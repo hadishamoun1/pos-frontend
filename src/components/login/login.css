@@ -54,3 +54,8 @@
 .create-acc {
   margin-top: 10px;
 }
+
+.link-login-signup{
+  text-decoration: none;
+  color:#007bff;
+}
