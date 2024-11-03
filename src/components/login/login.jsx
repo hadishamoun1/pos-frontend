@@ -13,7 +13,7 @@ const LoginPage = () => {
           <button type="submit">Login</button>
         </form>
         <div className="create-acc">
-          Dont have an account? <a className="link-login-signup" href="/Signup">Sign up</a>
+          Don't have an account? <a className="link-login-signup" href="/Signup">Sign up</a>
         </div>
       </div>
     </div>
