@@ -6,7 +6,7 @@ const LoginPage = () => {
     <div className="auth-container">
       
       <div className="auth-form">
-      <div className="welcome-text">Welcome to Shamun Co.</div>
+      <div className="welcome-text">Welcome to Shamoun Co.</div>
         <h2>Login</h2>
         <form>
           <input type="text" placeholder="Username" required />
