@@ -1,10 +1,12 @@
 import React from 'react';
-import './login.CSS'; 
+import './login.css'; 
 
 const LoginPage = () => {
   return (
     <div className="auth-container">
+      
       <div className="auth-form">
+      <div className="welcome-text">Welcome to Shamun Co.</div>
         <h2>Login</h2>
         <form>
           <input type="text" placeholder="Username" required />
