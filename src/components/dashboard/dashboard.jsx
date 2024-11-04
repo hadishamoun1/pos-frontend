@@ -3,8 +3,8 @@ import "./dashboard.css";
 import { Link } from "react-router-dom";
 
 const sections = [
-  { name: "POS System", image: "/assests/accounting.jpeg" },
-  { name: "Invoices", image: "/path/to/invoices-image.jpg" },
+  { name: "POS System", image: "/assests/pos.jpeg" },
+  { name: "Accounting", image: "/path/to/invoices-image.jpg" },
   { name: "Inventory", image: "/path/to/inventory-image.jpg" },
   { name: "Customers", image: "/path/to/customers-image.jpg" },
   { name: "Settings", image: "/path/to/settings-image.jpg" },
