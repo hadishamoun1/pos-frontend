@@ -6,8 +6,8 @@ const sections = [
   { name: "POS System", image: "/assests/pos.jpeg" },
   { name: "Accounting", image: "/assests/accounting.jpg" },
   { name: "Inventory", image: "/assests/inventory.png" },
-  { name: "Customers", image: "/path/to/customers-image.jpg" },
-  { name: "Settings", image: "/path/to/settings-image.jpg" },
+  { name: "Customers", image: "/assests/customers.jpeg" },
+  { name: "Settings", image: "/assests/settings.png" },
 ];
 
 const DashboardPage = () => {
