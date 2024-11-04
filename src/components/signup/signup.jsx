@@ -11,6 +11,7 @@ const SignupPage = () => {
           <input type="text" placeholder="Username" required />
 
           <input type="password" placeholder="Password" required />
+          <input type="password" placeholder="Confirm Password" required />
           <button type="submit">Sign Up</button>
         </form>
         <div className="create-acc">

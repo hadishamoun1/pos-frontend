@@ -10,10 +10,14 @@ const LoginPage = () => {
         <form>
           <input type="text" placeholder="Username" required />
           <input type="password" placeholder="Password" required />
+
           <button type="submit">Login</button>
         </form>
         <div className="create-acc">
-          Don't have an account? <a className="link-login-signup" href="/Signup">Sign up</a>
+          Don't have an account?{" "}
+          <a className="link-login-signup" href="/Signup">
+            Sign up
+          </a>
         </div>
       </div>
     </div>
