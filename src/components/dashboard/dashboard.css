@@ -1,6 +1,12 @@
 .dashboard-container {
+  min-height: 100vh; 
   padding: 2rem;
+  color: white;
   text-align: center;
+  background-image: url("../../../public/assests/background.jpg");
+  background-size: cover; 
+  background-position: center; 
+  background-repeat: no-repeat; 
 }
 
 .card-grid {
@@ -11,8 +17,8 @@
 }
 
 .dashboard-card {
-  width: 250px; /* Adjust as needed */
-  height: 250px; /* Adjust as needed */
+  width: 250px; 
+  height: 250px; 
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -41,6 +47,6 @@
 }
 
 .dashboard-card-link {
-  text-decoration: none; /* Remove underline */
-  color: inherit; /* Use the card's color */
+  text-decoration: none; 
+  color: inherit; 
 }
