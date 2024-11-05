@@ -1,23 +1,69 @@
 .pos-container {
-    display: flex;
-    height: 100vh; 
-    padding: 1rem;
-    gap: 1rem;
-  }
-  
-  .pos-left, .pos-center, .pos-right {
-    background-color: #f0f0f0; 
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .pos-left, .pos-right {
-    flex: 1; 
-  }
-  
-  .pos-center {
-    flex: 2; 
-    background-color: #ffffff; 
-  }
-  
+  display: flex;
+  height: 100vh;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.pos-left,
+.pos-center,
+.pos-right {
+  background-color: #f0f0f0;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pos-left,
+.pos-right {
+  flex: 1;
+}
+
+.pos-center {
+  flex: 2;
+  background-color: #ffffff;
+  padding-top: 20vh;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  overflow-y: auto;
+}
+
+.inventory-table {
+  width: 100%; /* Set table to take up full width of the container */
+  border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.inventory-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+.inventory-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.inventory-table td {
+  color: #333;
+}
+
+.add-row-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.add-row-button:hover {
+  background-color: #0056b3;
+}
