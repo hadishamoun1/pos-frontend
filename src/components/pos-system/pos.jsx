@@ -1,5 +1,5 @@
 import React from 'react';
-import './posSystem.css';
+import './pos.css';
 
 const POSSystemPage = () => {
   return (
