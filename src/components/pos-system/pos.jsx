@@ -14,14 +14,12 @@ const POSSystemPage = () => {
     },
   ]);
 
-  // Handle input changes
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
     newData[index][field] = value;
     setTableData(newData);
   };
 
-  // Add a new row to the table
   const addRow = () => {
     setTableData([
       ...tableData,
@@ -131,9 +129,13 @@ const POSSystemPage = () => {
             ))}
           </tbody>
         </table>
-        <button onClick={addRow} className="add-row-button">
-          Add Row
-        </button>
+
+        
+        <div className="button-container">
+          <button onClick={addRow} className="add-row-button">
+            Add Row
+          </button>
+        </div>
       </div>
 
       <div className="pos-right">Right Container</div>
