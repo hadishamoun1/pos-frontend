@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa"; // Import icons from Font Awesome or similar library
 import "./pos.css";
 
 const POSSystemPage = () => {
@@ -46,7 +47,14 @@ const POSSystemPage = () => {
 
   return (
     <div className="pos-container">
-      <div className="pos-left">Left Container</div>
+      {/* Left Container - Requests */}
+      <div className="pos-left">
+        <div className="container-header">
+          <FaClipboardList className="header-icon" />
+          <span className="header-text">Requests</span>
+        </div>
+        {/* Add content for requests here */}
+      </div>
 
       <div className="pos-center">
         {/* Toolbar section */}
@@ -191,7 +199,14 @@ const POSSystemPage = () => {
         </div>
       </div>
 
-      <div className="pos-right">Right Container</div>
+      {/* Right Container - Invoices */}
+      <div className="pos-right">
+        <div className="container-header">
+          <FaFileInvoiceDollar className="header-icon" />
+          <span className="header-text">Invoices</span>
+        </div>
+        {/* Add content for invoices here */}
+      </div>
     </div>
   );
 };
