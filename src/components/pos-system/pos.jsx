@@ -45,6 +45,26 @@ const POSSystemPage = () => {
       <div className="pos-left">Left Container</div>
 
       <div className="pos-center">
+        {/* Toolbar section */}
+        <div className="toolbar">
+          <div className="button-row">
+            <button className="toolbar-button blue-button">New</button>
+            <button className="toolbar-button blue-button">Request</button>
+            <button className="toolbar-button red-button">Issue</button>
+            <button className="toolbar-button yellow-button">Offer</button>
+          </div>
+          <div className="input-row">
+            <select className="exchange-rate-dropdown">
+              <option value="usd">USD Exchange Rate</option>
+              <option value="eur">EUR Exchange Rate</option>
+            </select>
+            <label className="checkbox-container">
+              <input type="checkbox" />
+              <span className="checkbox-label">Company Name</span>
+            </label>
+          </div>
+        </div>
+
         <table className="inventory-table">
           <thead>
             <tr>

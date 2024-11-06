@@ -26,7 +26,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 20vh;
+  position: relative;
   overflow-y: auto;
 }
 
@@ -34,6 +34,7 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
+  margin-top: 12rem;
 }
 
 .inventory-table th,
@@ -79,7 +80,7 @@
   margin-top: 1rem;
 }
 .delete-cell {
-  width: 10px; 
+  width: 10px;
   text-align: center;
 }
 
@@ -89,14 +90,94 @@
   color: red;
   cursor: pointer;
   font-size: 1.2rem;
-  padding: 0; 
+  padding: 0;
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%; 
+  width: 100%;
 }
 
 .delete-button:hover {
   color: darkred;
+}
+
+.toolbar {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.button-row {
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.input-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toolbar-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.red-button {
+  background-color: #e74c3c;
+}
+
+.red-button:hover {
+  background-color: #c0392b;
+}
+
+.yellow-button {
+  background-color: #f1c40f;
+}
+
+.blue-button {
+  background-color: #007bff;
+}
+
+.blue-button:hover {
+  background-color: #0056b3;
+}
+
+.yellow-button:hover {
+  background-color: #d4ac0d;
+}
+
+.exchange-rate-dropdown {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-label {
+  font-size: 1rem;
+  color: #333;
 }
