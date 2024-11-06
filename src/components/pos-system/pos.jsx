@@ -78,15 +78,26 @@ const POSSystemPage = () => {
           </div>
 
           <div className="input-row">
-            <select className="exchange-rate-dropdown">
-              <option value="usd">USD Exchange Rate</option>
-              <option value="eur">EUR Exchange Rate</option>
-            </select>
-            <label className="checkbox-container">
-              <input type="checkbox" />
-              <span className="checkbox-label">Company Name</span>
-            </label>
-          </div>
+  <div className="dropdown-container">
+    <select className="exchange-rate-dropdown">
+      <option value="usd">USD Exchange Rate</option>
+      <option value="eur">EUR Exchange Rate</option>
+    </select>
+
+    <select className="vat-dropdown">
+      <option value="" disabled selected>VAT</option>
+      <option value="0">0%</option>
+      <option value="6">6%</option>
+      <option value="11">11%</option>
+    </select>
+  </div>
+
+  <label className="checkbox-container">
+    <input type="checkbox" />
+    <span className="checkbox-label">Company Name</span>
+  </label>
+</div>
+
 
           {/* Customer name input row */}
           <div className="customer-name-row">

@@ -194,11 +194,24 @@
   background-color: #d4ac0d;
 }
 
-.exchange-rate-dropdown {
+.exchange-rate-dropdown,
+.vat-dropdown {
   padding: 0.5rem;
   font-size: 1rem;
   border-radius: 5px;
   border: 1px solid #ccc;
+}
+.dropdown-container {
+  display: flex;
+  gap: 0.5rem; 
+}
+
+.vat-dropdown {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  
 }
 
 .checkbox-container {
