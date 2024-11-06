@@ -35,6 +35,11 @@ const POSSystemPage = () => {
     ]);
   };
 
+  const deleteRow = (index) => {
+    const newData = tableData.filter((_, i) => i !== index);
+    setTableData(newData);
+  };
+
   return (
     <div className="pos-container">
       <div className="pos-left">Left Container</div>
@@ -43,6 +48,7 @@ const POSSystemPage = () => {
         <table className="inventory-table">
           <thead>
             <tr>
+              <th></th> {/* Empty header for delete button */}
               <th>Origin</th>
               <th>Item</th>
               <th>Box</th>
@@ -55,6 +61,14 @@ const POSSystemPage = () => {
           <tbody>
             {tableData.map((row, index) => (
               <tr key={index}>
+                <td className="delete-cell">
+                  <button
+                    className="delete-button"
+                    onClick={() => deleteRow(index)}
+                  >
+                    🗑️
+                  </button>
+                </td>
                 <td>
                   <input
                     type="text"
@@ -130,7 +144,6 @@ const POSSystemPage = () => {
           </tbody>
         </table>
 
-        
         <div className="button-container">
           <button onClick={addRow} className="add-row-button">
             Add Row
