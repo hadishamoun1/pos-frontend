@@ -14,6 +14,10 @@ const POSSystemPage = () => {
     },
   ]);
 
+  // Set the current date as default for the date input
+  const today = new Date().toISOString().split("T")[0];
+  const [date, setDate] = useState(today);
+
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
     newData[index][field] = value;
@@ -52,6 +56,12 @@ const POSSystemPage = () => {
             <button className="toolbar-button blue-button">Request</button>
             <button className="toolbar-button red-button">Issue</button>
             <button className="toolbar-button yellow-button">Offer</button>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="date-input"
+            />
           </div>
           <div className="input-row">
             <select className="exchange-rate-dropdown">
