@@ -1,7 +1,40 @@
-import React from "react";
+import React, { useState } from "react";
 import "./accounting.css";
+import NewRecordModal from "./newRecord";
 
 const AccountingPage = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    customerName: "",
+    currency: "",
+    exchangeRate: "",
+    cashNumber: "",
+    date: "",
+    invoiceNumber: "",
+    comments: "",
+    rct: "",
+  });
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setFormData({
+      customerName: "",
+      currency: "",
+      exchangeRate: "",
+      cashNumber: "",
+      date: "",
+      invoiceNumber: "",
+      comments: "",
+      rct: "",
+    });
+  };
+
+  const handleSave = () => {
+    console.log("Form Data:", formData);
+    closeModal(); // Close the modal after saving
+  };
+
   return (
     <div className="accounting-container">
       {/* Top Section */}
@@ -9,17 +42,18 @@ const AccountingPage = () => {
         <div className="top-toolbar">
           <input type="text" placeholder="Search" className="search-input" />
           <div className="button-group">
-            <button className="action-button">New</button>
+            <button className="action-button" onClick={openModal}>
+              New
+            </button>
             <button className="action-button">Edit</button>
           </div>
         </div>
 
-        {/* Accounting table */}
         <table className="accounting-table">
           <thead>
             <tr>
               <th>Customer Name</th>
-              <th>Currency</th> {/* New column for Currency */}
+              <th>Currency</th>
               <th>Currency Exchange Rate</th>
               <th>Cash Number</th>
               <th>Date</th>
@@ -28,19 +62,7 @@ const AccountingPage = () => {
               <th>RCT</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>John Doe</td>
-              <td>USD</td> {/* Example Currency */}
-              <td>1.13</td> {/* Example Currency Exchange Rate */}
-              <td>12345</td>
-              <td>2024-11-01</td>
-              <td>INV001</td> {/* Example Invoice Number */}
-              <td>Sample comment</td>
-              <td>RCT123</td>
-            </tr>
-            {/* Additional rows can be added here */}
-          </tbody>
+          <tbody>{/* Table rows would go here */}</tbody>
         </table>
       </div>
 
@@ -52,6 +74,15 @@ const AccountingPage = () => {
         </div>
         {/* Additional content for bottom section can go here */}
       </div>
+
+      {isModalOpen && (
+        <NewRecordModal
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeModal}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 };
