@@ -138,6 +138,21 @@
   align-items: center;
 }
 
+.customer-name-input {
+  width: 19.5%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.customer-name-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+}
+
 .toolbar-button {
   padding: 0.6rem 1.2rem;
   font-size: 1rem;

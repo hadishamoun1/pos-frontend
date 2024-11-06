@@ -63,6 +63,7 @@ const POSSystemPage = () => {
               className="date-input"
             />
           </div>
+
           <div className="input-row">
             <select className="exchange-rate-dropdown">
               <option value="usd">USD Exchange Rate</option>
@@ -72,6 +73,15 @@ const POSSystemPage = () => {
               <input type="checkbox" />
               <span className="checkbox-label">Company Name</span>
             </label>
+          </div>
+
+          {/* Customer name input row */}
+          <div className="customer-name-row">
+            <input
+              type="text"
+              placeholder="Enter Customer Name"
+              className="customer-name-input"
+            />
           </div>
         </div>
 
