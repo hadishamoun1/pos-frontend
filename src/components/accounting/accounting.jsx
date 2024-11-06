@@ -4,13 +4,25 @@ import "./accounting.css";
 const AccountingPage = () => {
   return (
     <div className="accounting-container">
+      {/* Top Section */}
       <div className="accounting-section top-section">
-        {/* Content for the top section */}
-        <h2>Top Accounting Section</h2>
+        <div className="top-toolbar">
+          <input type="text" placeholder="Search" className="search-input" />
+          <div className="button-group">
+            <button className="action-button">New</button>
+            <button className="action-button">Edit</button>
+          </div>
+        </div>
+        {/* Additional content for top section can go here */}
       </div>
+
+      {/* Bottom Section */}
       <div className="accounting-section bottom-section">
-        {/* Content for the bottom section */}
-        <h2>Bottom Accounting Section</h2>
+        <div className="bottom-toolbar">
+          <input type="text" placeholder="Search" className="search-input" />
+          <button className="action-button">Edit</button>
+        </div>
+        {/* Additional content for bottom section can go here */}
       </div>
     </div>
   );

@@ -1,25 +1,61 @@
 .accounting-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
-  }
-  
-  .accounting-section {
-    flex: 1;
-    width: 100%;
-    padding: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-sizing: border-box;
-  }
-  
-  .top-section {
-    background-color: #f0f0f0; 
-  }
-  
-  .bottom-section {
-    background-color: #ffffff; 
-  }
-  
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+.accounting-section {
+  flex: 1;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.top-section {
+  background-color: #f0f0f0;
+}
+
+.bottom-section {
+  background-color: #ffffff;
+}
+
+/* Toolbar styling */
+.top-toolbar,
+.bottom-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.search-input {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 200px; /* Adjust as needed */
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  background-color: #007bff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: #0056b3;
+}
