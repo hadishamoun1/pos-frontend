@@ -137,16 +137,7 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             placeholder="Comments"
           />
 
-          {/* RCT */}
-          <label htmlFor="rct">RCT</label>
-          <input
-            type="text"
-            id="rct"
-            name="rct"
-            value={formData.rct}
-            onChange={handleInputChange}
-            placeholder="RCT"
-          />
+         
         </form>
         <div className="modal-buttons">
           <button className="action-button" onClick={onSave}>Save</button>
