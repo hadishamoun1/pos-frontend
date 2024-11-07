@@ -15,63 +15,109 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
       <div className="modal-content">
         <h2>New Record</h2>
         <form>
+          {/* Customer Name */}
+          <label htmlFor="customerName">Customer Name</label>
           <input
             type="text"
+            id="customerName"
             name="customerName"
             value={formData.customerName}
             onChange={handleInputChange}
             placeholder="Customer Name"
           />
-          <input
-            type="text"
+
+          {/* Currency - Dropdown */}
+          <label htmlFor="currency">Currency</label>
+          <select
+            id="currency"
             name="currency"
             value={formData.currency}
             onChange={handleInputChange}
-            placeholder="Currency"
-          />
-          <input
-            type="text"
+          >
+            <option value="">Select Currency</option>
+            <option value="USD">USD</option>
+            <option value="LL">LL</option>
+          </select>
+
+          {/* Currency Exchange Rate - Dropdown with Custom Option */}
+          <label htmlFor="exchangeRate">Exchange Rate</label>
+          <select
+            id="exchangeRate"
             name="exchangeRate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
-            placeholder="Exchange Rate"
+          >
+            <option value="">Select Exchange Rate</option>
+            <option value="89000">89,000</option>
+            <option value="1500">1,500</option>
+          </select>
+          <input
+            type="number"
+            name="exchangeRate"
+            placeholder="Or enter a custom rate"
+            value={formData.exchangeRate}
+            onChange={handleInputChange}
           />
+
+          {/* Amount Exchanged */}
+          <label htmlFor="amountExchanged">Amount Exchanged</label>
           <input
             type="text"
-            name="amountExchanged" // New input for Amount Exchanged
+            id="amountExchanged"
+            name="amountExchanged"
             value={formData.amountExchanged}
             onChange={handleInputChange}
             placeholder="Amount Exchanged"
           />
+
+          {/* Cash Number */}
+          <label htmlFor="cashNumber">Cash Number</label>
           <input
             type="text"
+            id="cashNumber"
             name="cashNumber"
             value={formData.cashNumber}
             onChange={handleInputChange}
             placeholder="Cash Number"
           />
+
+          {/* Date - Calendar */}
+          <label htmlFor="date">Date</label>
           <input
             type="date"
+            id="date"
             name="date"
-            value={formData.date}
+            value={formData.date || new Date().toISOString().split("T")[0]}
             onChange={handleInputChange}
           />
+
+          {/* Invoice Number */}
+          <label htmlFor="invoiceNumber">Invoice Number</label>
           <input
             type="text"
+            id="invoiceNumber"
             name="invoiceNumber"
             value={formData.invoiceNumber}
             onChange={handleInputChange}
             placeholder="Invoice Number"
           />
+
+          {/* Comments */}
+          <label htmlFor="comments">Comments</label>
           <input
             type="text"
+            id="comments"
             name="comments"
             value={formData.comments}
             onChange={handleInputChange}
             placeholder="Comments"
           />
+
+          {/* RCT */}
+          <label htmlFor="rct">RCT</label>
           <input
             type="text"
+            id="rct"
             name="rct"
             value={formData.rct}
             onChange={handleInputChange}
