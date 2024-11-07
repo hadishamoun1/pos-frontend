@@ -38,6 +38,13 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
           />
           <input
             type="text"
+            name="amountExchanged" // New input for Amount Exchanged
+            value={formData.amountExchanged}
+            onChange={handleInputChange}
+            placeholder="Amount Exchanged"
+          />
+          <input
+            type="text"
             name="cashNumber"
             value={formData.cashNumber}
             onChange={handleInputChange}
@@ -72,8 +79,12 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
           />
         </form>
         <div className="modal-buttons">
-          <button className="action-button" onClick={onSave}>Save</button>
-          <button className="action-button" onClick={onClose}>Cancel</button>
+          <button className="action-button" onClick={onSave}>
+            Save
+          </button>
+          <button className="action-button" onClick={onClose}>
+            Cancel
+          </button>
         </div>
       </div>
     </div>

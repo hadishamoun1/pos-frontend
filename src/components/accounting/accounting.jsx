@@ -8,6 +8,7 @@ const AccountingPage = () => {
     customerName: "",
     currency: "",
     exchangeRate: "",
+    amountExchanged: "", // New field for Amount Exchanged
     cashNumber: "",
     date: "",
     invoiceNumber: "",
@@ -22,6 +23,7 @@ const AccountingPage = () => {
       customerName: "",
       currency: "",
       exchangeRate: "",
+      amountExchanged: "", // Reset the new field
       cashNumber: "",
       date: "",
       invoiceNumber: "",
@@ -55,6 +57,7 @@ const AccountingPage = () => {
               <th>Customer Name</th>
               <th>Currency</th>
               <th>Currency Exchange Rate</th>
+              <th>Amount Exchanged</th> {/* New column for Amount Exchanged */}
               <th>Cash Number</th>
               <th>Date</th>
               <th>Invoice Number</th>
