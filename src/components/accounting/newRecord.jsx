@@ -1,7 +1,19 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./newRecord.css";
 
 const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
+  const [invoiceNumbers, setInvoiceNumbers] = useState([]);
+
+  // Simulated fetching of invoice numbers
+  useEffect(() => {
+    const fetchInvoiceNumbers = async () => {
+      const invoices = ["INV-001", "INV-002", "INV-003"];
+      setInvoiceNumbers(invoices);
+    };
+
+    fetchInvoiceNumbers();
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -46,6 +58,7 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             name="exchangeRate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
+            disabled={formData.currency === "USD"} // Disable if currency is USD
           >
             <option value="">Select Exchange Rate</option>
             <option value="89000">89,000</option>
@@ -57,6 +70,7 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             placeholder="Or enter a custom rate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
+            disabled={formData.currency === "USD"} // Disable if currency is USD
           />
 
           {/* Amount Exchanged */}
@@ -68,6 +82,7 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             value={formData.amountExchanged}
             onChange={handleInputChange}
             placeholder="Amount Exchanged"
+            disabled={formData.currency === "USD"} // Disable if currency is USD
           />
 
           {/* Cash Number */}
@@ -91,16 +106,21 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             onChange={handleInputChange}
           />
 
-          {/* Invoice Number */}
+          {/* Invoice Number - Dropdown */}
           <label htmlFor="invoiceNumber">Invoice Number</label>
-          <input
-            type="text"
+          <select
             id="invoiceNumber"
             name="invoiceNumber"
             value={formData.invoiceNumber}
             onChange={handleInputChange}
-            placeholder="Invoice Number"
-          />
+          >
+            <option value="">Select Invoice Number</option>
+            {invoiceNumbers.map((invoice) => (
+              <option key={invoice} value={invoice}>
+                {invoice}
+              </option>
+            ))}
+          </select>
 
           {/* Comments */}
           <label htmlFor="comments">Comments</label>
@@ -125,12 +145,8 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
           />
         </form>
         <div className="modal-buttons">
-          <button className="action-button" onClick={onSave}>
-            Save
-          </button>
-          <button className="action-button" onClick={onClose}>
-            Cancel
-          </button>
+          <button className="action-button" onClick={onSave}>Save</button>
+          <button className="action-button" onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
