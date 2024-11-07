@@ -110,3 +110,10 @@
 .modal-content input[type="date"] {
   padding: 0.55rem;
 }
+.disabled-field {
+    background-color: #f0f0f0; 
+    color: #888888; 
+    border-color: #ccc; 
+    cursor: not-allowed; 
+  }
+  

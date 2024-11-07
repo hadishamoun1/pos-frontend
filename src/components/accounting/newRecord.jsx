@@ -4,7 +4,6 @@ import "./newRecord.css";
 const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
   const [invoiceNumbers, setInvoiceNumbers] = useState([]);
 
-  // Simulated fetching of invoice numbers
   useEffect(() => {
     const fetchInvoiceNumbers = async () => {
       const invoices = ["INV-001", "INV-002", "INV-003"];
@@ -21,6 +20,8 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
       [name]: value,
     }));
   };
+
+  const isDisabled = formData.currency === "USD";
 
   return (
     <div className="modal-overlay">
@@ -58,7 +59,8 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             name="exchangeRate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
-            disabled={formData.currency === "USD"} // Disable if currency is USD
+            disabled={isDisabled}
+            className={isDisabled ? "disabled-field" : ""}
           >
             <option value="">Select Exchange Rate</option>
             <option value="89000">89,000</option>
@@ -70,7 +72,8 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             placeholder="Or enter a custom rate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
-            disabled={formData.currency === "USD"} // Disable if currency is USD
+            disabled={isDisabled}
+            className={isDisabled ? "disabled-field" : ""}
           />
 
           {/* Amount Exchanged */}
@@ -82,7 +85,8 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             value={formData.amountExchanged}
             onChange={handleInputChange}
             placeholder="Amount Exchanged"
-            disabled={formData.currency === "USD"} // Disable if currency is USD
+            disabled={isDisabled}
+            className={isDisabled ? "disabled-field" : ""}
           />
 
           {/* Cash Number */}
