@@ -7,6 +7,7 @@ const sections = [
   { name: "Accounting", image: "/assests/accounting.jpg" },
   { name: "Inventory", image: "/assests/inventory.png" },
   { name: "Customers", image: "/assests/customers.jpeg" },
+  { name: "Purchases invoice", image: "/assests/purchase.jpg" },
   { name: "Settings", image: "/assests/settings.png" },
 ];
 
