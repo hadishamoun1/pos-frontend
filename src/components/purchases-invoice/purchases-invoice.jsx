@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaTrash } from "react-icons/fa"; // Import delete icon
+import { FaTrash } from "react-icons/fa";
 import "./purchases-invoice.css";
 
 const PurchasesInvoicePage = () => {
@@ -16,31 +16,37 @@ const PurchasesInvoicePage = () => {
     setItems([
       ...items,
       {
-        id: Date.now(), // Unique identifier for each item
+        id: Date.now(),
         itemName: "",
         origin: "",
         length: "",
         width: "",
         quantity: 1,
-        unitPrice: 0,
+        sheetsPerBox: 1,
+        sqm: 0,
+        unitPrice: "",
         total: 0,
       },
     ]);
   };
 
-  // Update item fields
+  // Update item fields and calculate SQM and Total
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
-    newItems[index].total =
-      newItems[index].quantity * newItems[index].unitPrice;
+
+    const { length, width, quantity, sheetsPerBox, unitPrice } =
+      newItems[index];
+    const sqm = (length * width * quantity * sheetsPerBox) / 10000; // Convert cm² to m²
+    newItems[index].sqm = sqm;
+    newItems[index].total = sqm * unitPrice;
+
     setItems(newItems);
   };
 
   // Delete an item from the invoice
   const deleteItem = (id) => {
-    const newItems = items.filter((item) => item.id !== id);
-    setItems(newItems);
+    setItems(items.filter((item) => item.id !== id));
   };
 
   // Calculate total amounts
@@ -91,9 +97,11 @@ const PurchasesInvoicePage = () => {
             <tr>
               <th>Item Name</th>
               <th>Origin</th>
-              <th>Length</th>
-              <th>Width</th>
+              <th>Length (cm)</th>
+              <th>Width (cm)</th>
               <th>Quantity</th>
+              <th>Sheets/Box</th>
+              <th>SQM</th>
               <th>Unit Price</th>
               <th>Total</th>
               <th>Delete</th>
@@ -127,9 +135,9 @@ const PurchasesInvoicePage = () => {
                     type="number"
                     value={item.length}
                     onChange={(e) =>
-                      handleItemChange(index, "length", e.target.value)
+                      handleItemChange(index, "length", Number(e.target.value))
                     }
-                    placeholder="Enter length"
+                    placeholder="Length"
                   />
                 </td>
                 <td>
@@ -137,9 +145,9 @@ const PurchasesInvoicePage = () => {
                     type="number"
                     value={item.width}
                     onChange={(e) =>
-                      handleItemChange(index, "width", e.target.value)
+                      handleItemChange(index, "width", Number(e.target.value))
                     }
-                    placeholder="Enter width"
+                    placeholder="Width"
                   />
                 </td>
                 <td>
@@ -153,9 +161,24 @@ const PurchasesInvoicePage = () => {
                         Number(e.target.value)
                       )
                     }
-                    placeholder="Enter quantity"
+                    placeholder="Quantity"
                   />
                 </td>
+                <td>
+                  <input
+                    type="number"
+                    value={item.sheetsPerBox}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "sheetsPerBox",
+                        Number(e.target.value)
+                      )
+                    }
+                    placeholder="Sheets/Box"
+                  />
+                </td>
+                <td>{item.sqm.toFixed(2)}</td>
                 <td>
                   <input
                     type="number"
@@ -167,7 +190,7 @@ const PurchasesInvoicePage = () => {
                         Number(e.target.value)
                       )
                     }
-                    placeholder="Enter unit price"
+                    placeholder="Unit Price"
                   />
                 </td>
                 <td>{item.total.toFixed(2)}</td>
