@@ -5,6 +5,7 @@ import SignupPage from "./components/signup/signup";
 import DashboardPage from "./components/dashboard/dashboard";
 import POSSystemPage from "./components/pos-system/pos";
 import AccountingPage from "./components/accounting/accounting";
+import PurchasesInvoicePage from "./components/purchases-invoice/purchases-invoice";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/Dashboard" element={<DashboardPage />} />
         <Route path="/pos-system" element={<POSSystemPage />} />
         <Route path="/accounting" element={<AccountingPage />} />
+        <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
 
       </Routes>
     </Router>
