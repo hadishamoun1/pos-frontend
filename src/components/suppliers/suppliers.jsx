@@ -7,8 +7,7 @@ const SuppliersPage = () => {
   const [form, setForm] = useState({
     id: null,
     name: "",
-    contact: "",
-    email: "",
+    contactInfo: "",
     address: "",
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -18,43 +17,74 @@ const SuppliersPage = () => {
   }, []);
 
   const fetchSuppliers = async () => {
-    // Fetch suppliers from API
-    const response = await fetch("/api/suppliers");
-    const data = await response.json();
-    setSuppliers(data);
+    try {
+      const response = await fetch("http://localhost:3000/suppliers");
+      if (response.ok) {
+        const data = await response.json();
+        setSuppliers(data);
+      } else {
+        console.error("Error fetching suppliers:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+    }
   };
 
   const handleFormChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value || "" });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const method = isEditing ? "PUT" : "POST";
-    const url = isEditing ? `/api/suppliers/${form.id}` : "/api/suppliers";
+    const url = isEditing
+      ? `http://localhost:3000/suppliers/${form.id}`
+      : "http://localhost:3000/suppliers";
 
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    fetchSuppliers();
-    resetForm();
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (response.ok) {
+        fetchSuppliers();
+        resetForm();
+      } else {
+        console.error("Error submitting form:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
   };
 
   const handleEdit = (supplier) => {
     setIsEditing(true);
-    setForm(supplier);
+    setForm({
+      id: supplier.id || null,
+      name: supplier.name || "",
+      contactInfo: supplier.contactInfo || "",
+      address: supplier.address || "",
+    });
   };
 
   const handleDelete = async (id) => {
-    await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
-    fetchSuppliers();
+    try {
+      const response = await fetch(`http://localhost:3000/suppliers/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        fetchSuppliers();
+      } else {
+        console.error("Error deleting supplier:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error deleting supplier:", error);
+    }
   };
 
   const resetForm = () => {
-    setForm({ id: null, name: "", contact: "", email: "", address: "" });
+    setForm({ id: null, name: "", contactInfo: "", address: "" });
     setIsEditing(false);
   };
 
@@ -73,27 +103,17 @@ const SuppliersPage = () => {
           <input
             type="text"
             name="name"
-            value={form.name}
+            value={form.name || ""}
             onChange={handleFormChange}
             required
           />
         </label>
         <label>
-          Contact
+          Contact Info
           <input
             type="text"
-            name="contact"
-            value={form.contact}
-            onChange={handleFormChange}
-            required
-          />
-        </label>
-        <label>
-          Email
-          <input
-            type="email"
-            name="email"
-            value={form.email}
+            name="contactInfo"
+            value={form.contactInfo || ""}
             onChange={handleFormChange}
             required
           />
@@ -103,7 +123,7 @@ const SuppliersPage = () => {
           <input
             type="text"
             name="address"
-            value={form.address}
+            value={form.address || ""}
             onChange={handleFormChange}
           />
         </label>
@@ -116,8 +136,7 @@ const SuppliersPage = () => {
         <thead>
           <tr>
             <th>Name</th>
-            <th>Contact</th>
-            <th>Email</th>
+            <th>Contact Info</th>
             <th>Address</th>
             <th>Actions</th>
           </tr>
@@ -126,8 +145,7 @@ const SuppliersPage = () => {
           {suppliers.map((supplier) => (
             <tr key={supplier.id}>
               <td>{supplier.name}</td>
-              <td>{supplier.contact}</td>
-              <td>{supplier.email}</td>
+              <td>{supplier.contactInfo}</td>
               <td>{supplier.address}</td>
               <td>
                 <button
