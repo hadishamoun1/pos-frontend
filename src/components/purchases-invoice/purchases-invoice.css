@@ -185,3 +185,25 @@
 .delete-button:hover {
   color: #c0392b;
 }
+.suggestions-box {
+  position: absolute;
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 1000;
+  top: calc(100% + 4px);
+}
+
+.suggestion-item {
+  padding: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.suggestion-item:hover {
+  background-color: #f1f1f1;
+}

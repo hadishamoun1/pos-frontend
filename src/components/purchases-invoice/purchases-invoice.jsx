@@ -1,18 +1,17 @@
 import React, { useState } from "react";
-import { FaTrash } from "react-icons/fa";
 import { useQuery } from "@tanstack/react-query";
+import { FaTrash } from "react-icons/fa";
 import "./purchases-invoice.css";
 
+// Fetch supplier data using React Query
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
-  if (!response.ok) {
-    throw new Error("Network response was not ok");
-  }
   return response.json();
 };
 
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10)
@@ -20,17 +19,16 @@ const PurchasesInvoicePage = () => {
   const [items, setItems] = useState([]);
   const [vat, setVat] = useState(0);
 
-  const {
-    data: suppliers,
-    isLoading,
-    error,
-  } = useQuery({
+  // Use React Query to fetch suppliers
+  const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
     queryFn: fetchSuppliers,
   });
 
-  if (isLoading) return <div>Loading suppliers...</div>;
-  if (error) return <div>Error: {error.message}</div>;
+  // Filter suppliers based on the supplierName input
+  const filteredSuppliers = suppliers.filter((supplier) =>
+    supplier.name.toLowerCase().includes(supplierName.toLowerCase())
+  );
 
   // Add new item to the invoice
   const addItem = () => {
@@ -83,20 +81,35 @@ const PurchasesInvoicePage = () => {
       </div>
 
       <div className="invoice-details">
-        <label>
+        <label style={{ position: "relative" }}>
           Supplier Name
           <input
             type="text"
-            list="suppliers"
             value={supplierName}
-            onChange={(e) => setSupplierName(e.target.value)}
+            onChange={(e) => {
+              setSupplierName(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 100)}
             placeholder="Enter supplier name"
           />
-          <datalist id="suppliers">
-            {suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.name} />
-            ))}
-          </datalist>
+          {showSuggestions && filteredSuppliers.length > 0 && (
+            <div className="suggestions-box">
+              {filteredSuppliers.map((supplier) => (
+                <div
+                  key={supplier.id}
+                  className="suggestion-item"
+                  onMouseDown={() => {
+                    setSupplierName(supplier.name);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  {supplier.name}
+                </div>
+              ))}
+            </div>
+          )}
         </label>
         <label>
           Invoice Number
