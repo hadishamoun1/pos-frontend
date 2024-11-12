@@ -9,6 +9,7 @@ const sections = [
   { name: "Customers", image: "/assests/customers.jpeg" },
   { name: "Purchases invoice", image: "/assests/purchase.jpg" },
   { name: "Settings", image: "/assests/settings.png" },
+  { name: "Suppliers", image: "/assests/suppliers.webp" },
 ];
 
 const DashboardPage = () => {
