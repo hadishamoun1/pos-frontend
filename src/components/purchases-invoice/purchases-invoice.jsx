@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { FaTrash } from "react-icons/fa";
+import { useQuery } from "@tanstack/react-query";
 import "./purchases-invoice.css";
+
+const fetchSuppliers = async () => {
+  const response = await fetch("http://localhost:3000/suppliers");
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
 
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
@@ -10,6 +19,18 @@ const PurchasesInvoicePage = () => {
   );
   const [items, setItems] = useState([]);
   const [vat, setVat] = useState(0);
+
+  const {
+    data: suppliers,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: fetchSuppliers,
+  });
+
+  if (isLoading) return <div>Loading suppliers...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
   // Add new item to the invoice
   const addItem = () => {
@@ -66,10 +87,16 @@ const PurchasesInvoicePage = () => {
           Supplier Name
           <input
             type="text"
+            list="suppliers"
             value={supplierName}
             onChange={(e) => setSupplierName(e.target.value)}
             placeholder="Enter supplier name"
           />
+          <datalist id="suppliers">
+            {suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.name} />
+            ))}
+          </datalist>
         </label>
         <label>
           Invoice Number
