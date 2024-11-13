@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./items.css";
+import { FaTrash } from "react-icons/fa";
 
 const CreateItemWithDimensions = () => {
   const [items, setItems] = useState([]);
@@ -110,7 +111,7 @@ const CreateItemWithDimensions = () => {
               className="itemDeleteBtn"
               onClick={() => handleDelete(item.id)}
             >
-              🗑️
+              <FaTrash />
             </button>
           </div>
         ))}
