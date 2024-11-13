@@ -10,6 +10,7 @@ import AccountingPage from "./components/accounting/accounting";
 import PurchasesInvoicePage from "./components/purchases-invoice/purchases-invoice";
 import InventoryPage from "./components/inventory/inventory";
 import SuppliersPage from "./components/suppliers/suppliers";
+import ItemCreationPage from "./components/items/items";
 
 // Initialize QueryClient
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ function App() {
           <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/suppliers" element={<SuppliersPage />} />
+          <Route path="/items" element={<ItemCreationPage />} />
         </Routes>
       </Router>
     </QueryClientProvider>
