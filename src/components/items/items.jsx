@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
-import "./item-creation.css";
+import "./item.css";
 
 const ItemCreationPage = () => {
   const [itemName, setItemName] = useState("");
