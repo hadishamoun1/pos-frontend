@@ -1,143 +1,140 @@
 import React, { useState } from "react";
-import { FaPlusCircle, FaTrash } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
 import "./items.css";
 
-const NewItem = () => {
-  const [item, setItem] = useState({
-    itemName: "",
-    type: "box",
-    origin: "",
-    dimensions: [{ length: "", width: "", sheetsPerBox: "" }],
-  });
+const ItemFormPage = () => {
+  const [items, setItems] = useState([
+    {
+      id: Date.now(),
+      itemName: "",
+      origin: "",
+      type: "Box",
+      length: "",
+      width: "",
+      sheetsPerBox: "",
+      disabledSheets: false,
+    },
+  ]);
 
-  const handleItemChange = (e) => {
-    setItem({ ...item, [e.target.name]: e.target.value });
+  // Add new item row
+  const addItem = () => {
+    setItems([
+      ...items,
+      {
+        id: Date.now(),
+        itemName: "",
+        origin: "",
+        type: "Box",
+        length: "",
+        width: "",
+        sheetsPerBox: "",
+        disabledSheets: false,
+      },
+    ]);
   };
 
-  const handleDimensionChange = (index, field, value) => {
-    const updatedDimensions = [...item.dimensions];
-    updatedDimensions[index][field] = value;
-    setItem({ ...item, dimensions: updatedDimensions });
+  // Handle item field changes
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...items];
+    newItems[index][field] = value;
+
+    // Disable sheetsPerBox if type is "Sheet"
+    if (field === "type") {
+      newItems[index].disabledSheets = value === "Sheet";
+      if (value === "Sheet") {
+        newItems[index].sheetsPerBox = "";
+      }
+    }
+    setItems(newItems);
   };
 
-  const addDimension = () => {
-    setItem({
-      ...item,
-      dimensions: [
-        ...item.dimensions,
-        { length: "", width: "", sheetsPerBox: "" },
-      ],
-    });
-  };
-
-  const deleteDimension = (index) => {
-    const updatedDimensions = item.dimensions.filter((_, i) => i !== index);
-    setItem({ ...item, dimensions: updatedDimensions });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Item created:", item);
+  // Delete an item row
+  const deleteItem = (id) => {
+    setItems(items.filter((item) => item.id !== id));
   };
 
   return (
-    <div className="new-item-container">
-      <h2>Create New Item</h2>
-      <form onSubmit={handleSubmit} className="item-form">
-        <label>
-          Item Name
-          <input
-            type="text"
-            name="itemName"
-            value={item.itemName}
-            onChange={handleItemChange}
-            placeholder="Enter item name"
-            required
-          />
-        </label>
-        <label>
-          Type
-          <select name="type" value={item.type} onChange={handleItemChange}>
-            <option value="box">Box</option>
-            <option value="sheet">Sheet</option>
-          </select>
-        </label>
-        <label>
-          Origin
-          <input
-            type="text"
-            name="origin"
-            value={item.origin}
-            onChange={handleItemChange}
-            placeholder="Enter origin"
-            required
-          />
-        </label>
-
-        <h3>Dimensions</h3>
-        {item.dimensions.map((dim, index) => (
-          <div key={index} className="dimension-card">
-            <div className="dimension-fields">
-              <label>
-                Length (cm)
-                <input
-                  type="number"
-                  value={dim.length}
-                  onChange={(e) =>
-                    handleDimensionChange(index, "length", e.target.value)
-                  }
-                  placeholder="Length"
-                  required
-                />
-              </label>
-              <label>
-                Width (cm)
-                <input
-                  type="number"
-                  value={dim.width}
-                  onChange={(e) =>
-                    handleDimensionChange(index, "width", e.target.value)
-                  }
-                  placeholder="Width"
-                  required
-                />
-              </label>
-              <label className="sheets-box-label">
-                Sheets per Box
-                <input
-                  type="number"
-                  value={dim.sheetsPerBox}
-                  onChange={(e) =>
-                    handleDimensionChange(index, "sheetsPerBox", e.target.value)
-                  }
-                  placeholder="Sheets per Box"
-                  disabled={item.type === "sheet"} // Disable if item type is "sheet"
-                />
-              </label>
-              <button
-                type="button"
-                className="delete-dimension"
-                onClick={() => deleteDimension(index)}
-              >
-                <FaTrash /> Remove
-              </button>
-            </div>
+    <div className="twoColumnContainer">
+      <div className="createItemContainer">
+        <h2 className="itemFormTitle">Create New Item with Dimensions</h2>
+        {items.map((item, index) => (
+          <div className="itemFormRow" key={item.id}>
+            <input
+              type="text"
+              className="itemInput"
+              placeholder="Item Name"
+              value={item.itemName}
+              onChange={(e) =>
+                handleItemChange(index, "itemName", e.target.value)
+              }
+            />
+            <input
+              type="text"
+              className="itemInput"
+              placeholder="Origin"
+              value={item.origin}
+              onChange={(e) =>
+                handleItemChange(index, "origin", e.target.value)
+              }
+            />
+            <select
+              className="itemInput"
+              value={item.type}
+              onChange={(e) => handleItemChange(index, "type", e.target.value)}
+            >
+              <option value="Box">Box</option>
+              <option value="Sheet">Sheet</option>
+            </select>
+            <input
+              type="number"
+              className="itemInput"
+              placeholder="Length"
+              value={item.length}
+              onChange={(e) =>
+                handleItemChange(index, "length", e.target.value)
+              }
+            />
+            <input
+              type="number"
+              className="itemInput"
+              placeholder="Width"
+              value={item.width}
+              onChange={(e) => handleItemChange(index, "width", e.target.value)}
+            />
+            <input
+              type="number"
+              className="itemInput"
+              placeholder="Sheets per Box"
+              value={item.sheetsPerBox}
+              onChange={(e) =>
+                handleItemChange(index, "sheetsPerBox", e.target.value)
+              }
+              disabled={item.disabledSheets}
+            />
+            <button
+              className="itemDeleteBtn"
+              onClick={() => deleteItem(item.id)}
+            >
+              <FaTrash />
+            </button>
           </div>
         ))}
-        <button
-          type="button"
-          onClick={addDimension}
-          className="add-dimension-button"
-        >
-          <FaPlusCircle /> Add Another Dimension
-        </button>
+        <div className="buttonRow">
+          <button className="itemAddBtn" onClick={addItem}>
+            Add Another Item
+          </button>
+          <button className="itemSaveBtn">Save Items</button>
+        </div>
+      </div>
 
-        <button type="submit" className="save-button">
-          Save Item
-        </button>
-      </form>
+      <div className="additionalInfoContainer">
+        <h3>Additional Information</h3>
+        <p>
+          This container can display newly created items, guidelines, or notes.
+        </p>
+      </div>
     </div>
   );
 };
 
-export default NewItem;
+export default ItemFormPage;
