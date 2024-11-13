@@ -137,3 +137,27 @@
 .itemSaveBtn:hover {
   background-color: #218838;
 }
+.errorMessage {
+  color: red;
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+}
+.itemsTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.itemsTable th,
+.itemsTable td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.itemsTable th {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
