@@ -237,6 +237,7 @@ const CreateItemWithDimensions = () => {
           <table className="itemsTable">
             <thead>
               <tr>
+                <th>Origin</th>
                 <th>Item Name</th>
                 <th>Type</th>
                 <th>Length (cm)</th>
@@ -248,6 +249,7 @@ const CreateItemWithDimensions = () => {
               {filteredItems.map((item) =>
                 item.dimensions.map((dimension) => (
                   <tr key={dimension.dimensionId}>
+                    <td>{dimension.origin}</td>
                     <td>{item.itemName}</td>
                     <td>{item.type}</td>
                     <td>{dimension.length}</td>
