@@ -1,4 +1,4 @@
-/* Two-column container */
+/* Two-column container layout */
 .twoColumnContainer {
   display: flex;
   gap: 20px;
@@ -7,68 +7,104 @@
   margin: 0 auto;
 }
 
+/* Left container */
 .createItemContainer {
-  flex: 1; /* Left container is smaller */
+  flex: 1;
   padding: 20px;
-  background-color: #f7f9fc;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f0f4f8;
   border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   font-family: Arial, sans-serif;
 }
 
+/* Right container */
 .additionalInfoContainer {
-  flex: 2; /* Right container is wider */
-  background-color: #f9fafb;
+  flex: 1.5;
   padding: 20px;
+  background-color: #f9fafb;
   border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Title */
+/* Title styling */
 .itemFormTitle {
   font-size: 1.8rem;
-  margin-bottom: 1rem;
-  color: #333;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
   text-align: center;
+  font-weight: bold;
 }
 
-/* Form row */
+/* Row wrapper to place delete icon next to the card */
+.itemRowWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+/* Row styling for form fields */
 .itemFormRow {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
-  background-color: #ffffff;
   padding: 10px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  box-sizing: border-box;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  flex: 1;
 }
 
-/* Inputs */
+/* Flex container for inputs */
+.inputRow {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+/* Input styling */
 .itemInput {
   flex: 1;
-  min-width: 120px;
   padding: 10px;
   border-radius: 5px;
   border: 1px solid #ced4da;
   font-size: 0.9rem;
-  color: #333;
+  color: #34495e;
+  min-width: 120px;
+  box-sizing: border-box;
 }
 
 .itemInput:disabled {
-  background-color: #f0f0f0;
-  color: #999;
+  background-color: #ecf0f1;
+  color: #95a5a6;
+}
+
+/* Delete button */
+.itemDeleteBtn {
+  background-color: transparent;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 1.4rem;
+  transition: color 0.3s;
+}
+
+.itemDeleteBtn:hover {
+  color: #c0392b;
 }
 
 /* Buttons */
+.buttonsContainer {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .itemAddBtn,
 .itemSaveBtn {
   padding: 12px 24px;
-  margin-top: 20px;
   background-color: #007bff;
   color: white;
   border: none;
@@ -78,29 +114,14 @@
   transition: background-color 0.3s;
 }
 
-.itemAddBtn:hover,
-.itemSaveBtn:hover {
+.itemAddBtn:hover {
   background-color: #0056b3;
 }
 
 .itemSaveBtn {
   background-color: #28a745;
-  margin-left: 10px;
 }
 
 .itemSaveBtn:hover {
   background-color: #218838;
-}
-
-/* Delete button */
-.itemDeleteBtn {
-  background-color: transparent;
-  border: none;
-  color: #dc3545;
-  cursor: pointer;
-  font-size: 1.2rem;
-}
-
-.itemDeleteBtn:hover {
-  color: #c82333;
 }
