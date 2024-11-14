@@ -8,6 +8,7 @@ const CreateItemWithDimensions = () => {
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const queryClient = useQueryClient();
 
   const {
@@ -29,8 +30,19 @@ const CreateItemWithDimensions = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       setSelectedItem(null);
+      setShowModal(false);
     },
   });
+
+  const handleDeleteClick = () => {
+    if (selectedItem) {
+      setShowModal(true); // Show modal when delete button is clicked
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowModal(false); // Close modal if user cancels
+  };
 
   const saveItemMutation = useMutation({
     mutationFn: async (item) => {
@@ -240,10 +252,27 @@ const CreateItemWithDimensions = () => {
       <div className="additionalInfoContainer">
         <div className="headerContainer">
           <h2 className="itemFormTitle">Saved Items & Dimensions</h2>
-          <button className="deleteButton" onClick={confirmDelete}>
-            <FaTrash />
+          <button className="deleteButton" onClick={handleDeleteClick}>
+            <FaTrash /> Delete
           </button>
         </div>
+        {/* Confirmation Modal */}
+        {showModal && (
+          <div className="modalOverlay">
+            <div className="modalContent">
+              <h3>Confirm Deletion</h3>
+              <p>Are you sure you want to delete this item?</p>
+              <div className="modalButtons">
+                <button className="confirmButton" onClick={confirmDelete}>
+                  Yes
+                </button>
+                <button className="cancelButton" onClick={cancelDelete}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <input
           type="text"

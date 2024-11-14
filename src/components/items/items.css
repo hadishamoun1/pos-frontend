@@ -206,3 +206,88 @@
 .selectedRow {
   background-color: #ffdddd;
 }
+
+/* Modal overlay for dimming background */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal content styling */
+.modalContent {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 300px;
+  max-width: 90%;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Modal heading and message */
+.modalContent h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.modalContent p {
+  font-size: 1rem;
+  color: #7f8c8d;
+  margin-bottom: 20px;
+}
+
+/* Modal buttons */
+.modalButtons {
+  display: flex;
+  justify-content: space-around;
+}
+
+.confirmButton,
+.cancelButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.confirmButton {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.confirmButton:hover {
+  background-color: #c0392b;
+}
+
+.cancelButton {
+  background-color: #bdc3c7;
+  color: white;
+}
+
+.cancelButton:hover {
+  background-color: #95a5a6;
+}
+
+/* Animation for modal appearance */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
