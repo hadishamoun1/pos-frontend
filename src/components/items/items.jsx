@@ -7,6 +7,7 @@ import "./items.css";
 const CreateItemWithDimensions = () => {
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedItem, setSelectedItem] = useState(null);
   const queryClient = useQueryClient();
 
   const {
@@ -18,6 +19,16 @@ const CreateItemWithDimensions = () => {
     queryFn: async () => {
       const { data } = await axios.get("http://localhost:3000/items");
       return data;
+    },
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (itemId) => {
+      await axios.delete(`http://localhost:3000/items/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      setSelectedItem(null);
     },
   });
 
@@ -95,7 +106,6 @@ const CreateItemWithDimensions = () => {
     }
   };
 
-  // Function to filter items based on search query with real-time partial matching
   const filterItems = (items) => {
     if (!searchQuery) return items;
 
@@ -127,6 +137,16 @@ const CreateItemWithDimensions = () => {
   };
 
   const filteredItems = filterItems(fetchedItems);
+
+  const handleRowClick = (item) => {
+    setSelectedItem(item);
+  };
+
+  const confirmDelete = () => {
+    if (selectedItem) {
+      deleteItemMutation.mutate(selectedItem.itemId);
+    }
+  };
 
   return (
     <div className="twoColumnContainer">
@@ -218,9 +238,13 @@ const CreateItemWithDimensions = () => {
       </div>
 
       <div className="additionalInfoContainer">
-        <h2 className="itemFormTitle">Saved Items & Dimensions</h2>
+        <div className="headerContainer">
+          <h2 className="itemFormTitle">Saved Items & Dimensions</h2>
+          <button className="deleteButton" onClick={confirmDelete}>
+            <FaTrash />
+          </button>
+        </div>
 
-        {/* Search Bar */}
         <input
           type="text"
           className="searchInput"
@@ -248,7 +272,13 @@ const CreateItemWithDimensions = () => {
             <tbody>
               {filteredItems.map((item) =>
                 item.dimensions.map((dimension) => (
-                  <tr key={dimension.dimensionId}>
+                  <tr
+                    key={dimension.dimensionId}
+                    onClick={() => handleRowClick(item)}
+                    className={
+                      selectedItem?.itemId === item.itemId ? "selectedRow" : ""
+                    }
+                  >
                     <td>{dimension.origin}</td>
                     <td>{item.itemName}</td>
                     <td>{item.type}</td>

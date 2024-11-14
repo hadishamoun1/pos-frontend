@@ -183,3 +183,26 @@
   color: #6c757d;
   font-style: italic;
 }
+/* Delete button positioned at the top right of the container */
+.deleteButton {
+  background-color: #e74c3c;
+  border: none;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  transition: background-color 0.3s;
+}
+
+.deleteButton:hover {
+  background-color: #c0392b;
+}
+
+/* Highlight selected row */
+.selectedRow {
+  background-color: #ffdddd;
+}
