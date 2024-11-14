@@ -185,25 +185,88 @@
 .delete-button:hover {
   color: #c0392b;
 }
+/* Styles for input with suggestions */
+.input-with-suggestions {
+  position: relative;
+}
+
 .suggestions-box {
   position: absolute;
+  top: 100%;
+  left: 0;
   width: 100%;
-  background-color: #fff;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
+  background-color: white;
+  border: 1px solid #ddd;
   max-height: 150px;
   overflow-y: auto;
-  z-index: 1000;
-  top: calc(100% + 4px);
+  z-index: 10;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .suggestion-item {
-  padding: 10px;
+  padding: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
-  color: #333;
 }
 
 .suggestion-item:hover {
-  background-color: #f1f1f1;
+  background-color: #f0f0f0;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.modal-items-table th,
+.modal-items-table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.modal-items-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+.suggestions-box,
+.select-item-button,
+.close-modal-button {
+  margin-top: 10px;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.select-item-button {
+  background-color: #5bc0de;
+  color: white;
+  border: none;
+}
+
+.close-modal-button {
+  background-color: #d9534f;
+  color: white;
 }

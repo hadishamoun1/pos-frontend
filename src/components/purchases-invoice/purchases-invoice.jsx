@@ -3,72 +3,117 @@ import { useQuery } from "@tanstack/react-query";
 import { FaTrash } from "react-icons/fa";
 import "./purchases-invoice.css";
 
-// Fetch supplier data using React Query
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
   return response.json();
 };
 
+const fetchItems = async () => {
+  const response = await fetch("http://localhost:3000/items");
+  return response.json();
+};
+
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSupplierSuggestions, setShowSupplierSuggestions] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
   const [items, setItems] = useState([]);
   const [vat, setVat] = useState(0);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedItems, setSelectedItems] = useState([]);
 
-  // Use React Query to fetch suppliers
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
     queryFn: fetchSuppliers,
   });
 
-  // Filter suppliers based on the supplierName input
+  const { data: allItems = [] } = useQuery({
+    queryKey: ["items"],
+    queryFn: fetchItems,
+  });
+
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.name.toLowerCase().includes(supplierName.toLowerCase())
   );
 
-  // Add new item to the invoice
-  const addItem = () => {
-    setItems([
-      ...items,
-      {
-        id: Date.now(),
-        itemName: "",
-        origin: "",
-        length: "",
-        width: "",
-        quantity: 1,
-        sheetsPerBox: 1,
-        sqm: 0,
-        unitPrice: "",
-        total: 0,
-      },
-    ]);
+  const openItemModal = () => {
+    setShowItemModal(true);
   };
 
-  // Update item fields and calculate SQM and Total
+  const closeItemModal = () => {
+    const newSelectedItems = selectedItems.map((item) => ({
+      id: Date.now() + Math.random(), // unique id
+      ...item,
+      quantity: 1,
+      sqm: 0,
+      unitPrice: "",
+      total: 0,
+    }));
+    setItems((prevItems) => [...prevItems, ...newSelectedItems]);
+    setSelectedItems([]);
+    setShowItemModal(false);
+  };
+
+  const filteredItems = allItems.filter((item) =>
+    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleCheckboxChange = (item, dimension) => {
+    const isSelected = selectedItems.find(
+      (selectedItem) =>
+        selectedItem.itemName === item.itemName &&
+        selectedItem.origin === dimension.origin &&
+        selectedItem.length === dimension.length &&
+        selectedItem.width === dimension.width
+    );
+
+    if (isSelected) {
+      setSelectedItems(
+        selectedItems.filter(
+          (selectedItem) =>
+            !(
+              selectedItem.itemName === item.itemName &&
+              selectedItem.origin === dimension.origin &&
+              selectedItem.length === dimension.length &&
+              selectedItem.width === dimension.width
+            )
+        )
+      );
+    } else {
+      setSelectedItems([
+        ...selectedItems,
+        {
+          itemName: item.itemName,
+          origin: dimension.origin,
+          length: dimension.length,
+          width: dimension.width,
+          sheetsPerBox: dimension.sheetsPerBox || 1,
+        },
+      ]);
+    }
+  };
+
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
 
     const { length, width, quantity, sheetsPerBox, unitPrice } =
       newItems[index];
-    const sqm = (length * width * quantity * sheetsPerBox) / 10000; // Convert cm² to m²
+    const sqm = (length * width * quantity * sheetsPerBox) / 10000;
     newItems[index].sqm = sqm;
     newItems[index].total = sqm * unitPrice;
 
     setItems(newItems);
   };
 
-  // Delete an item from the invoice
   const deleteItem = (id) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
-  // Calculate total amounts
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
   const vatAmount = totalAmount * (vat / 100);
   const grandTotal = totalAmount + vatAmount;
@@ -88,13 +133,15 @@ const PurchasesInvoicePage = () => {
             value={supplierName}
             onChange={(e) => {
               setSupplierName(e.target.value);
-              setShowSuggestions(true);
+              setShowSupplierSuggestions(true);
             }}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 100)}
+            onFocus={() => setShowSupplierSuggestions(true)}
+            onBlur={() =>
+              setTimeout(() => setShowSupplierSuggestions(false), 100)
+            }
             placeholder="Enter supplier name"
           />
-          {showSuggestions && filteredSuppliers.length > 0 && (
+          {showSupplierSuggestions && filteredSuppliers.length > 0 && (
             <div className="suggestions-box">
               {filteredSuppliers.map((supplier) => (
                 <div
@@ -102,7 +149,7 @@ const PurchasesInvoicePage = () => {
                   className="suggestion-item"
                   onMouseDown={() => {
                     setSupplierName(supplier.name);
-                    setShowSuggestions(false);
+                    setShowSupplierSuggestions(false);
                   }}
                 >
                   {supplier.name}
@@ -150,46 +197,10 @@ const PurchasesInvoicePage = () => {
           <tbody>
             {items.map((item, index) => (
               <tr key={item.id}>
-                <td>
-                  <input
-                    type="text"
-                    value={item.itemName}
-                    onChange={(e) =>
-                      handleItemChange(index, "itemName", e.target.value)
-                    }
-                    placeholder="Enter item name"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={item.origin}
-                    onChange={(e) =>
-                      handleItemChange(index, "origin", e.target.value)
-                    }
-                    placeholder="Enter origin"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={item.length}
-                    onChange={(e) =>
-                      handleItemChange(index, "length", Number(e.target.value))
-                    }
-                    placeholder="Length"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={item.width}
-                    onChange={(e) =>
-                      handleItemChange(index, "width", Number(e.target.value))
-                    }
-                    placeholder="Width"
-                  />
-                </td>
+                <td>{item.itemName}</td>
+                <td>{item.origin}</td>
+                <td>{item.length}</td>
+                <td>{item.width}</td>
                 <td>
                   <input
                     type="number"
@@ -201,23 +212,9 @@ const PurchasesInvoicePage = () => {
                         Number(e.target.value)
                       )
                     }
-                    placeholder="Quantity"
                   />
                 </td>
-                <td>
-                  <input
-                    type="number"
-                    value={item.sheetsPerBox}
-                    onChange={(e) =>
-                      handleItemChange(
-                        index,
-                        "sheetsPerBox",
-                        Number(e.target.value)
-                      )
-                    }
-                    placeholder="Sheets/Box"
-                  />
-                </td>
+                <td>{item.sheetsPerBox}</td>
                 <td>{item.sqm.toFixed(2)}</td>
                 <td>
                   <input
@@ -230,7 +227,6 @@ const PurchasesInvoicePage = () => {
                         Number(e.target.value)
                       )
                     }
-                    placeholder="Unit Price"
                   />
                 </td>
                 <td>{item.total.toFixed(2)}</td>
@@ -246,10 +242,66 @@ const PurchasesInvoicePage = () => {
             ))}
           </tbody>
         </table>
-        <button className="add-item-button" onClick={addItem}>
-          Add Item
+        <button className="select-item-button" onClick={openItemModal}>
+          Select Item
         </button>
       </div>
+
+      {showItemModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Select Items and Dimensions</h3>
+            <input
+              type="text"
+              placeholder="Search for items"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="modal-search"
+            />
+            <table className="modal-items-table">
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Item Name</th>
+                  <th>Origin</th>
+                  <th>Length (cm)</th>
+                  <th>Width (cm)</th>
+                  <th>Sheets/Box</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) =>
+                  item.dimensions.map((dimension) => (
+                    <tr key={`${item.id}-${dimension.dimensionId}`}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          onChange={() => handleCheckboxChange(item, dimension)}
+                          checked={selectedItems.some(
+                            (selectedItem) =>
+                              selectedItem.itemName === item.itemName &&
+                              selectedItem.origin === dimension.origin &&
+                              selectedItem.length === dimension.length &&
+                              selectedItem.width === dimension.width
+                          )}
+                        />
+                      </td>
+                      <td>{item.itemName}</td>
+                      <td>{dimension.origin}</td>
+                      <td>{dimension.length}</td>
+                      <td>{dimension.width}</td>
+                      <td>{dimension.sheetsPerBox || ""}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+            <button className="close-modal-button" onClick={closeItemModal}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="summary-section">
         <label>
