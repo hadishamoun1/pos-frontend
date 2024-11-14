@@ -2,6 +2,7 @@
 .purchase-invoice-container {
   width: 90%;
   max-width: 1200px;
+  height: 89vh;
   margin: 20px auto;
   padding: 30px;
   background-color: #f9fafb;
