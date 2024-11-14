@@ -68,7 +68,8 @@ const PurchasesInvoicePage = () => {
         selectedItem.itemName === item.itemName &&
         selectedItem.origin === dimension.origin &&
         selectedItem.length === dimension.length &&
-        selectedItem.width === dimension.width
+        selectedItem.width === dimension.width &&
+        selectedItem.type === item.type // Ensure both type and item match
     );
 
     if (isSelected) {
@@ -79,7 +80,8 @@ const PurchasesInvoicePage = () => {
               selectedItem.itemName === item.itemName &&
               selectedItem.origin === dimension.origin &&
               selectedItem.length === dimension.length &&
-              selectedItem.width === dimension.width
+              selectedItem.width === dimension.width &&
+              selectedItem.type === item.type
             )
         )
       );
@@ -91,6 +93,7 @@ const PurchasesInvoicePage = () => {
           origin: dimension.origin,
           length: dimension.length,
           width: dimension.width,
+          type: item.type,
           sheetsPerBox: dimension.sheetsPerBox || 1,
         },
       ]);
@@ -263,6 +266,7 @@ const PurchasesInvoicePage = () => {
                 <tr>
                   <th>Select</th>
                   <th>Item Name</th>
+                  <th>Type</th>
                   <th>Origin</th>
                   <th>Length (cm)</th>
                   <th>Width (cm)</th>
@@ -282,11 +286,13 @@ const PurchasesInvoicePage = () => {
                               selectedItem.itemName === item.itemName &&
                               selectedItem.origin === dimension.origin &&
                               selectedItem.length === dimension.length &&
-                              selectedItem.width === dimension.width
+                              selectedItem.width === dimension.width &&
+                              selectedItem.type === item.type
                           )}
                         />
                       </td>
                       <td>{item.itemName}</td>
+                      <td>{item.type}</td>
                       <td>{dimension.origin}</td>
                       <td>{dimension.length}</td>
                       <td>{dimension.width}</td>
