@@ -69,7 +69,7 @@ const PurchasesInvoicePage = () => {
         selectedItem.origin === dimension.origin &&
         selectedItem.length === dimension.length &&
         selectedItem.width === dimension.width &&
-        selectedItem.type === item.type // Ensure both type and item match
+        selectedItem.type === item.type
     );
 
     if (isSelected) {
@@ -181,15 +181,18 @@ const PurchasesInvoicePage = () => {
       </div>
 
       <div className="items-table">
-        <div className="separator"><h3>Items</h3>
-        <button className="select-item-button" onClick={openItemModal}>
-          Select Item
-        </button></div>
-        
+        <div className="separator">
+          <h3>Items</h3>
+          <button className="select-item-button" onClick={openItemModal}>
+            Select Item
+          </button>
+        </div>
+
         <table>
           <thead>
             <tr>
               <th>Item Name</th>
+              <th>Type</th>
               <th>Origin</th>
               <th>Length (cm)</th>
               <th>Width (cm)</th>
@@ -205,6 +208,7 @@ const PurchasesInvoicePage = () => {
             {items.map((item, index) => (
               <tr key={item.id}>
                 <td>{item.itemName}</td>
+                <td>{item.type}</td>
                 <td>{item.origin}</td>
                 <td>{item.length}</td>
                 <td>{item.width}</td>
@@ -221,7 +225,7 @@ const PurchasesInvoicePage = () => {
                     }
                   />
                 </td>
-                <td>{item.sheetsPerBox}</td>
+                <td>{item.type === "box" ? item.sheetsPerBox : ""}</td>
                 <td>{item.sqm.toFixed(2)}</td>
                 <td>
                   <input
@@ -249,7 +253,6 @@ const PurchasesInvoicePage = () => {
             ))}
           </tbody>
         </table>
-       
       </div>
 
       {showItemModal && (

@@ -80,8 +80,8 @@
 .items-table {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Allow the table section to take up the available height */
-  overflow: auto; /* Prevent overflow of the entire section */
+  height: 100%; 
+  overflow: auto;
 }
 .items-table h3 {
   font-size: 1.25rem;
