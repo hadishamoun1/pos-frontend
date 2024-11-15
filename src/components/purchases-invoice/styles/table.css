@@ -1,97 +1,112 @@
 /* Items Table Styling */
 .items-table {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: auto;
-  }
-  
-  .items-table h3 {
-    font-size: 1.25rem;
-    color: #333;
-    margin-bottom: 10px;
-  }
-  
-  .items-table table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-  }
-  
-  .items-table th,
-  .items-table td {
-    padding: 12px;
-    border: 1px solid #ddd;
-    text-align: left;
-    font-size: 0.95rem;
-  }
-  
-  .items-table th {
-    background-color: #007bff;
-    color: #fff;
-    font-weight: 600;
-    position: sticky;
-  }
-  
-  .items-table td input {
-    width: 90%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #333;
-  }
-  
-  .add-item-button {
-    display: inline-block;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding: 10px 20px;
-    background-color: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  .add-item-button:hover {
-    background-color: #218838;
-  }
-  
-  /* Checkbox-specific cells */
-  .checkbox-cell {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  /* Style for the checkbox */
-  input[type="checkbox"] {
-    appearance: none;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #007bff;
-    border-radius: 4px;
-    background-color: white;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background-color 0.2s ease;
-  }
-  
-  input[type="checkbox"]:checked {
-    background-color: #007bff;
-    border-color: #0056b3;
-  }
-  
-  input[type="checkbox"]:checked::after {
-    content: "✔";
-    color: white;
-    font-size: 14px;
-    line-height: 1;
-    position: absolute;
-  }
-  
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+}
+
+.items-table h3 {
+  font-size: 1.25rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.items-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.items-table th,
+.items-table td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.items-table th {
+  background-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+  position: sticky;
+}
+
+.items-table td input {
+  width: 90%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.add-item-button {
+  display: inline-block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-item-button:hover {
+  background-color: #218838;
+}
+
+/* Checkbox-specific cells */
+.checkbox-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Style for the checkbox */
+input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #007bff;
+  border-color: #0056b3;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✔";
+  color: white;
+  font-size: 14px;
+  line-height: 1;
+  position: absolute;
+}
+.select-item-button {
+  background-color: #5bc0de;
+  color: white;
+  border: none;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.separator {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
