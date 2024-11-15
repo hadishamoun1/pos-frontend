@@ -181,7 +181,11 @@ const PurchasesInvoicePage = () => {
       </div>
 
       <div className="items-table">
-        <h3>Items</h3>
+        <div className="separator"><h3>Items</h3>
+        <button className="select-item-button" onClick={openItemModal}>
+          Select Item
+        </button></div>
+        
         <table>
           <thead>
             <tr>
@@ -245,9 +249,7 @@ const PurchasesInvoicePage = () => {
             ))}
           </tbody>
         </table>
-        <button className="select-item-button" onClick={openItemModal}>
-          Select Item
-        </button>
+       
       </div>
 
       {showItemModal && (
