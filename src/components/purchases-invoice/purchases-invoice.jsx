@@ -4,7 +4,13 @@ import SupplierInput from "./SupplierInput";
 import ItemsTable from "./ItemsTable";
 import ItemModal from "./ItemModel";
 import SummarySection from "./SummarySelection";
-import "./purchases-invoice.css";
+import './styles/container.css';
+import './styles/header.css';
+import './styles/details.css';
+import './styles/table.css';
+import './styles/model.css';
+import './styles/summary.css';
+
 
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");

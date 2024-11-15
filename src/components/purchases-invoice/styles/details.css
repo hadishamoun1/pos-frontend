@@ -1,0 +1,32 @@
+/* Invoice Details Section */
+.invoice-details {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+  }
+  
+  .invoice-details label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.9rem;
+    color: #666;
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .invoice-details input {
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #333;
+    transition: border-color 0.3s;
+  }
+  
+  .invoice-details input:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+  
