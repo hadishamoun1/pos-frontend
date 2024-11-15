@@ -80,7 +80,7 @@
 .items-table {
   display: flex;
   flex-direction: column;
-  height: 100%; 
+  height: 100%;
   overflow: auto;
 }
 .items-table h3 {
@@ -332,4 +332,42 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+}
+
+/* Parent cell for checkbox */
+.checkbox-cell {
+  display: flex; /* Use flexbox */
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+}
+
+/* Style for the checkbox */
+input[type="checkbox"] {
+  appearance: none; /* Remove default styles */
+  width: 20px; /* Width of the checkbox */
+  height: 20px; /* Height of the checkbox */
+  border: 2px solid #007bff; /* Border color */
+  border-radius: 4px; /* Optional: Rounded corners */
+  background-color: white; /* Background color */
+  cursor: pointer; /* Show pointer cursor */
+  position: relative; /* For pseudo-element positioning */
+  display: flex; /* Align pseudo-elements */
+  justify-content: center; /* Center pseudo-element */
+  align-items: center; /* Center pseudo-element */
+  transition: background-color 0.2s ease;
+}
+
+/* Checked state styling */
+input[type="checkbox"]:checked {
+  background-color: #007bff; /* Background color for checked state */
+  border-color: #0056b3; /* Border color for checked state */
+}
+
+/* Checkmark styling */
+input[type="checkbox"]:checked::after {
+  content: "✔"; /* Unicode for checkmark */
+  color: white; /* Color of the checkmark */
+  font-size: 14px; /* Adjust size of the checkmark */
+  line-height: 1; /* Ensure proper alignment */
+  position: absolute; /* Positioned within the checkbox */
 }

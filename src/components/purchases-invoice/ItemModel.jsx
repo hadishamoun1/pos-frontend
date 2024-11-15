@@ -36,7 +36,7 @@ const ItemModal = ({
               {filteredItems.map((item) =>
                 item.dimensions.map((dimension) => (
                   <tr key={`${item.id}-${dimension.dimensionId}`}>
-                    <td>
+                    <td className="checkbox-cell">
                       <input
                         type="checkbox"
                         onChange={() => handleCheckboxChange(item, dimension)}
