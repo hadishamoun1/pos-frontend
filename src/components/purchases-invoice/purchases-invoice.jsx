@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FaTrash } from "react-icons/fa";
+import SupplierInput from "./SupplierInput";
+import ItemsTable from "./ItemsTable";
+import ItemModal from "./ItemModel";
+import SummarySection from "./SummarySelection";
 import "./purchases-invoice.css";
 
 const fetchSuppliers = async () => {
@@ -40,30 +43,12 @@ const PurchasesInvoicePage = () => {
     supplier.name.toLowerCase().includes(supplierName.toLowerCase())
   );
 
-  const openItemModal = () => {
-    setShowItemModal(true);
-  };
-
-  const closeItemModal = () => {
-    const newSelectedItems = selectedItems.map((item) => ({
-      id: Date.now() + Math.random(), // unique id
-      ...item,
-      quantity: 1,
-      sqm: 0,
-      unitPrice: "",
-      total: 0,
-    }));
-    setItems((prevItems) => [...prevItems, ...newSelectedItems]);
-    setSelectedItems([]);
-    setShowItemModal(false);
-  };
-
   const filteredItems = allItems.filter((item) =>
     item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCheckboxChange = (item, dimension) => {
-    const isSelected = selectedItems.find(
+    const isSelected = selectedItems.some(
       (selectedItem) =>
         selectedItem.itemName === item.itemName &&
         selectedItem.origin === dimension.origin &&
@@ -100,21 +85,18 @@ const PurchasesInvoicePage = () => {
     }
   };
 
-  const handleItemChange = (index, field, value) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-
-    const { length, width, quantity, sheetsPerBox, unitPrice } =
-      newItems[index];
-    const sqm = (length * width * quantity * sheetsPerBox) / 10000;
-    newItems[index].sqm = sqm;
-    newItems[index].total = sqm * unitPrice;
-
-    setItems(newItems);
-  };
-
-  const deleteItem = (id) => {
-    setItems(items.filter((item) => item.id !== id));
+  const closeItemModal = () => {
+    const newSelectedItems = selectedItems.map((item) => ({
+      id: Date.now() + Math.random(),
+      ...item,
+      quantity: 1,
+      sqm: 0,
+      unitPrice: "",
+      total: 0,
+    }));
+    setItems((prevItems) => [...prevItems, ...newSelectedItems]);
+    setSelectedItems([]);
+    setShowItemModal(false);
   };
 
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
@@ -129,38 +111,13 @@ const PurchasesInvoicePage = () => {
       </div>
 
       <div className="invoice-details">
-        <label style={{ position: "relative" }}>
-          Supplier Name
-          <input
-            type="text"
-            value={supplierName}
-            onChange={(e) => {
-              setSupplierName(e.target.value);
-              setShowSupplierSuggestions(true);
-            }}
-            onFocus={() => setShowSupplierSuggestions(true)}
-            onBlur={() =>
-              setTimeout(() => setShowSupplierSuggestions(false), 100)
-            }
-            placeholder="Enter supplier name"
-          />
-          {showSupplierSuggestions && filteredSuppliers.length > 0 && (
-            <div className="suggestions-box">
-              {filteredSuppliers.map((supplier) => (
-                <div
-                  key={supplier.id}
-                  className="suggestion-item"
-                  onMouseDown={() => {
-                    setSupplierName(supplier.name);
-                    setShowSupplierSuggestions(false);
-                  }}
-                >
-                  {supplier.name}
-                </div>
-              ))}
-            </div>
-          )}
-        </label>
+        <SupplierInput
+          supplierName={supplierName}
+          setSupplierName={setSupplierName}
+          filteredSuppliers={filteredSuppliers}
+          showSupplierSuggestions={showSupplierSuggestions}
+          setShowSupplierSuggestions={setShowSupplierSuggestions}
+        />
         <label>
           Invoice Number
           <input
@@ -180,159 +137,30 @@ const PurchasesInvoicePage = () => {
         </label>
       </div>
 
-      <div className="items-table">
-        <div className="separator">
-          <h3>Items</h3>
-          <button className="select-item-button" onClick={openItemModal}>
-            Select Item
-          </button>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Item Name</th>
-              <th>Type</th>
-              <th>Origin</th>
-              <th>Length (cm)</th>
-              <th>Width (cm)</th>
-              <th>Quantity</th>
-              <th>Sheets/Box</th>
-              <th>SQM</th>
-              <th>Unit Price</th>
-              <th>Total</th>
-              <th>Delete</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={item.id}>
-                <td>{item.itemName}</td>
-                <td>{item.type}</td>
-                <td>{item.origin}</td>
-                <td>{item.length}</td>
-                <td>{item.width}</td>
-                <td>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      handleItemChange(
-                        index,
-                        "quantity",
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </td>
-                <td>{item.type === "box" ? item.sheetsPerBox : ""}</td>
-                <td>{item.sqm.toFixed(2)}</td>
-                <td>
-                  <input
-                    type="number"
-                    value={item.unitPrice}
-                    onChange={(e) =>
-                      handleItemChange(
-                        index,
-                        "unitPrice",
-                        Number(e.target.value)
-                      )
-                    }
-                  />
-                </td>
-                <td>{item.total.toFixed(2)}</td>
-                <td>
-                  <button
-                    className="delete-button"
-                    onClick={() => deleteItem(item.id)}
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ItemsTable
+        items={items}
+        setItems={setItems}
+        openItemModal={() => setShowItemModal(true)}
+      />
 
       {showItemModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Select Items and Dimensions</h3>
-            <input
-              type="text"
-              placeholder="Search for items"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="modal-search"
-            />
-            <div className="modal-items-table-container">
-              <table className="modal-items-table">
-                <thead>
-                  <tr>
-                    <th>Select</th>
-                    <th>Item Name</th>
-                    <th>Type</th>
-                    <th>Origin</th>
-                    <th>Length (cm)</th>
-                    <th>Width (cm)</th>
-                    <th>Sheets/Box</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item) =>
-                    item.dimensions.map((dimension) => (
-                      <tr key={`${item.id}-${dimension.dimensionId}`}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            onChange={() =>
-                              handleCheckboxChange(item, dimension)
-                            }
-                            checked={selectedItems.some(
-                              (selectedItem) =>
-                                selectedItem.itemName === item.itemName &&
-                                selectedItem.origin === dimension.origin &&
-                                selectedItem.length === dimension.length &&
-                                selectedItem.width === dimension.width &&
-                                selectedItem.type === item.type
-                            )}
-                          />
-                        </td>
-                        <td>{item.itemName}</td>
-                        <td>{item.type}</td>
-                        <td>{dimension.origin}</td>
-                        <td>{dimension.length}</td>
-                        <td>{dimension.width}</td>
-                        <td>{dimension.sheetsPerBox || ""}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <button className="close-modal-button" onClick={closeItemModal}>
-              Close
-            </button>
-          </div>
-        </div>
+        <ItemModal
+          filteredItems={filteredItems}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedItems={selectedItems}
+          handleCheckboxChange={handleCheckboxChange}
+          closeItemModal={closeItemModal}
+        />
       )}
 
-      <div className="summary-section">
-        <label>
-          VAT
-          <select value={vat} onChange={(e) => setVat(Number(e.target.value))}>
-            <option value="0">0%</option>
-            <option value="6">6%</option>
-            <option value="11">11%</option>
-          </select>
-        </label>
-        <div className="totals">
-          <p>Total Amount: ${totalAmount.toFixed(2)}</p>
-          <p>VAT Amount: ${vatAmount.toFixed(2)}</p>
-          <p>Grand Total: ${grandTotal.toFixed(2)}</p>
-        </div>
-      </div>
+      <SummarySection
+        vat={vat}
+        setVat={setVat}
+        totalAmount={totalAmount}
+        vatAmount={vatAmount}
+        grandTotal={grandTotal}
+      />
     </div>
   );
 };
