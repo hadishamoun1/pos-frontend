@@ -210,7 +210,7 @@ const PurchasesInvoicePage = () => {
                   setSelectedType("S");
                   saveInvoice("S");
                 }}
-                className="invoice-type-button"
+                className="invoice-S-type-button"
               >
                 S
               </button>
@@ -219,7 +219,7 @@ const PurchasesInvoicePage = () => {
                   setSelectedType("G");
                   saveInvoice("G");
                 }}
-                className="invoice-type-button"
+                className="invoice-G-type-button"
               >
                 G
               </button>
