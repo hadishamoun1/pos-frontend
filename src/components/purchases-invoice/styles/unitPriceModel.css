@@ -1,0 +1,81 @@
+.unit-price-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .unit-price-modal-content {
+    background: #fff;
+    padding: 20px;
+    width: 400px;
+    max-width: 90%;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    text-align: center;
+  }
+  
+  .unit-price-modal-content h3 {
+    margin-top: 0;
+    font-size: 1.5rem;
+    color: #333;
+  }
+  
+  .modal-body {
+    margin: 20px 0;
+  }
+  
+  .modal-body label {
+    font-size: 1rem;
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  .modal-body input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  .save-button,
+  .cancel-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .save-button {
+    background: #007bff;
+    color: #fff;
+  }
+  
+  .save-button:hover {
+    background: #0056b3;
+  }
+  
+  .cancel-button {
+    background: #e74c3c;
+    color: #fff;
+  }
+  
+  .cancel-button:hover {
+    background: #c0392b;
+  }
+  

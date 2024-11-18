@@ -13,6 +13,7 @@ import "./styles/summary.css";
 import "./styles/invoiceModel.css";
 import axios from "axios";
 
+
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
   return response.json();

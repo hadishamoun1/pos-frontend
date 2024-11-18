@@ -1,7 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaTrash } from "react-icons/fa";
+import UnitPriceModal from "./unitPriceModel";
 
 const ItemsTable = ({ items, setItems, openItemModal }) => {
+  const [isModalVisible, setModalVisible] = useState(false); // Modal visibility state
+  const [currentItemIndex, setCurrentItemIndex] = useState(null); // Current item being edited
+
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
@@ -17,6 +21,11 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
 
   const deleteItem = (id) => {
     setItems(items.filter((item) => item.id !== id));
+  };
+
+  const openModal = (index) => {
+    setCurrentItemIndex(index); // Set the current item index
+    setModalVisible(true); // Show the modal
   };
 
   return (
@@ -67,9 +76,8 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
                 <input
                   type="number"
                   value={item.unitPrice}
-                  onChange={(e) =>
-                    handleItemChange(index, "unitPrice", Number(e.target.value))
-                  }
+                  onClick={() => openModal(index)} // Open modal on click
+                  readOnly // Prevent direct input to the field
                 />
               </td>
               <td>{item.total.toFixed(2)}</td>
@@ -85,6 +93,19 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
           ))}
         </tbody>
       </table>
+
+      {/* Unit Price Modal */}
+      <UnitPriceModal
+        isVisible={isModalVisible}
+        onClose={() => setModalVisible(false)}
+        item={currentItemIndex !== null ? items[currentItemIndex] : null} // Pass current item
+        onSave={(unitPrice) => {
+          if (currentItemIndex !== null) {
+            handleItemChange(currentItemIndex, "unitPrice", unitPrice);
+          }
+          setModalVisible(false);
+        }}
+      />
     </div>
   );
 };
