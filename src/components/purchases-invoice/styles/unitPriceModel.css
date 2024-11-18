@@ -49,7 +49,7 @@
 .field-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
+  gap: 25px;
 }
 
 .field {
@@ -58,16 +58,16 @@
 }
 
 .field label {
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   color: #555;
   margin-bottom: 5px;
   font-weight: bold;
 }
 
 .field input {
-  width: 100%;
+  width: 90%;
   padding: 10px;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   transition: border-color 0.3s;
@@ -93,12 +93,12 @@
 }
 
 .total-row .total-field:last-child {
-  margin-right: 0;
+  margin-right: 15px;
 }
 
 .total-row input {
   text-align: right;
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: bold;
   border: none;
   background-color: #f4f4f4;
@@ -118,7 +118,7 @@
   margin-top: 30px;
 }
 
-.save-button,
+.price-save-button,
 .cancel-button {
   padding: 12px 30px;
   border: none;
@@ -129,12 +129,12 @@
   transition: all 0.3s ease;
 }
 
-.save-button {
+.price-save-button {
   background: #28a745;
   color: #fff;
 }
 
-.save-button:hover {
+.price-save-button:hover {
   background: #218838;
 }
 
@@ -164,4 +164,90 @@
   .total-row .total-field:last-child {
     margin-bottom: 0;
   }
+}
+/* Dropdown styling */
+.currency-select {
+  appearance: none;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+  color: #333;
+  font-size: 20px;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.currency-select:hover {
+  border-color: #007bff;
+  background-color: #e6f4ff;
+}
+
+.currency-select:focus {
+  outline: none;
+  border-color: #007bff;
+  background-color: #e6f4ff;
+}
+
+/* Dropdown container for alignment */
+.dropdown-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.converted-amount {
+  font-size: 15px;
+  color: #555;
+  background-color: #f5f5f5;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+.unit-price-modal-content input:focus {
+  background-color: #f0f8ff; /* Light blue background for focus */
+  border-color: #007bff;
+  outline: none;
+}
+
+.total-row input {
+  text-align: right;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  background-color: #f9f9f9;
+  padding: 5px 10px;
+  border-radius: 4px;
+  max-width: 130px;
+  border: 2px solid red;
+   
+}
+
+.total-row label {
+  display: inline-block;
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-right: 10px;
+}
+
+.total-row .total-field {
+  display: flex;
+  align-items: center; 
+}
+
+.field input {
+  width: 90%;
+  padding: 10px;
+  font-size: 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.field input:focus {
+  background-color: #cfe7fd;
+  border-color: #007bff;
+  outline: none;
 }

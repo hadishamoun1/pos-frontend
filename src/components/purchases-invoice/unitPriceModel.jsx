@@ -1,21 +1,29 @@
 import React, { useState } from "react";
-import "./styles/unitPriceModal.css";
+import "./styles/unitPriceModel.css";
 
 const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   const [invoiceAmount, setInvoiceAmount] = useState(0);
   const [shippingTerms, setShippingTerms] = useState("");
   const [customs, setCustoms] = useState(0);
+  const [customsCurrency, setCustomsCurrency] = useState("USD"); // Currency for customs
   const [tva, setTva] = useState(0);
+  const [tvaCurrency, setTvaCurrency] = useState("USD"); // Currency for TVA
+  const [exchangeRate, setExchangeRate] = useState(1); // Exchange rate for conversion
   const [fio, setFio] = useState(0);
   const [fioTva, setFioTva] = useState(0);
   const [transport, setTransport] = useState(0);
   const [transportTva, setTransportTva] = useState(0);
   const [transferFees, setTransferFees] = useState(0);
 
+  // Convert customs and TVA to USD if their currency is LL
+  const convertedCustoms =
+    customsCurrency === "LL" ? customs / exchangeRate : customs;
+  const convertedTva = tvaCurrency === "LL" ? tva / exchangeRate : tva;
+
   // Derived calculations
-  const totalInvoiceAmount = invoiceAmount + invoiceAmount * 0.1; // Example logic: add 10% shipping terms
-  const totalFees = customs + fio + transport + transferFees;
-  const totalTva = tva + fioTva + transportTva;
+  const totalInvoiceAmount = invoiceAmount + shippingTerms;
+  const totalFees = convertedCustoms + fio + transport + transferFees;
+  const totalTva = convertedTva + fioTva + transportTva;
 
   if (!isVisible) return null;
 
@@ -23,8 +31,8 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
     onSave({
       invoiceAmount,
       shippingTerms,
-      customs,
-      tva,
+      customs: convertedCustoms,
+      tva: convertedTva,
       fio,
       fioTva,
       transport,
@@ -54,22 +62,18 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               />
             </div>
             <div className="field">
-              <label>Shipping Terms</label>
+              <label>Shipping Cost</label>
               <input
-                type="text"
+                type="number"
                 value={shippingTerms}
-                onChange={(e) => setShippingTerms(e.target.value)}
+                onChange={(e) => setShippingTerms(Number(e.target.value))}
               />
             </div>
           </div>
           <div className="total-row">
             <div className="total-field">
               <label>Total Invoice Amount</label>
-              <input
-                type="number"
-                value={totalInvoiceAmount.toFixed(2)}
-                readOnly
-              />
+              <input type="number" value={totalInvoiceAmount} readOnly />
             </div>
           </div>
         </div>
@@ -80,18 +84,58 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
           <div className="field-grid">
             <div className="field">
               <label>Customs</label>
-              <input
-                type="number"
-                value={customs}
-                onChange={(e) => setCustoms(Number(e.target.value))}
-              />
+              <div className="dropdown-container">
+                <input
+                  type="number"
+                  value={customs}
+                  onChange={(e) => setCustoms(Number(e.target.value))}
+                />
+                <select
+                  value={customsCurrency}
+                  onChange={(e) => setCustomsCurrency(e.target.value)}
+                  className="currency-select"
+                >
+                  <option value="USD">USD</option>
+                  <option value="LL">LL</option>
+                </select>
+                <span className="converted-amount">
+                  {customsCurrency === "LL"
+                    ? `${(customs / exchangeRate).toFixed(2)} USD`
+                    : `${customs.toFixed(2)} USD`}
+                </span>
+              </div>
             </div>
+
             <div className="field">
               <label>TVA</label>
+              <div className="dropdown-container">
+                <input
+                  type="number"
+                  value={tva}
+                  onChange={(e) => setTva(Number(e.target.value))}
+                />
+                <select
+                  value={tvaCurrency}
+                  onChange={(e) => setTvaCurrency(e.target.value)}
+                  className="currency-select"
+                >
+                  <option value="USD">USD</option>
+                  <option value="LL">LL</option>
+                </select>
+                <span className="converted-amount">
+                  {tvaCurrency === "LL"
+                    ? `${(tva / exchangeRate).toFixed(2)} USD`
+                    : `${tva.toFixed(2)} USD`}
+                </span>
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Exchange Rate</label>
               <input
                 type="number"
-                value={tva}
-                onChange={(e) => setTva(Number(e.target.value))}
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(Number(e.target.value))}
               />
             </div>
             <div className="field">
