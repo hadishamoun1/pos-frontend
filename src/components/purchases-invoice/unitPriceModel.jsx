@@ -81,11 +81,12 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
         {/* Fees & Taxes Section */}
         <div className="section">
           <div className="section-title">Fees & Taxes</div>
-          <div className="field-grid">
+          <div className="field-grid  customs-tva-row">
             <div className="field">
               <label>Customs</label>
               <div className="dropdown-container">
                 <input
+                  className="customs-input"
                   type="number"
                   value={customs}
                   onChange={(e) => setCustoms(Number(e.target.value))}
@@ -110,6 +111,7 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <label>TVA</label>
               <div className="dropdown-container">
                 <input
+                  className="tva-input"
                   type="number"
                   value={tva}
                   onChange={(e) => setTva(Number(e.target.value))}
@@ -130,7 +132,7 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               </div>
             </div>
 
-            <div className="field">
+            <div className="exchange-rate-field">
               <label>Exchange Rate</label>
               <input
                 type="number"
