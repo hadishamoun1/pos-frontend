@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./styles/unitPriceModal.css";
+import "./styles/unitPriceModel.css";
 
 const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   const [unitPrice, setUnitPrice] = useState(item?.unitPrice || "");
