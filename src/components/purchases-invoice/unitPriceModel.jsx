@@ -55,25 +55,34 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
           <div className="field-grid">
             <div className="field">
               <label>Invoice Amount</label>
-              <input
-                type="number"
-                value={invoiceAmount}
-                onChange={(e) => setInvoiceAmount(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={invoiceAmount}
+                  onChange={(e) => setInvoiceAmount(Number(e.target.value))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>Shipping Cost</label>
-              <input
-                type="number"
-                value={shippingTerms}
-                onChange={(e) => setShippingTerms(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={shippingTerms}
+                  onChange={(e) => setShippingTerms(Number(e.target.value))}
+                />
+              </div>
             </div>
           </div>
           <div className="total-row">
             <div className="total-field">
               <label>Total Invoice Amount</label>
-              <input type="number" value={totalInvoiceAmount} readOnly />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input type="number" value={totalInvoiceAmount} readOnly />
+              </div>
             </div>
           </div>
         </div>
@@ -81,16 +90,19 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
         {/* Fees & Taxes Section */}
         <div className="section">
           <div className="section-title">Fees & Taxes</div>
-          <div className="field-grid  customs-tva-row">
+          <div className="field-grid customs-tva-row">
             <div className="field">
               <label>Customs</label>
               <div className="dropdown-container">
-                <input
-                  className="customs-input"
-                  type="number"
-                  value={customs}
-                  onChange={(e) => setCustoms(Number(e.target.value))}
-                />
+                <div className="input-with-prefix">
+                  <span className="input-prefix">$</span>
+                  <input
+                    className="customs-input"
+                    type="number"
+                    value={customs}
+                    onChange={(e) => setCustoms(Number(e.target.value))}
+                  />
+                </div>
                 <select
                   value={customsCurrency}
                   onChange={(e) => setCustomsCurrency(e.target.value)}
@@ -110,12 +122,15 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
             <div className="field">
               <label>TVA</label>
               <div className="dropdown-container">
-                <input
-                  className="tva-input"
-                  type="number"
-                  value={tva}
-                  onChange={(e) => setTva(Number(e.target.value))}
-                />
+                <div className="input-with-prefix">
+                  <span className="input-prefix">$</span>
+                  <input
+                    className="tva-input"
+                    type="number"
+                    value={tva}
+                    onChange={(e) => setTva(Number(e.target.value))}
+                  />
+                </div>
                 <select
                   value={tvaCurrency}
                   onChange={(e) => setTvaCurrency(e.target.value)}
@@ -142,53 +157,74 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
             </div>
             <div className="field">
               <label>FIO</label>
-              <input
-                type="number"
-                value={fio}
-                onChange={(e) => setFio(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={fio}
+                  onChange={(e) => setFio(Number(e.target.value))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>FIO TVA</label>
-              <input
-                type="number"
-                value={fioTva}
-                onChange={(e) => setFioTva(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={fioTva}
+                  onChange={(e) => setFioTva(Number(e.target.value))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>Transport</label>
-              <input
-                type="number"
-                value={transport}
-                onChange={(e) => setTransport(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={transport}
+                  onChange={(e) => setTransport(Number(e.target.value))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>Transport TVA</label>
-              <input
-                type="number"
-                value={transportTva}
-                onChange={(e) => setTransportTva(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={transportTva}
+                  onChange={(e) => setTransportTva(Number(e.target.value))}
+                />
+              </div>
             </div>
             <div className="field">
               <label>Transfer Fees</label>
-              <input
-                type="number"
-                value={transferFees}
-                onChange={(e) => setTransferFees(Number(e.target.value))}
-              />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="number"
+                  value={transferFees}
+                  onChange={(e) => setTransferFees(Number(e.target.value))}
+                />
+              </div>
             </div>
           </div>
           <div className="total-row">
             <div className="total-field">
               <label>Total Fees</label>
-              <input type="number" value={totalFees.toFixed(2)} readOnly />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input type="number" value={totalFees.toFixed(2)} readOnly />
+              </div>
             </div>
             <div className="total-field">
               <label>Total TVA</label>
-              <input type="number" value={totalTva.toFixed(2)} readOnly />
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input type="number" value={totalTva.toFixed(2)} readOnly />
+              </div>
             </div>
           </div>
         </div>
