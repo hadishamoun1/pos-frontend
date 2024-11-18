@@ -10,6 +10,7 @@ import "./styles/details.css";
 import "./styles/table.css";
 import "./styles/model.css";
 import "./styles/summary.css";
+import "./styles/invoiceModel.css";
 import axios from "axios";
 
 const fetchSuppliers = async () => {
@@ -77,7 +78,7 @@ const PurchasesInvoicePage = () => {
         ...selectedItems,
         {
           itemName: item.itemName,
-          dimensionId: dimension.dimensionId, 
+          dimensionId: dimension.dimensionId,
           origin: dimension.origin,
           length: dimension.length,
           width: dimension.width,
@@ -200,16 +201,16 @@ const PurchasesInvoicePage = () => {
       )}
 
       {showTypePopup && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className="invoice-type-modal-overlay">
+          <div className="invoice-type-modal-content">
             <h3>Select Invoice Type</h3>
-            <div className="type-selection-buttons">
+            <div className="invoice-type-selection-buttons">
               <button
                 onClick={() => {
                   setSelectedType("S");
                   saveInvoice("S");
                 }}
-                className="type-button"
+                className="invoice-type-button"
               >
                 S
               </button>
@@ -218,13 +219,13 @@ const PurchasesInvoicePage = () => {
                   setSelectedType("G");
                   saveInvoice("G");
                 }}
-                className="type-button"
+                className="invoice-type-button"
               >
                 G
               </button>
             </div>
             <button
-              className="close-modal-button"
+              className="invoice-type-close-button"
               onClick={() => setShowTypePopup(false)}
             >
               Cancel
