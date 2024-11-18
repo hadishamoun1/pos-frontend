@@ -4,13 +4,13 @@ import SupplierInput from "./SupplierInput";
 import ItemsTable from "./ItemsTable";
 import ItemModal from "./ItemModel";
 import SummarySection from "./SummarySelection";
-import './styles/container.css';
-import './styles/header.css';
-import './styles/details.css';
-import './styles/table.css';
-import './styles/model.css';
-import './styles/summary.css';
-
+import "./styles/container.css";
+import "./styles/header.css";
+import "./styles/details.css";
+import "./styles/table.css";
+import "./styles/model.css";
+import "./styles/summary.css";
+import axios from "axios";
 
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
@@ -25,15 +25,17 @@ const fetchItems = async () => {
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
   const [showSupplierSuggestions, setShowSupplierSuggestions] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
   const [items, setItems] = useState([]);
   const [vat, setVat] = useState(0);
+  const [exchangeRate, setExchangeRate] = useState(1.5); // Add exchangeRate state
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showTypePopup, setShowTypePopup] = useState(false); // For type selection popup
+  const [selectedType, setSelectedType] = useState(""); // For storing selected type
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -57,10 +59,7 @@ const PurchasesInvoicePage = () => {
     const isSelected = selectedItems.some(
       (selectedItem) =>
         selectedItem.itemName === item.itemName &&
-        selectedItem.origin === dimension.origin &&
-        selectedItem.length === dimension.length &&
-        selectedItem.width === dimension.width &&
-        selectedItem.type === item.type
+        selectedItem.dimensionId === dimension.dimensionId
     );
 
     if (isSelected) {
@@ -69,10 +68,7 @@ const PurchasesInvoicePage = () => {
           (selectedItem) =>
             !(
               selectedItem.itemName === item.itemName &&
-              selectedItem.origin === dimension.origin &&
-              selectedItem.length === dimension.length &&
-              selectedItem.width === dimension.width &&
-              selectedItem.type === item.type
+              selectedItem.dimensionId === dimension.dimensionId
             )
         )
       );
@@ -81,6 +77,7 @@ const PurchasesInvoicePage = () => {
         ...selectedItems,
         {
           itemName: item.itemName,
+          dimensionId: dimension.dimensionId, 
           origin: dimension.origin,
           length: dimension.length,
           width: dimension.width,
@@ -96,13 +93,54 @@ const PurchasesInvoicePage = () => {
       id: Date.now() + Math.random(),
       ...item,
       quantity: 1,
-      sqm: 0,
+      sqm: (item.length * item.width * item.quantity) / 10000,
       unitPrice: "",
       total: 0,
     }));
     setItems((prevItems) => [...prevItems, ...newSelectedItems]);
     setSelectedItems([]);
     setShowItemModal(false);
+  };
+
+  const handleSaveButtonClick = () => {
+    setShowTypePopup(true); // Show the type selection popup
+  };
+
+  const saveInvoice = async (type) => {
+    try {
+      const invoiceData = {
+        supplierName,
+        vatAmount,
+        grandAmount: totalAmount + vatAmount,
+        exchangeRate,
+        date: invoiceDate,
+        type, // Use the passed type instead of relying on state
+        items: items.map((item) => ({
+          itemName: item.itemName,
+          dimensionId: item.dimensionId,
+          sqm: item.sqm,
+          unitPrice: item.unitPrice,
+          totalAmount: item.sqm * item.unitPrice,
+        })),
+      };
+
+      const response = await axios.post(
+        "http://localhost:3000/purchase-invoices",
+        invoiceData
+      );
+      alert(
+        `Invoice saved successfully! Invoice Number: ${response.data.invoiceNumber}`
+      );
+
+      // Reset form
+      setSupplierName("");
+      setInvoiceDate(new Date().toISOString().slice(0, 10));
+      setItems([]);
+      setShowTypePopup(false);
+    } catch (error) {
+      console.error("Failed to save invoice:", error);
+      alert("Failed to save the invoice. Please try again.");
+    }
   };
 
   const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
@@ -113,7 +151,9 @@ const PurchasesInvoicePage = () => {
     <div className="purchase-invoice-container">
       <div className="header">
         <h2>Create Purchase Invoice</h2>
-        <button className="save-button">Save Invoice</button>
+        <button className="save-button" onClick={handleSaveButtonClick}>
+          Save Invoice
+        </button>
       </div>
 
       <div className="invoice-details">
@@ -125,20 +165,19 @@ const PurchasesInvoicePage = () => {
           setShowSupplierSuggestions={setShowSupplierSuggestions}
         />
         <label>
-          Invoice Number
-          <input
-            type="text"
-            value={invoiceNumber}
-            onChange={(e) => setInvoiceNumber(e.target.value)}
-            placeholder="Enter invoice number"
-          />
-        </label>
-        <label>
           Date
           <input
             type="date"
             value={invoiceDate}
             onChange={(e) => setInvoiceDate(e.target.value)}
+          />
+        </label>
+        <label>
+          Exchange Rate
+          <input
+            type="number"
+            value={exchangeRate}
+            onChange={(e) => setExchangeRate(Number(e.target.value))}
           />
         </label>
       </div>
@@ -158,6 +197,40 @@ const PurchasesInvoicePage = () => {
           handleCheckboxChange={handleCheckboxChange}
           closeItemModal={closeItemModal}
         />
+      )}
+
+      {showTypePopup && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>Select Invoice Type</h3>
+            <div className="type-selection-buttons">
+              <button
+                onClick={() => {
+                  setSelectedType("S");
+                  saveInvoice("S");
+                }}
+                className="type-button"
+              >
+                S
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedType("G");
+                  saveInvoice("G");
+                }}
+                className="type-button"
+              >
+                G
+              </button>
+            </div>
+            <button
+              className="close-modal-button"
+              onClick={() => setShowTypePopup(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       <SummarySection
