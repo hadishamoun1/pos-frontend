@@ -15,6 +15,22 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   const [transportTva, setTransportTva] = useState(0);
   const [transferFees, setTransferFees] = useState(0);
 
+  // Function to format a number with commas
+  const formatWithCommas = (value) => {
+    if (!value) return "";
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  // Function to handle input and remove commas for calculations
+  const handleInputWithCommas = (e, setterFunction) => {
+    const value = e.target.value.replace(/,/g, ""); // Remove commas for calculations
+    if (!isNaN(value) && value !== "") {
+      setterFunction(Number(value)); // Update state with the numeric value
+    } else {
+      setterFunction(0); // Reset to 0 if the input is invalid
+    }
+  };
+
   // Convert customs and TVA to USD if their currency is LL
   const convertedCustoms =
     customsCurrency === "LL" ? customs / exchangeRate : customs;
@@ -58,9 +74,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={invoiceAmount}
-                  onChange={(e) => setInvoiceAmount(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(invoiceAmount)}
+                  onChange={(e) => handleInputWithCommas(e, setInvoiceAmount)}
                 />
               </div>
             </div>
@@ -69,9 +85,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={shippingTerms}
-                  onChange={(e) => setShippingTerms(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(shippingTerms)}
+                  onChange={(e) => handleInputWithCommas(e, setShippingTerms)}
                 />
               </div>
             </div>
@@ -81,7 +97,11 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <label>Total Invoice Amount</label>
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
-                <input type="number" value={totalInvoiceAmount} readOnly />
+                <input
+                  type="text"
+                  value={formatWithCommas(totalInvoiceAmount)}
+                  readOnly
+                />
               </div>
             </div>
           </div>
@@ -98,9 +118,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                   <span className="input-prefix">$</span>
                   <input
                     className="customs-input"
-                    type="number"
-                    value={customs}
-                    onChange={(e) => setCustoms(Number(e.target.value))}
+                    type="text"
+                    value={formatWithCommas(customs)}
+                    onChange={(e) => handleInputWithCommas(e, setCustoms)}
                   />
                 </div>
                 <select
@@ -126,9 +146,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                   <span className="input-prefix">$</span>
                   <input
                     className="tva-input"
-                    type="number"
-                    value={tva}
-                    onChange={(e) => setTva(Number(e.target.value))}
+                    type="text"
+                    value={formatWithCommas(tva)}
+                    onChange={(e) => handleInputWithCommas(e, setTva)}
                   />
                 </div>
                 <select
@@ -160,9 +180,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={fio}
-                  onChange={(e) => setFio(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(fio)}
+                  onChange={(e) => handleInputWithCommas(e, setFio)}
                 />
               </div>
             </div>
@@ -171,9 +191,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={fioTva}
-                  onChange={(e) => setFioTva(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(fioTva)}
+                  onChange={(e) => handleInputWithCommas(e, setFioTva)}
                 />
               </div>
             </div>
@@ -182,9 +202,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={transport}
-                  onChange={(e) => setTransport(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(transport)}
+                  onChange={(e) => handleInputWithCommas(e, setTransport)}
                 />
               </div>
             </div>
@@ -193,9 +213,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={transportTva}
-                  onChange={(e) => setTransportTva(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(transportTva)}
+                  onChange={(e) => handleInputWithCommas(e, setTransportTva)}
                 />
               </div>
             </div>
@@ -204,9 +224,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
                 <input
-                  type="number"
-                  value={transferFees}
-                  onChange={(e) => setTransferFees(Number(e.target.value))}
+                  type="text"
+                  value={formatWithCommas(transferFees)}
+                  onChange={(e) => handleInputWithCommas(e, setTransferFees)}
                 />
               </div>
             </div>
@@ -216,14 +236,22 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
               <label>Total Fees</label>
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
-                <input type="number" value={totalFees.toFixed(2)} readOnly />
+                <input
+                  type="text"
+                  value={formatWithCommas(totalFees.toFixed(2))}
+                  readOnly
+                />
               </div>
             </div>
             <div className="total-field">
               <label>Total TVA</label>
               <div className="input-with-prefix">
                 <span className="input-prefix">$</span>
-                <input type="number" value={totalTva.toFixed(2)} readOnly />
+                <input
+                  type="text"
+                  value={formatWithCommas(totalTva.toFixed(2))}
+                  readOnly
+                />
               </div>
             </div>
           </div>
