@@ -14,6 +14,7 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   const [transport, setTransport] = useState(0);
   const [transportTva, setTransportTva] = useState(0);
   const [transferFees, setTransferFees] = useState(0);
+  const [fobPrice, setFobPrice] = useState(0); // FOB Price
 
   // Function to format a number with commas
   const formatWithCommas = (value) => {
@@ -24,8 +25,9 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   // Function to handle input and remove commas for calculations
   const handleInputWithCommas = (e, setterFunction) => {
     const value = e.target.value.replace(/,/g, ""); // Remove commas for calculations
-    if (!isNaN(value) && value !== "") {
-      setterFunction(Number(value)); // Update state with the numeric value
+    if (!isNaN(value) && /^(\d+(\.\d{0,2})?)?$/.test(value)) {
+      // Allow numbers with up to 2 decimal places
+      setterFunction(value); // Update state with the numeric value as a string
     } else {
       setterFunction(0); // Reset to 0 if the input is invalid
     }
@@ -37,9 +39,34 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   const convertedTva = tvaCurrency === "LL" ? tva / exchangeRate : tva;
 
   // Derived calculations
-  const totalInvoiceAmount = invoiceAmount + shippingTerms;
-  const totalFees = convertedCustoms + fio + transport + transferFees;
-  const totalTva = convertedTva + fioTva + transportTva;
+  const totalInvoiceAmount = parseFloat(
+    (parseFloat(invoiceAmount || 0) + parseFloat(shippingTerms || 0)).toFixed(2)
+  );
+
+  const totalFees =
+    parseFloat(convertedCustoms) +
+    parseFloat(fio) +
+    parseFloat(transport) +
+    parseFloat(transferFees);
+  const totalTva =
+    parseFloat(convertedTva) + parseFloat(fioTva) + parseFloat(transportTva);
+
+  // CFR Price = ((Shipping Cost / Invoice Amount) + 1) * FOB Price
+  const cfrPrice =
+    invoiceAmount > 0
+      ? ((parseFloat(shippingTerms) || 0) / (parseFloat(invoiceAmount) || 1) +
+          1) *
+        parseFloat(fobPrice || 0)
+      : 0;
+
+  // Final Cost = Total Fees + Total TVA + CFR Price
+  const finalCost =
+    totalInvoiceAmount > 0
+      ? (parseFloat(totalFees) / parseFloat(totalInvoiceAmount) + 1) *
+        parseFloat(cfrPrice)
+      : 0; // Ensure no division by zero
+
+  if (!isVisible) return null;
 
   if (!isVisible) return null;
 
@@ -56,6 +83,8 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
       transferFees,
       totalFees,
       totalTva,
+      cfrPrice,
+      finalCost,
     });
     onClose();
   };
@@ -88,6 +117,17 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                   type="text"
                   value={formatWithCommas(shippingTerms)}
                   onChange={(e) => handleInputWithCommas(e, setShippingTerms)}
+                />
+              </div>
+            </div>
+            <div className="field">
+              <label>FOB Price</label>
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="text"
+                  value={formatWithCommas(fobPrice)}
+                  onChange={(e) => handleInputWithCommas(e, setFobPrice)}
                 />
               </div>
             </div>
@@ -133,8 +173,10 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                 </select>
                 <span className="converted-amount">
                   {customsCurrency === "LL"
-                    ? `${(customs / exchangeRate).toFixed(2)} USD`
-                    : `${customs.toFixed(2)} USD`}
+                    ? `${(parseFloat(customs || 0) / exchangeRate).toFixed(
+                        2
+                      )} USD`
+                    : `${parseFloat(customs || 0).toFixed(2)} USD`}
                 </span>
               </div>
             </div>
@@ -161,8 +203,8 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                 </select>
                 <span className="converted-amount">
                   {tvaCurrency === "LL"
-                    ? `${(tva / exchangeRate).toFixed(2)} USD`
-                    : `${tva.toFixed(2)} USD`}
+                    ? `${(parseFloat(tva || 0) / exchangeRate).toFixed(2)} USD`
+                    : `${parseFloat(tva || 0).toFixed(2)} USD`}
                 </span>
               </div>
             </div>
@@ -253,6 +295,31 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                   readOnly
                 />
               </div>
+            </div>
+          </div>
+        </div>
+        {/* CFR Price and Final Cost */}
+        <div className="total-row">
+          <div className="total-field">
+            <label>CFR Price</label>
+            <div className="input-with-prefix">
+              <span className="input-prefix">$</span>
+              <input
+                type="text"
+                value={formatWithCommas(cfrPrice.toFixed(2))}
+                readOnly
+              />
+            </div>
+          </div>
+          <div className="total-field">
+            <label>Final Cost</label>
+            <div className="input-with-prefix">
+              <span className="input-prefix">$</span>
+              <input
+                type="text"
+                value={formatWithCommas(finalCost.toFixed(2))}
+                readOnly
+              />
             </div>
           </div>
         </div>
