@@ -92,7 +92,15 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
   return (
     <div className="unit-price-modal-overlay">
       <div className="unit-price-modal-content">
-        <h3>Set Invoice Details</h3>
+        <div className="modal-header">
+          <button className="cancel-button" onClick={onClose}>
+            Cancel
+          </button>
+          <h3>Set Invoice Details</h3>
+          <button className="save-button" onClick={handleSave}>
+            Save
+          </button>
+        </div>
 
         {/* Invoice Section */}
         <div className="section">
@@ -325,14 +333,6 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
         </div>
 
         {/* Actions */}
-        <div className="modal-actions">
-          <button className="save-button" onClick={handleSave}>
-            Save
-          </button>
-          <button className="cancel-button" onClick={onClose}>
-            Cancel
-          </button>
-        </div>
       </div>
     </div>
   );

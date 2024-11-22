@@ -121,35 +121,6 @@
   margin-top: 30px;
 }
 
-.price-save-button,
-.cancel-button {
-  padding: 12px 30px;
-  border: none;
-  border-radius: 5px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.price-save-button {
-  background: #28a745;
-  color: #fff;
-}
-
-.price-save-button:hover {
-  background: #218838;
-}
-
-.cancel-button {
-  background: #e74c3c;
-  color: #fff;
-}
-
-.cancel-button:hover {
-  background: #c0392b;
-}
-
 @media (max-width: 768px) {
   .field-grid {
     grid-template-columns: 1fr;
@@ -266,4 +237,57 @@
 
 .input-with-prefix input {
   padding-left: 25px; /* Adjust for prefix spacing */
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  text-align: center;
+  flex-grow: 1; /* Ensures the title is centered */
+  color: #333;
+  border-bottom: 3px solid #007bff;
+  padding-bottom: 10px;
+  max-width: 70%;
+}
+
+.modal-header .cancel-button {
+  padding: 10px 20px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-header .cancel-button:hover {
+  background: #c0392b;
+}
+
+.modal-header .save-button {
+  padding: 10px 20px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-header .save-button:hover {
+  background: #218838;
+}
+
+.modal-header button {
+  flex-shrink: 0; /* Prevent buttons from resizing */
 }
