@@ -1,196 +1,179 @@
 import React, { useState } from "react";
+import ItemModal from "./itemsModel"; // Import the ItemModal
 import "./pricingPage.css";
 
+// Sample items with dimensions
+const itemsList = [
+  {
+    id: 1,
+    itemName: "Item 1",
+    type: "Type A",
+    dimensions: [
+      {
+        dimensionId: 1,
+        origin: "Origin A",
+        length: 100,
+        width: 50,
+        sheetsPerBox: 10,
+      },
+    ],
+  },
+  {
+    id: 2,
+    itemName: "Item 2",
+    type: "Type B",
+    dimensions: [
+      {
+        dimensionId: 2,
+        origin: "Origin B",
+        length: 200,
+        width: 100,
+        sheetsPerBox: 20,
+      },
+    ],
+  },
+];
+
 const PricingPage = () => {
-  const [invoiceAmount, setInvoiceAmount] = useState(0);
-  const [shippingTerms, setShippingTerms] = useState("");
-  const [customs, setCustoms] = useState(0);
-  const [customsCurrency, setCustomsCurrency] = useState("USD");
-  const [tva, setTva] = useState(0);
-  const [tvaCurrency, setTvaCurrency] = useState("USD");
-  const [exchangeRate, setExchangeRate] = useState(1);
-  const [fio, setFio] = useState(0);
-  const [fioTva, setFioTva] = useState(0);
-  const [transport, setTransport] = useState(0);
-  const [transportTva, setTransportTva] = useState(0);
-  const [transferFees, setTransferFees] = useState(0);
-  const [fobPrice, setFobPrice] = useState(0);
+  const [selectedItems, setSelectedItems] = useState([
+    { itemName: "", length: "", width: "", fobPrice: 0, numContainers: 0 },
+  ]); // Initial empty row
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null); // Track the selected row index
 
-  // Format number with commas
-  const formatWithCommas = (value) =>
-    value ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : "";
+  // Filter items based on search query
+  const filteredItems = itemsList.filter((item) =>
+    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  // Handle input with commas and decimals
-  const handleInputWithCommas = (e, setterFunction) => {
-    const value = e.target.value.replace(/,/g, "");
-    if (!isNaN(value) && /^(\d+(\.\d{0,2})?)?$/.test(value)) {
-      setterFunction(value);
-    } else {
-      setterFunction(0);
+  // Handle checkbox selection
+  const handleCheckboxChange = (item, dimension) => {
+    const updatedItems = [...selectedItems];
+    if (selectedRowIndex !== null) {
+      updatedItems[selectedRowIndex] = {
+        itemName: item.itemName,
+        origin: dimension.origin,
+        length: dimension.length,
+        width: dimension.width,
+        type: item.type,
+        fobPrice: updatedItems[selectedRowIndex].fobPrice, // Retain existing values
+        numContainers: updatedItems[selectedRowIndex].numContainers, // Retain existing values
+      };
     }
+    setSelectedItems(updatedItems);
+    setShowItemModal(false); // Close the modal after selection
   };
 
-  // Calculations
-  const convertedCustoms =
-    customsCurrency === "LL" ? customs / exchangeRate : customs;
-  const convertedTva = tvaCurrency === "LL" ? tva / exchangeRate : tva;
-  const totalInvoiceAmount =
-    parseFloat(invoiceAmount || 0) + parseFloat(shippingTerms || 0);
-  const totalFees = convertedCustoms + fio + transport + transferFees;
-  const totalTva = convertedTva + fioTva + transportTva;
-  const cfrPrice =
-    totalInvoiceAmount > 0
-      ? ((shippingTerms / totalInvoiceAmount) + 1) * fobPrice
-      : 0;
-  const finalCost =
-    totalInvoiceAmount > 0 ? ((totalFees / totalInvoiceAmount) + 1) * cfrPrice : 0;
+  // Add new empty row
+  const addEmptyRow = () => {
+    setSelectedItems((prev) => [
+      ...prev,
+      { itemName: "", length: "", width: "", fobPrice: 0, numContainers: 0 },
+    ]);
+  };
+
+  // Close the item modal
+  const closeItemModal = () => {
+    setShowItemModal(false);
+  };
 
   return (
     <div className="pricing-page">
       <header className="pricing-header">
-        <h1>Pricing Details</h1>
+        <button className="cancel-button">Cancel</button>
+        <h1 className="underlined-title">Pricing Details</h1>
+        <button className="save-button">Save</button>
       </header>
 
       <div className="pricing-container">
-        {/* Invoice Details Section */}
+        {/* Item Details Section */}
         <div className="section">
-          <div className="section-title">Invoice Details</div>
-          <div className="field-grid">
-            <div className="field">
-              <label>Invoice Amount</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
+          <div className="section-title">Item Details</div>
+          {selectedItems.map((item, index) => (
+            <div className="item-details-row" key={index}>
+              <div className="field">
+                <label>Item Name</label>
                 <input
                   type="text"
-                  value={formatWithCommas(invoiceAmount)}
-                  onChange={(e) => handleInputWithCommas(e, setInvoiceAmount)}
+                  value={item.itemName}
+                  placeholder="Select item"
+                  readOnly
+                  onClick={() => {
+                    setSelectedRowIndex(index); // Set the index of the row being edited
+                    setShowItemModal(true); // Open modal on click
+                  }}
                 />
               </div>
-            </div>
-            <div className="field">
-              <label>Shipping Cost</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
+              <div className="field">
+                <label>Length (cm)</label>
                 <input
-                  type="text"
-                  value={formatWithCommas(shippingTerms)}
-                  onChange={(e) => handleInputWithCommas(e, setShippingTerms)}
+                  type="number"
+                  value={item.length}
+                  placeholder="Auto-filled"
+                  readOnly
                 />
               </div>
-            </div>
-            <div className="field">
-              <label>FOB Price</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
+              <div className="field">
+                <label>Width (cm)</label>
                 <input
-                  type="text"
-                  value={formatWithCommas(fobPrice)}
-                  onChange={(e) => handleInputWithCommas(e, setFobPrice)}
+                  type="number"
+                  value={item.width}
+                  placeholder="Auto-filled"
+                  readOnly
                 />
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Fees and Taxes Section */}
-        <div className="section">
-          <div className="section-title">Fees and Taxes</div>
-          <div className="field-grid">
-            <div className="field">
-              <label>Customs</label>
-              <div className="dropdown-container">
+              <div className="field">
+                <label>FOB Price</label>
                 <div className="input-with-prefix">
                   <span className="input-prefix">$</span>
                   <input
                     type="text"
-                    value={formatWithCommas(customs)}
-                    onChange={(e) => handleInputWithCommas(e, setCustoms)}
+                    value={item.fobPrice}
+                    onChange={(e) =>
+                      setSelectedItems((prev) => {
+                        const updated = [...prev];
+                        updated[index].fobPrice = Number(e.target.value);
+                        return updated;
+                      })
+                    }
+                    placeholder="Enter FOB Price"
                   />
                 </div>
-                <select
-                  value={customsCurrency}
-                  onChange={(e) => setCustomsCurrency(e.target.value)}
-                  className="currency-select"
-                >
-                  <option value="USD">USD</option>
-                  <option value="LL">LL</option>
-                </select>
+              </div>
+              <div className="field">
+                <label>Number of Containers</label>
+                <input
+                  type="text"
+                  value={item.numContainers}
+                  onChange={(e) =>
+                    setSelectedItems((prev) => {
+                      const updated = [...prev];
+                      updated[index].numContainers = Number(e.target.value);
+                      return updated;
+                    })
+                  }
+                  placeholder="Enter number of containers"
+                />
               </div>
             </div>
-            <div className="field">
-              <label>TVA</label>
-              <div className="dropdown-container">
-                <div className="input-with-prefix">
-                  <span className="input-prefix">$</span>
-                  <input
-                    type="text"
-                    value={formatWithCommas(tva)}
-                    onChange={(e) => handleInputWithCommas(e, setTva)}
-                  />
-                </div>
-                <select
-                  value={tvaCurrency}
-                  onChange={(e) => setTvaCurrency(e.target.value)}
-                  className="currency-select"
-                >
-                  <option value="USD">USD</option>
-                  <option value="LL">LL</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          ))}
+          <button className="load-items-button" onClick={addEmptyRow}>
+            Add Item
+          </button>
         </div>
 
-        {/* Totals Section */}
-        <div className="section">
-          <div className="section-title">Totals</div>
-          <div className="field-grid">
-            <div className="field">
-              <label>Total Invoice Amount</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={formatWithCommas(totalInvoiceAmount.toFixed(2))}
-                  readOnly
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Total Fees</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={formatWithCommas(totalFees.toFixed(2))}
-                  readOnly
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>CFR Price</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={formatWithCommas(cfrPrice.toFixed(2))}
-                  readOnly
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Final Cost</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={formatWithCommas(finalCost.toFixed(2))}
-                  readOnly
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Item Modal */}
+        {showItemModal && (
+          <ItemModal
+            filteredItems={filteredItems}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedItems={selectedItems}
+            handleCheckboxChange={handleCheckboxChange}
+            closeItemModal={closeItemModal}
+          />
+        )}
       </div>
     </div>
   );
