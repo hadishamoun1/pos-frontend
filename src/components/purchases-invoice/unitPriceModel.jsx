@@ -104,7 +104,17 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
 
         {/* Item Details Section */}
         <div className="section">
-          <div className="section-title">Item Details</div>
+          <div className="section-header">
+            <div className="section-title">Item Details</div>
+            <div className="load-container">
+              <input
+                type="text"
+                placeholder="Enter item ID or name"
+                className="load-input"
+              />
+              <button className="load-button">Load</button>
+            </div>
+          </div>
           <div className="field-grid">
             <div className="field">
               <label>Item Name</label>
