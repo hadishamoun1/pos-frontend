@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
 import ItemModal from "./itemsModel"; // Import the ItemModal
 import "./pricingPage.css";
 
@@ -36,7 +38,7 @@ const itemsList = [
 
 const PricingPage = () => {
   const [selectedItems, setSelectedItems] = useState([
-    { itemName: "", length: "", width: "", fobPrice: 0, numContainers: 0 },
+    { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
   ]); // Initial empty row
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,8 +71,13 @@ const PricingPage = () => {
   const addEmptyRow = () => {
     setSelectedItems((prev) => [
       ...prev,
-      { itemName: "", length: "", width: "", fobPrice: 0, numContainers: 0 },
+      { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
     ]);
+  };
+
+  // Remove a row
+  const deleteRow = (index) => {
+    setSelectedItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Close the item modal
@@ -92,6 +99,13 @@ const PricingPage = () => {
           <div className="section-title">Item Details</div>
           {selectedItems.map((item, index) => (
             <div className="item-details-row" key={index}>
+              <button
+                className="delete-row"
+                onClick={() => deleteRow(index)}
+                aria-label="Delete Row"
+              >
+                <FontAwesomeIcon icon={faTrashAlt} />
+              </button>
               <div className="field">
                 <label>Item Name</label>
                 <input
@@ -133,7 +147,7 @@ const PricingPage = () => {
                     onChange={(e) =>
                       setSelectedItems((prev) => {
                         const updated = [...prev];
-                        updated[index].fobPrice = Number(e.target.value);
+                        updated[index].fobPrice = e.target.value;
                         return updated;
                       })
                     }
@@ -142,18 +156,18 @@ const PricingPage = () => {
                 </div>
               </div>
               <div className="field">
-                <label>Number of Containers</label>
+                <label>Nb of Containers</label>
                 <input
                   type="text"
                   value={item.numContainers}
                   onChange={(e) =>
                     setSelectedItems((prev) => {
                       const updated = [...prev];
-                      updated[index].numContainers = Number(e.target.value);
+                      updated[index].numContainers = e.target.value;
                       return updated;
                     })
                   }
-                  placeholder="Enter number of containers"
+                  placeholder="Enter nb of containers"
                 />
               </div>
             </div>

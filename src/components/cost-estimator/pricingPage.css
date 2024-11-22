@@ -64,7 +64,7 @@
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  width: 70%;
+  width: 90%;
 }
 
 .input-with-prefix {
@@ -112,4 +112,25 @@
 
 .load-items-button:hover {
   background-color: #0056b3;
+}
+.item-details-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 100%;
+}
+
+.delete-row {
+  background: transparent;
+  color: #ff4d4d;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 10px;
+
+  height: 100%;
+}
+
+.delete-row:hover {
+  color: #e60000;
 }
