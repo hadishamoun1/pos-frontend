@@ -31,7 +31,7 @@
 }
 
 .section {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   border: 1px solid #ddd;
   padding: 15px;
   border-radius: 8px;
@@ -39,7 +39,7 @@
 }
 
 .section-title {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   margin-bottom: 15px;
   color: #007bff;
   font-weight: bold;
@@ -49,7 +49,7 @@
 .field-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  
 }
 
 .field {
@@ -59,7 +59,7 @@
 }
 
 .field label {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #555;
   margin-bottom: 5px;
   font-weight: bold;
@@ -68,7 +68,7 @@
 .field input {
   width: 80%;
   padding: 10px;
-  font-size: 1.2rem;
+  font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   transition: all 0.3s ease;
@@ -236,7 +236,7 @@
 }
 
 .input-with-prefix input {
-  padding-left: 25px; /* Adjust for prefix spacing */
+  padding-left: 25px; 
 }
 .modal-header {
   display: flex;
@@ -249,7 +249,7 @@
   margin: 0;
   font-size: 1.8rem;
   text-align: center;
-  flex-grow: 1; /* Ensures the title is centered */
+  flex-grow: 1;
   color: #333;
   border-bottom: 3px solid #007bff;
   padding-bottom: 10px;

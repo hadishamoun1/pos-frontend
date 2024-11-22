@@ -102,6 +102,43 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
           </button>
         </div>
 
+        {/* Item Details Section */}
+        <div className="section">
+          <div className="section-title">Item Details</div>
+          <div className="field-grid">
+            <div className="field">
+              <label>Item Name</label>
+              <input
+                type="text"
+                value={item?.name || ""}
+                onChange={(e) => onSave({ ...item, name: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Dimensions</label>
+              <input
+                type="text"
+                placeholder="e.g., 10x20"
+                value={item?.dimensions || ""}
+                onChange={(e) =>
+                  onSave({ ...item, dimensions: e.target.value })
+                }
+              />
+            </div>
+            <div className="field">
+              <label>FOB Price</label>
+              <div className="input-with-prefix">
+                <span className="input-prefix">$</span>
+                <input
+                  type="text"
+                  value={formatWithCommas(fobPrice)}
+                  onChange={(e) => handleInputWithCommas(e, setFobPrice)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Invoice Section */}
         <div className="section">
           <div className="section-title">Invoice Details</div>
@@ -125,17 +162,6 @@ const UnitPriceModal = ({ isVisible, onClose, item, onSave }) => {
                   type="text"
                   value={formatWithCommas(shippingTerms)}
                   onChange={(e) => handleInputWithCommas(e, setShippingTerms)}
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>FOB Price</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={formatWithCommas(fobPrice)}
-                  onChange={(e) => handleInputWithCommas(e, setFobPrice)}
                 />
               </div>
             </div>
