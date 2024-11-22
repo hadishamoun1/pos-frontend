@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./styles/pricingPage.css";
+import "./pricingPage.css";
 
 const PricingPage = () => {
   const [invoiceAmount, setInvoiceAmount] = useState(0);
