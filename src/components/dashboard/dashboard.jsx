@@ -11,6 +11,7 @@ const sections = [
   { name: "Settings", image: "/assests/settings.png" },
   { name: "Suppliers", image: "/assests/suppliers.webp" },
   { name: "Items", image: "/assests/items.webp" },
+  { name: "Cost Estimator", image: "/assests/price.webp" },
 ];
 
 const DashboardPage = () => {
