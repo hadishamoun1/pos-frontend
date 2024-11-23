@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import ItemModal from "./itemsModel"; // Import the ItemModal
+import ItemModal from "./itemsModel"; 
 import "./pricingPage.css";
 
 // Sample items with dimensions
@@ -37,12 +37,13 @@ const itemsList = [
 ];
 
 const PricingPage = () => {
+  const [supplierName, setSupplierName] = useState("");
   const [selectedItems, setSelectedItems] = useState([
     { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
-  ]); // Initial empty row
+  ]); 
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRowIndex, setSelectedRowIndex] = useState(null); // Track the selected row index
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null); 
   const [invoiceAmount, setInvoiceAmount] = useState("");
   const [shippingCost, setShippingCost] = useState("");
   const [customs, setCustoms] = useState("");
@@ -89,12 +90,12 @@ const PricingPage = () => {
         length: dimension.length,
         width: dimension.width,
         type: item.type,
-        fobPrice: updatedItems[selectedRowIndex].fobPrice, // Retain existing values
-        numContainers: updatedItems[selectedRowIndex].numContainers, // Retain existing values
+        fobPrice: updatedItems[selectedRowIndex].fobPrice, 
+        numContainers: updatedItems[selectedRowIndex].numContainers, 
       };
     }
     setSelectedItems(updatedItems);
-    setShowItemModal(false); // Close the modal after selection
+    setShowItemModal(false); 
   };
 
   // Add new empty row
@@ -117,13 +118,24 @@ const PricingPage = () => {
 
   return (
     <div className="pricing-page">
-      <header className="pricing-header">
-        <button className="cancel-button">Cancel</button>
-        <h1 className="underlined-title">Pricing Details</h1>
-        <button className="save-button">Save</button>
-      </header>
 
       <div className="pricing-container">
+        {/* Supplier Details Section */}
+        <div className="section">
+          <div className="section-title">Supplier Details</div>
+          <div className="supplier-details-row">
+            <div className="field">
+              <label>Supplier Name</label>
+              <input
+              className="field-supplier"
+                type="text"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder="Enter Supplier Name"
+              />
+            </div>
+          </div>
+        </div>
         {/* Item Details Section */}
         <div className="section">
           <div className="section-title">Item Details</div>
