@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 
 import "./pricingPage.css";
+import "./styles/CostTable.css";
 
 import SupplierDetails from "./SupplierDetails";
 import ItemDetails from "./ItemDetails";
 import InvoiceDetails from "./invoiceDetails";
 import FeesAndTaxes from "./FeesAndTaxes ";
+import CostTable from "./CostTable";
 // Sample items with dimensions
 const itemsList = [
   {
@@ -126,7 +128,7 @@ const PricingPage = () => {
 
   return (
     <div className="pricing-page">
-      <div className="pricing-page-content">
+      <div className="container-wrapper">
         <div className="pricing-container">
           <SupplierDetails
             supplierName={supplierName}
@@ -170,6 +172,20 @@ const PricingPage = () => {
             totalFees={totalFees || 0}
             totalTva={totalTva || 0}
           />
+        </div>
+        {/* Additional container 1 */}
+        <CostTable
+          selectedItems={selectedItems}
+          shippingCost={shippingCost}
+          totalInvoiceAmount={totalInvoiceAmount}
+          totalFees={totalFees}
+          invoiceAmount={invoiceAmount}
+        />
+
+        {/* Additional container 2 */}
+        <div className="side-container">
+          <h3>Container 2</h3>
+          <p>Content for the second side container.</p>
         </div>
       </div>
     </div>

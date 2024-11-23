@@ -6,12 +6,14 @@
 }
 
 .pricing-container {
+  flex: 2;
   margin-top: 10px;
   background: white;
   margin-left: 10px;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   max-width: 50%;
+  min-height: 98vh;
 }
 
 .section {
@@ -127,4 +129,19 @@
 }
 .field-supplier {
   max-width: 200px;
+}
+.container-wrapper {
+  display: flex;
+  gap: 10px;
+}
+.side-container {
+  flex: 1;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  min-height: 98vh;
 }
