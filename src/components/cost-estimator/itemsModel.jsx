@@ -36,9 +36,11 @@ const ItemModal = ({
     fetchItems();
   }, []);
 
-  // Filter items based on the search query
-  const filteredItemsList = items.filter((item) =>
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter items based on the search query and type
+  const filteredItemsList = items.filter(
+    (item) =>
+      item.type === "box" && 
+      item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
