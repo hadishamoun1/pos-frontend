@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrashAlt } from "@fortawesome/free-solid-svg-icons";
-import ItemModal from "./itemsModel"; 
+
 import "./pricingPage.css";
 
+import SupplierDetails from "./SupplierDetails";
+import ItemDetails from "./ItemDetails";
+import InvoiceDetails from "./invoiceDetails";
+import FeesAndTaxes from "./FeesAndTaxes ";
 // Sample items with dimensions
 const itemsList = [
   {
@@ -40,10 +42,10 @@ const PricingPage = () => {
   const [supplierName, setSupplierName] = useState("");
   const [selectedItems, setSelectedItems] = useState([
     { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
-  ]); 
+  ]);
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRowIndex, setSelectedRowIndex] = useState(null); 
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   const [invoiceAmount, setInvoiceAmount] = useState("");
   const [shippingCost, setShippingCost] = useState("");
   const [customs, setCustoms] = useState("");
@@ -90,12 +92,12 @@ const PricingPage = () => {
         length: dimension.length,
         width: dimension.width,
         type: item.type,
-        fobPrice: updatedItems[selectedRowIndex].fobPrice, 
-        numContainers: updatedItems[selectedRowIndex].numContainers, 
+        fobPrice: updatedItems[selectedRowIndex].fobPrice,
+        numContainers: updatedItems[selectedRowIndex].numContainers,
       };
     }
     setSelectedItems(updatedItems);
-    setShowItemModal(false); 
+    setShowItemModal(false);
   };
 
   // Add new empty row
@@ -106,11 +108,17 @@ const PricingPage = () => {
     ]);
   };
 
-  // Remove a row
+  // Remove a row safely
   const deleteRow = (index) => {
-    setSelectedItems((prev) => prev.filter((_, i) => i !== index));
+    setSelectedItems((prev) => {
+      const updatedItems = prev.filter((_, i) => i !== index);
+      if (selectedRowIndex === index) {
+        // Reset selectedRowIndex if the deleted row was selected
+        setSelectedRowIndex(null);
+      }
+      return updatedItems;
+    });
   };
-
   // Close the item modal
   const closeItemModal = () => {
     setShowItemModal(false);
@@ -118,247 +126,50 @@ const PricingPage = () => {
 
   return (
     <div className="pricing-page">
-
-      <div className="pricing-container">
-        {/* Supplier Details Section */}
-        <div className="section">
-          <div className="section-title">Supplier Details</div>
-          <div className="supplier-details-row">
-            <div className="field">
-              <label>Supplier Name</label>
-              <input
-              className="field-supplier"
-                type="text"
-                value={supplierName}
-                onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="Enter Supplier Name"
-              />
-            </div>
-          </div>
-        </div>
-        {/* Item Details Section */}
-        <div className="section">
-          <div className="section-title">Item Details</div>
-          {selectedItems.map((item, index) => (
-            <div className="item-details-row" key={index}>
-              <button
-                className="delete-row"
-                onClick={() => deleteRow(index)}
-                aria-label="Delete Row"
-              >
-                <FontAwesomeIcon icon={faTrashAlt} />
-              </button>
-              <div className="field">
-                <label>Item Name</label>
-                <input
-                  type="text"
-                  value={item.itemName}
-                  placeholder="Select item"
-                  readOnly
-                  onClick={() => {
-                    setSelectedRowIndex(index);
-                    setShowItemModal(true);
-                  }}
-                />
-              </div>
-              <div className="field">
-                <label>Length (cm)</label>
-                <input
-                  type="number"
-                  value={item.length}
-                  placeholder="Auto-filled"
-                  readOnly
-                />
-              </div>
-              <div className="field">
-                <label>Width (cm)</label>
-                <input
-                  type="number"
-                  value={item.width}
-                  placeholder="Auto-filled"
-                  readOnly
-                />
-              </div>
-              <div className="field">
-                <label>FOB Price</label>
-                <div className="input-with-prefix">
-                  <span className="input-prefix">$</span>
-                  <input
-                    type="text"
-                    value={item.fobPrice}
-                    onChange={(e) =>
-                      setSelectedItems((prev) => {
-                        const updated = [...prev];
-                        updated[index].fobPrice = e.target.value;
-                        return updated;
-                      })
-                    }
-                    placeholder="Enter FOB Price"
-                  />
-                </div>
-              </div>
-              <div className="field">
-                <label>Nb of Containers</label>
-                <input
-                  type="text"
-                  value={item.numContainers}
-                  onChange={(e) =>
-                    setSelectedItems((prev) => {
-                      const updated = [...prev];
-                      updated[index].numContainers = e.target.value;
-                      return updated;
-                    })
-                  }
-                  placeholder="Enter nb of containers"
-                />
-              </div>
-            </div>
-          ))}
-          <button className="load-items-button" onClick={addEmptyRow}>
-            Add Item
-          </button>
-        </div>
-
-        {/* Invoice Details Section */}
-        <div className="section">
-          <div className="section-title">Invoice Details</div>
-          <div className="field-grid">
-            <div className="field">
-              <label>Invoice Amount</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={invoiceAmount}
-                  onChange={(e) => setInvoiceAmount(e.target.value)}
-                  placeholder="Enter Invoice Amount"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Shipping Cost</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={shippingCost}
-                  onChange={(e) => setShippingCost(e.target.value)}
-                  placeholder="Enter Shipping Cost"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="total-row">
-            <div className="total-field">
-              <label>Total Invoice Amount</label>
-              <input
-                type="text"
-                value={`$${totalInvoiceAmount.toFixed(2)}`}
-                readOnly
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Fees and Taxes Section */}
-        <div className="section">
-          <div className="section-title">Fees and Taxes</div>
-          <div className="field-grid">
-            <div className="field">
-              <label>Customs</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={customs}
-                  onChange={(e) => setCustoms(e.target.value)}
-                  placeholder="Enter Customs"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>TVA</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={tva}
-                  onChange={(e) => setTva(e.target.value)}
-                  placeholder="Enter TVA"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>FIO</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={fio}
-                  onChange={(e) => setFio(e.target.value)}
-                  placeholder="Enter FIO"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>FIO TVA</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={fioTva}
-                  onChange={(e) => setFioTva(e.target.value)}
-                  placeholder="Enter FIO TVA"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Transport</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={transport}
-                  onChange={(e) => setTransport(e.target.value)}
-                  placeholder="Enter Transport"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Transport TVA</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={transportTva}
-                  onChange={(e) => setTransportTva(e.target.value)}
-                  placeholder="Enter Transport TVA"
-                />
-              </div>
-            </div>
-            <div className="field">
-              <label>Transfer Fees</label>
-              <div className="input-with-prefix">
-                <span className="input-prefix">$</span>
-                <input
-                  type="text"
-                  value={transferFees}
-                  onChange={(e) => setTransferFees(e.target.value)}
-                  placeholder="Enter Transfer Fees"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="total-row">
-            <div className="total-field">
-              <label>Total Fees</label>
-              <input type="text" value={`$${totalFees.toFixed(2)}`} readOnly />
-            </div>
-            <div className="total-field">
-              <label>Total TVA</label>
-              <input type="text" value={`$${totalTva.toFixed(2)}`} readOnly />
-            </div>
-          </div>
+      <div className="pricing-page-content">
+        <div className="pricing-container">
+          <SupplierDetails
+            supplierName={supplierName}
+            setSupplierName={setSupplierName}
+          />
+          <ItemDetails
+            selectedItems={selectedItems}
+            setSelectedItems={setSelectedItems}
+            deleteRow={deleteRow}
+            setSelectedRowIndex={setSelectedRowIndex}
+            selectedRowIndex={selectedRowIndex}
+            itemsList={itemsList}
+            filteredItems={filteredItems}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            closeModal={closeItemModal}
+            handleCheckboxChange={handleCheckboxChange}
+          />
+          <InvoiceDetails
+            invoiceAmount={invoiceAmount}
+            setInvoiceAmount={setInvoiceAmount}
+            shippingCost={shippingCost}
+            setShippingCost={setShippingCost}
+            totalInvoiceAmount={totalInvoiceAmount}
+          />
+          <FeesAndTaxes
+            customs={customs}
+            setCustoms={setCustoms}
+            tva={tva}
+            setTva={setTva}
+            fio={fio}
+            setFio={setFio}
+            fioTva={fioTva}
+            setFioTva={setFioTva}
+            transport={transport}
+            setTransport={setTransport}
+            transportTva={transportTva}
+            setTransportTva={setTransportTva}
+            transferFees={transferFees}
+            setTransferFees={setTransferFees}
+            totalFees={totalFees || 0}
+            totalTva={totalTva || 0}
+          />
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ const ItemModal = ({
   setSearchQuery,
   selectedItems,
   handleCheckboxChange,
-  closeItemModal,
+  closeModal,
 }) => {
   return (
     <div className="modal-overlay">
@@ -62,7 +62,7 @@ const ItemModal = ({
             </tbody>
           </table>
         </div>
-        <button className="close-modal-button" onClick={closeItemModal}>
+        <button className="close-modal-button" onClick={closeModal}>
           Close
         </button>
       </div>
