@@ -16,22 +16,23 @@ const CostTable = ({
 
   const calculateFinalCost = (item) => {
     const cfrPrice = calculatePriceCFR(item);
-    if (! totalInvoiceAmount || !totalFees) return 0;
+    if (!totalInvoiceAmount || !totalFees) return 0;
     const feesRatio =
-      parseFloat(totalFees || 0) / parseFloat( totalInvoiceAmount || 1);
+      parseFloat(totalFees || 0) / parseFloat(totalInvoiceAmount || 1);
     return (feesRatio + 1) * cfrPrice;
   };
 
   const calculateCostPercentage = () => {
-    if (!totalFees || ! totalInvoiceAmount) return 0;
-    return ((parseFloat(totalFees) / parseFloat( totalInvoiceAmount)) * 100).toFixed(
-      2
-    );
+    if (!totalFees || !totalInvoiceAmount) return 0;
+    return (
+      (parseFloat(totalFees) / parseFloat(totalInvoiceAmount)) *
+      100
+    ).toFixed(2);
   };
 
   return (
     <div className="side-container">
-      <h3>Cost Breakdown</h3>
+      <h3>Cost Summary</h3>
       <table className="cost-table">
         <thead>
           <tr>

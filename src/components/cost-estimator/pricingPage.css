@@ -145,3 +145,27 @@
   margin-top: 10px;
   min-height: 98vh;
 }
+.supplier-details-row {
+  display: flex;
+  gap: 20px; 
+}
+
+.field input[type="date"] {
+  padding: 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.reset-button {
+  background-color: #22b405;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background-color: #03943f;
+}

@@ -125,6 +125,23 @@ const PricingPage = () => {
   const closeItemModal = () => {
     setShowItemModal(false);
   };
+  const resetAllFields = () => {
+    setSupplierName("");
+    setInvoiceAmount("");
+    setShippingCost("");
+    setCustoms("");
+    setTva("");
+    setFio("");
+    setFioTva("");
+    setTransport("");
+    setTransportTva("");
+    setTransferFees("");
+
+    setSelectedItems([
+        { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
+      ]);
+    
+  };
 
   return (
     <div className="pricing-page">
@@ -133,6 +150,7 @@ const PricingPage = () => {
           <SupplierDetails
             supplierName={supplierName}
             setSupplierName={setSupplierName}
+            resetAllFields={resetAllFields}
           />
           <ItemDetails
             selectedItems={selectedItems}
