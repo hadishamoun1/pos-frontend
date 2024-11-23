@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 
-const SupplierDetails = ({ supplierName, setSupplierName, resetAllFields }) => {
+const SupplierDetails = ({
+  supplierName,
+  setSupplierName,
+  resetAllFields,
+  handleSave, // Add a save handler prop
+}) => {
   const [date, setDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split("T")[0]; // Default to today's date
@@ -13,7 +18,6 @@ const SupplierDetails = ({ supplierName, setSupplierName, resetAllFields }) => {
       return today.toISOString().split("T")[0];
     });
 
-    // Call the resetAllFields to reset other sections
     if (resetAllFields) {
       resetAllFields();
     }
@@ -23,9 +27,14 @@ const SupplierDetails = ({ supplierName, setSupplierName, resetAllFields }) => {
     <div className="section">
       <div className="section-header">
         <h3 className="section-title">Supplier Details</h3>
-        <button className="reset-button" onClick={resetFields}>
-          New
-        </button>
+        <div className="button-group">
+          <button className="reset-button" onClick={resetFields}>
+            New
+          </button>
+          <button className="save-button" onClick={handleSave}>
+            Save
+          </button>
+        </div>
       </div>
       <div className="supplier-details-row">
         <div className="field">
