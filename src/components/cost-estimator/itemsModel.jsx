@@ -1,13 +1,70 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const ItemModal = ({
   filteredItems,
   searchQuery,
   setSearchQuery,
   selectedItems,
-  handleCheckboxChange,
+  handleItemSelection,
   closeModal,
 }) => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch items from the API
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/items");
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+          setItems(data);
+        } else {
+          console.error("Unexpected data format:", data);
+          setError("Invalid response format from API");
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching items:", err);
+        setError("Failed to load items. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, []);
+
+  // Filter items based on the search query
+  const filteredItemsList = items.filter((item) =>
+    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h3>Loading Items...</h3>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h3>Error</h3>
+          <p>{error}</p>
+          <button className="close-modal-button" onClick={closeModal}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -33,13 +90,13 @@ const ItemModal = ({
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((item) =>
+              {filteredItemsList.map((item) =>
                 item.dimensions.map((dimension) => (
-                  <tr key={`${item.id}-${dimension.dimensionId}`}>
-                    <td className="checkbox-cell">
+                  <tr key={`${item.itemId}-${dimension.dimensionId}`}>
+                    <td>
                       <input
                         type="checkbox"
-                        onChange={() => handleCheckboxChange(item, dimension)}
+                        onChange={() => handleItemSelection(item, dimension)}
                         checked={selectedItems.some(
                           (selectedItem) =>
                             selectedItem.itemName === item.itemName &&

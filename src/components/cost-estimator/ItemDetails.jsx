@@ -15,12 +15,18 @@ const ItemDetails = ({
   const [showModal, setShowModal] = useState(false);
   const [filteredItems, setFilteredItems] = useState([]); // To filter items in the modal
 
-  const handleItemSelection = (selectedItem) => {
+  const handleItemSelection = (item, dimension) => {
     const updatedItems = [...selectedItems];
-    updatedItems[selectedRowIndex] = {
-      ...updatedItems[selectedRowIndex],
-      ...selectedItem,
-    };
+    if (selectedRowIndex !== null) {
+      updatedItems[selectedRowIndex] = {
+        ...updatedItems[selectedRowIndex],
+        itemName: item.itemName,
+        length: dimension.length,
+        width: dimension.width,
+        origin: dimension.origin,
+        type: item.type,
+      };
+    }
     setSelectedItems(updatedItems);
     setShowModal(false); // Close modal after selection
   };
@@ -45,8 +51,8 @@ const ItemDetails = ({
               placeholder="Select item"
               readOnly
               onClick={() => {
-                setSelectedRowIndex(index); // Track the selected row index
-                setShowModal(true); // Open modal
+                setSelectedRowIndex(index);
+                setShowModal(true);
               }}
             />
           </div>
@@ -123,6 +129,7 @@ const ItemDetails = ({
         <ItemModal
           filteredItems={filteredItems}
           searchQuery={searchQuery}
+          selectedItems={selectedItems}
           setSearchQuery={setSearchQuery}
           handleItemSelection={handleItemSelection}
           closeModal={() => setShowModal(false)}
