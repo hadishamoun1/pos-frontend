@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./pricingPage.css";
 import "./styles/CostTable.css";
-
+import SavedProformas from "./savedProformas";
 import SupplierDetails from "./SupplierDetails";
 import ItemDetails from "./ItemDetails";
 import InvoiceDetails from "./invoiceDetails";
@@ -176,17 +176,8 @@ const PricingPage = () => {
           totalFees={totalFees}
           invoiceAmount={invoiceAmount}
         />
-
-        <div className="saved-proformas">
-          <h2>Saved Proformas</h2>
-          <ul>
-            {savedProformas.map((proforma) => (
-              <li key={proforma.id}>
-                {proforma.proformaNumber} - {proforma.itemName}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Add the SavedProformas component */}
+        <SavedProformas savedProformas={savedProformas} />
       </div>
     </div>
   );
