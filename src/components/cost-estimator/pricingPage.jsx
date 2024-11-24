@@ -1,51 +1,24 @@
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
 import "./pricingPage.css";
 import "./styles/CostTable.css";
 
 import SupplierDetails from "./SupplierDetails";
 import ItemDetails from "./ItemDetails";
 import InvoiceDetails from "./invoiceDetails";
-import FeesAndTaxes from "./FeesAndTaxes ";
+import FeesAndTaxes from "./FeesAndTaxes";
 import CostTable from "./CostTable";
-// Sample items with dimensions
-const itemsList = [
-  {
-    id: 1,
-    itemName: "Item 1",
-    type: "Type A",
-    dimensions: [
-      {
-        dimensionId: 1,
-        origin: "Origin A",
-        length: 100,
-        width: 50,
-        sheetsPerBox: 10,
-      },
-    ],
-  },
-  {
-    id: 2,
-    itemName: "Item 2",
-    type: "Type B",
-    dimensions: [
-      {
-        dimensionId: 2,
-        origin: "Origin B",
-        length: 200,
-        width: 100,
-        sheetsPerBox: 20,
-      },
-    ],
-  },
-];
+import {
+  createSupplierProforma,
+  getAllSupplierProformas,
+} from "./supplierProformaApi";
 
 const PricingPage = () => {
   const [supplierName, setSupplierName] = useState("");
+
   const [selectedItems, setSelectedItems] = useState([
     { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
   ]);
-  const [showItemModal, setShowItemModal] = useState(false);
+  const [supplierId, setSupplierId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   const [invoiceAmount, setInvoiceAmount] = useState("");
@@ -57,14 +30,10 @@ const PricingPage = () => {
   const [transport, setTransport] = useState("");
   const [transportTva, setTransportTva] = useState("");
   const [transferFees, setTransferFees] = useState("");
+  const [savedProformas, setSavedProformas] = useState([]);
 
-  // Auto-calculation fields
   const totalFobPrice = selectedItems.reduce(
     (sum, item) => sum + parseFloat(item.fobPrice || 0),
-    0
-  );
-  const totalContainers = selectedItems.reduce(
-    (sum, item) => sum + parseFloat(item.numContainers || 0),
     0
   );
   const totalInvoiceAmount =
@@ -79,54 +48,9 @@ const PricingPage = () => {
     parseFloat(fioTva || 0) +
     parseFloat(transportTva || 0);
 
-  // Filter items based on search query
-  const filteredItems = itemsList.filter((item) =>
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Handle checkbox selection
-  const handleCheckboxChange = (item, dimension) => {
-    const updatedItems = [...selectedItems];
-    if (selectedRowIndex !== null) {
-      updatedItems[selectedRowIndex] = {
-        itemName: item.itemName,
-        origin: dimension.origin,
-        length: dimension.length,
-        width: dimension.width,
-        type: item.type,
-        fobPrice: updatedItems[selectedRowIndex].fobPrice,
-        numContainers: updatedItems[selectedRowIndex].numContainers,
-      };
-    }
-    setSelectedItems(updatedItems);
-    setShowItemModal(false);
-  };
-
-  // Add new empty row
-  const addEmptyRow = () => {
-    setSelectedItems((prev) => [
-      ...prev,
-      { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
-    ]);
-  };
-
-  // Remove a row safely
-  const deleteRow = (index) => {
-    setSelectedItems((prev) => {
-      const updatedItems = prev.filter((_, i) => i !== index);
-      if (selectedRowIndex === index) {
-        // Reset selectedRowIndex if the deleted row was selected
-        setSelectedRowIndex(null);
-      }
-      return updatedItems;
-    });
-  };
-  // Close the item modal
-  const closeItemModal = () => {
-    setShowItemModal(false);
-  };
   const resetAllFields = () => {
     setSupplierName("");
+    setSupplierId(null);
     setInvoiceAmount("");
     setShippingCost("");
     setCustoms("");
@@ -136,12 +60,65 @@ const PricingPage = () => {
     setTransport("");
     setTransportTva("");
     setTransferFees("");
-
     setSelectedItems([
-        { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
-      ]);
-    
+      { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
+    ]);
   };
+  const handleSubmitProforma = async () => {
+    if (!supplierId) {
+      alert("Please select a valid supplier.");
+      return;
+    }
+
+    const proformaPayload = {
+      supplier: supplierId, // Send the supplier ID
+      date: new Date().toISOString().split("T")[0],
+      invoiceAmount: parseFloat(invoiceAmount),
+      shippingCost: parseFloat(shippingCost),
+      totalInvoiceAmount,
+      customs: parseFloat(customs),
+      tva: parseFloat(tva),
+      fio: parseFloat(fio),
+      fioTva: parseFloat(fioTva),
+      transport: parseFloat(transport),
+      transportTva:parseFloat(transportTva),
+      transferFees: parseFloat(transferFees),
+      totalFees,
+      totalTva,
+      items: selectedItems.map((item) => ({
+        itemName: item.itemName,
+        length: item.length,
+        width: item.width,
+        fobPrice: parseFloat(item.fobPrice || 0),
+        containersNumber: parseInt(item.numContainers || 0, 10),
+        cfrPrice: parseFloat(item.cfrPrice || 0),
+        finalCost: parseFloat(item.finalCost || 0),
+        //costPercentage: parseFloat(costPercentage || 0),
+      })),
+    };
+
+    try {
+      const savedProforma = await createSupplierProforma(proformaPayload);
+      setSavedProformas((prev) => [...prev, savedProforma]);
+      console.log("Proforma saved successfully:", savedProforma);
+      resetAllFields();
+    } catch (error) {
+      console.error("Error saving proforma:", error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProformas = async () => {
+      try {
+        const data = await getAllSupplierProformas();
+        setSavedProformas(data);
+      } catch (error) {
+        console.error("Error fetching proformas:", error);
+      }
+    };
+
+    fetchProformas();
+  }, []);
 
   return (
     <div className="pricing-page">
@@ -150,20 +127,17 @@ const PricingPage = () => {
           <SupplierDetails
             supplierName={supplierName}
             setSupplierName={setSupplierName}
+            setSupplierId={setSupplierId}
             resetAllFields={resetAllFields}
+            handleSave={handleSubmitProforma}
           />
           <ItemDetails
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
-            deleteRow={deleteRow}
-            setSelectedRowIndex={setSelectedRowIndex}
-            selectedRowIndex={selectedRowIndex}
-            itemsList={itemsList}
-            filteredItems={filteredItems}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            closeModal={closeItemModal}
-            handleCheckboxChange={handleCheckboxChange}
+            selectedRowIndex={selectedRowIndex}
+            setSelectedRowIndex={setSelectedRowIndex}
           />
           <InvoiceDetails
             invoiceAmount={invoiceAmount}
@@ -191,7 +165,6 @@ const PricingPage = () => {
             totalTva={totalTva || 0}
           />
         </div>
-        {/* Additional container 1 */}
         <CostTable
           selectedItems={selectedItems}
           shippingCost={shippingCost}
@@ -200,10 +173,15 @@ const PricingPage = () => {
           invoiceAmount={invoiceAmount}
         />
 
-        {/* Additional container 2 */}
-        <div className="side-container">
-          <h3>Container 2</h3>
-          <p>Content for the second side container.</p>
+        <div className="saved-proformas">
+          <h2>Saved Proformas</h2>
+          <ul>
+            {savedProformas.map((proforma) => (
+              <li key={proforma.id}>
+                {proforma.proformaNumber} - {proforma.itemName}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
