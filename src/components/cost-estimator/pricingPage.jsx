@@ -64,6 +64,9 @@ const PricingPage = () => {
       { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
     ]);
   };
+  const deleteRow = (index) => {
+    setSelectedItems((prev) => prev.filter((_, i) => i !== index));
+  };
   const handleSubmitProforma = async () => {
     if (!supplierId) {
       alert("Please select a valid supplier.");
@@ -81,7 +84,7 @@ const PricingPage = () => {
       fio: parseFloat(fio),
       fioTva: parseFloat(fioTva),
       transport: parseFloat(transport),
-      transportTva:parseFloat(transportTva),
+      transportTva: parseFloat(transportTva),
       transferFees: parseFloat(transferFees),
       totalFees,
       totalTva,
@@ -138,6 +141,7 @@ const PricingPage = () => {
             setSearchQuery={setSearchQuery}
             selectedRowIndex={selectedRowIndex}
             setSelectedRowIndex={setSelectedRowIndex}
+            deleteRow={deleteRow}
           />
           <InvoiceDetails
             invoiceAmount={invoiceAmount}
