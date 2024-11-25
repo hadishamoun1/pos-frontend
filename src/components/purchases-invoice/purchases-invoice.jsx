@@ -154,6 +154,19 @@ const PurchasesInvoicePage = () => {
   const vatAmount = totalAmount * (vat / 100);
   const grandTotal = totalAmount + vatAmount;
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Ordered":
+        return "red";
+      case "Shipped":
+        return "yellow";
+      case "Recieved":
+        return "rgb(2, 235, 2)";
+      default:
+        return "white"; // Default color
+    }
+  };
+
   return (
     <div className="purchase-invoice-container">
       <div className="header">
@@ -193,10 +206,28 @@ const PurchasesInvoicePage = () => {
           </label>
           <label>
             Status
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="Ordered">Ordered</option>
-              <option value="Shipped">Shipped</option>
-              <option value="Recieved">Recieved</option>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              style={{
+                backgroundColor: status ? getStatusColor(status) : "white", // Default background if no status selected
+              }}
+            >
+              <option value="" style={{ backgroundColor: "white" }}>
+                Select Status
+              </option>
+              <option value="Ordered" style={{ backgroundColor: "red" }}>
+                Ordered
+              </option>
+              <option value="Shipped" style={{ backgroundColor: "yellow" }}>
+                Shipped
+              </option>
+              <option
+                value="Recieved"
+                style={{ backgroundColor: "rgb(2, 235, 2)" }}
+              >
+                Recieved
+              </option>
             </select>
           </label>
         </div>
