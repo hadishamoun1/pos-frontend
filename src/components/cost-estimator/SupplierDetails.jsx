@@ -22,6 +22,7 @@ const SupplierDetails = ({
       try {
         const response = await fetch("http://localhost:3000/suppliers");
         const data = await response.json();
+        console.log("calling");
         setSuppliers(data);
       } catch (error) {
         console.error("Error fetching suppliers:", error);

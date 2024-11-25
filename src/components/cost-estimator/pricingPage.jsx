@@ -113,19 +113,6 @@ const PricingPage = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchProformas = async () => {
-      try {
-        const data = await getAllSupplierProformas();
-        setSavedProformas(data);
-      } catch (error) {
-        console.error("Error fetching proformas:", error);
-      }
-    };
-
-    fetchProformas();
-  }, []);
-
   const handleProformaSelect = (proforma) => {
     setSelectedProforma(proforma);
     setSupplierName(proforma.supplier.name); // Assuming the supplier name is included
