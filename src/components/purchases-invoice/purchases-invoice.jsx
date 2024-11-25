@@ -13,7 +13,6 @@ import "./styles/summary.css";
 import "./styles/invoiceModel.css";
 import axios from "axios";
 
-
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
   return response.json();
@@ -33,11 +32,12 @@ const PurchasesInvoicePage = () => {
   const [items, setItems] = useState([]);
   const [vat, setVat] = useState(0);
   const [exchangeRate, setExchangeRate] = useState(1.5); // Add exchangeRate state
+  const [status, setStatus] = useState("Pending");
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
-  const [showTypePopup, setShowTypePopup] = useState(false); // For type selection popup
-  const [selectedType, setSelectedType] = useState(""); // For storing selected type
+  const [showTypePopup, setShowTypePopup] = useState(false);
+  const [selectedType, setSelectedType] = useState("");
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -94,10 +94,15 @@ const PurchasesInvoicePage = () => {
     const newSelectedItems = selectedItems.map((item) => ({
       id: Date.now() + Math.random(),
       ...item,
-      quantity: 1,
-      sqm: (item.length * item.width * item.quantity) / 10000,
-      unitPrice: "",
-      total: 0,
+      quantity: item.quantity || 1, // Default to 1 if undefined
+      sqm:
+        ((item.length || 0) *
+          (item.width || 0) *
+          (item.quantity || 1) *
+          (item.sheetsPerBox || 1)) /
+        10000, // Avoid NaN
+      unitPrice: item.unitPrice || 0, // Default to 0 if undefined
+      total: 0, // Total will be updated later
     }));
     setItems((prevItems) => [...prevItems, ...newSelectedItems]);
     setSelectedItems([]);
@@ -116,7 +121,7 @@ const PurchasesInvoicePage = () => {
         grandAmount: totalAmount + vatAmount,
         exchangeRate,
         date: invoiceDate,
-        type, // Use the passed type instead of relying on state
+        type,
         items: items.map((item) => ({
           itemName: item.itemName,
           dimensionId: item.dimensionId,
@@ -174,14 +179,27 @@ const PurchasesInvoicePage = () => {
             onChange={(e) => setInvoiceDate(e.target.value)}
           />
         </label>
-        <label>
-          Exchange Rate
-          <input
-            type="number"
-            value={exchangeRate}
-            onChange={(e) => setExchangeRate(Number(e.target.value))}
-          />
-        </label>
+        <div className="dropdown-container">
+          <label>
+            Exchange Rate
+            <select
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(e.target.value)}
+            >
+              <option value="1.5">1.5</option>
+              <option value="1.6">1.6</option>
+              <option value="1.7">1.7</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="Ordered">Ordered</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Recieved">Recieved</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <ItemsTable

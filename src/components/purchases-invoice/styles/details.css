@@ -1,30 +1,63 @@
-/* Invoice Details Section */
+/* General container for alignment */
 .invoice-details {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-    margin-bottom: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px; 
+  align-items: center; 
+  margin: 10px 0;
+}
+
+/* Label and input container */
+.invoice-details label {
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  gap: 5px; 
+  align-items: start; 
+}
+
+/* Input styling */
+.invoice-details input,
+.invoice-details select {
+  padding: 10px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+  color: #555;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  width: 200px; 
+}
+
+/* Focus effect for inputs and dropdowns */
+.invoice-details input:focus,
+.invoice-details select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .invoice-details {
+    flex-direction: column; 
+    gap: 15px;
   }
-  
+
   .invoice-details label {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.9rem;
-    color: #666;
-    width: 100%;
-    max-width: 250px;
+    align-items: stretch; 
   }
-  
-  .invoice-details input {
-    margin-top: 5px;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #333;
-    transition: border-color 0.3s;
+
+  .invoice-details input,
+  .invoice-details select {
+    width: 100%; 
   }
-  
+}
+
   .invoice-details input:focus {
     border-color: #007bff;
     outline: none;

@@ -24,8 +24,8 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
   };
 
   const openModal = (index) => {
-    setCurrentItemIndex(index); // Set the current item index
-    setModalVisible(true); // Show the modal
+    setCurrentItemIndex(index);
+    setModalVisible(true);
   };
 
   return (
