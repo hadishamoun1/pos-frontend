@@ -31,6 +31,8 @@ const PricingPage = () => {
   const [transportTva, setTransportTva] = useState("");
   const [transferFees, setTransferFees] = useState("");
   const [savedProformas, setSavedProformas] = useState([]);
+  const [isEditEnabled, setIsEditEnabled] = useState(false);
+  const [selectedProforma, setSelectedProforma] = useState(null);
 
   const totalFobPrice = selectedItems.reduce(
     (sum, item) => sum + parseFloat(item.fobPrice || 0),
@@ -63,6 +65,7 @@ const PricingPage = () => {
     setSelectedItems([
       { itemName: "", length: "", width: "", fobPrice: "", numContainers: "" },
     ]);
+    setIsEditEnabled(false);
   };
   const deleteRow = (index) => {
     setSelectedItems((prev) => prev.filter((_, i) => i !== index));
@@ -123,6 +126,38 @@ const PricingPage = () => {
     fetchProformas();
   }, []);
 
+  const handleProformaSelect = (proforma) => {
+    setSelectedProforma(proforma);
+    setSupplierName(proforma.supplier.name); // Assuming the supplier name is included
+    setSupplierId(proforma.supplier.id);
+    setInvoiceAmount(proforma.invoiceAmount.toString());
+    setShippingCost(proforma.shippingCost.toString());
+    setCustoms(proforma.customs.toString());
+    setTva(proforma.tva.toString());
+    setFio(proforma.fio.toString());
+    setFioTva(proforma.fioTva.toString());
+    setTransport(proforma.transport.toString());
+    setTransportTva(proforma.transportTva.toString());
+    setTransferFees(proforma.transferFees.toString());
+    setSelectedItems(proforma.items || []);
+    setSelectedItems(
+      proforma.items.map((item) => ({
+        itemName: item.itemName,
+        length: item.length,
+        width: item.width,
+        fobPrice: item.fobPrice,
+        numContainers: item.containersNumber, // Map the correct field here
+        cfrPrice: item.cfrPrice,
+        finalCost: item.finalCost,
+      }))
+    );
+    setIsEditEnabled(false); // Disable editing initially
+  };
+
+  const handleEnableEdit = () => {
+    setIsEditEnabled(true);
+  };
+
   return (
     <div className="pricing-page">
       <div className="container-wrapper">
@@ -133,6 +168,8 @@ const PricingPage = () => {
             setSupplierId={setSupplierId}
             resetAllFields={resetAllFields}
             handleSave={handleSubmitProforma}
+            isEditEnabled={!!selectedProforma}
+            handleEnableEdit={handleEnableEdit}
           />
           <ItemDetails
             selectedItems={selectedItems}
@@ -142,6 +179,7 @@ const PricingPage = () => {
             selectedRowIndex={selectedRowIndex}
             setSelectedRowIndex={setSelectedRowIndex}
             deleteRow={deleteRow}
+            isEditEnabled={isEditEnabled}
           />
           <InvoiceDetails
             invoiceAmount={invoiceAmount}
@@ -149,6 +187,7 @@ const PricingPage = () => {
             shippingCost={shippingCost}
             setShippingCost={setShippingCost}
             totalInvoiceAmount={totalInvoiceAmount}
+            isEditEnabled={isEditEnabled}
           />
           <FeesAndTaxes
             customs={customs}
@@ -167,6 +206,7 @@ const PricingPage = () => {
             setTransferFees={setTransferFees}
             totalFees={totalFees || 0}
             totalTva={totalTva || 0}
+            isEditEnabled={isEditEnabled}
           />
         </div>
         <CostTable
@@ -177,7 +217,10 @@ const PricingPage = () => {
           invoiceAmount={invoiceAmount}
         />
         {/* Add the SavedProformas component */}
-        <SavedProformas savedProformas={savedProformas} />
+        <SavedProformas
+          savedProformas={savedProformas}
+          onProformaSelect={handleProformaSelect}
+        />
       </div>
     </div>
   );

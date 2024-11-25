@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./styles/savedProformas.css";
 import { getAllSupplierProformas } from "./supplierProformaApi";
 
-const SavedProformas = () => {
+const SavedProformas = ({ onProformaSelect }) => {
   const [savedProformas, setSavedProformas] = useState([]);
 
   useEffect(() => {
@@ -19,12 +19,16 @@ const SavedProformas = () => {
   }, []);
 
   return (
-    <div  className="side-container">
+    <div className="saved-proformas-container">
       <h2>Saved Proformas</h2>
       {savedProformas.length > 0 ? (
         <div className="proforma-cards">
           {savedProformas.map((proforma) => (
-            <div className="proforma-card" key={proforma.id}>
+            <div
+              className="proforma-card"
+              key={proforma.id}
+              onClick={() => onProformaSelect(proforma)} // Attach onClick event
+            >
               <div className="proforma-card-header">
                 <span className="proforma-number">
                   {proforma.proformaNumber}

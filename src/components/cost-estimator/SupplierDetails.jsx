@@ -5,11 +5,13 @@ const SupplierDetails = ({
   setSupplierName,
   resetAllFields,
   handleSave,
-  setSupplierId, // Add a setter for supplier ID
+  setSupplierId,
+  isEditEnabled, // New prop to conditionally render Edit button
+  handleEnableEdit, // New prop to enable editing
 }) => {
   const [date, setDate] = useState(() => {
     const today = new Date();
-    return today.toISOString().split("T")[0]; // Default to today's date
+    return today.toISOString().split("T")[0];
   });
   const [suppliers, setSuppliers] = useState([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
@@ -18,7 +20,7 @@ const SupplierDetails = ({
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch("http://localhost:3000/suppliers"); // Replace with your API endpoint
+        const response = await fetch("http://localhost:3000/suppliers");
         const data = await response.json();
         setSuppliers(data);
       } catch (error) {
@@ -42,9 +44,9 @@ const SupplierDetails = ({
   }, [supplierName, suppliers]);
 
   const handleSupplierSelect = (supplier) => {
-    setSupplierName(supplier.name); // Set the selected supplier's name
-    setSupplierId(supplier.id); // Set the selected supplier's ID
-    setFilteredSuppliers([]); // Clear the suggestions
+    setSupplierName(supplier.name);
+    setSupplierId(supplier.id);
+    setFilteredSuppliers([]);
   };
 
   const resetFields = () => {
@@ -68,6 +70,12 @@ const SupplierDetails = ({
           <button className="reset-button" onClick={resetFields}>
             New
           </button>
+          {/* Edit button, shown only when isEditEnabled is true */}
+          {isEditEnabled && (
+            <button className="edit-button" onClick={handleEnableEdit}>
+              Edit
+            </button>
+          )}
           <button className="save-button" onClick={handleSave}>
             Save
           </button>
@@ -82,6 +90,7 @@ const SupplierDetails = ({
             value={supplierName}
             onChange={(e) => setSupplierName(e.target.value)}
             placeholder="Enter Supplier Name"
+            readOnly={isEditEnabled}
           />
           {filteredSuppliers.length > 0 && (
             <ul className="supplier-suggestions">
@@ -103,6 +112,7 @@ const SupplierDetails = ({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            readOnly={isEditEnabled}
           />
         </div>
       </div>
