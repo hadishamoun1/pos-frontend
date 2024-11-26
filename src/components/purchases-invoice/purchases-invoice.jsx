@@ -178,156 +178,161 @@ const PurchasesInvoicePage = () => {
   };
 
   return (
-    <div className="purchase-invoice-container">
-      <div className="header">
-        <h2>Create Purchase Invoice</h2>
-        <button className="save-button" onClick={handleSaveButtonClick}>
-          Save Invoice
-        </button>
-      </div>
+    <div className="main-container">
+      <div className="purchase-invoice-container">
+        <div className="header">
+          <h2>Create Purchase Invoice</h2>
+          <button className="save-button" onClick={handleSaveButtonClick}>
+            Save Invoice
+          </button>
+        </div>
 
-      <div className="invoice-details">
-        <SupplierInput
-          supplierName={supplierName}
-          setSupplierName={setSupplierName}
-          filteredSuppliers={filteredSuppliers}
-          showSupplierSuggestions={showSupplierSuggestions}
-          setShowSupplierSuggestions={setShowSupplierSuggestions}
-        />
-        <label>
-          Date
-          <input
-            type="date"
-            value={invoiceDate}
-            onChange={(e) => setInvoiceDate(e.target.value)}
+        <div className="invoice-details">
+          <SupplierInput
+            supplierName={supplierName}
+            setSupplierName={setSupplierName}
+            filteredSuppliers={filteredSuppliers}
+            showSupplierSuggestions={showSupplierSuggestions}
+            setShowSupplierSuggestions={setShowSupplierSuggestions}
           />
-        </label>
-        <div className="dropdown-container">
           <label>
-            Invoice Number
-            <input type="text" placeholder="Enter invoice number" />
-          </label>
-          <label>
-            Exchange Rate
-            <select
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(e.target.value)}
-            >
-              <option value="1.5">1.5</option>
-              <option value="1.6">1.6</option>
-              <option value="1.7">1.7</option>
-            </select>
-          </label>
-          <label>
-            Currency
-            <select
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(e.target.value)}
-            >
-              <option value="USD">USD</option>
-              <option value="EURO">EURO</option>
-            </select>
-          </label>
-          <label>
-            Status
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={{
-                backgroundColor: status ? getStatusColor(status) : "white", // Default background if no status selected
-              }}
-            >
-              <option value="" style={{ backgroundColor: "white" }}>
-                Select Status
-              </option>
-              <option value="Ordered" style={{ backgroundColor: "red" }}>
-                Ordered
-              </option>
-              <option value="Shipped" style={{ backgroundColor: "yellow" }}>
-                Shipped
-              </option>
-              <option
-                value="Recieved"
-                style={{ backgroundColor: "rgb(2, 235, 2)" }}
-              >
-                Recieved
-              </option>
-            </select>
-          </label>
-          <label>
-            Expected Arrival Date
+            Date
             <input
               type="date"
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
             />
           </label>
-        </div>
-      </div>
-
-     
-
-      <ItemsTable
-        items={items}
-        setItems={setItems}
-        openItemModal={() => setShowItemModal(true)}
-      />
-
-      {showItemModal && (
-        <ItemModal
-          filteredItems={filteredItems}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedItems={selectedItems}
-          handleCheckboxChange={handleCheckboxChange}
-          closeItemModal={closeItemModal}
-        />
-      )}
-
-      {showTypePopup && (
-        <div className="invoice-type-modal-overlay">
-          <div className="invoice-type-modal-content">
-            <h3>Select Invoice Type</h3>
-            <div className="invoice-type-selection-buttons">
-              <button
-                onClick={() => {
-                  setSelectedType("S");
-                  saveInvoice("S");
-                }}
-                className="invoice-S-type-button"
+          <div className="dropdown-container">
+            <label>
+              Invoice Number
+              <input type="text" placeholder="Enter invoice number" />
+            </label>
+            <label>
+              Exchange Rate
+              <select
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
               >
-                S
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedType("G");
-                  saveInvoice("G");
-                }}
-                className="invoice-G-type-button"
+                <option value="1.5">1.5</option>
+                <option value="1.6">1.6</option>
+                <option value="1.7">1.7</option>
+              </select>
+            </label>
+            <label>
+              Currency
+              <select
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
               >
-                G
-              </button>
-            </div>
-            <button
-              className="invoice-type-close-button"
-              onClick={() => setShowTypePopup(false)}
-            >
-              Cancel
-            </button>
+                <option value="USD">USD</option>
+                <option value="EURO">EURO</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={{
+                  backgroundColor: status ? getStatusColor(status) : "white", 
+                }}
+              >
+                <option value="" style={{ backgroundColor: "white" }}>
+                  Select Status
+                </option>
+                <option value="Ordered" style={{ backgroundColor: "red" }}>
+                  Ordered
+                </option>
+                <option value="Shipped" style={{ backgroundColor: "yellow" }}>
+                  Shipped
+                </option>
+                <option
+                  value="Recieved"
+                  style={{ backgroundColor: "rgb(2, 235, 2)" }}
+                >
+                  Recieved
+                </option>
+              </select>
+            </label>
+            <label>
+              Expected Arrival Date
+              <input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </label>
           </div>
         </div>
-      )}
 
-      <SummarySection
-        totalAmount={itemsTotalAmount}
-        totalOfferAmount={totalOfferAmount}
-        potentialCost={potentialCost}
-        setPotentialCost={setPotentialCost}
-        shippingCost={shippingCost}
-        setShippingCost={setShippingCost}
-        numberOfContainers={numberOfContainers}
-        setNumberOfContainers={setNumberOfContainers}
-      />
+        <ItemsTable
+          items={items}
+          setItems={setItems}
+          openItemModal={() => setShowItemModal(true)}
+        />
+
+        {showItemModal && (
+          <ItemModal
+            filteredItems={filteredItems}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedItems={selectedItems}
+            handleCheckboxChange={handleCheckboxChange}
+            closeItemModal={closeItemModal}
+          />
+        )}
+
+        {showTypePopup && (
+          <div className="invoice-type-modal-overlay">
+            <div className="invoice-type-modal-content">
+              <h3>Select Invoice Type</h3>
+              <div className="invoice-type-selection-buttons">
+                <button
+                  onClick={() => {
+                    setSelectedType("S");
+                    saveInvoice("S");
+                  }}
+                  className="invoice-S-type-button"
+                >
+                  S
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedType("G");
+                    saveInvoice("G");
+                  }}
+                  className="invoice-G-type-button"
+                >
+                  G
+                </button>
+              </div>
+              <button
+                className="invoice-type-close-button"
+                onClick={() => setShowTypePopup(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <SummarySection
+          totalAmount={itemsTotalAmount}
+          totalOfferAmount={totalOfferAmount}
+          potentialCost={potentialCost}
+          setPotentialCost={setPotentialCost}
+          shippingCost={shippingCost}
+          setShippingCost={setShippingCost}
+          numberOfContainers={numberOfContainers}
+          setNumberOfContainers={setNumberOfContainers}
+        />
+      </div>
+      <div className="additional-container">
+        <h3>Additional Information</h3>
+        {/* Add your content here */}
+        <p>This is the right-side container. Add content here.</p>
+      </div>
     </div>
   );
 };
