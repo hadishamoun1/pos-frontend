@@ -235,7 +235,7 @@ const PurchasesInvoicePage = () => {
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 style={{
-                  backgroundColor: status ? getStatusColor(status) : "white", 
+                  backgroundColor: status ? getStatusColor(status) : "white",
                 }}
               >
                 <option value="" style={{ backgroundColor: "white" }}>
@@ -270,6 +270,8 @@ const PurchasesInvoicePage = () => {
           items={items}
           setItems={setItems}
           openItemModal={() => setShowItemModal(true)}
+          currency={exchangeRate === "EURO" ? "EURO" : "USD"} // Pass selected currency
+          exchangeRate={exchangeRate} // Pass exchange rate
         />
 
         {showItemModal && (

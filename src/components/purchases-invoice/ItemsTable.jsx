@@ -2,28 +2,46 @@ import React, { useState } from "react";
 import { FaTrash } from "react-icons/fa";
 import UnitPriceModal from "./unitPriceModel";
 
-const ItemsTable = ({ items, setItems, openItemModal }) => {
-  const [isModalVisible, setModalVisible] = useState(false); // Modal visibility state
-  const [currentItemIndex, setCurrentItemIndex] = useState(null); // Current item being edited
-
+const ItemsTable = ({
+  items,
+  setItems,
+  openItemModal,
+  currency,
+  exchangeRate,
+}) => {
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
 
-    const { length, width, quantity, sheetsPerBox, unitPrice, priceOFR } =
-      newItems[index];
+    const {
+      length,
+      width,
+      quantity,
+      sheetsPerBox,
+      euroPrice,
+      euroOfferPrice,
+      unitPrice,
+      priceOFR,
+    } = newItems[index];
+
     const sqm = (length * width * quantity * sheetsPerBox) / 10000;
-    const total = sqm * unitPrice;
-    const totalOFR = sqm * (priceOFR || 0);
+
+    // Calculate values based on the currency
+    if (currency === "EURO") {
+      newItems[index].unitPrice = euroPrice ? euroPrice / exchangeRate : null;
+      newItems[index].priceOFR = euroOfferPrice
+        ? euroOfferPrice / exchangeRate
+        : null;
+    }
+
+    const total = sqm * (newItems[index].unitPrice || 0);
+    const totalOFR = sqm * (newItems[index].priceOFR || 0);
+
     newItems[index].sqm = sqm;
-    newItems[index].total = sqm * unitPrice;
+    newItems[index].total = total;
     newItems[index].totalOFR = totalOFR;
 
     setItems(newItems);
-  };
-
-  const deleteItem = (id) => {
-    setItems(items.filter((item) => item.id !== id));
   };
 
   return (
@@ -46,7 +64,9 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
             <th>Quantity</th>
             <th>Sheets/Box</th>
             <th>SQM</th>
+            {currency === "EURO" && <th>Euro Price</th>}
             <th>Unit Price</th>
+            {currency === "EURO" && <th>Euro Offer Price</th>}
             <th>Price OFR</th>
             <th>Total</th>
             <th>Total OFR</th>
@@ -59,47 +79,89 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
               <td>{item.itemName}</td>
               <td>{item.type}</td>
               <td>{item.origin}</td>
-              <td>{item.length || 0}</td> {/* Default to 0 if undefined */}
-              <td>{item.width || 0}</td> {/* Default to 0 if undefined */}
+              <td>{item.length || 0}</td>
+              <td>{item.width || 0}</td>
               <td>
                 <input
                   type="number"
-                  value={item.quantity || 0} // Default to 0 if undefined
+                  value={item.quantity || 0}
                   onChange={(e) =>
                     handleItemChange(index, "quantity", Number(e.target.value))
                   }
                 />
               </td>
-              <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>{" "}
-              {/* Default to 0 */}
-              <td>{(item.sqm || 0).toFixed(2)}</td>{" "}
-              {/* Default to 0 before .toFixed() */}
+              <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>
+              <td>{(item.sqm || 0).toFixed(2)}</td>
+              {currency === "EURO" && (
+                <td>
+                  <input
+                    type="number"
+                    value={item.euroPrice || 0}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "euroPrice",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                </td>
+              )}
               <td>
-                <input
-                  type="number"
-                  value={item.unitPrice || 0} // Default to 0 if undefined
-                  onChange={(e) =>
-                    handleItemChange(index, "unitPrice", Number(e.target.value))
-                  }
-                />
+                {currency === "EURO" ? (
+                  (item.unitPrice || 0).toFixed(2)
+                ) : (
+                  <input
+                    type="number"
+                    value={item.unitPrice || 0}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "unitPrice",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                )}
               </td>
+              {currency === "EURO" && (
+                <td>
+                  <input
+                    type="number"
+                    value={item.euroOfferPrice || 0}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "euroOfferPrice",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                </td>
+              )}
               <td>
-                <input
-                  type="number"
-                  value={item.priceOFR || 0} // Input for Price OFR
-                  onChange={(e) =>
-                    handleItemChange(index, "priceOFR", Number(e.target.value))
-                  }
-                />
+                {currency === "EURO" ? (
+                  (item.priceOFR || 0).toFixed(2)
+                ) : (
+                  <input
+                    type="number"
+                    value={item.priceOFR || 0}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "priceOFR",
+                        Number(e.target.value)
+                      )
+                    }
+                  />
+                )}
               </td>
-              <td>{(item.total || 0).toFixed(2)}</td>{" "}
-              {/* Default to 0 before .toFixed() */}
-              <td>{(item.totalOFR || 0).toFixed(2)}</td>{" "}
-              {/* Default to 0 before .toFixed() */}
+              <td>{(item.total || 0).toFixed(2)}</td>
+              <td>{(item.totalOFR || 0).toFixed(2)}</td>
               <td>
                 <button
                   className="delete-button"
-                  onClick={() => deleteItem(item.id)}
+                  onClick={() => setItems(items.filter((_, i) => i !== index))}
                 >
                   <FaTrash />
                 </button>
