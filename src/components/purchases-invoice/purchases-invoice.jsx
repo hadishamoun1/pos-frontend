@@ -30,6 +30,9 @@ const PurchasesInvoicePage = () => {
     new Date().toISOString().slice(0, 10)
   );
   const [items, setItems] = useState([]);
+  const [potentialCost, setPotentialCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState(0);
+  const [numberOfContainers, setNumberOfContainers] = useState(0);
   const [vat, setVat] = useState(0);
   const [exchangeRate, setExchangeRate] = useState(1.5); // Add exchangeRate state
   const [status, setStatus] = useState("Pending");
@@ -43,7 +46,14 @@ const PurchasesInvoicePage = () => {
     queryKey: ["suppliers"],
     queryFn: fetchSuppliers,
   });
-
+  const itemsTotalAmount = items.reduce(
+    (sum, item) => sum + (item.total || 0),
+    0
+  );
+  const totalOfferAmount = items.reduce(
+    (sum, item) => sum + (item.totalOFR || 0),
+    0
+  );
   const { data: allItems = [] } = useQuery({
     queryKey: ["items"],
     queryFn: fetchItems,
@@ -194,6 +204,10 @@ const PurchasesInvoicePage = () => {
         </label>
         <div className="dropdown-container">
           <label>
+            Invoice Number
+            <input type="text" placeholder="Enter invoice number" />
+          </label>
+          <label>
             Exchange Rate
             <select
               value={exchangeRate}
@@ -202,6 +216,16 @@ const PurchasesInvoicePage = () => {
               <option value="1.5">1.5</option>
               <option value="1.6">1.6</option>
               <option value="1.7">1.7</option>
+            </select>
+          </label>
+          <label>
+            Currency
+            <select
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(e.target.value)}
+            >
+              <option value="USD">USD</option>
+              <option value="EURO">EURO</option>
             </select>
           </label>
           <label>
@@ -230,25 +254,18 @@ const PurchasesInvoicePage = () => {
               </option>
             </select>
           </label>
+          <label>
+            Expected Arrival Date
+            <input
+              type="date"
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+            />
+          </label>
         </div>
       </div>
 
-      <ItemsTable
-        items={items}
-        setItems={setItems}
-        openItemModal={() => setShowItemModal(true)}
-      />
-
-      {showItemModal && (
-        <ItemModal
-          filteredItems={filteredItems}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedItems={selectedItems}
-          handleCheckboxChange={handleCheckboxChange}
-          closeItemModal={closeItemModal}
-        />
-      )}
+      <ItemsTable items={items} setItems={setItems} />
 
       {showTypePopup && (
         <div className="invoice-type-modal-overlay">
@@ -285,11 +302,14 @@ const PurchasesInvoicePage = () => {
       )}
 
       <SummarySection
-        vat={vat}
-        setVat={setVat}
-        totalAmount={totalAmount}
-        vatAmount={vatAmount}
-        grandTotal={grandTotal}
+        totalAmount={itemsTotalAmount}
+        totalOfferAmount={totalOfferAmount}
+        potentialCost={potentialCost}
+        setPotentialCost={setPotentialCost}
+        shippingCost={shippingCost}
+        setShippingCost={setShippingCost}
+        numberOfContainers={numberOfContainers}
+        setNumberOfContainers={setNumberOfContainers}
       />
     </div>
   );

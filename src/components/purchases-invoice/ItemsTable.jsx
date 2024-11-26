@@ -10,11 +10,14 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
     const newItems = [...items];
     newItems[index][field] = value;
 
-    const { length, width, quantity, sheetsPerBox, unitPrice } =
+    const { length, width, quantity, sheetsPerBox, unitPrice, priceOFR } =
       newItems[index];
     const sqm = (length * width * quantity * sheetsPerBox) / 10000;
+    const total = sqm * unitPrice;
+    const totalOFR = sqm * (priceOFR || 0);
     newItems[index].sqm = sqm;
     newItems[index].total = sqm * unitPrice;
+    newItems[index].totalOFR = totalOFR;
 
     setItems(newItems);
   };
@@ -23,11 +26,7 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
-  const openModal = (index) => {
-    setCurrentItemIndex(index);
-    setModalVisible(true);
-  };
-
+  
   return (
     <div className="items-table">
       <div className="separator">
@@ -49,7 +48,9 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
             <th>Sheets/Box</th>
             <th>SQM</th>
             <th>Unit Price</th>
+            <th>Price OFR</th>
             <th>Total</th>
+            <th>Total OFR</th>
             <th>Delete</th>
           </tr>
         </thead>
@@ -59,28 +60,43 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
               <td>{item.itemName}</td>
               <td>{item.type}</td>
               <td>{item.origin}</td>
-              <td>{item.length}</td>
-              <td>{item.width}</td>
+              <td>{item.length || 0}</td> {/* Default to 0 if undefined */}
+              <td>{item.width || 0}</td> {/* Default to 0 if undefined */}
               <td>
                 <input
                   type="number"
-                  value={item.quantity}
+                  value={item.quantity || 0} // Default to 0 if undefined
                   onChange={(e) =>
                     handleItemChange(index, "quantity", Number(e.target.value))
                   }
                 />
               </td>
-              <td>{item.type === "box" ? item.sheetsPerBox : ""}</td>
-              <td>{item.sqm.toFixed(2)}</td>
+              <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>{" "}
+              {/* Default to 0 */}
+              <td>{(item.sqm || 0).toFixed(2)}</td>{" "}
+              {/* Default to 0 before .toFixed() */}
               <td>
                 <input
                   type="number"
-                  value={item.unitPrice}
-                  onClick={() => openModal(index)} // Open modal on click
-                  readOnly // Prevent direct input to the field
+                  value={item.unitPrice || 0} // Default to 0 if undefined
+                  onChange={(e) =>
+                    handleItemChange(index, "unitPrice", Number(e.target.value))
+                  }
                 />
               </td>
-              <td>{item.total.toFixed(2)}</td>
+              <td>
+                <input
+                  type="number"
+                  value={item.priceOFR || 0} // Input for Price OFR
+                  onChange={(e) =>
+                    handleItemChange(index, "priceOFR", Number(e.target.value))
+                  }
+                />
+              </td>
+              <td>{(item.total || 0).toFixed(2)}</td>{" "}
+              {/* Default to 0 before .toFixed() */}
+              <td>{(item.totalOFR || 0).toFixed(2)}</td>{" "}
+              {/* Default to 0 before .toFixed() */}
               <td>
                 <button
                   className="delete-button"
@@ -93,19 +109,6 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
           ))}
         </tbody>
       </table>
-
-      {/* Unit Price Modal */}
-      <UnitPriceModal
-        isVisible={isModalVisible}
-        onClose={() => setModalVisible(false)}
-        item={currentItemIndex !== null ? items[currentItemIndex] : null} // Pass current item
-        onSave={(unitPrice) => {
-          if (currentItemIndex !== null) {
-            handleItemChange(currentItemIndex, "unitPrice", unitPrice);
-          }
-          setModalVisible(false);
-        }}
-      />
     </div>
   );
 };
