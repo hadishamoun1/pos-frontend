@@ -265,7 +265,24 @@ const PurchasesInvoicePage = () => {
         </div>
       </div>
 
-      <ItemsTable items={items} setItems={setItems} />
+     
+
+      <ItemsTable
+        items={items}
+        setItems={setItems}
+        openItemModal={() => setShowItemModal(true)}
+      />
+
+      {showItemModal && (
+        <ItemModal
+          filteredItems={filteredItems}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedItems={selectedItems}
+          handleCheckboxChange={handleCheckboxChange}
+          closeItemModal={closeItemModal}
+        />
+      )}
 
       {showTypePopup && (
         <div className="invoice-type-modal-overlay">

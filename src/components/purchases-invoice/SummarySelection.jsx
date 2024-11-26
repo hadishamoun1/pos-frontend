@@ -30,7 +30,7 @@ const SummarySection = ({
           />
         </label>
         <label>
-          Number of Containers
+          Nb of Containers
           <input
             type="number"
             value={numberOfContainers}

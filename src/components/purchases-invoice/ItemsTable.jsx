@@ -26,7 +26,6 @@ const ItemsTable = ({ items, setItems, openItemModal }) => {
     setItems(items.filter((item) => item.id !== id));
   };
 
-  
   return (
     <div className="items-table">
       <div className="separator">

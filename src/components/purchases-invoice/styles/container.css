@@ -4,8 +4,8 @@
   flex-direction: column;
   justify-content: space-between;
   height: 89vh;
-  width: 90%;
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1300px;
   margin: 20px auto;
   padding: 30px;
   background-color: #f9fafb;
