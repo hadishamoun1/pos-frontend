@@ -14,9 +14,9 @@
 }
 
 .items-table table {
-  width: 100%; /* Ensure the table takes up the full width */
+  width: 100%; 
   border-collapse: collapse;
-  table-layout: auto; /* Allow columns to adjust their width based on content */
+  table-layout: auto; 
   margin-bottom: 20px;
 }
 
