@@ -1,8 +1,8 @@
 /* Header Section */
 .header {
   display: flex;
-  justify-content: space-between; /* Space between title and buttons */
-  align-items: center; /* Align items vertically */
+  justify-content: space-between; 
+  align-items: center; 
   margin-bottom: 30px;
 }
 
@@ -12,14 +12,15 @@
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
+  width: 100%;
 }
 
 /* Buttons Wrapper */
 .button-container {
   display: flex;
-  gap: 10px; /* Add space between buttons */
-  justify-content: flex-end; /* Align buttons to the right */
-  width: 100%; /* Take full width for alignment */
+  gap: 10px; 
+  justify-content: flex-end; 
+  width: 100%; 
 }
 
 /* Save Button */
@@ -43,7 +44,7 @@
   background-color: #01b94e;
   color: white;
   border: 1px solid #ddd;
-  padding: 12px 24px; /* Match save-button size */
+  padding: 12px 24px; 
   border-radius: 5px;
   cursor: pointer;
 }

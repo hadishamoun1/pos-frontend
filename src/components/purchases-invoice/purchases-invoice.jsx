@@ -42,8 +42,9 @@ const PurchasesInvoicePage = () => {
   const [showTypePopup, setShowTypePopup] = useState(false);
   const [selectedType, setSelectedType] = useState("");
 
-  const [currency, setCurrency] = useState("USD"); // Separate state for currency
-  const [exchangeRate, setExchangeRate] = useState(1.5); // Separate state for exchange rate
+  const [currency, setCurrency] = useState("USD");
+  const [exchangeRate, setExchangeRate] = useState(1.5);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   const resetFields = () => {
     setSupplierName("");
@@ -58,15 +59,16 @@ const PurchasesInvoicePage = () => {
     setSelectedItems([]);
     setCurrency("USD");
     setExchangeRate(1.5);
+    setInvoiceNumber("");
   };
 
   const handleCurrencyChange = (e) => {
     const selectedCurrency = e.target.value;
-    setCurrency(selectedCurrency); // Update currency state
+    setCurrency(selectedCurrency);
 
     // Optional: Reset exchange rate for Euro when switching currencies
     if (selectedCurrency === "EURO") {
-      setExchangeRate(1.5); // Default exchange rate for EURO
+      setExchangeRate(1.5);
     }
   };
 
@@ -132,15 +134,15 @@ const PurchasesInvoicePage = () => {
     const newSelectedItems = selectedItems.map((item) => ({
       id: Date.now() + Math.random(),
       ...item,
-      quantity: item.quantity || 1, // Default to 1 if undefined
+      quantity: item.quantity || 1,
       sqm:
         ((item.length || 0) *
           (item.width || 0) *
           (item.quantity || 1) *
           (item.sheetsPerBox || 1)) /
         10000, // Avoid NaN
-      unitPrice: item.unitPrice || 0, // Default to 0 if undefined
-      total: 0, // Total will be updated later
+      unitPrice: item.unitPrice || 0,
+      total: 0,
     }));
     setItems((prevItems) => [...prevItems, ...newSelectedItems]);
     setSelectedItems([]);
@@ -148,7 +150,7 @@ const PurchasesInvoicePage = () => {
   };
 
   const handleSaveButtonClick = () => {
-    setShowTypePopup(true); // Show the type selection popup
+    setShowTypePopup(true);
   };
 
   const saveInvoice = async (type) => {
@@ -201,7 +203,7 @@ const PurchasesInvoicePage = () => {
       case "Recieved":
         return "rgb(2, 235, 2)";
       default:
-        return "white"; // Default color
+        return "white";
     }
   };
 
@@ -239,7 +241,12 @@ const PurchasesInvoicePage = () => {
           <div className="dropdown-container">
             <label>
               Invoice Number
-              <input type="text" placeholder="Enter invoice number" />
+              <input
+                type="text"
+                placeholder="Enter invoice number"
+                value={invoiceNumber} 
+                onChange={(e) => setInvoiceNumber(e.target.value)} 
+              />
             </label>
             {currency === "EURO" && (
               <label>
@@ -302,8 +309,8 @@ const PurchasesInvoicePage = () => {
           items={items}
           setItems={setItems}
           openItemModal={() => setShowItemModal(true)}
-          currency={currency} // Pass selected currency
-          exchangeRate={exchangeRate} // Pass exchange rate
+          currency={currency}
+          exchangeRate={exchangeRate}
         />
 
         {showItemModal && (

@@ -1,7 +1,7 @@
 /* Wrapper for the Two Containers */
 .main-container {
   display: flex;
-  justify-content: flex-start; /* Align containers to the left */
+  justify-content: flex-start; 
   align-items: flex-start;
   gap: 20px;
   width: 100%;
