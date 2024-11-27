@@ -1,0 +1,71 @@
+.customers-page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  .customer-form table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .customer-form td {
+    padding: 10px;
+    vertical-align: top;
+  }
+  
+  .customer-form label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+  }
+  
+  .customer-form input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  .add-customer-button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .add-customer-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .customer-preview {
+    margin-top: 20px;
+  }
+  
+  .customer-preview h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+  }
+  
+  .customer-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .customer-table th,
+  .customer-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .customer-table th {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+  }
+  
