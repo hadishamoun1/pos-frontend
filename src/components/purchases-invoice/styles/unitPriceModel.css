@@ -3,6 +3,7 @@
   top: 0;
   left: 0;
   width: 100%;
+
   height: 100%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -16,7 +17,7 @@
   border-radius: 10px;
   padding: 20px;
   width: 90%;
-  max-width: 1200px;
+  max-width: 1600px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -36,6 +37,7 @@
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 20px;
+  table-layout: fixed;
 }
 
 .unit-price-table th,
@@ -43,12 +45,16 @@
   padding: 10px;
   text-align: left;
   border: 1px solid #ddd;
+  height: auto;
 }
 
 .unit-price-table th {
   background-color: #007bff;
   color: white;
   font-weight: bold;
+  white-space: normal;
+  word-wrap: break-word;
+  text-align: center;
 }
 
 .unit-price-table td input,
@@ -57,6 +63,13 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.unit-price-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .table-actions {
@@ -87,4 +100,40 @@
 .close-button {
   background-color: #ff4d4d;
   color: white;
+}
+.unit-price-table td input[type="checkbox"] {
+  appearance: none; /* Remove default styling */
+  -webkit-appearance: none; /* For Safari */
+  width: 20px; /* Set size (adjustable) */
+  height: 20px; /* Set size (adjustable) */
+  border: 2px solid #007bff; /* Border color */
+  border-radius: 4px; /* Set to 0 for perfect square or adjust for rounded edges */
+  background-color: #fff; /* Background color */
+  cursor: pointer;
+  display: inline-block; /* Ensure proper alignment */
+  position: relative;
+  transition: all 0.3s ease; /* Smooth transitions */
+}
+
+.unit-price-table td input[type="checkbox"]:checked {
+  background-color: #007bff; /* Background color when checked */
+  border-color: #0056b3; /* Border color when checked */
+}
+
+.unit-price-table td input[type="checkbox"]:checked::after {
+  content: "✔"; /* Add checkmark */
+  font-size: 16px; /* Adjust size of the checkmark */
+  color: white; /* Color of the checkmark */
+  display: block;
+  text-align: center;
+  line-height: 1.2; /* Align checkmark inside the box */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.unit-price-table td input[type="checkbox"]:focus {
+  outline: none; /* Remove default focus outline */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Add focus shadow */
 }
