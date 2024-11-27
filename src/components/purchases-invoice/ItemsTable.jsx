@@ -13,16 +13,8 @@ const ItemsTable = ({
     const newItems = [...items];
     newItems[index][field] = value;
 
-    const {
-      length,
-      width,
-      quantity,
-      sheetsPerBox,
-      euroPrice,
-      euroOfferPrice,
-      unitPrice,
-      priceOFR,
-    } = newItems[index];
+    const { length, width, quantity, sheetsPerBox, euroPrice, euroOfferPrice } =
+      newItems[index];
 
     const sqm = (length * width * quantity * sheetsPerBox) / 10000;
 

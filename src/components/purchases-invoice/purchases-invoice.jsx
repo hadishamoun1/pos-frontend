@@ -34,13 +34,26 @@ const PurchasesInvoicePage = () => {
   const [shippingCost, setShippingCost] = useState(0);
   const [numberOfContainers, setNumberOfContainers] = useState(0);
   const [vat, setVat] = useState(0);
-  const [exchangeRate, setExchangeRate] = useState(1.5); // Add exchangeRate state
+
   const [status, setStatus] = useState("Pending");
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
   const [showTypePopup, setShowTypePopup] = useState(false);
   const [selectedType, setSelectedType] = useState("");
+
+  const [currency, setCurrency] = useState("USD"); // Separate state for currency
+  const [exchangeRate, setExchangeRate] = useState(1.5); // Separate state for exchange rate
+
+  const handleCurrencyChange = (e) => {
+    const selectedCurrency = e.target.value;
+    setCurrency(selectedCurrency); // Update currency state
+
+    // Optional: Reset exchange rate for Euro when switching currencies
+    if (selectedCurrency === "EURO") {
+      setExchangeRate(1.5); // Default exchange rate for EURO
+    }
+  };
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -208,23 +221,22 @@ const PurchasesInvoicePage = () => {
               Invoice Number
               <input type="text" placeholder="Enter invoice number" />
             </label>
-            <label>
-              Exchange Rate
-              <select
-                value={exchangeRate}
-                onChange={(e) => setExchangeRate(e.target.value)}
-              >
-                <option value="1.5">1.5</option>
-                <option value="1.6">1.6</option>
-                <option value="1.7">1.7</option>
-              </select>
-            </label>
+            {currency === "EURO" && (
+              <label>
+                Exchange Rate
+                <select
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(Number(e.target.value))}
+                >
+                  <option value="1.5">1.5</option>
+                  <option value="1.6">1.6</option>
+                  <option value="1.7">1.7</option>
+                </select>
+              </label>
+            )}
             <label>
               Currency
-              <select
-                value={exchangeRate}
-                onChange={(e) => setExchangeRate(e.target.value)}
-              >
+              <select value={currency} onChange={handleCurrencyChange}>
                 <option value="USD">USD</option>
                 <option value="EURO">EURO</option>
               </select>
@@ -270,7 +282,7 @@ const PurchasesInvoicePage = () => {
           items={items}
           setItems={setItems}
           openItemModal={() => setShowItemModal(true)}
-          currency={exchangeRate === "EURO" ? "EURO" : "USD"} // Pass selected currency
+          currency={currency} // Pass selected currency
           exchangeRate={exchangeRate} // Pass exchange rate
         />
 
