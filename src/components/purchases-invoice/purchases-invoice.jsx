@@ -45,6 +45,21 @@ const PurchasesInvoicePage = () => {
   const [currency, setCurrency] = useState("USD"); // Separate state for currency
   const [exchangeRate, setExchangeRate] = useState(1.5); // Separate state for exchange rate
 
+  const resetFields = () => {
+    setSupplierName("");
+    setInvoiceDate(new Date().toISOString().slice(0, 10));
+    setItems([]);
+    setPotentialCost(0);
+    setShippingCost(0);
+    setNumberOfContainers(0);
+    setVat(0);
+    setStatus("Pending");
+    setSearchQuery("");
+    setSelectedItems([]);
+    setCurrency("USD");
+    setExchangeRate(1.5);
+  };
+
   const handleCurrencyChange = (e) => {
     const selectedCurrency = e.target.value;
     setCurrency(selectedCurrency); // Update currency state
@@ -195,9 +210,14 @@ const PurchasesInvoicePage = () => {
       <div className="purchase-invoice-container">
         <div className="header">
           <h2>Create Purchase Invoice</h2>
-          <button className="save-button" onClick={handleSaveButtonClick}>
-            Save Invoice
-          </button>
+          <div className="button-container">
+            <button className="save-button" onClick={handleSaveButtonClick}>
+              Save Invoice
+            </button>
+            <button className="new-button" onClick={resetFields}>
+              New
+            </button>
+          </div>
         </div>
 
         <div className="invoice-details">

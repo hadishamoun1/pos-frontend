@@ -1,18 +1,18 @@
 /* Wrapper for the Two Containers */
 .main-container {
-  display: flex; 
-  justify-content: space-between; 
-  align-items: flex-start; 
+  display: flex;
+  justify-content: flex-start; /* Align containers to the left */
+  align-items: flex-start;
   gap: 20px;
-  width: 100%; 
+  width: 100%;
   margin: 0 auto;
-  padding: 0; 
+  padding: 0;
 }
 
 /* Left Container (Purchase Invoice) */
 .purchase-invoice-container {
-  flex: 3; 
-  height: 93vh; 
+  flex: 3;
+  height: 93vh;
   background-color: #f9fafb;
   padding: 30px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
@@ -26,8 +26,8 @@
 
 /* Right Container (Additional Section) */
 .additional-container {
-  flex: 1; 
-  height: 95vh; 
+  flex: 1;
+  height: 95vh;
   background-color: #ffffff;
   padding: 20px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
