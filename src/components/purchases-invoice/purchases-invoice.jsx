@@ -4,6 +4,7 @@ import SupplierInput from "./SupplierInput";
 import ItemsTable from "./ItemsTable";
 import ItemModal from "./ItemModel";
 import SummarySection from "./SummarySelection";
+import UnitPriceModal from "./unitPriceModel";
 import "./styles/container.css";
 import "./styles/header.css";
 import "./styles/details.css";
@@ -34,7 +35,8 @@ const PurchasesInvoicePage = () => {
   const [shippingCost, setShippingCost] = useState(0);
   const [numberOfContainers, setNumberOfContainers] = useState(0);
   const [vat, setVat] = useState(0);
-
+  const [finalCost, setFinalCost] = useState(0);
+  const [showUnitPriceModal, setShowUnitPriceModal] = useState(false);
   const [status, setStatus] = useState("Pending");
   const [showItemModal, setShowItemModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,6 +62,7 @@ const PurchasesInvoicePage = () => {
     setCurrency("USD");
     setExchangeRate(1.5);
     setInvoiceNumber("");
+    setFinalCost(0);
   };
 
   const handleCurrencyChange = (e) => {
@@ -70,6 +73,11 @@ const PurchasesInvoicePage = () => {
     if (selectedCurrency === "EURO") {
       setExchangeRate(1.5);
     }
+  };
+  const handleModalSave = (data) => {
+    // Save data from the modal
+    setFinalCost(data.finalCost);
+    setShowUnitPriceModal(false);
   };
 
   const { data: suppliers = [] } = useQuery({
@@ -244,8 +252,8 @@ const PurchasesInvoicePage = () => {
               <input
                 type="text"
                 placeholder="Enter invoice number"
-                value={invoiceNumber} 
-                onChange={(e) => setInvoiceNumber(e.target.value)} 
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
               />
             </label>
             {currency === "EURO" && (
@@ -357,17 +365,27 @@ const PurchasesInvoicePage = () => {
             </div>
           </div>
         )}
-
         <SummarySection
           totalAmount={itemsTotalAmount}
           totalOfferAmount={totalOfferAmount}
           potentialCost={potentialCost}
           setPotentialCost={setPotentialCost}
+          finalCost={finalCost}
+          setFinalCost={setFinalCost}
+          openItemModal={() => setShowUnitPriceModal(true)}
           shippingCost={shippingCost}
           setShippingCost={setShippingCost}
           numberOfContainers={numberOfContainers}
           setNumberOfContainers={setNumberOfContainers}
         />
+        {/* UnitPriceModal */}
+        {showUnitPriceModal && (
+          <UnitPriceModal
+            isVisible={showUnitPriceModal}
+            onClose={() => setShowUnitPriceModal(false)}
+            onSave={handleModalSave}
+          />
+        )}
       </div>
       <div className="additional-container">
         <h3>Additional Information</h3>
