@@ -4,7 +4,7 @@ import "./customers.css";
 
 const CreatePreviewCustomers = () => {
   const [customers, setCustomers] = useState([]);
-  const [currencyCodes, setCurrencyCodes] = useState([]); // For storing currency codes
+  const [currencyCodes, setCurrencyCodes] = useState([]);
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
@@ -15,6 +15,11 @@ const CreatePreviewCustomers = () => {
     address: "",
     location: "",
   });
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [modalContent, setModalContent] = useState(false);
+  const [modalType, setModalType] = useState("");
 
   // Fetch currency codes from the API
   useEffect(() => {
@@ -22,7 +27,7 @@ const CreatePreviewCustomers = () => {
       try {
         const response = await axios.get(
           "http://localhost:3000/currency/v1/dropdown/currencycodes"
-        ); 
+        );
         setCurrencyCodes(response.data);
       } catch (error) {
         console.error("Error fetching currency codes:", error);
@@ -31,28 +36,96 @@ const CreatePreviewCustomers = () => {
     fetchCurrencyCodes();
   }, []);
 
+  // Fetch customers from the API
+  const fetchCustomers = async (currentPage) => {
+    if (loading || !hasMore) return;
+
+    setLoading(true);
+    try {
+      console.log(`Fetching customers for page ${currentPage}`);
+      const response = await axios.get(
+        `http://localhost:3000/customers/v1/paginated?page=${currentPage}&limit=50`
+      );
+
+      setCustomers((prevCustomers) => {
+        const newCustomers = response.data.customers.filter(
+          (newCustomer) =>
+            !prevCustomers.some(
+              (existingCustomer) => existingCustomer.id === newCustomer.id
+            )
+        );
+        return [...prevCustomers, ...newCustomers];
+      });
+
+      setHasMore(response.data.customers.length > 0);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Controlled page increment
+  const nextPage = () => {
+    setPage((prevPage) => {
+      const newPage = prevPage + 1;
+      fetchCustomers(newPage);
+      return newPage;
+    });
+  };
+
+  // Initial fetch for the first page of customers
+  useEffect(() => {
+    fetchCustomers(page);
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleAddCustomer = () => {
-    setCustomers([
-      ...customers,
-      { ...formData, id: Date.now(), accountNumber: `ACC-${Date.now()}` },
-    ]);
-    setFormData({
-      customerName: "",
-      phoneNumber: "",
-      financialAccount: "",
-      invoiceType: "",
-      vat: "",
-      currency: "",
-      address: "",
-      location: "",
-    });
-  };
+  const handleAddCustomer = async () => {
+    try {
+      const newCustomer = {
+        customerName: formData.customerName,
+        phoneNumber: formData.phoneNumber,
+        financialNumber: formData.financialAccount,
+        invoiceType: formData.invoiceType,
+        vat: formData.vat,
+        currencyId: formData.currency,
+        address: formData.address,
+        location: formData.location,
+      };
 
+      const response = await axios.post(
+        "http://localhost:3000/customers",
+        newCustomer
+      );
+
+      setCustomers((prevCustomers) => [...prevCustomers, response.data]);
+      setFormData({
+        customerName: "",
+        phoneNumber: "",
+        financialAccount: "",
+        invoiceType: "",
+        vat: "",
+        currency: "",
+        address: "",
+        location: "",
+      });
+
+      // Show success modal
+      setModalType("success");
+      setModalContent(true);
+    } catch (error) {
+      console.error("Error adding customer:", error);
+
+      // Show error modal
+      setModalType("error");
+      setModalContent(true);
+    }
+  };
+  const closeModal = () => setModalContent(false);
   return (
     <div className="customers-page-container">
       <h2>Create and Preview Customers</h2>
@@ -124,9 +197,9 @@ const CreatePreviewCustomers = () => {
                   onChange={handleInputChange}
                 >
                   <option value="">Select Currency</option>
-                  {currencyCodes.map((code, index) => (
-                    <option key={index} value={code}>
-                      {code}
+                  {currencyCodes.map((currency) => (
+                    <option key={currency.id} value={currency.id}>
+                      {currency.currencyCode}
                     </option>
                   ))}
                 </select>
@@ -170,7 +243,7 @@ const CreatePreviewCustomers = () => {
         <table className="customer-table">
           <thead>
             <tr>
-              <th>Account Number</th>
+              <th>Customer Account Number</th>
               <th>Customer Name</th>
               <th>Phone Number</th>
               <th>Financial Account</th>
@@ -182,22 +255,57 @@ const CreatePreviewCustomers = () => {
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.id}>
-                <td>{customer.accountNumber}</td>
+            {customers.map((customer, index) => (
+              <tr key={customer.id || index}>
+                <td>{customer.customerAccountNumber}</td>
                 <td>{customer.customerName}</td>
                 <td>{customer.phoneNumber}</td>
-                <td>{customer.financialAccount}</td>
+                <td>{customer.financialNumber}</td>
                 <td>{customer.invoiceType}</td>
-                <td>{customer.vat}</td>
-                <td>{customer.currency}</td>
+                <td>{customer.vat}%</td>
+                <td>{customer.currencyCode}</td>
                 <td>{customer.address}</td>
                 <td>{customer.location}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {hasMore && !loading && (
+          <button className="load-more-button" onClick={nextPage}>
+            Load More
+          </button>
+        )}
+        {loading && <p>Loading...</p>}
+        {!hasMore && <p>No more customers to load</p>}
       </div>
+
+      {/* Modal */}
+      {modalContent && (
+        <div className="modal">
+          <div
+            className={`modal-content ${
+              modalType === "success" ? "success-modal" : "error-modal"
+            }`}
+          >
+            {modalType === "success" ? (
+              <>
+                <h2 className="modal-success-text">
+                  Customer Added Successfully
+                </h2>
+                <div className="modal-icon">✔</div>
+              </>
+            ) : (
+              <>
+                <h2 className="modal-error-text">Failed to Add Customer</h2>
+                <div className="modal-icon">✖</div>
+              </>
+            )}
+            <button className="modal-button" onClick={closeModal}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
