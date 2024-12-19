@@ -1,172 +1,278 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./suppliers.css";
-import { FaEdit, FaTrash } from "react-icons/fa";
 
-const SuppliersPage = () => {
+const CreatePreviewSuppliers = () => {
   const [suppliers, setSuppliers] = useState([]);
-  const [form, setForm] = useState({
-    id: null,
-    name: "",
-    contactInfo: "",
+  const [currencyCodes, setCurrencyCodes] = useState([]);
+  const [formData, setFormData] = useState({
+    supplierName: "",
+    phoneNumber: "",
+    financialAccount: "",
+    invoiceType: "",
+    vat: "",
+    currency: "",
     address: "",
+    location: "",
   });
-  const [isEditing, setIsEditing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
+  // Fetch currency codes from the API
   useEffect(() => {
-    fetchSuppliers();
+    const fetchCurrencyCodes = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/currency/v1/dropdown/currencycodes"
+        );
+        setCurrencyCodes(response.data);
+      } catch (error) {
+        console.error("Error fetching currency codes:", error);
+      }
+    };
+    fetchCurrencyCodes();
   }, []);
 
-  const fetchSuppliers = async () => {
+  // Fetch suppliers from the API
+  const fetchSuppliers = async (currentPage) => {
+    if (loading || !hasMore) return;
+
+    setLoading(true);
     try {
-      const response = await fetch("http://localhost:3000/suppliers");
-      if (response.ok) {
-        const data = await response.json();
-        setSuppliers(data);
-      } else {
-        console.error("Error fetching suppliers:", response.statusText);
-      }
+      console.log(`Fetching suppliers for page ${currentPage}`);
+      const response = await axios.get(
+        `http://localhost:3000/suppliers/v1/paginated?page=${currentPage}&limit=50`
+      );
+
+      setSuppliers((prevSuppliers) => {
+        const newSuppliers = response.data.suppliers.filter(
+          (newSupplier) =>
+            !prevSuppliers.some(
+              (existingSupplier) => existingSupplier.id === newSupplier.id
+            )
+        );
+        return [...prevSuppliers, ...newSuppliers];
+      });
+
+      setHasMore(response.data.suppliers.length > 0);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleFormChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value || "" });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const method = isEditing ? "PUT" : "POST";
-    const url = isEditing
-      ? `http://localhost:3000/suppliers/${form.id}`
-      : "http://localhost:3000/suppliers";
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (response.ok) {
-        fetchSuppliers();
-        resetForm();
-      } else {
-        console.error("Error submitting form:", response.statusText);
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-    }
-  };
-
-  const handleEdit = (supplier) => {
-    setIsEditing(true);
-    setForm({
-      id: supplier.id || null,
-      name: supplier.name || "",
-      contactInfo: supplier.contactInfo || "",
-      address: supplier.address || "",
+  // Controlled page increment
+  const nextPage = () => {
+    setPage((prevPage) => {
+      const newPage = prevPage + 1;
+      fetchSuppliers(newPage);
+      return newPage;
     });
   };
 
-  const handleDelete = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:3000/suppliers/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchSuppliers();
-      } else {
-        console.error("Error deleting supplier:", response.statusText);
-      }
-    } catch (error) {
-      console.error("Error deleting supplier:", error);
-    }
+  // Initial fetch for the first page of suppliers
+  useEffect(() => {
+    fetchSuppliers(page);
+  }, []);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
-  const resetForm = () => {
-    setForm({ id: null, name: "", contactInfo: "", address: "" });
-    setIsEditing(false);
+  const handleAddSupplier = async () => {
+    try {
+      const newSupplier = {
+        supplierName: formData.supplierName,
+        phoneNumber: formData.phoneNumber,
+        financialNumber: formData.financialAccount,
+        invoiceType: formData.invoiceType,
+        vat: formData.vat,
+        currencyId: formData.currency,
+        address: formData.address,
+        location: formData.location,
+      };
+
+      const response = await axios.post(
+        "http://localhost:3000/suppliers",
+        newSupplier
+      );
+
+      setSuppliers((prevSuppliers) => [...prevSuppliers, response.data]);
+      setFormData({
+        supplierName: "",
+        phoneNumber: "",
+        financialAccount: "",
+        invoiceType: "",
+        vat: "",
+        currency: "",
+        address: "",
+        location: "",
+      });
+
+      alert("Supplier added successfully!");
+    } catch (error) {
+      console.error("Error adding supplier:", error);
+      alert("Failed to add supplier. Please try again.");
+    }
   };
 
   return (
     <div className="suppliers-container">
-      <div className="header">
-        <h2>{isEditing ? "Edit Supplier" : "Create Supplier"}</h2>
-        <button onClick={resetForm} className="reset-button">
-          {isEditing ? "Cancel" : "Reset"}
-        </button>
-      </div>
+      <h2 className="suppliers-heading">Create and Preview Suppliers</h2>
 
-      <form onSubmit={handleSubmit} className="supplier-form">
-        <label>
-          Name
-          <input
-            type="text"
-            name="name"
-            value={form.name || ""}
-            onChange={handleFormChange}
-            required
-          />
-        </label>
-        <label>
-          Contact Info
-          <input
-            type="text"
-            name="contactInfo"
-            value={form.contactInfo || ""}
-            onChange={handleFormChange}
-            required
-          />
-        </label>
-        <label>
-          Address
-          <input
-            type="text"
-            name="address"
-            value={form.address || ""}
-            onChange={handleFormChange}
-          />
-        </label>
-        <button type="submit" className="submit-button">
-          {isEditing ? "Update Supplier" : "Add Supplier"}
-        </button>
-      </form>
-
-      <table className="suppliers-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Contact Info</th>
-            <th>Address</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {suppliers.map((supplier) => (
-            <tr key={supplier.id}>
-              <td>{supplier.name}</td>
-              <td>{supplier.contactInfo}</td>
-              <td>{supplier.address}</td>
+      {/* Input Form */}
+      <div className="suppliers-form">
+        <table>
+          <tbody>
+            <tr>
               <td>
-                <button
-                  onClick={() => handleEdit(supplier)}
-                  className="edit-button"
+                <label>Supplier Name</label>
+                <input
+                  type="text"
+                  name="supplierName"
+                  value={formData.supplierName}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Phone Number</label>
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Financial Account</label>
+                <input
+                  type="text"
+                  name="financialAccount"
+                  value={formData.financialAccount}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Invoice Type</label>
+                <select
+                  name="invoiceType"
+                  value={formData.invoiceType}
+                  onChange={handleInputChange}
                 >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={() => handleDelete(supplier.id)}
-                  className="delete-button"
+                  <option value="">Select Type</option>
+                  <option value="S">S</option>
+                  <option value="G">G</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label>VAT</label>
+                <select
+                  name="vat"
+                  value={formData.vat}
+                  onChange={handleInputChange}
                 >
-                  <FaTrash />
+                  <option value="">Select VAT</option>
+                  <option value="5">5%</option>
+                  <option value="10">10%</option>
+                  <option value="15">15%</option>
+                </select>
+              </td>
+              <td>
+                <label>Currency</label>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select Currency</option>
+                  {currencyCodes.map((currency) => (
+                    <option key={currency.id} value={currency.id}>
+                      {currency.currencyCode}
+                    </option>
+                  ))}
+                </select>
+              </td>
+              <td>
+                <label>Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td colSpan="4">
+                <button
+                  className="add-supplier-btn"
+                  onClick={handleAddSupplier}
+                >
+                  Add Supplier
                 </button>
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Preview Table */}
+      <div className="suppliers-preview">
+        <h3 className="suppliers-preview-heading">Supplier Preview</h3>
+        <table className="suppliers-table">
+          <thead>
+            <tr>
+              <th>Supplier Account Number</th>
+              <th>Supplier Name</th>
+              <th>Phone Number</th>
+              <th>Financial Account</th>
+              <th>Invoice Type</th>
+              <th>VAT</th>
+              <th>Currency</th>
+              <th>Address</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            {suppliers.map((supplier, index) => (
+              <tr key={supplier.id || index}>
+                <td>{supplier.supplierAccountNumber}</td>
+                <td>{supplier.supplierName}</td>
+                <td>{supplier.phoneNumber}</td>
+                <td>{supplier.financialNumber}</td>
+                <td>{supplier.invoiceType}</td>
+                <td>{supplier.vat}%</td>
+                <td>{supplier.currencyCode}</td>
+                <td>{supplier.address}</td>
+                <td>{supplier.location}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {hasMore && !loading && (
+          <button className="load-more-suppliers-btn" onClick={nextPage}>
+            Load More
+          </button>
+        )}
+        {loading && <p>Loading...</p>}
+        {!hasMore && <p>No more suppliers to load</p>}
+      </div>
     </div>
   );
 };
 
-export default SuppliersPage;
+export default CreatePreviewSuppliers;
