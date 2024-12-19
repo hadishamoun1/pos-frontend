@@ -1,20 +1,17 @@
 import React, { useState } from "react";
-import "./styles/customersPage.css";
+import "./customers.css";
 
 const CreatePreviewCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [formData, setFormData] = useState({
-    company: "",
-    supplierType: "",
-    mobileNumber: "",
-    emailAddress: "",
-    address: "",
-    businessPhone: "",
-    businessFax: "",
+    customerName: "",
+    phoneNumber: "",
     financialAccount: "",
     invoiceType: "",
     vat: "",
-    region: "",
+    currency: "",
+    address: "",
+    location: "",
   });
 
   const handleInputChange = (e) => {
@@ -25,17 +22,14 @@ const CreatePreviewCustomers = () => {
   const handleAddCustomer = () => {
     setCustomers([...customers, { ...formData, id: Date.now() }]);
     setFormData({
-      company: "",
-      supplierType: "",
-      mobileNumber: "",
-      emailAddress: "",
-      address: "",
-      businessPhone: "",
-      businessFax: "",
+      customerName: "",
+      phoneNumber: "",
       financialAccount: "",
       invoiceType: "",
       vat: "",
-      region: "",
+      currency: "",
+      address: "",
+      location: "",
     });
   };
 
@@ -43,77 +37,26 @@ const CreatePreviewCustomers = () => {
     <div className="customers-page-container">
       <h2>Create and Preview Customers</h2>
 
-      {/* Input Table */}
+      {/* Input Form */}
       <div className="customer-form">
         <table>
           <tbody>
             <tr>
               <td>
-                <label>Company</label>
+                <label>Customer Name</label>
                 <input
                   type="text"
-                  name="company"
-                  value={formData.company}
+                  name="customerName"
+                  value={formData.customerName}
                   onChange={handleInputChange}
                 />
               </td>
               <td>
-                <label>Supplier Type</label>
+                <label>Phone Number</label>
                 <input
                   type="text"
-                  name="supplierType"
-                  value={formData.supplierType}
-                  onChange={handleInputChange}
-                />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label>Mobile Number</label>
-                <input
-                  type="text"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleInputChange}
-                />
-              </td>
-              <td>
-                <label>Email Address</label>
-                <input
-                  type="email"
-                  name="emailAddress"
-                  value={formData.emailAddress}
-                  onChange={handleInputChange}
-                />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label>Address</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                />
-              </td>
-              <td>
-                <label>Business Phone</label>
-                <input
-                  type="text"
-                  name="businessPhone"
-                  value={formData.businessPhone}
-                  onChange={handleInputChange}
-                />
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <label>Business Fax</label>
-                <input
-                  type="text"
-                  name="businessFax"
-                  value={formData.businessFax}
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
                   onChange={handleInputChange}
                 />
               </td>
@@ -126,38 +69,67 @@ const CreatePreviewCustomers = () => {
                   onChange={handleInputChange}
                 />
               </td>
-            </tr>
-            <tr>
               <td>
                 <label>Invoice Type</label>
-                <input
-                  type="text"
+                <select
                   name="invoiceType"
                   value={formData.invoiceType}
                   onChange={handleInputChange}
+                >
+                  <option value="">Select Type</option>
+                  <option value="S">S</option>
+                  <option value="G">G</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <label>VAT</label>
+                <select
+                  name="vat"
+                  value={formData.vat}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select VAT</option>
+                  <option value="5">5%</option>
+                  <option value="10">10%</option>
+                  <option value="15">15%</option>
+                </select>
+              </td>
+              <td>
+                <label>Currency</label>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select Currency</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="LL">LL</option>
+                </select>
+              </td>
+              <td>
+                <label>Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
                 />
               </td>
               <td>
-                <label>VAT</label>
+                <label>Location</label>
                 <input
                   type="text"
-                  name="vat"
-                  value={formData.vat}
+                  name="location"
+                  value={formData.location}
                   onChange={handleInputChange}
                 />
               </td>
             </tr>
             <tr>
-              <td>
-                <label>Region</label>
-                <input
-                  type="text"
-                  name="region"
-                  value={formData.region}
-                  onChange={handleInputChange}
-                />
-              </td>
-              <td>
+              <td colSpan="4">
                 <button
                   className="add-customer-button"
                   onClick={handleAddCustomer}
@@ -176,33 +148,27 @@ const CreatePreviewCustomers = () => {
         <table className="customer-table">
           <thead>
             <tr>
-              <th>Company</th>
-              <th>Supplier Type</th>
-              <th>Mobile Number</th>
-              <th>Email Address</th>
-              <th>Address</th>
-              <th>Business Phone</th>
-              <th>Business Fax</th>
+              <th>Customer Name</th>
+              <th>Phone Number</th>
               <th>Financial Account</th>
               <th>Invoice Type</th>
               <th>VAT</th>
-              <th>Region</th>
+              <th>Currency</th>
+              <th>Address</th>
+              <th>Location</th>
             </tr>
           </thead>
           <tbody>
             {customers.map((customer) => (
               <tr key={customer.id}>
-                <td>{customer.company}</td>
-                <td>{customer.supplierType}</td>
-                <td>{customer.mobileNumber}</td>
-                <td>{customer.emailAddress}</td>
-                <td>{customer.address}</td>
-                <td>{customer.businessPhone}</td>
-                <td>{customer.businessFax}</td>
+                <td>{customer.customerName}</td>
+                <td>{customer.phoneNumber}</td>
                 <td>{customer.financialAccount}</td>
                 <td>{customer.invoiceType}</td>
                 <td>{customer.vat}</td>
-                <td>{customer.region}</td>
+                <td>{customer.currency}</td>
+                <td>{customer.address}</td>
+                <td>{customer.location}</td>
               </tr>
             ))}
           </tbody>
