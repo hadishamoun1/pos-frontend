@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./customers.css";
 
 const CreatePreviewCustomers = () => {
   const [customers, setCustomers] = useState([]);
+  const [currencyCodes, setCurrencyCodes] = useState([]); // For storing currency codes
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
@@ -13,6 +15,21 @@ const CreatePreviewCustomers = () => {
     address: "",
     location: "",
   });
+
+  // Fetch currency codes from the API
+  useEffect(() => {
+    const fetchCurrencyCodes = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/currency/v1/dropdown/currencycodes"
+        ); 
+        setCurrencyCodes(response.data);
+      } catch (error) {
+        console.error("Error fetching currency codes:", error);
+      }
+    };
+    fetchCurrencyCodes();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -107,9 +124,11 @@ const CreatePreviewCustomers = () => {
                   onChange={handleInputChange}
                 >
                   <option value="">Select Currency</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="LL">LL</option>
+                  {currencyCodes.map((code, index) => (
+                    <option key={index} value={code}>
+                      {code}
+                    </option>
+                  ))}
                 </select>
               </td>
               <td>
