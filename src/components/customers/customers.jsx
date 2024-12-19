@@ -20,7 +20,10 @@ const CreatePreviewCustomers = () => {
   };
 
   const handleAddCustomer = () => {
-    setCustomers([...customers, { ...formData, id: Date.now() }]);
+    setCustomers([
+      ...customers,
+      { ...formData, id: Date.now(), accountNumber: `ACC-${Date.now()}` },
+    ]);
     setFormData({
       customerName: "",
       phoneNumber: "",
@@ -148,6 +151,7 @@ const CreatePreviewCustomers = () => {
         <table className="customer-table">
           <thead>
             <tr>
+              <th>Account Number</th>
               <th>Customer Name</th>
               <th>Phone Number</th>
               <th>Financial Account</th>
@@ -161,6 +165,7 @@ const CreatePreviewCustomers = () => {
           <tbody>
             {customers.map((customer) => (
               <tr key={customer.id}>
+                <td>{customer.accountNumber}</td>
                 <td>{customer.customerName}</td>
                 <td>{customer.phoneNumber}</td>
                 <td>{customer.financialAccount}</td>
