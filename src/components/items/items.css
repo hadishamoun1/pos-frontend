@@ -1,293 +1,138 @@
-/* Two-column container layout */
-/* Two-column container layout */
-.twoColumnContainer {
-  display: flex;
-  gap: 20px;
-  padding: 20px;
-  max-width: 100%;
-  margin: 0 auto;
-  height: 95vh; /* Full viewport height */
-  overflow: hidden; /* Hide overflow from main container */
-}
-
-/* Left container with column flex layout */
-.createItemContainer {
+/* Updated CSS */
+.unique-items-page {
+  font-family: "Montserrat", sans-serif;
+  margin: 2rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  flex: 1;
-  padding: 20px;
-  background-color: #f0f4f8;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  font-family: Arial, sans-serif;
-  overflow-y: auto; /* Enable vertical scrolling */
-  height: 100%; /* Full height within container */
-}
-
-/* Right container */
-.additionalInfoContainer {
-  flex: 1.5;
-  padding: 20px;
-  background-color: #f9fafb;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  overflow-y: auto; /* Enable vertical scrolling */
-  height: 100%; /* Full height within container */
-}
-
-/* Title styling */
-.itemFormTitle {
-  font-size: 1.8rem;
-  margin-bottom: 1.5rem;
-  color: #2c3e50;
-  text-align: center;
-  font-weight: bold;
-}
-
-/* Row wrapper to place delete icon next to the card */
-.itemRowWrapper {
-  display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
+  background: linear-gradient(135deg, #f3f4f6, #ffffff);
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
-/* Row styling for form fields */
-.itemFormRow {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  flex: 1;
+.unique-items-page h1 {
+  margin-bottom: 2rem;
+  text-align: center;
+  color: #333;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 2.5rem;
+  font-weight: 700;
 }
 
-/* Flex container for inputs */
-.inputRow {
-  display: flex;
-  gap: 10px;
+/* Search Bar */
+.unique-search-bar {
   width: 100%;
+  max-width: 450px;
+  position: relative;
+  background-color: #fff;
+  border-radius: 30px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
   align-items: center;
 }
 
-/* Input styling */
-.itemInput {
+.unique-search-bar input {
   flex: 1;
-  padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #ced4da;
-  font-size: 0.9rem;
-  color: #34495e;
-  min-width: 120px;
-  box-sizing: border-box;
-}
-
-.itemInput:disabled {
-  background-color: #ecf0f1;
-  color: #95a5a6;
-}
-
-/* Delete button */
-.itemDeleteBtn {
-  background-color: transparent;
+  padding: 1rem;
   border: none;
-  color: #e74c3c; /* Bright red */
-  cursor: pointer;
-  font-size: 1.4rem;
-  transition: color 0.3s;
+  border-radius: 30px 0 0 30px;
+  outline: none;
+  font-size: 1rem;
+  color: #666;
+  background-color: #f9f9f9;
+  transition: background-color 0.3s, color 0.3s;
 }
 
-.itemDeleteBtn:hover {
-  color: #c0392b; /* Darker red on hover */
+.unique-search-bar input:focus {
+  background-color: #fff;
+  color: #333;
 }
 
-/* Buttons */
-.buttonsContainer {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  padding-top: 10px;
-  margin-top: auto; /* Push to the bottom */
-  margin-bottom: 20px;
-}
-
-.itemAddBtn,
-.itemSaveBtn {
-  padding: 12px 24px;
-  background-color: #007bff;
-  color: white;
+.unique-search-bar button {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
   border: none;
-  border-radius: 5px;
-  font-weight: bold;
+  border-radius: 0 30px 30px 0;
+  padding: 1rem 2rem;
   cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.itemAddBtn:hover {
-  background-color: #0056b3;
-}
-
-.itemSaveBtn {
-  background-color: #28a745;
-}
-
-.itemSaveBtn:hover {
-  background-color: #218838;
-}
-.errorMessage {
-  color: red;
-  text-align: center;
-  margin-top: 10px;
+  font-size: 1rem;
   font-weight: bold;
+  transition: background 0.3s, transform 0.2s;
 }
-.itemsTable {
+
+.unique-search-bar button:hover {
+  background: linear-gradient(135deg, #0056b3, #003f8a);
+  transform: scale(1.05);
+}
+
+/* Table Styling */
+.unique-items-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 2rem;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background-color: #fff;
 }
 
-.itemsTable th,
-.itemsTable td {
-  padding: 10px;
-  border: 1px solid #ddd;
+.unique-items-table th,
+.unique-items-table td {
+  padding: 1.5rem;
   text-align: left;
+  font-size: 1rem;
+  color: #555;
 }
 
-.itemsTable th {
-  background-color: #007bff;
-  color: white;
+.unique-items-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
   font-weight: bold;
 }
-/* Search bar styling */
-.searchInput {
-  width: 40%;
-  padding: 10px;
-  margin-bottom: 20px;
-  font-size: 1rem;
-  border: 1px solid #ced4da;
-  border-radius: 5px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+
+.unique-items-table td {
+  border-bottom: 1px solid #eee;
 }
 
-.searchInput:focus {
-  border-color: #007bff;
-  outline: none;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+.unique-items-table tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
-.searchInput::placeholder {
-  color: #6c757d;
-  font-style: italic;
-}
-/* Delete button positioned at the top right of the container */
-.deleteButton {
-  background-color: #e74c3c;
-  border: none;
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  transition: background-color 0.3s;
+.unique-items-table tr:hover {
+  background-color: #e6f0ff;
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
 }
 
-.deleteButton:hover {
-  background-color: #c0392b;
-}
-
-/* Highlight selected row */
-.selectedRow {
-  background-color: #ffdddd;
-}
-
-/* Modal overlay for dimming background */
-.modalOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-/* Modal content styling */
-.modalContent {
-  background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  text-align: center;
-  width: 300px;
-  max-width: 90%;
-  animation: fadeIn 0.3s ease;
-}
-
-/* Modal heading and message */
-.modalContent h3 {
-  font-size: 1.5rem;
-  color: #2c3e50;
-  margin-bottom: 10px;
-}
-
-.modalContent p {
-  font-size: 1rem;
-  color: #7f8c8d;
-  margin-bottom: 20px;
-}
-
-/* Modal buttons */
-.modalButtons {
-  display: flex;
-  justify-content: space-around;
-}
-
-.confirmButton,
-.cancelButton {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-.confirmButton {
-  background-color: #e74c3c;
-  color: white;
-}
-
-.confirmButton:hover {
-  background-color: #c0392b;
-}
-
-.cancelButton {
-  background-color: #bdc3c7;
-  color: white;
-}
-
-.cancelButton:hover {
-  background-color: #95a5a6;
-}
-
-/* Animation for modal appearance */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .unique-items-table {
+    width: 100%;
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
+
+  .unique-items-table th,
+  .unique-items-table td {
+    display: block;
+  }
+
+  .unique-items-table th {
+    text-align: left;
+  }
+
+  .unique-items-table td {
+    border: none;
+    border-bottom: 1px solid #ddd;
+    padding: 1rem 0;
+  }
+
+  .unique-items-table td:before {
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    color: #333;
+    margin-right: 1rem;
   }
 }
