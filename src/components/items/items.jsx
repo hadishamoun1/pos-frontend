@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaPlus } from "react-icons/fa";
 import "./items.css";
 
 const CreateItemWithDimensions = () => {
@@ -9,318 +8,207 @@ const CreateItemWithDimensions = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const queryClient = useQueryClient();
-
-  const {
-    data: fetchedItems = [],
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ["items"],
-    queryFn: async () => {
-      const { data } = await axios.get("http://localhost:3000/items");
-      return data;
-    },
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [newItem, setNewItem] = useState({
+    itemName: "",
+    type: "box",
+    thickness: "",
+    length: "",
+    width: "",
+    sheetsPerBox: "",
+    origin: "",
   });
 
-  const deleteItemMutation = useMutation({
-    mutationFn: async (itemId) => {
-      await axios.delete(`http://localhost:3000/items/${itemId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      setSelectedItem(null);
-      setShowModal(false);
-    },
-  });
-
-  const handleDeleteClick = () => {
-    if (selectedItem) {
-      setShowModal(true); // Show modal when delete button is clicked
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowModal(false); // Close modal if user cancels
-  };
-
-  const saveItemMutation = useMutation({
-    mutationFn: async (item) => {
-      const { data } = await axios.post("http://localhost:3000/items", {
-        itemName: item.itemName,
-        type: item.type,
-      });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-    },
-  });
-
-  const saveDimensionMutation = useMutation({
-    mutationFn: async (dimension) => {
-      const { data } = await axios.post(
-        "http://localhost:3000/dimensions",
-        dimension
-      );
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dimensions"] });
-    },
-  });
-
-  const addItem = () => {
-    setItems([
-      ...items,
-      {
-        id: Date.now(),
-        itemName: "",
-        origin: "",
-        type: "box",
-        length: "",
-        width: "",
-        sheetsPerBox: 1,
-      },
-    ]);
-  };
-
-  const handleItemChange = (index, field, value) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-    setItems(newItems);
-  };
-
-  const handleDelete = (id) => {
-    setItems(items.filter((item) => item.id !== id));
-  };
-
-  const saveItems = async () => {
-    try {
-      for (const item of items) {
-        const newItem = await saveItemMutation.mutateAsync({
-          itemName: item.itemName,
-          type: item.type,
-        });
-
-        await saveDimensionMutation.mutateAsync({
-          itemId: newItem.itemId,
-          length: item.length,
-          width: item.width,
-          sheetsPerBox: item.sheetsPerBox,
-          origin: item.origin,
-        });
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/items/v1/filtered-items"
+        );
+        setItems(response.data);
+      } catch (error) {
+        console.error("Error fetching items:", error);
+      } finally {
+        setLoading(false);
       }
-      setItems([]);
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-    } catch (error) {
-      console.error("Error saving items and dimensions:", error);
-    }
-  };
-
-  const filterItems = (items) => {
-    if (!searchQuery) return items;
-
-    const searchPattern = /^(.+?)\s*(\d*)\*?(\d*)-?(\d*)$/;
-    const match = searchQuery.match(searchPattern);
-
-    if (!match) return items;
-
-    const [
-      ,
-      searchName = "",
-      searchLength = "",
-      searchWidth = "",
-      searchSheets = "",
-    ] = match;
-
-    return items.filter((item) =>
-      item.dimensions.some(
-        (dimension) =>
-          item.itemName.toLowerCase().startsWith(searchName.toLowerCase()) &&
-          (!searchLength ||
-            dimension.length.toString().startsWith(searchLength)) &&
-          (!searchWidth ||
-            dimension.width.toString().startsWith(searchWidth)) &&
-          (!searchSheets ||
-            dimension.sheetsPerBox?.toString().startsWith(searchSheets))
-      )
-    );
-  };
-
-  const filteredItems = filterItems(fetchedItems);
+    };
+    fetchItems();
+  }, []);
 
   const handleRowClick = (item) => {
     setSelectedItem(item);
   };
 
-  const confirmDelete = () => {
-    if (selectedItem) {
-      deleteItemMutation.mutate(selectedItem.itemId);
-    }
+  const handleAddItemChange = (field, value) => {
+    setNewItem({ ...newItem, [field]: value });
   };
 
+  const handleAddItemSubmit = () => {
+    // Placeholder for API integration to add a new item
+    console.log("New item data:", newItem);
+    setShowAddItemModal(false);
+    setNewItem({
+      itemName: "",
+      type: "box",
+      thickness: "",
+      length: "",
+      width: "",
+      sheetsPerBox: "",
+      origin: "",
+    });
+    alert("New item added successfully!");
+  };
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value.toLowerCase());
+  };
+
+  const filteredItems = items.filter((item) => {
+    const dimensions = item.thicknesses.flatMap((thick) => thick.variants);
+    return dimensions.some(
+      (dimension) =>
+        item.itemName.toLowerCase().includes(searchQuery) ||
+        dimension.origin.toLowerCase().includes(searchQuery) ||
+        dimension.length.toString().includes(searchQuery) ||
+        dimension.width.toString().includes(searchQuery) ||
+        dimension.sheetsPerBox?.toString().includes(searchQuery)
+    );
+  });
+
   return (
-    <div className="twoColumnContainer">
-      <div className="createItemContainer">
-        <h2 className="itemFormTitle">Create New Item with Dimensions</h2>
-
-        {items.map((item, index) => (
-          <div key={item.id} className="itemRowWrapper">
-            <div className="itemFormRow">
-              <div className="inputRow">
-                <input
-                  type="text"
-                  className="itemInput"
-                  placeholder="Item Name"
-                  value={item.itemName}
-                  onChange={(e) =>
-                    handleItemChange(index, "itemName", e.target.value)
-                  }
-                />
-                <input
-                  type="text"
-                  className="itemInput"
-                  placeholder="Origin"
-                  value={item.origin}
-                  onChange={(e) =>
-                    handleItemChange(index, "origin", e.target.value)
-                  }
-                />
-                <select
-                  className="itemInput"
-                  value={item.type}
-                  onChange={(e) =>
-                    handleItemChange(index, "type", e.target.value)
-                  }
-                >
-                  <option value="box">Box</option>
-                  <option value="sheet">Sheet</option>
-                </select>
-              </div>
-
-              <div className="inputRow">
-                <input
-                  type="number"
-                  className="itemInput"
-                  placeholder="Length"
-                  value={item.length}
-                  onChange={(e) =>
-                    handleItemChange(index, "length", e.target.value)
-                  }
-                />
-                <input
-                  type="number"
-                  className="itemInput"
-                  placeholder="Width"
-                  value={item.width}
-                  onChange={(e) =>
-                    handleItemChange(index, "width", e.target.value)
-                  }
-                />
-                <input
-                  type="number"
-                  className="itemInput"
-                  placeholder="Sheets per Box"
-                  value={item.sheetsPerBox}
-                  onChange={(e) =>
-                    handleItemChange(index, "sheetsPerBox", e.target.value)
-                  }
-                  disabled={item.type === "sheet"}
-                />
-              </div>
-            </div>
-            <button
-              className="itemDeleteBtn"
-              onClick={() => handleDelete(item.id)}
-            >
-              <FaTrash />
-            </button>
-          </div>
-        ))}
-
-        <div className="buttonsContainer">
-          <button className="itemAddBtn" onClick={addItem}>
-            Add Another Item
-          </button>
-          <button className="itemSaveBtn" onClick={saveItems}>
-            Save Items
-          </button>
-        </div>
+    <div className="itemPageContainer">
+      <div className="itemHeader">
+        <h2 className="itemFormTitle">Items and Dimensions</h2>
+        <button
+          className="addNewItemButton"
+          onClick={() => setShowAddItemModal(true)}
+        >
+          <FaPlus /> Add New Item
+        </button>
       </div>
 
-      <div className="additionalInfoContainer">
-        <div className="headerContainer">
-          <h2 className="itemFormTitle">Saved Items & Dimensions</h2>
-          <button className="deleteButton" onClick={handleDeleteClick}>
-            <FaTrash /> Delete
-          </button>
-        </div>
-        {/* Confirmation Modal */}
-        {showModal && (
-          <div className="modalOverlay">
-            <div className="modalContent">
-              <h3>Confirm Deletion</h3>
-              <p>Are you sure you want to delete this item?</p>
-              <div className="modalButtons">
-                <button className="confirmButton" onClick={confirmDelete}>
-                  Yes
-                </button>
-                <button className="cancelButton" onClick={cancelDelete}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <input
+        type="text"
+        className="searchInput"
+        placeholder="Search items by name, origin, length, width..."
+        value={searchQuery}
+        onChange={handleSearch}
+      />
 
-        <input
-          type="text"
-          className="searchInput"
-          placeholder="Search by format: e.g., 5.5mm clear 225*321-27"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-
-        {isLoading ? (
-          <p>Loading items...</p>
-        ) : isError ? (
-          <p>Error fetching items.</p>
-        ) : (
-          <table className="itemsTable">
-            <thead>
-              <tr>
-                <th>Origin</th>
-                <th>Item Name</th>
-                <th>Type</th>
-                <th>Length (cm)</th>
-                <th>Width (cm)</th>
-                <th>Sheets per Box</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item) =>
-                item.dimensions.map((dimension) => (
+      {loading ? (
+        <p>Loading items...</p>
+      ) : (
+        <table className="itemsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Item Name</th>
+              <th>Type</th>
+              <th>Thickness</th>
+              <th>Length</th>
+              <th>Width</th>
+              <th>Sheets per Box</th>
+              <th>Origin</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredItems.map((item) =>
+              item.thicknesses.flatMap((thickness) =>
+                thickness.variants.map((variant, index) => (
                   <tr
-                    key={dimension.dimensionId}
+                    key={`${item.id}-${thickness.id}-${index}`}
                     onClick={() => handleRowClick(item)}
                     className={
-                      selectedItem?.itemId === item.itemId ? "selectedRow" : ""
+                      selectedItem?.id === item.id ? "selectedRow" : ""
                     }
                   >
-                    <td>{dimension.origin}</td>
+                    <td>{item.id}</td>
                     <td>{item.itemName}</td>
                     <td>{item.type}</td>
-                    <td>{dimension.length}</td>
-                    <td>{dimension.width}</td>
-                    <td>{item.type === "box" ? dimension.sheetsPerBox : ""}</td>
+                    <td>{thickness.thickness}</td>
+                    <td>{variant.length}</td>
+                    <td>{variant.width}</td>
+                    <td>
+                      {item.type === "box" ? variant.sheetsPerBox : ""}
+                    </td>
+                    <td>{variant.origin}</td>
                   </tr>
                 ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
+              )
+            )}
+          </tbody>
+        </table>
+      )}
+
+      {showAddItemModal && (
+        <div className="modalOverlay">
+          <div className="modalContent">
+            <h3>Add New Item</h3>
+            <form>
+              <input
+                type="text"
+                placeholder="Item Name"
+                value={newItem.itemName}
+                onChange={(e) => handleAddItemChange("itemName", e.target.value)}
+              />
+              <select
+                value={newItem.type}
+                onChange={(e) => handleAddItemChange("type", e.target.value)}
+              >
+                <option value="box">Box</option>
+                <option value="sheet">Sheet</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Thickness"
+                value={newItem.thickness}
+                onChange={(e) =>
+                  handleAddItemChange("thickness", e.target.value)
+                }
+              />
+              <input
+                type="number"
+                placeholder="Length"
+                value={newItem.length}
+                onChange={(e) => handleAddItemChange("length", e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Width"
+                value={newItem.width}
+                onChange={(e) => handleAddItemChange("width", e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Sheets per Box"
+                value={newItem.sheetsPerBox}
+                onChange={(e) =>
+                  handleAddItemChange("sheetsPerBox", e.target.value)
+                }
+                disabled={newItem.type === "sheet"}
+              />
+              <input
+                type="text"
+                placeholder="Origin"
+                value={newItem.origin}
+                onChange={(e) => handleAddItemChange("origin", e.target.value)}
+              />
+            </form>
+            <div className="modalButtons">
+              <button className="confirmButton" onClick={handleAddItemSubmit}>
+                Save
+              </button>
+              <button
+                className="cancelButton"
+                onClick={() => setShowAddItemModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
