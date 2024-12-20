@@ -18,6 +18,8 @@ const CreatePreviewSuppliers = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [modalContent, setModalContent] = useState(false);
+  const [modalType, setModalType] = useState("");
 
   // Fetch currency codes from the API
   useEffect(() => {
@@ -112,12 +114,19 @@ const CreatePreviewSuppliers = () => {
         location: "",
       });
 
-      alert("Supplier added successfully!");
+      // Show success modal
+      setModalType("success");
+      setModalContent(true);
     } catch (error) {
       console.error("Error adding supplier:", error);
-      alert("Failed to add supplier. Please try again.");
+
+      // Show error modal
+      setModalType("error");
+      setModalContent(true);
     }
   };
+
+  const closeModal = () => setModalContent(false);
 
   return (
     <div className="suppliers-container">
@@ -271,6 +280,34 @@ const CreatePreviewSuppliers = () => {
         {loading && <p>Loading...</p>}
         {!hasMore && <p>No more suppliers to load</p>}
       </div>
+
+      {/* Modal */}
+      {modalContent && (
+        <div className="modal">
+          <div
+            className={`modal-content ${
+              modalType === "success" ? "success-modal" : "error-modal"
+            }`}
+          >
+            {modalType === "success" ? (
+              <>
+                <h2 className="modal-success-text">
+                  Supplier Added Successfully
+                </h2>
+                <div className="modal-icon">✔</div>
+              </>
+            ) : (
+              <>
+                <h2 className="modal-error-text">Failed to Add Supplier</h2>
+                <div className="modal-icon">✖</div>
+              </>
+            )}
+            <button className="modal-button" onClick={closeModal}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
