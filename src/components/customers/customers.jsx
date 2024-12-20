@@ -21,7 +21,6 @@ const CreatePreviewCustomers = () => {
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
 
-  // Fetch currency codes from the API
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
@@ -36,7 +35,6 @@ const CreatePreviewCustomers = () => {
     fetchCurrencyCodes();
   }, []);
 
-  // Fetch customers from the API
   const fetchCustomers = async (currentPage) => {
     if (loading || !hasMore) return;
 
@@ -65,7 +63,6 @@ const CreatePreviewCustomers = () => {
     }
   };
 
-  // Controlled page increment
   const nextPage = () => {
     setPage((prevPage) => {
       const newPage = prevPage + 1;
@@ -74,7 +71,6 @@ const CreatePreviewCustomers = () => {
     });
   };
 
-  // Initial fetch for the first page of customers
   useEffect(() => {
     fetchCustomers(page);
   }, []);
@@ -114,24 +110,22 @@ const CreatePreviewCustomers = () => {
         location: "",
       });
 
-      // Show success modal
       setModalType("success");
       setModalContent(true);
     } catch (error) {
       console.error("Error adding customer:", error);
-
-      // Show error modal
       setModalType("error");
       setModalContent(true);
     }
   };
-  const closeModal = () => setModalContent(false);
-  return (
-    <div className="customers-page-container">
-      <h2>Create and Preview Customers</h2>
 
-      {/* Input Form */}
-      <div className="customer-form">
+  const closeModal = () => setModalContent(false);
+
+  return (
+    <div className="customers-container">
+      <h2 className="customers-heading">Create and Preview Customers</h2>
+
+      <div className="customers-form">
         <table>
           <tbody>
             <tr>
@@ -226,7 +220,7 @@ const CreatePreviewCustomers = () => {
             <tr>
               <td colSpan="4">
                 <button
-                  className="add-customer-button"
+                  className="add-customer-btn"
                   onClick={handleAddCustomer}
                 >
                   Add Customer
@@ -237,10 +231,9 @@ const CreatePreviewCustomers = () => {
         </table>
       </div>
 
-      {/* Preview Table */}
-      <div className="customer-preview">
-        <h3>Customer Preview</h3>
-        <table className="customer-table">
+      <div className="customers-preview">
+        <h3 className="customers-preview-heading">Customer Preview</h3>
+        <table className="customers-table">
           <thead>
             <tr>
               <th>Customer Account Number</th>
@@ -271,7 +264,7 @@ const CreatePreviewCustomers = () => {
           </tbody>
         </table>
         {hasMore && !loading && (
-          <button className="load-more-button" onClick={nextPage}>
+          <button className="load-more-customers-btn" onClick={nextPage}>
             Load More
           </button>
         )}
@@ -279,7 +272,6 @@ const CreatePreviewCustomers = () => {
         {!hasMore && <p>No more customers to load</p>}
       </div>
 
-      {/* Modal */}
       {modalContent && (
         <div className="modal">
           <div

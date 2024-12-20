@@ -1,160 +1,220 @@
 body {
   font-family: "Roboto", sans-serif;
-  background: linear-gradient(135deg, #ece9e6, #ffffff);
+  background: linear-gradient(135deg, #f2f4f8, #ffffff);
   color: #333;
   margin: 0;
   padding: 0;
 }
 
-.customers-page-container {
-  max-width: 1870px;
-
-  padding: 20px;
-  background: #fff;
-  height: 95.5vh;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  overflow: auto;
+/* General Page Styling */
+.customers-container {
+  padding: 5px;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #f9f9f9, #e8f1f8);
+  color: #333;
+  min-height: 100vh;
 }
 
-h2 {
+/* Section Headings */
+.customers-heading {
   text-align: center;
-  margin-bottom: 30px;
-  color: #4a90e2;
-  font-size: 28px;
-  font-weight: bold;
+  font-size: 2rem;
+  margin-bottom: 14px;
+  color: #007bff;
   text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 1s ease-in-out;
 }
 
-.customer-form table {
+/* Input Form Section */
+.customers-form {
+  background: #fff;
+  padding: 25px 20px;
+  border-radius: 10px;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
+  transition: transform 0.3s ease-in-out;
+}
+
+.customers-form:hover {
+  transform: translateY(-5px);
+}
+
+.customers-form table {
   width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
 }
 
-.customer-form td {
-  padding: 10px;
-  vertical-align: top;
-}
-
-.customer-form label {
+.customers-form label {
   display: block;
   font-weight: bold;
   margin-bottom: 5px;
-  color: #555;
+  color: #444;
+  text-transform: capitalize;
+  font-size: 15px;
 }
 
-.customer-form input,
-.customer-form select {
+.customers-form input,
+.customers-form select {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
+  margin-top: 5px;
+  margin-bottom: 15px;
   border: 1px solid #ccc;
   border-radius: 8px;
   font-size: 14px;
   box-sizing: border-box;
   transition: all 0.3s ease;
+  background: #f7f9fc;
 }
 
-.customer-form input:focus,
-.customer-form select:focus {
+.customers-form input:focus,
+.customers-form select:focus {
   border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-  outline: none;
+  background: #fff;
+  box-shadow: 0px 4px 10px rgba(0, 123, 255, 0.2);
 }
 
-.add-customer-button {
-  background-color: #007bff;
-  color: #fff;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.add-customer-button:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
-}
-
-.customer-preview {
-  margin-top: 30px;
-}
-
-.customer-preview h3 {
-  font-size: 24px;
-  color: #4a90e2;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.customer-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.customer-table thead {
-  background-color: #007bff;
-  color: #fff;
-}
-
-.customer-table th,
-.customer-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.customer-table tbody tr:hover {
-  background-color: #f4f8ff;
-  cursor: pointer;
-}
-
-@media screen and (max-width: 768px) {
-  .customers-page-container {
-    padding: 15px;
-  }
-
-  .customer-form table,
-  .customer-table {
-    font-size: 14px;
-  }
-
-  .add-customer-button {
-    width: 100%;
-    font-size: 14px;
-  }
-}
-.load-more-button {
-  background-color: #007bff;
+.add-customer-btn {
+  width: 10%;
+  padding: 14px;
+  background: linear-gradient(45deg, #28a745, #1d8a34);
   color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
   font-size: 16px;
   font-weight: bold;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  margin: 20px auto;
-  display: block;
+  box-shadow: 0px 6px 15px rgba(40, 167, 69, 0.2);
+  transition: all 0.3s ease;
+}
+
+.add-customer-btn:hover {
+  background: linear-gradient(45deg, #1d8a34, #28a745);
+  box-shadow: 0px 8px 20px rgba(40, 167, 69, 0.3);
+}
+
+/* Preview Section Styling */
+.customers-preview {
+  background: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.1);
+  animation: fadeInUp 0.8s ease-in-out;
+}
+
+.customers-preview-heading {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #007bff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.customers-table {
+  width: 100%;
+  border-collapse: collapse;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.customers-table th,
+.customers-table td {
+  padding: 15px 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+  font-size: 14px;
+}
+
+.customers-table th {
+  background: linear-gradient(45deg, #007bff, #0056b3);
+  color: white;
+  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.customers-table tr:nth-child(even) {
+  background-color: #f4f6fa;
+}
+
+.customers-table tr:hover {
+  background-color: #e8f1f8;
   transition: background-color 0.3s ease;
 }
 
-.load-more-button:hover {
-  background-color: #0056b3;
+/* Load More Button */
+.load-more-customers-btn {
+  display: block;
+  margin: 20px auto;
+  padding: 12px 20px;
+  background: linear-gradient(45deg, #007bff, #0056b3);
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0px 6px 15px rgba(0, 123, 255, 0.2);
+  transition: all 0.3s ease;
 }
 
-.load-more-button:active {
-  background-color: #004085;
+.load-more-customers-btn:hover {
+  background: linear-gradient(45deg, #0056b3, #007bff);
+  box-shadow: 0px 8px 20px rgba(0, 123, 255, 0.3);
 }
 
-.load-more-button:disabled {
-  background-color: #d6d6d6;
-  color: #8c8c8c;
-  cursor: not-allowed;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .customers-form table,
+  .customers-table {
+    font-size: 12px;
+  }
+
+  .customers-form input,
+  .customers-form select {
+    padding: 10px;
+  }
+
+  .add-customer-btn,
+  .load-more-customers-btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .customers-heading,
+  .customers-preview-heading {
+    font-size: 1.8rem;
+  }
 }
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Modal overlay */
-
 .modal {
   position: fixed;
   top: 0;
@@ -168,7 +228,6 @@ h2 {
   z-index: 1000;
 }
 
-/* Modal container */
 .modal-content {
   background: #ffffff;
   border-radius: 15px;
@@ -181,23 +240,20 @@ h2 {
   animation: fadeInModal 0.3s ease-in-out;
 }
 
-/* Success text */
 .modal-success-text {
   font-size: 22px;
   font-weight: bold;
-  color: #28a745; 
+  color: #28a745;
   margin-bottom: 20px;
 }
 
-/* Error text */
 .modal-error-text {
   font-size: 22px;
   font-weight: bold;
-  color: #dc3545; 
+  color: #dc3545;
   margin-bottom: 20px;
 }
 
-/* Tick and cross icon */
 .modal-icon {
   font-size: 64px;
   margin-bottom: 20px;
@@ -206,16 +262,15 @@ h2 {
 }
 
 .success-modal .modal-icon {
-  color: #28a745; 
+  color: #28a745;
 }
 
 .error-modal .modal-icon {
-  color: #dc3545; 
+  color: #dc3545;
 }
 
-/* OK button */
 .modal-button {
-  background-color: #007bff; 
+  background-color: #007bff;
   color: white;
   padding: 12px 25px;
   border: none;
@@ -228,30 +283,6 @@ h2 {
 }
 
 .modal-button:hover {
-  background-color: #0056b3; 
+  background-color: #0056b3;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-}
-
-/* Animations */
-@keyframes fadeInModal {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes iconBounce {
-  0% {
-    transform: scale(0.8);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
