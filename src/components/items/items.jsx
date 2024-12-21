@@ -5,6 +5,8 @@ const UniqueItemsPage = () => {
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState(false);
+  const [modalType, setModalType] = useState("");
   const [newItemData, setNewItemData] = useState({
     itemName: "",
     type: "box",
@@ -56,16 +58,11 @@ const UniqueItemsPage = () => {
     setNewItemData((prevState) => {
       const updated = { ...prevState };
 
-      // Checkboxes
       if (type === "checkbox") {
         updated.thicknesses[0].variants[0][name] = checked;
-      }
-      // Thickness field
-      else if (name === "thickness") {
+      } else if (name === "thickness") {
         updated.thicknesses[0].thickness = value;
-      }
-      // Other fields
-      else if (name in prevState) {
+      } else if (name in newItemData) {
         updated[name] = value;
       } else {
         updated.thicknesses[0].variants[0][name] = value;
@@ -92,14 +89,19 @@ const UniqueItemsPage = () => {
       if (response.ok) {
         const newItem = await response.json();
         setItems((prevState) => [...prevState, newItem]);
-        handleModalToggle();
+        setModalType("success");
       } else {
-        console.error("Error creating new item");
+        setModalType("error");
       }
     } catch (error) {
-      console.error("Error:", error);
+      setModalType("error");
+    } finally {
+      setModalContent(true);
+      handleModalToggle();
     }
   };
+
+  const closeModal = () => setModalContent(false);
 
   const filteredItems = items.filter((item) =>
     item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -268,6 +270,32 @@ const UniqueItemsPage = () => {
                 Cancel
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {modalContent && (
+        <div className="modal">
+          <div
+            className={`modal-content ${
+              modalType === "success" ? "success-modal" : "error-modal"
+            }`}
+          >
+            {modalType === "success" ? (
+              <>
+                <h2 className="modal-success-text">
+                  Item Created Successfully
+                </h2>
+                <div className="modal-icon">✔</div>
+              </>
+            ) : (
+              <>
+                <h2 className="modal-error-text">Failed to Create Item</h2>
+                <div className="modal-icon">✖</div>
+              </>
+            )}
+            <button className="modal-button" onClick={closeModal}>
+              OK
+            </button>
           </div>
         </div>
       )}
