@@ -53,24 +53,26 @@ const UniqueItemsPage = () => {
   const handleInputChange = (e, index = 0) => {
     const { name, value, checked, type } = e.target;
 
-    if (type === "checkbox") {
-      setNewItemData((prevState) => {
-        const updated = { ...prevState };
+    setNewItemData((prevState) => {
+      const updated = { ...prevState };
+
+      // Checkboxes
+      if (type === "checkbox") {
         updated.thicknesses[0].variants[0][name] = checked;
-        return updated;
-      });
-    } else if (name in newItemData) {
-      setNewItemData((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
-    } else {
-      setNewItemData((prevState) => {
-        const updated = { ...prevState };
+      }
+      // Thickness field
+      else if (name === "thickness") {
+        updated.thicknesses[0].thickness = value;
+      }
+      // Other fields
+      else if (name in prevState) {
+        updated[name] = value;
+      } else {
         updated.thicknesses[0].variants[0][name] = value;
-        return updated;
-      });
-    }
+      }
+
+      return updated;
+    });
   };
 
   const handleFormSubmit = async (e) => {
