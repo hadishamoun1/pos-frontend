@@ -106,15 +106,16 @@ const AccountsPage = () => {
               ))}
             </select>
           </label>
-          <label>
-            Accessible:
+          <div className="accessible-container">
+            <label htmlFor="accessible">Accessible:</label>
             <input
               type="checkbox"
+              id="accessible"
               name="accessible"
               checked={formData.accessible}
               onChange={handleInputChange}
             />
-          </label>
+          </div>
           <button type="submit">Create Account</button>
         </form>
       </div>
