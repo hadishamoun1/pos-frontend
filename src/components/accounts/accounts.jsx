@@ -74,6 +74,7 @@ const AccountsPage = () => {
           <label>
             Account Number:
             <input
+            placeholder="Enter account number"
               type="text"
               name="accountNumber"
               value={formData.accountNumber}
@@ -84,6 +85,7 @@ const AccountsPage = () => {
           <label>
             Account Name:
             <input
+              placeholder="Enter account name"
               type="text"
               name="accountName"
               value={formData.accountName}
