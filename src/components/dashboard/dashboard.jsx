@@ -12,6 +12,7 @@ const sections = [
   { name: "Suppliers", image: "/assests/suppliers.webp" },
   { name: "Items", image: "/assests/items.webp" },
   { name: "Cost Estimator", image: "/assests/price.webp" },
+  { name: "Accounts", image: "/assests/price.webp" },
 ];
 
 const DashboardPage = () => {
