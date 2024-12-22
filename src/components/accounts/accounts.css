@@ -1,9 +1,8 @@
 /* Overall Page Styling */
 .accounts-page {
   font-family: "Montserrat", sans-serif;
-  margin: 2rem auto;
-  max-width: 1800px;
-  padding: 2rem;
+  max-width: 1900px;
+  padding: 1rem;
   background: linear-gradient(135deg, #f3f4f6, #ffffff);
   border-radius: 15px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
@@ -14,7 +13,7 @@
   text-align: center;
   font-size: 2.5rem;
   font-weight: 700;
-  color: #333;
+  color: #007bff;
   margin-bottom: 1.5rem;
   text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
 }
@@ -109,7 +108,7 @@
 .accounts-preview-heading {
   font-size: 1.8rem;
   font-weight: 600;
-  color: #333;
+  color: #007bff;
   text-align: center;
   margin-bottom: 1rem;
 }
