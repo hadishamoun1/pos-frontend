@@ -1,52 +1,103 @@
+/* Dashboard Page Styling */
 .dashboard-container {
-  min-height: 100vh; 
+  min-height: 100vh;
   padding: 2rem;
   color: white;
-  text-align: center;
-  background-image: url("../../../public/assests/background.jpg");
-  background-size: cover; 
-  background-position: center; 
-  background-repeat: no-repeat; 
-}
-
-.card-grid {
+  background-image: url("/public/assets/background.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   gap: 2rem;
-  justify-content: center;
 }
 
-.dashboard-card {
-  width: 250px; 
-  height: 250px; 
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+/* Header Styling */
+.dashboard-header {
   text-align: center;
-  background-color: #fff;
+  color: #ffffff;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.dashboard-header h1 {
+  font-size: 3rem;
+  font-weight: bold;
+}
+
+.dashboard-header p {
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+/* Card Grid Styling */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* Individual Card Styling */
+.dashboard-card {
+  position: relative;
+  border-radius: 15px;
+  overflow: hidden;
+  text-align: center;
+  background: #ffffff;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-10px) scale(1.03);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Card Image Styling */
+.card-image-wrapper {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
 }
 
 .card-image {
   width: 100%;
-  height: 195px;
-  object-fit: fill;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
 }
 
+.dashboard-card:hover .card-image {
+  transform: scale(1.1);
+}
+
+/* Card Title Styling */
 .card-title {
-  padding: 1rem;
   background-color: #007bff;
   color: white;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: bold;
+  padding: 1rem;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
 }
 
+/* Card Link Styling */
 .dashboard-card-link {
-  text-decoration: none; 
-  color: inherit; 
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .dashboard-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .dashboard-header p {
+    font-size: 1rem;
+  }
 }
