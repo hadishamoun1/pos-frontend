@@ -12,7 +12,7 @@
 /* Header Styling */
 .dashboard-header {
   text-align: center;
-  color: #2c3e50;
+  color: #018ecf;
   margin-bottom: 2rem;
 }
 
@@ -24,7 +24,7 @@
 
 .dashboard-subtitle {
   font-size: 1.2rem;
-  color: #7f8c8d;
+  color: #026999;
 }
 
 /* Grid Styling */
@@ -76,7 +76,7 @@
 /* Card Content Styling */
 .dashboard-card-content {
   padding: 1rem;
-  background: #3498db;
+  background: #3277a5;
   color: #ffffff;
 }
 

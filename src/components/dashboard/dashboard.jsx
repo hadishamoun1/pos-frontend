@@ -3,7 +3,16 @@ import "./dashboard.css";
 import { Link } from "react-router-dom";
 
 const sections = [
-
+  { name: "POS System", image: "/assets/pos.jpeg" },
+  { name: "Accounting", image: "/assets/accounting.jpg" },
+  { name: "Inventory", image: "/assets/inventory.png" },
+  { name: "Customers", image: "/assets/customers.jpeg" },
+  { name: "Purchases Invoice", image: "/assets/purchase.jpg" },
+  { name: "Settings", image: "/assets/settings.png" },
+  { name: "Suppliers", image: "/assets/suppliers.webp" },
+  { name: "Items", image: "/assets/items.webp" },
+  { name: "Cost Estimator", image: "/assets/price.webp" },
+  { name: "Accounts", image: "/assets/price.webp" },
 ];
 
 const DashboardPage = () => {
