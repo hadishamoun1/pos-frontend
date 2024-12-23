@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./accounts.css";
 
 const AccountsPage = () => {
-  const [accounts, setAccounts] = useState([]);
+  const [data, setData] = useState([]);
   const [formData, setFormData] = useState({
     accountNumber: "",
     accountName: "",
@@ -12,19 +12,19 @@ const AccountsPage = () => {
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
 
-  // Fetch accounts
+  // Fetch combined data
   useEffect(() => {
-    const fetchAccounts = async () => {
+    const fetchCombinedData = async () => {
       try {
-        const response = await fetch("http://localhost:3000/accounts");
-        const data = await response.json();
-        setAccounts(data);
+        const response = await fetch("http://localhost:3000/accounts/v1/combined");
+        const combinedData = await response.json();
+        setData(combinedData);
       } catch (error) {
-        console.error("Error fetching accounts:", error);
+        console.error("Error fetching combined data:", error);
       }
     };
 
-    fetchAccounts();
+    fetchCombinedData();
   }, []);
 
   // Handle input changes
@@ -50,7 +50,7 @@ const AccountsPage = () => {
 
       if (response.ok) {
         const newAccount = await response.json();
-        setAccounts((prevState) => [...prevState, newAccount]);
+        setData((prevState) => [...prevState, newAccount]);
         setModalType("success");
       } else {
         setModalType("error");
@@ -65,6 +65,51 @@ const AccountsPage = () => {
 
   const closeModal = () => setModalContent(false);
 
+  // Recursive function to render accounts, customers, and suppliers
+  const renderAccounts = (accounts, parentNumber = null) => {
+    return accounts
+      .filter((account) => account.parentNumber === parentNumber)
+      .map((account) => (
+        <React.Fragment key={account.id}>
+          <tr>
+            <td>{account.accountNumber}</td>
+            <td>{account.accountName}</td>
+            <td>{account.parentNumber || "Main Account"}</td>
+            <td>{account.parent?.accountName || "N/A"}</td>
+          </tr>
+
+          {/* Render customer accounts if they exist in children */}
+          {account.children &&
+            account.children
+              .filter((child) => child.isCustomer)
+              .map((customer) => (
+                <tr key={customer.id} className="customer-account-row">
+                  <td>{customer.accountNumber}</td>
+                  <td>{customer.accountName}</td>
+                  <td>{account.accountNumber}</td>
+                  <td>{account.accountName}</td>
+                </tr>
+              ))}
+
+          {/* Render supplier accounts if they exist in children */}
+          {account.children &&
+            account.children
+              .filter((child) => child.isSupplier)
+              .map((supplier) => (
+                <tr key={supplier.id} className="supplier-account-row">
+                  <td>{supplier.accountNumber}</td>
+                  <td>{supplier.accountName}</td>
+                  <td>{account.accountNumber}</td>
+                  <td>{account.accountName}</td>
+                </tr>
+              ))}
+
+          {/* Render other children accounts recursively */}
+          {renderAccounts(accounts, account.accountNumber)}
+        </React.Fragment>
+      ));
+  };
+
   return (
     <div className="accounts-page">
       <h2 className="accounts-heading">Accounts Management</h2>
@@ -74,7 +119,7 @@ const AccountsPage = () => {
           <label>
             Account Number:
             <input
-            placeholder="Enter account number"
+              placeholder="Enter account number"
               type="text"
               name="accountNumber"
               value={formData.accountNumber}
@@ -101,7 +146,7 @@ const AccountsPage = () => {
               onChange={handleInputChange}
             >
               <option value="">Select Parent Account</option>
-              {accounts.map((account) => (
+              {data.map((account) => (
                 <option key={account.id} value={account.accountNumber}>
                   {account.accountName}
                 </option>
@@ -133,16 +178,7 @@ const AccountsPage = () => {
               <th>Parent Account Name</th>
             </tr>
           </thead>
-          <tbody>
-            {accounts.map((account) => (
-              <tr key={account.id}>
-                <td>{account.accountNumber}</td>
-                <td>{account.accountName}</td>
-                <td>{account.parentNumber || "Main Account"}</td>
-                <td>{account.parent?.accountName || "N/A"}</td>
-              </tr>
-            ))}
-          </tbody>
+          <tbody>{renderAccounts(data)}</tbody>
         </table>
       </div>
 
