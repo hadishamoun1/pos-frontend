@@ -4,7 +4,9 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-image: url("../../../public/assets/background.jpg");
+  background: url("../../../public/assets/background.png") no-repeat center
+    center;
+
   background-size: cover;
   background-position: center;
 }
@@ -55,7 +57,7 @@
   margin-top: 10px;
 }
 
-.link-login-signup{
+.link-login-signup {
   text-decoration: none;
-  color:#007bff;
+  color: #007bff;
 }
