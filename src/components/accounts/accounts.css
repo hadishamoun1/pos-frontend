@@ -239,4 +239,19 @@
   .accounts-table td {
     font-size: 0.9rem;
   }
+/* Arabic Text Styling */
+.arabic-text {
+  font-family: "Tajawal", sans-serif; /* Use a suitable Arabic font */
+  font-size: 1.1rem; /* Slightly larger font for Arabic text */
+  color: #555; /* Neutral color */
+  text-align: right; /* Right-align Arabic text */
+  direction: rtl; /* Ensure proper RTL flow for Arabic text */
+}
+
+.arabic-text:hover {
+  color: #007bff; /* Highlight on hover */
+  background-color: #f9f9f9; /* Subtle background highlight */
+  transition: all 0.3s ease;
+}
+
 }

@@ -6,6 +6,7 @@ const AccountsPage = () => {
   const [formData, setFormData] = useState({
     accountNumber: "",
     accountName: "",
+    arabicAccountName: "",
     parentNumber: null,
     accessible: true,
   });
@@ -76,7 +77,17 @@ const AccountsPage = () => {
           <tr>
             <td>{account.accountNumber}</td>
             <td>{account.accountName}</td>
-            <td>{account.arabicAccountName || "N/A"}</td>
+            <td
+              style={{
+                fontFamily: "'Tajawal', sans-serif",
+                fontSize: "1.3rem",
+                color: "#555",
+                textAlign: "right",
+                direction: "rtl",
+              }}
+            >
+              {account.arabicAccountName || "N/A"}
+            </td>
             <td>{account.parentNumber || "Main Account"}</td>
             <td>{account.parent?.accountName || "N/A"}</td>
           </tr>
@@ -90,7 +101,17 @@ const AccountsPage = () => {
                 <tr key={customer.id} className="customer-account-row">
                   <td>{customer.accountNumber}</td>
                   <td>{customer.accountName}</td>
-                  <td>{customer.arabicAccountName || "N/A"}</td>
+                  <td
+                    style={{
+                      fontFamily: "'Tajawal', sans-serif",
+                      fontSize: "1.3rem",
+                      color: "#555",
+                      textAlign: "right",
+                      direction: "rtl",
+                    }}
+                  >
+                    {account.arabicAccountName || "N/A"}
+                  </td>
                   <td>{account.accountNumber}</td>
                   <td>{account.accountName}</td>
                 </tr>
@@ -105,7 +126,17 @@ const AccountsPage = () => {
                 <tr key={supplier.id} className="supplier-account-row">
                   <td>{supplier.accountNumber}</td>
                   <td>{supplier.accountName}</td>
-                  <td>{supplier.arabicAccountName || "N/A"}</td>
+                  <td
+                    style={{
+                      fontFamily: "'Tajawal', sans-serif",
+                      fontSize: "1.3rem",
+                      color: "#555",
+                      textAlign: "right",
+                      direction: "rtl",
+                    }}
+                  >
+                    {account.arabicAccountName || "N/A"}
+                  </td>
                   <td>{account.accountNumber}</td>
                   <td>{account.accountName}</td>
                 </tr>
@@ -143,6 +174,16 @@ const AccountsPage = () => {
               value={formData.accountName}
               onChange={handleInputChange}
               required
+            />
+          </label>
+          <label>
+            Arabic Account Name:
+            <input
+              placeholder="Enter Arabic account name"
+              type="text"
+              name="arabicAccountName"
+              value={formData.arabicAccountName}
+              onChange={handleInputChange}
             />
           </label>
           <label>
