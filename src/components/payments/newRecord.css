@@ -52,9 +52,15 @@
 .payments-modal-header-buttons .payments-modal-cancel-button {
   background: #dc3545; /* Red for cancel */
 }
+.payments-modal-cancel-button:hover {
+  background: #960110;
+}
 
 .payments-modal-header-buttons .payments-modal-save-button {
   background: #28a745; /* Green for save */
+}
+.payments-modal-save-button:hover{
+  background: #1b6d2e;
 }
 
 /* Table Styling */
@@ -70,7 +76,7 @@
 /* Control column widths */
 .payments-modal-table th:nth-child(1),
 .payments-modal-table td:nth-child(1) {
-  width: 17%; /* Customer Name */
+  width: 19%; /* Customer Name */
 }
 
 .payments-modal-table th:nth-child(2),
@@ -105,7 +111,7 @@
 
 .payments-modal-table th:nth-child(8),
 .payments-modal-table td:nth-child(8) {
-  width: 10%; /* Comments */
+  width: 8%; /* Comments */
 }
 
 /* Table Cell Styling */
@@ -115,8 +121,8 @@
   text-align: center;
   border: 1px solid #ddd;
   white-space: nowrap;
-  font-size: 1rem;
-  height: 2rem; /* Fixed row height */
+  font-size: 1.2rem;
+  height: 2rem; 
 }
 
 .payments-modal-table th {
@@ -131,7 +137,7 @@
 }
 
 .payments-modal-table tbody tr:hover {
-  background-color: #eaf4ff; /* Highlight on hover */
+  background-color: #eaf4ff; 
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
@@ -183,10 +189,7 @@
   transition: all 0.3s ease-in-out;
 }
 
-.payments-modal-action-button:hover {
-  background: linear-gradient(135deg, #0056b3, #003f8a);
-  transform: scale(1.05); /* Slight zoom on hover */
-}
+
 
 .payments-modal-action-button:active {
   transform: scale(0.95); /* Slight shrink on click */
