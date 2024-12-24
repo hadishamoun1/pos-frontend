@@ -7,6 +7,7 @@ const AccountsPage = () => {
     accountNumber: "",
     accountName: "",
     parentNumber: null,
+    arabicAccountName: "",
     accessible: true,
   });
   const [modalContent, setModalContent] = useState(false);
@@ -16,7 +17,9 @@ const AccountsPage = () => {
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
-        const response = await fetch("http://localhost:3000/accounts/v1/combined");
+        const response = await fetch(
+          "http://localhost:3000/accounts/v1/combined"
+        );
         const combinedData = await response.json();
         setData(combinedData);
       } catch (error) {
@@ -74,35 +77,10 @@ const AccountsPage = () => {
           <tr>
             <td>{account.accountNumber}</td>
             <td>{account.accountName}</td>
+            <td>{account.arabicAccountName || "N/A"}</td>
             <td>{account.parentNumber || "Main Account"}</td>
             <td>{account.parent?.accountName || "N/A"}</td>
           </tr>
-
-          {/* Render customer accounts if they exist in children */}
-          {account.children &&
-            account.children
-              .filter((child) => child.isCustomer)
-              .map((customer) => (
-                <tr key={customer.id} className="customer-account-row">
-                  <td>{customer.accountNumber}</td>
-                  <td>{customer.accountName}</td>
-                  <td>{account.accountNumber}</td>
-                  <td>{account.accountName}</td>
-                </tr>
-              ))}
-
-          {/* Render supplier accounts if they exist in children */}
-          {account.children &&
-            account.children
-              .filter((child) => child.isSupplier)
-              .map((supplier) => (
-                <tr key={supplier.id} className="supplier-account-row">
-                  <td>{supplier.accountNumber}</td>
-                  <td>{supplier.accountName}</td>
-                  <td>{account.accountNumber}</td>
-                  <td>{account.accountName}</td>
-                </tr>
-              ))}
 
           {/* Render other children accounts recursively */}
           {renderAccounts(accounts, account.accountNumber)}
@@ -136,6 +114,16 @@ const AccountsPage = () => {
               value={formData.accountName}
               onChange={handleInputChange}
               required
+            />
+          </label>
+          <label>
+            Arabic Account Name:
+            <input
+              placeholder="Enter Arabic account name"
+              type="text"
+              name="arabicAccountName"
+              value={formData.arabicAccountName}
+              onChange={handleInputChange}
             />
           </label>
           <label>
@@ -174,6 +162,7 @@ const AccountsPage = () => {
             <tr>
               <th>Account Number</th>
               <th>Account Name</th>
+              <th>Arabic Account Name</th>
               <th>Parent Number</th>
               <th>Parent Account Name</th>
             </tr>

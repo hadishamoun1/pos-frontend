@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const sections = [
   { name: "POS System", image: "/assets/pos.jpeg" },
-  { name: "Accounting", image: "/assets/accounting.jpg" },
+  { name: "Payments", image: "/assets/accounting.jpg" },
   { name: "Inventory", image: "/assets/inventory.png" },
   { name: "Customers", image: "/assets/customers.jpeg" },
   { name: "Purchases Invoice", image: "/assets/purchase.jpg" },

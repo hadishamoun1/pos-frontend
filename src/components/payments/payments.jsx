@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./accounting.css";
+import "./payments.css";
 import NewRecordModal from "./newRecord";
 
 const AccountingPage = () => {
