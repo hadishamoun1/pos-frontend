@@ -23,7 +23,7 @@ const AccountingPage = () => {
       customerName: "",
       currency: "",
       exchangeRate: "",
-      amountExchanged: "", 
+      amountExchanged: "",
       cashNumber: "",
       date: "",
       invoiceNumber: "",
