@@ -1,119 +1,149 @@
-.modal-overlay {
+.payments-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: payments-fadeIn 0.3s ease;
 }
 
-.modal-content {
-  background: #ffffff;
+.payments-modal-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
   padding: 2rem;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  height: 80%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: payments-scaleUp 0.3s ease;
+  overflow: hidden;
 }
 
-.modal-content h2 {
+.payments-modal-content h2 {
   margin-top: 0;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
+  text-align: center;
+  font-weight: 600;
+  color: #333333;
 }
 
-.modal-content form input {
+.payments-modal-content form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1rem;
+  overflow-y: auto;
   width: 100%;
-  padding: 0.75rem;
-  margin-top: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+}
+
+.payments-modal-content label {
+  font-weight: bold;
+  color: #555555;
+  margin-bottom: 0.3rem;
+  width: 100%;
+}
+
+.payments-modal-content input,
+.payments-modal-content select {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
   font-size: 1rem;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
   box-sizing: border-box;
 }
 
-.modal-buttons {
+.payments-modal-content input:focus,
+.payments-modal-content select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 6px rgba(0, 123, 255, 0.5);
+  outline: none;
+}
+
+.payments-modal-buttons {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
   margin-top: 1rem;
-}
-
-.modal-buttons .action-button {
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  border-radius: 5px;
-  color: white;
-  background-color: #007bff;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.modal-buttons .action-button:hover {
-  background-color: #0056b3;
-}
-.accounting-table th:nth-child(1) {
-  width: 13%; /* Customer Name */
-}
-
-.accounting-table th:nth-child(2) {
-  width: 5%; /* Currency */
-}
-
-.accounting-table th:nth-child(3) {
-  width: 11%; /* Exchange Rate */
-}
-
-.accounting-table th:nth-child(4) {
-  width: 10%; /* Amount Exchanged */
-}
-
-.accounting-table th:nth-child(5) {
-  width: 10%; /* Cash Number */
-}
-
-.accounting-table th:nth-child(6) {
-  width: 10%; /* Date */
-}
-
-.accounting-table th:nth-child(7) {
-  width: 10%; /* Invoice Number */
-}
-
-.accounting-table th:nth-child(8) {
-  width: 10%; /* Comments */
-}
-
-.accounting-table th:nth-child(9) {
-  width: 10%; /* RCT */
-}
-.modal-content label {
-  display: block;
-  font-weight: bold;
-  margin-top: 1rem;
-}
-
-.modal-content input,
-.modal-content select {
   width: 100%;
-  padding: 0.75rem;
-  margin-top: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 1rem;
-  box-sizing: border-box;
 }
 
-.modal-content input[type="date"] {
-  padding: 0.55rem;
+.payments-action-button {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s ease;
+  text-align: center;
 }
-.disabled-field {
-    background-color: #f0f0f0; 
-    color: #888888; 
-    border-color: #ccc; 
-    cursor: not-allowed; 
+
+.payments-action-button:hover {
+  background: linear-gradient(135deg, #0056b3, #003f8a);
+  transform: scale(1.05);
+}
+
+.payments-action-button:active {
+  transform: scale(0.95);
+}
+
+.payments-disabled-field {
+  background-color: #e9ecef;
+  color: #adb5bd;
+  border-color: #ced4da;
+  cursor: not-allowed;
+}
+
+@keyframes payments-fadeIn {
+  from {
+    opacity: 0;
   }
-  
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes payments-scaleUp {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .payments-modal-content {
+    padding: 1.5rem;
+    width: 95%;
+  }
+
+  .payments-modal-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .payments-modal-content {
+    height: 95%;
+  }
+
+  .payments-modal-content form {
+    overflow-y: auto;
+  }
+}

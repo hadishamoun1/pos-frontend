@@ -1,17 +1,38 @@
 import React, { useEffect, useState } from "react";
+import Select from "react-select";
 import "./newRecord.css";
 
 const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
   const [invoiceNumbers, setInvoiceNumbers] = useState([]);
+  const [customerNames, setCustomerNames] = useState([]);
 
+  // Fetch dynamic data
   useEffect(() => {
-    const fetchInvoiceNumbers = async () => {
+    const fetchDynamicData = async () => {
+      // Simulate fetching invoice numbers and customer names
       const invoices = ["INV-001", "INV-002", "INV-003"];
+      const customers = ["John Doe", "Jane Smith", "Alice Johnson"];
       setInvoiceNumbers(invoices);
+      setCustomerNames(customers);
     };
 
-    fetchInvoiceNumbers();
+    fetchDynamicData();
   }, []);
+
+  // Pre-fill exchange rate based on currency
+  useEffect(() => {
+    if (formData.currency === "USD") {
+      setFormData((prevData) => ({
+        ...prevData,
+        exchangeRate: "1.00",
+      }));
+    } else if (formData.currency === "LL") {
+      setFormData((prevData) => ({
+        ...prevData,
+        exchangeRate: "",
+      }));
+    }
+  }, [formData.currency, setFormData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -21,25 +42,48 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
     }));
   };
 
-  const isDisabled = formData.currency === "USD";
+  // Handle Enter key as Tab functionality
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const formElements = Array.from(
+          document.querySelectorAll(
+            ".payments-modal-content input, .payments-modal-content select"
+          )
+        );
+        const currentIndex = formElements.indexOf(document.activeElement);
+        const nextElement = formElements[currentIndex + 1];
+        nextElement?.focus();
+      }
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="payments-modal-overlay">
+      <div className="payments-modal-content">
         <h2>New Record</h2>
         <form>
-          {/* Customer Name */}
+          {/* Customer Name - Searchable Dropdown */}
           <label htmlFor="customerName">Customer Name</label>
-          <input
-            type="text"
-            id="customerName"
-            name="customerName"
-            value={formData.customerName}
-            onChange={handleInputChange}
-            placeholder="Customer Name"
+          <Select
+            options={customerNames.map((name) => ({
+              value: name,
+              label: name,
+            }))}
+            onChange={(selected) =>
+              setFormData((prevData) => ({
+                ...prevData,
+                customerName: selected.value,
+              }))
+            }
+            placeholder="Search or select customer"
           />
 
-          {/* Currency - Dropdown */}
+          {/* Currency */}
           <label htmlFor="currency">Currency</label>
           <select
             id="currency"
@@ -52,15 +96,17 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             <option value="LL">LL</option>
           </select>
 
-          {/* Currency Exchange Rate - Dropdown with Custom Option */}
+          {/* Exchange Rate */}
           <label htmlFor="exchangeRate">Exchange Rate</label>
           <select
             id="exchangeRate"
             name="exchangeRate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
-            disabled={isDisabled}
-            className={isDisabled ? "disabled-field" : ""}
+            disabled={formData.currency === "USD"}
+            className={
+              formData.currency === "USD" ? "payments-disabled-field" : ""
+            }
           >
             <option value="">Select Exchange Rate</option>
             <option value="89000">89,000</option>
@@ -72,8 +118,10 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             placeholder="Or enter a custom rate"
             value={formData.exchangeRate}
             onChange={handleInputChange}
-            disabled={isDisabled}
-            className={isDisabled ? "disabled-field" : ""}
+            disabled={formData.currency === "USD"}
+            className={
+              formData.currency === "USD" ? "payments-disabled-field" : ""
+            }
           />
 
           {/* Amount Exchanged */}
@@ -85,10 +133,13 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             value={formData.amountExchanged}
             onChange={handleInputChange}
             placeholder="Amount Exchanged"
-            disabled={isDisabled}
-            className={isDisabled ? "disabled-field" : ""}
+            disabled={formData.currency === "USD"}
+            className={
+              formData.currency === "USD" ? "payments-disabled-field" : ""
+            }
           />
 
+          {/* Other Fields */}
           {/* Cash Number */}
           <label htmlFor="cashNumber">Cash Number</label>
           <input
@@ -100,7 +151,7 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             placeholder="Cash Number"
           />
 
-          {/* Date - Calendar */}
+          {/* Date */}
           <label htmlFor="date">Date</label>
           <input
             type="date"
@@ -110,21 +161,21 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             onChange={handleInputChange}
           />
 
-          {/* Invoice Number - Dropdown */}
+          {/* Invoice Number - Searchable Dropdown */}
           <label htmlFor="invoiceNumber">Invoice Number</label>
-          <select
-            id="invoiceNumber"
-            name="invoiceNumber"
-            value={formData.invoiceNumber}
-            onChange={handleInputChange}
-          >
-            <option value="">Select Invoice Number</option>
-            {invoiceNumbers.map((invoice) => (
-              <option key={invoice} value={invoice}>
-                {invoice}
-              </option>
-            ))}
-          </select>
+          <Select
+            options={invoiceNumbers.map((invoice) => ({
+              value: invoice,
+              label: invoice,
+            }))}
+            onChange={(selected) =>
+              setFormData((prevData) => ({
+                ...prevData,
+                invoiceNumber: selected.value,
+              }))
+            }
+            placeholder="Search or select invoice"
+          />
 
           {/* Comments */}
           <label htmlFor="comments">Comments</label>
@@ -136,12 +187,14 @@ const NewRecordModal = ({ formData, setFormData, onClose, onSave }) => {
             onChange={handleInputChange}
             placeholder="Comments"
           />
-
-         
         </form>
-        <div className="modal-buttons">
-          <button className="action-button" onClick={onSave}>Save</button>
-          <button className="action-button" onClick={onClose}>Cancel</button>
+        <div className="payments-modal-buttons">
+          <button className="payments-action-button" onClick={onSave}>
+            Save
+          </button>
+          <button className="payments-action-button" onClick={onClose}>
+            Cancel
+          </button>
         </div>
       </div>
     </div>
