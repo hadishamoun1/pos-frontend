@@ -33,8 +33,26 @@ const NewRecordModal = ({ onClose, onSave }) => {
   return (
     <div className="payments-modal-overlay">
       <div className="payments-modal-content">
-        <h2>New Record</h2>
-        <table className="payments-table">
+        <div className="payments-modal-header">
+          <h2>New Record</h2>
+          <div className="payments-modal-header-buttons">
+            <button
+              type="button"
+              className="payments-modal-action-button payments-modal-cancel-button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="payments-modal-action-button payments-modal-save-button"
+              onClick={handleSave}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+        <table className="payments-modal-table">
           <thead>
             <tr>
               <th>Customer Name</th>
@@ -139,27 +157,13 @@ const NewRecordModal = ({ onClose, onSave }) => {
             ))}
           </tbody>
         </table>
-        <div className="payments-modal-buttons">
+        <div className="payments-modal-footer">
           <button
             type="button"
-            className="payments-action-button"
+            className="payments-modal-action-button"
             onClick={handleAddRow}
           >
             Add Row
-          </button>
-          <button
-            type="button"
-            className="payments-action-button"
-            onClick={handleSave}
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            className="payments-action-button"
-            onClick={onClose}
-          >
-            Cancel
           </button>
         </div>
       </div>

@@ -29,19 +29,36 @@
   animation: scaleIn 0.3s ease; /* Smooth scaling animation */
 }
 
-.payments-modal-content h2 {
-  margin-top: 0;
+/* Modal Header */
+.payments-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1rem;
+}
+
+.payments-modal-header h2 {
+  margin: 0;
   font-size: 1.8rem;
-  text-align: center;
   font-weight: 700;
   color: #333;
-  letter-spacing: 1px;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.payments-modal-header-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.payments-modal-header-buttons .payments-modal-cancel-button {
+  background: #dc3545; /* Red for cancel */
+}
+
+.payments-modal-header-buttons .payments-modal-save-button {
+  background: #28a745; /* Green for save */
 }
 
 /* Table Styling */
-.payments-table {
+.payments-modal-table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 8px;
@@ -51,49 +68,49 @@
 }
 
 /* Control column widths */
-.payments-table th:nth-child(1),
-.payments-table td:nth-child(1) {
-  width: 15%; /* Customer Name */
+.payments-modal-table th:nth-child(1),
+.payments-modal-table td:nth-child(1) {
+  width: 17%; /* Customer Name */
 }
 
-.payments-table th:nth-child(2),
-.payments-table td:nth-child(2) {
+.payments-modal-table th:nth-child(2),
+.payments-modal-table td:nth-child(2) {
   width: 6%; /* Currency */
 }
 
-.payments-table th:nth-child(3),
-.payments-table td:nth-child(3) {
+.payments-modal-table th:nth-child(3),
+.payments-modal-table td:nth-child(3) {
   width: 10%; /* Exchange Rate */
 }
 
-.payments-table th:nth-child(4),
-.payments-table td:nth-child(4) {
+.payments-modal-table th:nth-child(4),
+.payments-modal-table td:nth-child(4) {
   width: 12%; /* Amount Exchanged */
 }
 
-.payments-table th:nth-child(5),
-.payments-table td:nth-child(5) {
+.payments-modal-table th:nth-child(5),
+.payments-modal-table td:nth-child(5) {
   width: 10%; /* Cash Number */
 }
 
-.payments-table th:nth-child(6),
-.payments-table td:nth-child(6) {
+.payments-modal-table th:nth-child(6),
+.payments-modal-table td:nth-child(6) {
   width: 10%; /* Date */
 }
 
-.payments-table th:nth-child(7),
-.payments-table td:nth-child(7) {
-  width: 12%; /* Invoice Number */
+.payments-modal-table th:nth-child(7),
+.payments-modal-table td:nth-child(7) {
+  width: 8%; /* Invoice Number */
 }
 
-.payments-table th:nth-child(8),
-.payments-table td:nth-child(8) {
-  width: 14%; /* Comments */
+.payments-modal-table th:nth-child(8),
+.payments-modal-table td:nth-child(8) {
+  width: 10%; /* Comments */
 }
 
 /* Table Cell Styling */
-.payments-table th,
-.payments-table td {
+.payments-modal-table th,
+.payments-modal-table td {
   padding: 0.75rem;
   text-align: center;
   border: 1px solid #ddd;
@@ -102,26 +119,26 @@
   height: 2rem; /* Fixed row height */
 }
 
-.payments-table th {
+.payments-modal-table th {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   font-weight: bold;
   text-transform: uppercase;
 }
 
-.payments-table tbody tr:nth-child(even) {
+.payments-modal-table tbody tr:nth-child(even) {
   background-color: #f8f9fa;
 }
 
-.payments-table tbody tr:hover {
+.payments-modal-table tbody tr:hover {
   background-color: #eaf4ff; /* Highlight on hover */
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
 
 /* Input Field Styling */
-.payments-table input,
-.payments-table select {
+.payments-modal-table input,
+.payments-modal-table select {
   width: 100%;
   height: 3.5rem;
   padding: 0.6rem;
@@ -134,24 +151,27 @@
   transition: all 0.3s ease;
 }
 
-.payments-table input:focus,
-.payments-table select:focus {
+.payments-modal-table input:focus,
+.payments-modal-table select:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
   outline: none;
 }
 
-/* Modal Buttons */
-.payments-modal-buttons {
+/* Modal Footer */
+.payments-modal-footer {
   display: flex;
-  justify-content: space-between; /* Distribute buttons evenly */
-  gap: 1rem;
+  justify-content: flex-start;
   margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e0e0e0; /* Add a separator */
 }
 
-.payments-action-button {
+.payments-modal-footer .payments-modal-action-button {
+  padding: 0.8rem 1.2rem;
+  font-size: 1rem;
+}
+
+/* Action Buttons */
+.payments-modal-action-button {
   padding: 0.8rem 1.6rem;
   font-size: 1rem;
   font-weight: bold;
@@ -163,16 +183,16 @@
   transition: all 0.3s ease-in-out;
 }
 
-.payments-action-button:hover {
+.payments-modal-action-button:hover {
   background: linear-gradient(135deg, #0056b3, #003f8a);
   transform: scale(1.05); /* Slight zoom on hover */
 }
 
-.payments-action-button:active {
+.payments-modal-action-button:active {
   transform: scale(0.95); /* Slight shrink on click */
 }
 
-.payments-action-button:disabled {
+.payments-modal-action-button:disabled {
   background: #ddd;
   cursor: not-allowed;
 }
@@ -204,17 +224,17 @@
     height: 90%;
   }
 
-  .payments-table th,
-  .payments-table td {
+  .payments-modal-table th,
+  .payments-modal-table td {
     padding: 0.6rem;
   }
 
-  .payments-modal-buttons {
+  .payments-modal-header-buttons {
     flex-direction: column;
     gap: 0.8rem;
   }
 
-  .payments-action-button {
+  .payments-modal-action-button {
     width: 100%;
   }
 }
