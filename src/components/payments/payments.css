@@ -3,26 +3,30 @@
   flex-direction: column;
   height: 96vh;
   width: 98%;
-  padding: 1rem;
-  gap: 1rem;
+  padding: 2rem;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #f3f4f6, #ffffff);
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .accounting-section {
   flex: 1;
   width: 100%;
-  padding: 1rem;
+  padding: 1.5rem;
   box-sizing: border-box;
   position: relative;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 15px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .top-section {
-  background-color: #f0f0f0;
+  background: linear-gradient(135deg, #e3f2fd, #ffffff);
 }
 
 .bottom-section {
-  background-color: #ffffff;
+  background: linear-gradient(135deg, #f3f4f6, #ffffff);
 }
 
 .top-toolbar,
@@ -31,57 +35,117 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
 }
 
 .search-input {
-  padding: 0.5rem;
+  padding: 0.6rem;
   font-size: 1rem;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  width: 250px;
+  border-radius: 8px;
+  width: 300px;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
 }
 
 .button-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 .action-button {
-  padding: 0.6rem 1.2rem;
+  padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: bold;
   border: none;
-  border-radius: 5px;
+  border-radius: 10px;
   color: white;
-  background-color: #007bff;
+  background: linear-gradient(135deg, #007bff, #0056b3);
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .action-button:hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #0056b3, #003f8a);
+  transform: scale(1.05);
 }
 
 /* Accounting table styles */
 .accounting-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
 }
 
 .accounting-table th,
 .accounting-table td {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
+  padding: 1rem;
+  border-bottom: 1px solid #f1f1f1;
   text-align: left;
+  font-size: 1rem;
+  color: #555;
 }
 
 .accounting-table th {
-  background-color: #007bff;
-  color: white;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 0.6rem 1rem;
 }
 
-.accounting-table tbody tr:hover {
+.accounting-table td {
+  text-align: left;
   background-color: #f9f9f9;
+  transition: all 0.3s ease;
+}
+
+.accounting-table tr:nth-child(even) td {
+  background-color: #f3f4f6;
+}
+
+.accounting-table tbody tr:hover td {
+  background-color: #e3f2fd;
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Table rows and hover effects */
+.accounting-table tbody tr {
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .accounting-container {
+    padding: 1rem;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-button {
+    width: 100%;
+  }
+
+  .accounting-table th,
+  .accounting-table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
 }
