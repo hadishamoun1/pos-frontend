@@ -7,7 +7,6 @@ const AccountsPage = () => {
     accountNumber: "",
     accountName: "",
     parentNumber: null,
-    arabicAccountName: "",
     accessible: true,
   });
   const [modalContent, setModalContent] = useState(false);
@@ -68,7 +67,7 @@ const AccountsPage = () => {
 
   const closeModal = () => setModalContent(false);
 
-  // Recursive function to render accounts, customers, and suppliers
+  // Recursive function to render accounts, maintaining order and avoiding duplication
   const renderAccounts = (accounts, parentNumber = null) => {
     return accounts
       .filter((account) => account.parentNumber === parentNumber)
@@ -82,7 +81,37 @@ const AccountsPage = () => {
             <td>{account.parent?.accountName || "N/A"}</td>
           </tr>
 
-          {/* Render other children accounts recursively */}
+          {/* Render customer accounts under 4111 */}
+          {account.accountNumber === "4111" &&
+            account.children &&
+            account.children
+              .filter((child) => child.accountNumber.startsWith("4111"))
+              .map((customer) => (
+                <tr key={customer.id} className="customer-account-row">
+                  <td>{customer.accountNumber}</td>
+                  <td>{customer.accountName}</td>
+                  <td>{customer.arabicAccountName || "N/A"}</td>
+                  <td>{account.accountNumber}</td>
+                  <td>{account.accountName}</td>
+                </tr>
+              ))}
+
+          {/* Render supplier accounts under 4011 */}
+          {account.accountNumber === "4011" &&
+            account.children &&
+            account.children
+              .filter((child) => child.accountNumber.startsWith("4011"))
+              .map((supplier) => (
+                <tr key={supplier.id} className="supplier-account-row">
+                  <td>{supplier.accountNumber}</td>
+                  <td>{supplier.accountName}</td>
+                  <td>{supplier.arabicAccountName || "N/A"}</td>
+                  <td>{account.accountNumber}</td>
+                  <td>{account.accountName}</td>
+                </tr>
+              ))}
+
+          {/* Recursively render other children */}
           {renderAccounts(accounts, account.accountNumber)}
         </React.Fragment>
       ));
@@ -114,16 +143,6 @@ const AccountsPage = () => {
               value={formData.accountName}
               onChange={handleInputChange}
               required
-            />
-          </label>
-          <label>
-            Arabic Account Name:
-            <input
-              placeholder="Enter Arabic account name"
-              type="text"
-              name="arabicAccountName"
-              value={formData.arabicAccountName}
-              onChange={handleInputChange}
             />
           </label>
           <label>
