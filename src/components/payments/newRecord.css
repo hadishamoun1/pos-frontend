@@ -5,28 +5,28 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7); /* Slightly darker overlay for better focus */
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.3s ease; /* Smooth fade-in animation */
+  animation: fadeIn 0.3s ease;
 }
 
 /* Modal Content */
 .payments-modal-content {
-  background: linear-gradient(135deg, #ffffff, #f9fafb); /* Soft gradient */
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
   padding: 2rem;
   border-radius: 16px;
-  width: 95%; /* Responsive width */
+  width: 95%;
   max-width: 1800px;
-  height: 85%; /* Increased height for table content */
+  height: 85%;
   max-height: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* Enhanced shadow for depth */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent horizontal overflow */
-  animation: scaleIn 0.3s ease; /* Smooth scaling animation */
+  overflow-y: auto;
+  animation: scaleIn 0.3s ease;
 }
 
 /* Modal Header */
@@ -50,7 +50,7 @@
 }
 
 .payments-modal-header-buttons .payments-modal-cancel-button {
-  background: #dc3545; /* Red for cancel */
+  background: #dc3545;
 }
 
 .payments-modal-cancel-button:hover {
@@ -58,7 +58,7 @@
 }
 
 .payments-modal-header-buttons .payments-modal-save-button {
-  background: #28a745; /* Green for save */
+  background: #28a745;
 }
 
 .payments-modal-save-button:hover {
@@ -66,8 +66,7 @@
 }
 
 /* Table Styling */
-.payments-modal-table,
-.customer-selection-modal-table {
+.payments-modal-table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 8px;
@@ -76,22 +75,50 @@
   table-layout: fixed; /* Ensures consistent column widths */
 }
 
-/* Control column widths for customer selection modal */
-.customer-selection-modal-table th:nth-child(1),
-.customer-selection-modal-table td:nth-child(1) {
-  width: 40%; /* Account Number */
+/* Column Width Control */
+.payments-modal-table th:nth-child(1),
+.payments-modal-table td:nth-child(1) {
+  width: 28%; /* Customer Name */
 }
 
-.customer-selection-modal-table th:nth-child(2),
-.customer-selection-modal-table td:nth-child(2) {
-  width: 60%; /* Customer Name */
+.payments-modal-table th:nth-child(2),
+.payments-modal-table td:nth-child(2) {
+  width: 7%; /* Currency */
+}
+
+.payments-modal-table th:nth-child(3),
+.payments-modal-table td:nth-child(3) {
+  width: 10%; /* Exchange Rate */
+}
+
+.payments-modal-table th:nth-child(4),
+.payments-modal-table td:nth-child(4) {
+  width: 15%; /* Amount Exchanged */
+}
+
+.payments-modal-table th:nth-child(5),
+.payments-modal-table td:nth-child(5) {
+  width: 10%; /* Cash Number */
+}
+
+.payments-modal-table th:nth-child(6),
+.payments-modal-table td:nth-child(6) {
+  width: 10%; /* Date */
+}
+
+.payments-modal-table th:nth-child(7),
+.payments-modal-table td:nth-child(7) {
+  width: 10%; /* Invoice Number */
+}
+
+.payments-modal-table th:nth-child(8),
+.payments-modal-table td:nth-child(8) {
+  width: 10%; /* Comments */
 }
 
 /* Table Cell Styling */
 .payments-modal-table th,
-.payments-modal-table td,
-.customer-selection-modal-table th,
-.customer-selection-modal-table td {
+.payments-modal-table td {
   padding: 0.75rem;
   text-align: center;
   border: 1px solid #ddd;
@@ -100,21 +127,18 @@
   height: 2rem;
 }
 
-.payments-modal-table th,
-.customer-selection-modal-table th {
+.payments-modal-table th {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   font-weight: bold;
   text-transform: uppercase;
 }
 
-.payments-modal-table tbody tr:nth-child(even),
-.customer-selection-modal-table tbody tr:nth-child(even) {
+.payments-modal-table tbody tr:nth-child(even) {
   background-color: #f8f9fa;
 }
 
-.payments-modal-table tbody tr:hover,
-.customer-selection-modal-table tbody tr:hover {
+.payments-modal-table tbody tr:hover {
   background-color: #eaf4ff;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
@@ -168,7 +192,7 @@
 }
 
 .payments-modal-action-button:active {
-  transform: scale(0.95); /* Slight shrink on click */
+  transform: scale(0.95);
 }
 
 .payments-modal-action-button:disabled {
