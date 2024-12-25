@@ -88,17 +88,17 @@
 
 .payments-modal-table th:nth-child(3),
 .payments-modal-table td:nth-child(3) {
-  width: 10%; /* Exchange Rate */
+  width: 10%; /* cash number */
 }
 
 .payments-modal-table th:nth-child(4),
 .payments-modal-table td:nth-child(4) {
-  width: 15%; /* Amount Exchanged */
+  width: 10%; /* Exhnage rate */
 }
 
 .payments-modal-table th:nth-child(5),
 .payments-modal-table td:nth-child(5) {
-  width: 10%; /* Cash Number */
+  width: 14%; /* Amount Exchanged */
 }
 
 .payments-modal-table th:nth-child(6),

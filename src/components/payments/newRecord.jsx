@@ -69,9 +69,9 @@ const NewRecordModal = ({ onClose, onSave }) => {
             <tr>
               <th>Customer Name</th>
               <th>Currency</th>
+              <th>Cash Number</th>
               <th>Exchange Rate</th>
               <th>Amount Exchanged</th>
-              <th>Cash Number</th>
               <th>Date</th>
               <th>Invoice Number</th>
               <th>Comments</th>
@@ -106,12 +106,22 @@ const NewRecordModal = ({ onClose, onSave }) => {
                 </td>
                 <td>
                   <input
+                    type="text"
+                    value={row.cashNumber}
+                    onChange={(e) =>
+                      handleInputChange(index, "cashNumber", e.target.value)
+                    }
+                    placeholder="Cash Number"
+                  />
+                </td>
+                <td>
+                  <input
                     type="number"
                     value={row.exchangeRate}
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
-                    placeholder="Ex Rate"
+                    placeholder="Exch Rate"
                   />
                 </td>
                 <td>
@@ -128,16 +138,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     placeholder="Amount Exchanged"
                   />
                 </td>
-                <td>
-                  <input
-                    type="text"
-                    value={row.cashNumber}
-                    onChange={(e) =>
-                      handleInputChange(index, "cashNumber", e.target.value)
-                    }
-                    placeholder="Cash Number"
-                  />
-                </td>
+
                 <td>
                   <input
                     type="date"
