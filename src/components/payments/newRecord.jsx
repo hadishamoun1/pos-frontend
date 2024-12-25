@@ -7,6 +7,11 @@ const NewRecordModal = ({ onClose, onSave }) => {
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
 
+  const formatNumberWithCommas = (number) => {
+    if (number === "" || number === null) return "";
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
   const handleAddRow = () => {
     const newRow = {
       customerName: "",
@@ -26,51 +31,69 @@ const NewRecordModal = ({ onClose, onSave }) => {
       prevRows.map((row, i) => {
         if (i !== index) return row;
 
-        // Parse numeric fields for calculations
-        const numericValue = isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+        const numericValue = isNaN(parseFloat(value.replace(/,/g, "")))
+          ? 0
+          : parseFloat(value.replace(/,/g, ""));
         const updatedRow = { ...row, [field]: value };
 
-        // Handle specific logic for currency selection
         if (field === "currency") {
           if (value === "USD") {
-            updatedRow.exchangeRate = ""; // Clear exchange rate for USD
-            updatedRow.amountExchanged = updatedRow.cashNumber || ""; // Set amountExchanged = cashNumber
+            updatedRow.exchangeRate = "";
+            updatedRow.amountExchanged = formatNumberWithCommas(
+              updatedRow.cashNumber || ""
+            );
           } else if (value === "LL") {
-            // Recalculate amountExchanged if both cashNumber and exchangeRate exist
             if (row.cashNumber && row.exchangeRate) {
-              updatedRow.amountExchanged = (
-                parseFloat(row.cashNumber) / parseFloat(row.exchangeRate)
-              ).toFixed(2);
+              updatedRow.amountExchanged = formatNumberWithCommas(
+                (
+                  parseFloat(row.cashNumber.replace(/,/g, "")) /
+                  parseFloat(row.exchangeRate.replace(/,/g, ""))
+                ).toFixed(2)
+              );
             }
           }
         }
 
-        // Update amountExchanged or exchangeRate based on changes to cashNumber
         if (field === "cashNumber") {
+          updatedRow.cashNumber = formatNumberWithCommas(
+            value.replace(/,/g, "")
+          );
           if (row.currency === "LL" && row.exchangeRate) {
-            updatedRow.amountExchanged = (
-              numericValue / parseFloat(row.exchangeRate)
-            ).toFixed(2);
+            updatedRow.amountExchanged = formatNumberWithCommas(
+              (
+                numericValue / parseFloat(row.exchangeRate.replace(/,/g, ""))
+              ).toFixed(2)
+            );
           } else if (row.currency === "USD") {
-            updatedRow.amountExchanged = numericValue.toFixed(2); // Directly set amountExchanged for USD
+            updatedRow.amountExchanged = formatNumberWithCommas(
+              numericValue.toFixed(2)
+            );
           }
         }
 
-        // Update amountExchanged when exchangeRate changes for LL
         if (field === "exchangeRate" && row.currency === "LL") {
+          updatedRow.exchangeRate = formatNumberWithCommas(
+            value.replace(/,/g, "")
+          );
           if (row.cashNumber) {
-            updatedRow.amountExchanged = (
-              parseFloat(row.cashNumber) / numericValue
-            ).toFixed(2);
+            updatedRow.amountExchanged = formatNumberWithCommas(
+              (
+                parseFloat(row.cashNumber.replace(/,/g, "")) / numericValue
+              ).toFixed(2)
+            );
           }
         }
 
-        // Update exchangeRate when amountExchanged changes for LL
         if (field === "amountExchanged" && row.currency === "LL") {
+          updatedRow.amountExchanged = formatNumberWithCommas(
+            value.replace(/,/g, "")
+          );
           if (row.cashNumber) {
-            updatedRow.exchangeRate = (
-              parseFloat(row.cashNumber) / numericValue
-            ).toFixed(2);
+            updatedRow.exchangeRate = formatNumberWithCommas(
+              (
+                parseFloat(row.cashNumber.replace(/,/g, "")) / numericValue
+              ).toFixed(2)
+            );
           }
         }
 
@@ -158,7 +181,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.cashNumber}
                     onChange={(e) =>
                       handleInputChange(index, "cashNumber", e.target.value)
@@ -168,18 +191,18 @@ const NewRecordModal = ({ onClose, onSave }) => {
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.exchangeRate}
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
                     placeholder="Ex Rate"
-                    disabled={row.currency === "USD"} // Disable if currency is USD
+                    disabled={row.currency === "USD"}
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={row.amountExchanged}
                     onChange={(e) =>
                       handleInputChange(
