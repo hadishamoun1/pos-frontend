@@ -199,6 +199,14 @@
   background: #ddd;
   cursor: not-allowed;
 }
+/* Style for disabled inputs */
+.payments-modal-table input:disabled {
+  background-color: #dddcdc; 
+  color: #a1a1a1; 
+  cursor: not-allowed; 
+  border: 1px solid #ddd;
+  opacity: 0;
+}
 
 /* Animations */
 @keyframes fadeIn {

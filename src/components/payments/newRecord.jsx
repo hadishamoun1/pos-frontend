@@ -23,7 +23,59 @@ const NewRecordModal = ({ onClose, onSave }) => {
 
   const handleInputChange = (index, field, value) => {
     setRows((prevRows) =>
-      prevRows.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+      prevRows.map((row, i) => {
+        if (i !== index) return row;
+
+        // Parse numeric fields for calculations
+        const numericValue = isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+        const updatedRow = { ...row, [field]: value };
+
+        // Handle specific logic for currency selection
+        if (field === "currency") {
+          if (value === "USD") {
+            updatedRow.exchangeRate = ""; // Clear exchange rate for USD
+            updatedRow.amountExchanged = updatedRow.cashNumber || ""; // Set amountExchanged = cashNumber
+          } else if (value === "LL") {
+            // Recalculate amountExchanged if both cashNumber and exchangeRate exist
+            if (row.cashNumber && row.exchangeRate) {
+              updatedRow.amountExchanged = (
+                parseFloat(row.cashNumber) / parseFloat(row.exchangeRate)
+              ).toFixed(2);
+            }
+          }
+        }
+
+        // Update amountExchanged or exchangeRate based on changes to cashNumber
+        if (field === "cashNumber") {
+          if (row.currency === "LL" && row.exchangeRate) {
+            updatedRow.amountExchanged = (
+              numericValue / parseFloat(row.exchangeRate)
+            ).toFixed(2);
+          } else if (row.currency === "USD") {
+            updatedRow.amountExchanged = numericValue.toFixed(2); // Directly set amountExchanged for USD
+          }
+        }
+
+        // Update amountExchanged when exchangeRate changes for LL
+        if (field === "exchangeRate" && row.currency === "LL") {
+          if (row.cashNumber) {
+            updatedRow.amountExchanged = (
+              parseFloat(row.cashNumber) / numericValue
+            ).toFixed(2);
+          }
+        }
+
+        // Update exchangeRate when amountExchanged changes for LL
+        if (field === "amountExchanged" && row.currency === "LL") {
+          if (row.cashNumber) {
+            updatedRow.exchangeRate = (
+              parseFloat(row.cashNumber) / numericValue
+            ).toFixed(2);
+          }
+        }
+
+        return updatedRow;
+      })
     );
   };
 
@@ -106,7 +158,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
                 </td>
                 <td>
                   <input
-                    type="text"
+                    type="number"
                     value={row.cashNumber}
                     onChange={(e) =>
                       handleInputChange(index, "cashNumber", e.target.value)
@@ -121,7 +173,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
-                    placeholder="Exch Rate"
+                    placeholder="Exchange Rate"
+                    disabled={row.currency === "USD"} // Disable if currency is USD
                   />
                 </td>
                 <td>
@@ -138,7 +191,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     placeholder="Amount Exchanged"
                   />
                 </td>
-
                 <td>
                   <input
                     type="date"
