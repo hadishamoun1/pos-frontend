@@ -3,6 +3,8 @@ import "./CustomerSelectionModal.css";
 
 const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
   const [customers, setCustomers] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -12,6 +14,7 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
         );
         const data = await response.json();
         setCustomers(data);
+        setFilteredCustomers(data); // Initialize filtered list
       } catch (error) {
         console.error("Error fetching customers:", error);
       }
@@ -19,6 +22,16 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
 
     fetchCustomers();
   }, []);
+
+  const handleSearch = (e) => {
+    const value = e.target.value.toLowerCase();
+    setSearchTerm(value);
+
+    const filtered = customers.filter((customer) =>
+      customer.customerName.toLowerCase().includes(value)
+    );
+    setFilteredCustomers(filtered);
+  };
 
   const handleCustomerClick = (customerName) => {
     onSelectCustomer(customerName);
@@ -34,6 +47,15 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
             Close
           </button>
         </div>
+        {/* Search Bar */}
+        <div className="customer-unique-selection-search">
+          <input
+            type="text"
+            placeholder="Search customer..."
+            value={searchTerm}
+            onChange={handleSearch}
+          />
+        </div>
         <table className="customer-unique-selection-modal-table">
           <thead>
             <tr>
@@ -41,7 +63,7 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer) => (
+            {filteredCustomers.map((customer) => (
               <tr
                 key={customer.id}
                 onDoubleClick={() => handleCustomerClick(customer.customerName)}
