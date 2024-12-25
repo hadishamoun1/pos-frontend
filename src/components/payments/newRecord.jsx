@@ -111,7 +111,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
-                    placeholder="Exchange Rate"
+                    placeholder="Ex Rate"
                   />
                 </td>
                 <td>
