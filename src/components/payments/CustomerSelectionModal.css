@@ -1,0 +1,88 @@
+/* Overlay for New Popup */
+.customer-unique-selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6); /* Slightly darker overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Higher z-index than the parent modal */
+}
+
+/* Content for New Popup */
+.customer-unique-selection-modal-content {
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 60%; /* Smaller width for the popup */
+  max-width: 600px;
+  max-height: 80%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Add scroll for content overflow */
+  animation: scaleIn 0.3s ease;
+}
+
+/* Header for New Popup */
+.customer-unique-selection-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.customer-unique-selection-modal-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Table Styling for New Popup */
+.customer-unique-selection-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+.customer-unique-selection-modal-table th,
+.customer-unique-selection-modal-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+}
+
+.customer-unique-selection-modal-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.customer-unique-selection-modal-table tbody tr:hover {
+  background: #eaf4ff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Close Button for New Popup */
+.customer-unique-selection-modal-header .close-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.customer-unique-selection-modal-header .close-button:hover {
+  background: #960110;
+}

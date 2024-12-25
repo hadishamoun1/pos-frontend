@@ -52,6 +52,7 @@
 .payments-modal-header-buttons .payments-modal-cancel-button {
   background: #dc3545; /* Red for cancel */
 }
+
 .payments-modal-cancel-button:hover {
   background: #960110;
 }
@@ -59,12 +60,14 @@
 .payments-modal-header-buttons .payments-modal-save-button {
   background: #28a745; /* Green for save */
 }
-.payments-modal-save-button:hover{
+
+.payments-modal-save-button:hover {
   background: #1b6d2e;
 }
 
 /* Table Styling */
-.payments-modal-table {
+.payments-modal-table,
+.customer-selection-modal-table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 8px;
@@ -73,71 +76,46 @@
   table-layout: fixed; /* Ensures consistent column widths */
 }
 
-/* Control column widths */
-.payments-modal-table th:nth-child(1),
-.payments-modal-table td:nth-child(1) {
-  width: 19%; /* Customer Name */
+/* Control column widths for customer selection modal */
+.customer-selection-modal-table th:nth-child(1),
+.customer-selection-modal-table td:nth-child(1) {
+  width: 40%; /* Account Number */
 }
 
-.payments-modal-table th:nth-child(2),
-.payments-modal-table td:nth-child(2) {
-  width: 6%; /* Currency */
-}
-
-.payments-modal-table th:nth-child(3),
-.payments-modal-table td:nth-child(3) {
-  width: 10%; /* Exchange Rate */
-}
-
-.payments-modal-table th:nth-child(4),
-.payments-modal-table td:nth-child(4) {
-  width: 12%; /* Amount Exchanged */
-}
-
-.payments-modal-table th:nth-child(5),
-.payments-modal-table td:nth-child(5) {
-  width: 10%; /* Cash Number */
-}
-
-.payments-modal-table th:nth-child(6),
-.payments-modal-table td:nth-child(6) {
-  width: 10%; /* Date */
-}
-
-.payments-modal-table th:nth-child(7),
-.payments-modal-table td:nth-child(7) {
-  width: 8%; /* Invoice Number */
-}
-
-.payments-modal-table th:nth-child(8),
-.payments-modal-table td:nth-child(8) {
-  width: 8%; /* Comments */
+.customer-selection-modal-table th:nth-child(2),
+.customer-selection-modal-table td:nth-child(2) {
+  width: 60%; /* Customer Name */
 }
 
 /* Table Cell Styling */
 .payments-modal-table th,
-.payments-modal-table td {
+.payments-modal-table td,
+.customer-selection-modal-table th,
+.customer-selection-modal-table td {
   padding: 0.75rem;
   text-align: center;
   border: 1px solid #ddd;
   white-space: nowrap;
   font-size: 1.2rem;
-  height: 2rem; 
+  height: 2rem;
 }
 
-.payments-modal-table th {
+.payments-modal-table th,
+.customer-selection-modal-table th {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   font-weight: bold;
   text-transform: uppercase;
 }
 
-.payments-modal-table tbody tr:nth-child(even) {
+.payments-modal-table tbody tr:nth-child(even),
+.customer-selection-modal-table tbody tr:nth-child(even) {
   background-color: #f8f9fa;
 }
 
-.payments-modal-table tbody tr:hover {
-  background-color: #eaf4ff; 
+.payments-modal-table tbody tr:hover,
+.customer-selection-modal-table tbody tr:hover {
+  background-color: #eaf4ff;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
@@ -188,8 +166,6 @@
   cursor: pointer;
   transition: all 0.3s ease-in-out;
 }
-
-
 
 .payments-modal-action-button:active {
   transform: scale(0.95); /* Slight shrink on click */

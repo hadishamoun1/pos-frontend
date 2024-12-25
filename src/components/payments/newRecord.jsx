@@ -1,8 +1,11 @@
 import React, { useState } from "react";
+import CustomerSelectionModal from "./CustomerSelectionModal";
 import "./newRecord.css";
 
 const NewRecordModal = ({ onClose, onSave }) => {
   const [rows, setRows] = useState([]);
+  const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
+  const [currentRowIndex, setCurrentRowIndex] = useState(null);
 
   const handleAddRow = () => {
     const newRow = {
@@ -28,6 +31,15 @@ const NewRecordModal = ({ onClose, onSave }) => {
     console.log("Rows Data:", rows);
     onSave(rows);
     onClose();
+  };
+
+  const handleCustomerSelect = (customerName) => {
+    setRows((prevRows) =>
+      prevRows.map((row, i) =>
+        i === currentRowIndex ? { ...row, customerName } : row
+      )
+    );
+    setCustomerModalOpen(false);
   };
 
   return (
@@ -72,10 +84,12 @@ const NewRecordModal = ({ onClose, onSave }) => {
                   <input
                     type="text"
                     value={row.customerName}
-                    onChange={(e) =>
-                      handleInputChange(index, "customerName", e.target.value)
-                    }
-                    placeholder="Customer Name"
+                    onClick={() => {
+                      setCustomerModalOpen(true);
+                      setCurrentRowIndex(index);
+                    }}
+                    placeholder="Select Customer"
+                    readOnly
                   />
                 </td>
                 <td>
@@ -167,6 +181,12 @@ const NewRecordModal = ({ onClose, onSave }) => {
           </button>
         </div>
       </div>
+      {isCustomerModalOpen && (
+        <CustomerSelectionModal
+          onClose={() => setCustomerModalOpen(false)}
+          onSelectCustomer={handleCustomerSelect}
+        />
+      )}
     </div>
   );
 };
