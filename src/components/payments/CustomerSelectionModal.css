@@ -5,11 +5,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6); /* Slightly darker overlay */
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 2000; /* Higher z-index than the parent modal */
+  z-index: 2000;
 }
 
 /* Content for New Popup */
@@ -17,13 +17,13 @@
   background: linear-gradient(135deg, #ffffff, #f9fafb);
   padding: 1.5rem;
   border-radius: 12px;
-  width: 60%; /* Smaller width for the popup */
-  max-width: 600px;
-  max-height: 80%;
+  width: 50%;
+  max-width: 400px;
+  height: 85%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Add scroll for content overflow */
+  overflow-y: auto;
   animation: scaleIn 0.3s ease;
 }
 
