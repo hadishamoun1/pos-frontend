@@ -33,8 +33,9 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
     setFilteredCustomers(filtered);
   };
 
-  const handleCustomerClick = (customerName) => {
-    onSelectCustomer(customerName);
+  const handleCustomerClick = (customer) => {
+    // Pass both `id` and `customerName` to the parent
+    onSelectCustomer(customer);
     onClose();
   };
 
@@ -66,7 +67,7 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
             {filteredCustomers.map((customer) => (
               <tr
                 key={customer.id}
-                onDoubleClick={() => handleCustomerClick(customer.customerName)}
+                onDoubleClick={() => handleCustomerClick(customer)}
               >
                 <td>{customer.customerName}</td>
               </tr>

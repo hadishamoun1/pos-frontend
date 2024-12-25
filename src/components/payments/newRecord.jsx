@@ -14,6 +14,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
 
   const handleAddRow = () => {
     const newRow = {
+      customerId: "",
       customerName: "",
       currency: "",
       exchangeRate: "",
@@ -108,10 +109,16 @@ const NewRecordModal = ({ onClose, onSave }) => {
     onClose();
   };
 
-  const handleCustomerSelect = (customerName) => {
+  const handleCustomerSelect = (customer) => {
     setRows((prevRows) =>
       prevRows.map((row, i) =>
-        i === currentRowIndex ? { ...row, customerName } : row
+        i === currentRowIndex
+          ? {
+              ...row,
+              customerName: customer.customerName,
+              customerId: customer.id,
+            }
+          : row
       )
     );
     setCustomerModalOpen(false);
