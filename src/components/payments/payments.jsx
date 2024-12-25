@@ -53,17 +53,19 @@ const AccountingPage = () => {
 
         <table className="accounting-table">
           <thead>
-            <tr>
-              <th>Customer Name</th>
-              <th>Currency</th>
-              <th>Currency Ex Rate</th>
-              <th>Amount Exchanged</th> {/* New column for Amount Exchanged */}
-              <th>Cash Number</th>
-              <th>Date</th>
-              <th>Invoice Number</th>
-              <th>Comments</th>
-              <th>RCT</th>
-            </tr>
+            
+              <tr>
+                <th>Customer Name</th>
+                <th>Currency</th>
+                <th>Currency Ex Rate</th>
+                <th>Amount Exchanged</th>
+                <th>Cash Number</th>
+                <th>Date</th>
+                <th>Invoice Number</th>
+                <th>Comments</th>
+                <th>RCT</th>
+              </tr>
+          
           </thead>
           <tbody>{/* Table rows would go here */}</tbody>
         </table>
