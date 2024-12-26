@@ -89,9 +89,10 @@
 .accounting-table td {
   padding: 1rem;
   border-bottom: 1px solid #f1f1f1;
-  text-align: left;
+  text-align: center; /* Center the text */
   font-size: 1rem;
   color: #555;
+  border: 1px solid #ddd; /* Add a light border */
 }
 
 .accounting-table th {
@@ -104,9 +105,10 @@
 }
 
 .accounting-table td {
-  text-align: left;
+  text-align: center; /* Center the text */
   background-color: #f9f9f9;
   transition: all 0.3s ease;
+  border: 1px solid #ddd; /* Add a light border */
 }
 
 .accounting-table tr:nth-child(even) td {
