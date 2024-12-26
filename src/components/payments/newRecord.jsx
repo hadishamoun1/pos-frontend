@@ -1,35 +1,15 @@
 import React, { useState } from "react";
 import axios from "axios";
 import CustomerSelectionModal from "./CustomerSelectionModal";
+import NotificationModal from "./NotificationModal"; // Import the NotificationModal
 import "./newRecord.css";
-import "./notificationModal.css";
-
-const NotificationModal = ({ type, message, onClose }) => {
-  return (
-    <div className="notification-modal-overlay">
-      <div
-        className={`notification-modal-content ${
-          type === "success" ? "success" : "error"
-        }`}
-      >
-        <p>{message}</p>
-        <button
-          type="button"
-          className="notification-modal-close-button"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-};
 
 const NewRecordModal = ({ onClose, onSave }) => {
   const [rows, setRows] = useState([]);
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [closeAfterNotification, setCloseAfterNotification] = useState(false);
 
   const formatNumberWithCommas = (number) => {
     if (number === "" || number === null) return "";
@@ -197,20 +177,20 @@ const NewRecordModal = ({ onClose, onSave }) => {
         invoiceId: row.invoiceNumber,
         details: [
           {
-            cashNumber: row.cashNumber.replace(/,/g, ""), // Remove commas
+            cashNumber: row.cashNumber.replace(/,/g, ""),
             currency: row.currency,
             exchangeRate:
               row.currency === "LL"
                 ? row.exchangeRate.replace(/,/g, "") || "1"
-                : "1", // Default to 1 for USD
-            amountExchanged: row.amountExchanged.replace(/,/g, ""), // Remove commas
+                : "1",
+            amountExchanged: row.amountExchanged.replace(/,/g, ""),
             comments: row.comments,
           },
         ],
       }));
 
       // API Call to save the data
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:3000/receipt-vouchers/v1/bulk",
         formattedTransactions
       );
@@ -219,8 +199,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
         type: "success",
         message: "Receipt vouchers saved successfully!",
       });
-      onSave(rows); // Callback to parent component
-      onClose(); // Close the modal
+      setCloseAfterNotification(true);
     } catch (error) {
       setNotification({
         type: "error",
@@ -228,6 +207,13 @@ const NewRecordModal = ({ onClose, onSave }) => {
           error.response?.data?.message ||
           "Failed to save data. Please check your input and try again.",
       });
+    }
+  };
+
+  const handleNotificationClose = () => {
+    setNotification(null);
+    if (closeAfterNotification) {
+      onClose();
     }
   };
 
@@ -403,7 +389,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
         <NotificationModal
           type={notification.type}
           message={notification.message}
-          onClose={() => setNotification(null)}
+          onClose={handleNotificationClose}
         />
       )}
     </div>
