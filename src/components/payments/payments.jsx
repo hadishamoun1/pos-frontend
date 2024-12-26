@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./payments.css";
 import NewRecordModal from "./newRecord";
+import axios from "axios";
 
 const AccountingPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -8,13 +9,16 @@ const AccountingPage = () => {
     customerName: "",
     currency: "",
     exchangeRate: "",
-    amountExchanged: "", // New field for Amount Exchanged
+    amountExchanged: "",
     cashNumber: "",
     date: "",
     invoiceNumber: "",
     comments: "",
     rct: "",
   });
+  const [data, setData] = useState([]); // State to store fetched data
+  const [loading, setLoading] = useState(true); // State for loading status
+  const [error, setError] = useState(null); // State for error handling
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
@@ -34,8 +38,35 @@ const AccountingPage = () => {
 
   const handleSave = () => {
     console.log("Form Data:", formData);
-    closeModal(); // Close the modal after saving
+    closeModal();
   };
+
+  useEffect(() => {
+    // Fetch data from the API
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/receipt-vouchers/v1/specific-fields");
+        const formattedData = response.data.map((voucher) => ({
+          date: voucher.date,
+          customerName: voucher.customer.name,
+          currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
+          exchangeRate: voucher.exchangeRate.join(", "), // Join multiple rates if applicable
+          amountExchanged: voucher.totalCr,
+          cashNumber: voucher.totalCr,
+          invoiceNumber: voucher.rvNumber,
+          comments: voucher.comments.join(", "), // Join multiple comments if applicable
+          rct: "", // Remains empty
+        }));
+        setData(formattedData);
+      } catch (err) {
+        setError("Failed to fetch data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div className="accounting-container">
@@ -51,9 +82,13 @@ const AccountingPage = () => {
           </div>
         </div>
 
-        <table className="accounting-table">
-          <thead>
-            
+        {loading ? (
+          <p>Loading data...</p>
+        ) : error ? (
+          <p className="error-text">{error}</p>
+        ) : (
+          <table className="accounting-table">
+            <thead>
               <tr>
                 <th>Customer Name</th>
                 <th>Currency</th>
@@ -65,10 +100,24 @@ const AccountingPage = () => {
                 <th>Comments</th>
                 <th>RCT</th>
               </tr>
-          
-          </thead>
-          <tbody>{/* Table rows would go here */}</tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((row, index) => (
+                <tr key={index}>
+                  <td>{row.customerName}</td>
+                  <td>{row.currency}</td>
+                  <td>{row.exchangeRate}</td>
+                  <td>{row.amountExchanged}</td>
+                  <td>{row.cashNumber}</td>
+                  <td>{row.date}</td>
+                  <td>{row.invoiceNumber}</td>
+                  <td>{row.comments}</td>
+                  <td>{row.rct}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Bottom Section */}
@@ -77,7 +126,6 @@ const AccountingPage = () => {
           <input type="text" placeholder="Search" className="search-input" />
           <button className="action-button">Edit</button>
         </div>
-        {/* Additional content for bottom section can go here */}
       </div>
 
       {isModalOpen && (
