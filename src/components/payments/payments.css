@@ -1,9 +1,8 @@
 .accounting-container {
   display: flex;
   flex-direction: column;
-  height: 96vh;
-  width: 98%;
-  padding: 2rem;
+  height: 100vh;
+  width: 100%;
   gap: 1.5rem;
   background: linear-gradient(135deg, #f3f4f6, #ffffff);
   border-radius: 15px;
@@ -19,15 +18,9 @@
   border-radius: 15px;
   background-color: #ffffff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow: auto;
 }
 
-.top-section {
-  background: linear-gradient(135deg, #e3f2fd, #ffffff);
-}
-
-.bottom-section {
-  background: linear-gradient(135deg, #f3f4f6, #ffffff);
-}
 
 .top-toolbar,
 .bottom-toolbar {
@@ -113,6 +106,7 @@
 
 .accounting-table tr:nth-child(even) td {
   background-color: #f3f4f6;
+  width:11%;
 }
 
 .accounting-table tbody tr:hover td {

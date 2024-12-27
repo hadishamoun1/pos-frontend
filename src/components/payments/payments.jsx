@@ -1,70 +1,82 @@
 import React, { useState, useEffect } from "react";
 import "./payments.css";
 import NewRecordModal from "./newRecord";
-import NotificationModal from "./NotificationModal"; // Assuming you have this modal component
+import EditRecordModal from "./editRecordModal";
+import NotificationModal from "./NotificationModal";
 import axios from "axios";
 import io from "socket.io-client";
 
 const AccountingPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    customerName: "",
-    currency: "",
-    exchangeRate: "",
-    amountExchanged: "",
-    cashNumber: "",
-    date: "",
-    invoiceNumber: "",
-    comments: "",
-    rct: "",
-  });
-  const [data, setData] = useState([]); // State to store fetched data
-  const [filteredData, setFilteredData] = useState([]); // State for filtered data
-  const [searchTerm, setSearchTerm] = useState(""); // State for search input
-  const [loading, setLoading] = useState(true); // State for loading status
-  const [error, setError] = useState(null); // State for error handling
-  const [notification, setNotification] = useState(null); // Notification modal state
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormData({
-      customerName: "",
-      currency: "",
-      exchangeRate: "",
-      amountExchanged: "",
-      cashNumber: "",
-      date: "",
-      invoiceNumber: "",
-      comments: "",
-      rct: "",
-    });
+  const openNewModal = () => setIsNewModalOpen(true);
+  const closeNewModal = () => setIsNewModalOpen(false);
+
+  const openEditModal = () => {
+    if (selectedRowIndex === null) {
+      setNotification({
+        type: "error",
+        message: "Please select a row to edit.",
+      });
+      return;
+    }
+
+    const selected = data[selectedRowIndex];
+    const formattedRow = {
+      id: selected.id,
+      customer: {
+        id: selected.customerAccountId,
+        name: selected.customerName,
+      },
+      date: selected.date,
+      invoiceId: selected.invoiceNumber,
+      details: [
+        {
+          cashNumber: selected.cashNumber,
+          currency: selected.currency,
+          exchangeRate: selected.exchangeRate[0], // Use the first exchange rate
+          amountExchanged: selected.amountExchanged,
+          comments: selected.comments,
+        },
+      ],
+    };
+    setSelectedRow(formattedRow);
+    setIsEditModalOpen(true);
   };
 
-  const handleSave = () => {
-    console.log("Form Data:", formData);
-    closeModal();
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedRow(null);
+    setSelectedRowIndex(null);
   };
 
   useEffect(() => {
-    // Fetch data from the API
     const fetchData = async () => {
       try {
         const response = await axios.get(
           "http://localhost:3000/receipt-vouchers/v1/specific-fields"
         );
         const formattedData = response.data.map((voucher) => ({
+          id: voucher.id,
           date: voucher.date,
           customerName: voucher.customer.name,
+          customerAccountId: voucher.customer.id,
           currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
-          exchangeRate: voucher.exchangeRate
-            .map(formatNumberWithCommas)
-            .join(", "),
+          exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
           amountExchanged: formatNumberWithCommas(voucher.totalCr),
           cashNumber: formatNumberWithCommas(voucher.totalCr),
-          invoiceNumber: voucher.rvNumber,
+          invoiceNumber: voucher.invoiceId,
           comments: voucher.comments.join(", "),
-          rct: "",
+          rct: "", // Leave RCT empty for now
         }));
         setData(formattedData);
         setFilteredData(formattedData);
@@ -83,48 +95,38 @@ const AccountingPage = () => {
 
     const socket = io("http://localhost:3000");
 
-    // Verify WebSocket connection
     socket.on("connect", () => {
       console.log("WebSocket connected:", socket.id);
     });
 
-    // Debug fallback listener
-    socket.onAny((event, payload) => {
-      console.log(`Received event: ${event}`, payload);
-    });
-
-    // Listen for 'receipt-vouchers' event
     socket.on("receipt-vouchers", (updatedData) => {
-      console.log("Received updated data via WebSocket:", updatedData);
       const formattedData = updatedData.map((voucher) => ({
+        id: voucher.id,
         date: voucher.date,
         customerName: voucher.customer.name,
+        customerAccountId: voucher.customer.id,
         currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
-        exchangeRate: voucher.exchangeRate
-          .map(formatNumberWithCommas)
-          .join(", "),
+        exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
         amountExchanged: formatNumberWithCommas(voucher.totalCr),
         cashNumber: formatNumberWithCommas(voucher.totalCr),
-        invoiceNumber: voucher.rvNumber,
+        invoiceNumber: voucher.invoiceId,
         comments: voucher.comments.join(", "),
-        rct: "",
+        rct: "", // Leave RCT empty
       }));
       setData(formattedData);
       setFilteredData(formattedData);
     });
 
     return () => {
-      socket.disconnect(); // Clean up WebSocket connection on unmount
+      socket.disconnect();
     };
   }, []);
 
-  // Format numbers with commas
   const formatNumberWithCommas = (number) => {
     if (number === null || number === undefined) return "";
     return Number(number).toLocaleString("en-US");
   };
 
-  // Handle search
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
@@ -137,10 +139,55 @@ const AccountingPage = () => {
       )
     );
   };
+  const handleUpdateSave = async (updatedData) => {
+    try {
+      const response = await axios.put(
+        "http://localhost:3000/receipt-vouchers/v1/bulk",
+        [updatedData]
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        setNotification({
+          type: "success",
+          message: "Receipt voucher updated successfully!",
+        });
+
+        const updatedIndex = data.findIndex(
+          (item) => item.id === updatedData.receiptVoucherId
+        );
+
+        if (updatedIndex !== -1) {
+          const newData = [...data];
+          newData[updatedIndex] = {
+            ...newData[updatedIndex],
+            customerName: updatedData.customerName, // Update customerName in the table
+            customerAccountId: updatedData.customerAccountId, // Update customerAccountId
+            invoiceNumber: updatedData.invoiceId, // Update invoiceNumber
+            ...updatedData.details[0], // Update other details like cashNumber, comments, etc.
+          };
+          setData(newData); // Update the main data state
+          setFilteredData(newData); // Update the filtered data state
+        }
+
+        closeEditModal(); // Close the edit modal
+      } else {
+        setNotification({
+          type: "error",
+          message: "Failed to update receipt voucher. Please try again.",
+        });
+      }
+    } catch (err) {
+      console.error("Update API error:", err);
+      setNotification({
+        type: "error",
+        message:
+          err.response?.data?.message || "Failed to update receipt voucher.",
+      });
+    }
+  };
 
   return (
     <div className="accounting-container">
-      {/* Top Section */}
       <div className="accounting-section top-section">
         <div className="top-toolbar">
           <input
@@ -151,10 +198,12 @@ const AccountingPage = () => {
             onChange={handleSearch}
           />
           <div className="button-group">
-            <button className="action-button" onClick={openModal}>
+            <button className="action-button" onClick={openNewModal}>
               New
             </button>
-            <button className="action-button">Edit</button>
+            <button className="action-button" onClick={openEditModal}>
+              Edit
+            </button>
           </div>
         </div>
 
@@ -166,9 +215,10 @@ const AccountingPage = () => {
           <table className="accounting-table">
             <thead>
               <tr>
+                <th>Select</th>
                 <th>Customer Name</th>
                 <th>Currency</th>
-                <th>Currency Ex Rate</th>
+                <th>Exchange Rate</th>
                 <th>Amount Exchanged</th>
                 <th>Cash Number</th>
                 <th>Date</th>
@@ -180,6 +230,14 @@ const AccountingPage = () => {
             <tbody>
               {filteredData.map((row, index) => (
                 <tr key={index}>
+                  <td>
+                    <input
+                      type="radio"
+                      name="selectedRow"
+                      onChange={() => setSelectedRowIndex(index)}
+                      checked={selectedRowIndex === index}
+                    />
+                  </td>
                   <td>{row.customerName}</td>
                   <td>{row.currency}</td>
                   <td>{row.exchangeRate}</td>
@@ -196,20 +254,22 @@ const AccountingPage = () => {
         )}
       </div>
 
-      {/* Bottom Section */}
-      <div className="accounting-section bottom-section">
-        <div className="bottom-toolbar">
-          <input type="text" placeholder="Search" className="search-input" />
-          <button className="action-button">Edit</button>
-        </div>
-      </div>
-
-      {isModalOpen && (
+      {isNewModalOpen && (
         <NewRecordModal
-          formData={formData}
-          setFormData={setFormData}
-          onClose={closeModal}
-          onSave={handleSave}
+          onClose={closeNewModal}
+          onSave={(newData) => {
+            setData((prevData) => [...prevData, newData]);
+            setFilteredData((prevData) => [...prevData, newData]);
+            closeNewModal();
+          }}
+        />
+      )}
+
+      {isEditModalOpen && selectedRow && (
+        <EditRecordModal
+          selectedRow={selectedRow}
+          onClose={closeEditModal}
+          onSave={handleUpdateSave}
         />
       )}
 

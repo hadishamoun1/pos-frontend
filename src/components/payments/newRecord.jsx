@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
 import CustomerSelectionModal from "./CustomerSelectionModal";
-import NotificationModal from "./NotificationModal"; // Import the NotificationModal
 import "./newRecord.css";
+
+import NotificationModal from "./NotificationModal";
 
 const NewRecordModal = ({ onClose, onSave }) => {
   const [rows, setRows] = useState([]);
@@ -177,13 +178,13 @@ const NewRecordModal = ({ onClose, onSave }) => {
         invoiceId: row.invoiceNumber,
         details: [
           {
-            cashNumber: row.cashNumber.replace(/,/g, ""),
+            cashNumber: row.cashNumber.replace(/,/g, ""), // Remove commas
             currency: row.currency,
             exchangeRate:
               row.currency === "LL"
                 ? row.exchangeRate.replace(/,/g, "") || "1"
                 : "1",
-            amountExchanged: row.amountExchanged.replace(/,/g, ""),
+            amountExchanged: row.amountExchanged.replace(/,/g, ""), // Remove commas
             comments: row.comments,
           },
         ],
@@ -254,6 +255,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
             </button>
           </div>
         </div>
+        {/* Main Content */}
         <table className="payments-modal-table">
           <thead>
             <tr>
@@ -270,6 +272,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
           <tbody>
             {rows.map((row, index) => (
               <tr key={index}>
+                {/* Row Inputs */}
                 <td>
                   <input
                     type="text"
