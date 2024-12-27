@@ -1,89 +1,264 @@
+/* Modal Overlay */
 .edit-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease;
 }
 
+/* Modal Content */
 .edit-modal-content {
-  background-color: #fff;
-  width: 600px;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  padding: 20px;
-  position: relative;
-}
-
-.edit-modal-content h2 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 1.5em;
-}
-
-.edit-form-group {
-  margin-bottom: 15px;
-}
-
-.edit-form-group label {
-  display: block;
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.edit-form-group input,
-.edit-form-group select,
-.edit-form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 1em;
-  box-sizing: border-box;
-}
-
-.edit-form-group input:focus,
-.edit-form-group select:focus,
-.edit-form-group textarea:focus {
-  outline: none;
-  border-color: #007bff;
-}
-
-.edit-modal-actions {
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  padding: 1rem;
+  border-radius: 16px;
+  width: 95%;
+  max-width: 1800px;
+  height: 31%;
+  max-height: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: scaleIn 0.3s ease;
 }
 
-.edit-modal-action-button {
-  padding: 10px 15px;
-  font-size: 1em;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+/* Modal Header */
+.edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-.edit-modal-save-button {
-  background-color: #007bff;
-  color: #fff;
-}
-
-.edit-modal-save-button:hover {
-  background-color: #0056b3;
-}
-
-.edit-modal-cancel-button {
-  background-color: #ccc;
+.edit-modal-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #333;
+}
+
+.edit-modal-header-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.edit-modal-header-buttons .edit-modal-cancel-button {
+  background: #dc3545;
 }
 
 .edit-modal-cancel-button:hover {
-  background-color: #aaa;
+  background: #960110;
+}
+
+.edit-modal-header-buttons .edit-modal-save-button {
+  background: #28a745;
+}
+
+.edit-modal-save-button:hover {
+  background: #1b6d2e;
+}
+
+/* Table Styling */
+.edit-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  margin-top: 1rem;
+  background-color: #fff;
+  table-layout: fixed; /* Ensures consistent column widths */
+}
+
+/* Column Width Control */
+.edit-modal-table th:nth-child(1),
+.edit-modal-table td:nth-child(1) {
+  width: 28%; /* Customer Name */
+}
+
+.edit-modal-table th:nth-child(2),
+.edit-modal-table td:nth-child(2) {
+  width: 7%; /* Currency */
+}
+
+.edit-modal-table th:nth-child(3),
+.edit-modal-table td:nth-child(3) {
+  width: 10%; /* Cash Number */
+}
+
+.edit-modal-table th:nth-child(4),
+.edit-modal-table td:nth-child(4) {
+  width: 10%; /* Exchange Rate */
+}
+
+.edit-modal-table th:nth-child(5),
+.edit-modal-table td:nth-child(5) {
+  width: 14%; /* Amount Exchanged */
+}
+
+.edit-modal-table th:nth-child(6),
+.edit-modal-table td:nth-child(6) {
+  width: 10%; /* Date */
+}
+
+.edit-modal-table th:nth-child(7),
+.edit-modal-table td:nth-child(7) {
+  width: 10%; /* Invoice Number */
+}
+
+.edit-modal-table th:nth-child(8),
+.edit-modal-table td:nth-child(8) {
+  width: 10%; /* Comments */
+}
+
+/* Table Cell Styling */
+.edit-modal-table th,
+.edit-modal-table td {
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+  font-size: 1.2rem;
+  height: 2.5rem;
+}
+
+.edit-modal-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.edit-modal-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.edit-modal-table tbody tr:hover {
+  background-color: #eaf4ff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Input Field Styling */
+.edit-modal-table input,
+.edit-modal-table select {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  box-sizing: border-box;
+  background-color: #f9fafc;
+  transition: all 0.3s ease;
+}
+
+.edit-modal-table input:focus,
+.edit-modal-table select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  outline: none;
+}
+/* Modal Footer */
+.edit-modal-footer {
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+  margin-top: 2rem; /* Add space above the buttons */
+  gap: 1rem; /* Add space between buttons */
+}
+
+/* Action Buttons */
+.edit-modal-action-button {
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+.edit-modal-action-button:active {
+  transform: scale(0.95);
+}
+
+.edit-modal-action-button:disabled {
+  background: #ddd;
+  cursor: not-allowed;
+}
+
+/* Cancel Button */
+.edit-modal-cancel-button {
+  background: #dc3545;
+}
+
+.edit-modal-cancel-button:hover {
+  background: #960110;
+}
+
+/* Save Button */
+.edit-modal-save-button {
+  background: #28a745;
+}
+
+.edit-modal-save-button:hover {
+  background: #1b6d2e;
+}
+
+/* Style for disabled inputs */
+.edit-modal-table input:disabled {
+  background-color: #dddcdc;
+  color: #a1a1a1;
+  cursor: not-allowed;
+  border: 1px solid #ddd;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .edit-modal-content {
+    padding: 1.5rem;
+    width: 95%;
+    height: 90%;
+  }
+
+  .edit-modal-table th,
+  .edit-modal-table td {
+    padding: 0.6rem;
+  }
+
+  .edit-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+  }
+
+  .edit-modal-action-button {
+    width: 100%;
+  }
 }

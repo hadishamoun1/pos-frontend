@@ -18,6 +18,18 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
+  // Utility to format numbers with commas
+  const formatNumberWithCommas = (number) => {
+    if (!number) return "";
+    return Number(number).toLocaleString("en-US");
+  };
+
+  // Utility to strip commas from numbers
+  const stripCommas = (number) => {
+    if (!number) return "";
+    return number.replace(/,/g, "");
+  };
+
   useEffect(() => {
     if (selectedRow) {
       const {
@@ -34,10 +46,12 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
         customerAccountId: customer.id || "",
         date,
         invoiceNumber: invoiceId,
-        cashNumber: details[0]?.cashNumber || "",
+        cashNumber: formatNumberWithCommas(details[0]?.cashNumber || ""),
         currency: details[0]?.currency || "",
-        exchangeRate: details[0]?.exchangeRate || "",
-        amountExchanged: details[0]?.amountExchanged || "",
+        exchangeRate: formatNumberWithCommas(details[0]?.exchangeRate || ""),
+        amountExchanged: formatNumberWithCommas(
+          details[0]?.amountExchanged || ""
+        ),
         comments: details[0]?.comments || "",
       });
     }
@@ -45,25 +59,91 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const updatedData = { ...prev, [name]: value };
+
+      // Apply conditions based on currency and input fields
+      if (name === "currency") {
+        if (value === "USD") {
+          updatedData.exchangeRate = "";
+          updatedData.amountExchanged = formatNumberWithCommas(
+            stripCommas(updatedData.cashNumber) || ""
+          );
+        } else if (value === "LL") {
+          if (prev.cashNumber && prev.exchangeRate) {
+            updatedData.amountExchanged = formatNumberWithCommas(
+              (
+                parseFloat(stripCommas(prev.cashNumber)) /
+                parseFloat(stripCommas(prev.exchangeRate))
+              ).toFixed(2)
+            );
+          }
+        }
+      }
+
+      if (name === "cashNumber") {
+        updatedData.cashNumber = formatNumberWithCommas(
+          value.replace(/,/g, "")
+        ); // Add commas for display
+        if (prev.currency === "LL" && prev.exchangeRate) {
+          updatedData.amountExchanged = formatNumberWithCommas(
+            (
+              parseFloat(value.replace(/,/g, "")) /
+              parseFloat(stripCommas(prev.exchangeRate))
+            ).toFixed(2)
+          );
+        } else if (prev.currency === "USD") {
+          updatedData.amountExchanged = formatNumberWithCommas(
+            value.replace(/,/g, "")
+          );
+        }
+      }
+
+      if (name === "exchangeRate" && prev.currency === "LL") {
+        updatedData.exchangeRate = formatNumberWithCommas(
+          value.replace(/,/g, "")
+        ); // Add commas for display
+        if (prev.cashNumber) {
+          updatedData.amountExchanged = formatNumberWithCommas(
+            (
+              parseFloat(stripCommas(prev.cashNumber)) /
+              parseFloat(value.replace(/,/g, ""))
+            ).toFixed(2)
+          );
+        }
+      }
+
+      if (name === "amountExchanged" && prev.currency === "LL") {
+        updatedData.amountExchanged = formatNumberWithCommas(
+          value.replace(/,/g, "")
+        ); // Add commas for display
+        if (prev.cashNumber) {
+          updatedData.exchangeRate = formatNumberWithCommas(
+            (
+              parseFloat(stripCommas(prev.cashNumber)) /
+              parseFloat(value.replace(/,/g, ""))
+            ).toFixed(2)
+          );
+        }
+      }
+
+      return updatedData;
+    });
   };
 
   const handleSave = () => {
     const formattedData = {
       receiptVoucherId: selectedRow.id,
       customerAccountId: formData.customerAccountId,
-      customerName: formData.customerName, 
+      customerName: formData.customerName,
       date: formData.date,
       invoiceId: formData.invoiceNumber,
       details: [
         {
-          cashNumber: formData.cashNumber,
+          cashNumber: stripCommas(formData.cashNumber), // Strip commas before sending
           currency: formData.currency,
-          exchangeRate: formData.exchangeRate,
-          amountExchanged: formData.amountExchanged,
+          exchangeRate: stripCommas(formData.exchangeRate), // Strip commas before sending
+          amountExchanged: stripCommas(formData.amountExchanged), // Strip commas before sending
           comments: formData.comments,
         },
       ],
@@ -84,82 +164,99 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
     <div className="edit-modal-overlay">
       <div className="edit-modal-content">
         <h2>Edit Record</h2>
-        <div className="edit-form-group">
-          <label>Customer Name</label>
-          <input
-            type="text"
-            name="customerName"
-            value={formData.customerName}
-            readOnly
-            onClick={() => setIsCustomerModalOpen(true)}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Currency</label>
-          <select
-            name="currency"
-            value={formData.currency}
-            onChange={handleInputChange}
-          >
-            <option value="USD">USD</option>
-            <option value="LL">LL</option>
-          </select>
-        </div>
-        <div className="edit-form-group">
-          <label>Cash Number</label>
-          <input
-            type="text"
-            name="cashNumber"
-            value={formData.cashNumber}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Exchange Rate</label>
-          <input
-            type="text"
-            name="exchangeRate"
-            value={formData.exchangeRate}
-            onChange={handleInputChange}
-            disabled={formData.currency === "USD"}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Amount Exchanged</label>
-          <input
-            type="text"
-            name="amountExchanged"
-            value={formData.amountExchanged}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Date</label>
-          <input
-            type="date"
-            name="date"
-            value={formData.date}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Invoice Number</label>
-          <input
-            type="text"
-            name="invoiceNumber"
-            value={formData.invoiceNumber}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div className="edit-form-group">
-          <label>Comments</label>
-          <textarea
-            name="comments"
-            value={formData.comments}
-            onChange={handleInputChange}
-          />
-        </div>
-        <div className="edit-modal-actions">
+        <table className="edit-modal-table">
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th>Currency</th>
+              <th>Cash Number</th>
+              <th>Exchange Rate</th>
+              <th>Amount Exchanged</th>
+              <th>Date</th>
+              <th>Invoice Number</th>
+              <th>Comments</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={formData.customerName}
+                  readOnly
+                  onClick={() => setIsCustomerModalOpen(true)}
+                  placeholder="Select Customer"
+                />
+              </td>
+              <td>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select</option>
+                  <option value="USD">USD</option>
+                  <option value="LL">LL</option>
+                </select>
+              </td>
+              <td>
+                <input
+                  type="text"
+                  name="cashNumber"
+                  value={formData.cashNumber}
+                  onChange={handleInputChange}
+                  placeholder="Cash Number"
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  name="exchangeRate"
+                  value={formData.exchangeRate}
+                  onChange={handleInputChange}
+                  disabled={formData.currency === "USD"}
+                  placeholder="Ex Rate"
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  name="amountExchanged"
+                  value={formData.amountExchanged}
+                  onChange={handleInputChange}
+                  placeholder="Amount Exchanged"
+                />
+              </td>
+              <td>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <input
+                  type="text"
+                  name="invoiceNumber"
+                  value={formData.invoiceNumber}
+                  onChange={handleInputChange}
+                  placeholder="Invoice Number"
+                />
+              </td>
+              <td>
+                <input
+                  name="comments"
+                  value={formData.comments}
+                  onChange={handleInputChange}
+                  placeholder="Comments"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="edit-modal-footer">
           <button
             className="edit-modal-action-button edit-modal-cancel-button"
             onClick={onClose}
@@ -173,13 +270,13 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
             Update
           </button>
         </div>
+        {isCustomerModalOpen && (
+          <CustomerSelectionModal
+            onClose={() => setIsCustomerModalOpen(false)}
+            onSelectCustomer={handleCustomerSelect}
+          />
+        )}
       </div>
-      {isCustomerModalOpen && (
-        <CustomerSelectionModal
-          onClose={() => setIsCustomerModalOpen(false)}
-          onSelectCustomer={handleCustomerSelect}
-        />
-      )}
     </div>
   );
 };
