@@ -21,7 +21,6 @@
   overflow: auto;
 }
 
-
 .top-toolbar,
 .bottom-toolbar {
   display: flex;
@@ -76,16 +75,20 @@
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   background: #ffffff;
+  table-layout: fixed; /* Ensures consistent column widths */
 }
 
 .accounting-table th,
 .accounting-table td {
   padding: 1rem;
   border-bottom: 1px solid #f1f1f1;
-  text-align: center; /* Center the text */
+  text-align: center;
   font-size: 1rem;
   color: #555;
-  border: 1px solid #ddd; /* Add a light border */
+  border: 1px solid #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .accounting-table th {
@@ -98,15 +101,12 @@
 }
 
 .accounting-table td {
-  text-align: center; /* Center the text */
   background-color: #f9f9f9;
   transition: all 0.3s ease;
-  border: 1px solid #ddd; /* Add a light border */
 }
 
 .accounting-table tr:nth-child(even) td {
   background-color: #f3f4f6;
-  width:11%;
 }
 
 .accounting-table tbody tr:hover td {
@@ -115,9 +115,57 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Table rows and hover effects */
 .accounting-table tbody tr {
   transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+/* Square Checkbox Styling */
+.accounting-table td input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #007bff;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+}
+
+.accounting-table td input[type="radio"]:checked {
+  background-color: #0056b3;
+  border-color: #0056b3;
+  box-shadow: 0 0 8px rgba(40, 74, 167, 0.5);
+}
+
+.accounting-table td input[type="radio"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.8rem;
+  height: 0.8rem;
+  background-color: transparent;
+  color: transparent;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 0.8rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.accounting-table td input[type="radio"]:checked::before {
+  content: "✔";
+  color: #ffffff;
+}
+
+/* Focus Effect */
+.accounting-table td input[type="radio"]:focus {
+  box-shadow: 0 0 12px rgba(0, 123, 255, 0.6);
 }
 
 /* Responsive Design */
