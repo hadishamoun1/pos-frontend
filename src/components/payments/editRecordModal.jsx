@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios"; // Import axios
 import "./editRecordModal.css";
 import CustomerSelectionModal from "./CustomerSelectionModal";
 
@@ -20,7 +19,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
 
   // Utility to format numbers with commas
   const formatNumberWithCommas = (number) => {
-    if (!number) return "";
+    if (!number || isNaN(number)) return "";
     return Number(number).toLocaleString("en-US");
   };
 
@@ -34,24 +33,22 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
     if (selectedRow) {
       const {
         id: receiptVoucherId,
-        customer = {}, // Default to an empty object to prevent undefined errors
+        customer = {},
         date = "",
         invoiceId = "",
-        details = [{}], // Default to an array with an empty object
+        details = [{}],
       } = selectedRow;
 
       setFormData({
         receiptVoucherId,
-        customerName: customer.name || "", // Ensure fallback to an empty string
+        customerName: customer.name || "",
         customerAccountId: customer.id || "",
         date,
         invoiceNumber: invoiceId,
-        cashNumber: formatNumberWithCommas(details[0]?.cashNumber || ""),
+        cashNumber: details[0]?.cashNumber || "0",
         currency: details[0]?.currency || "",
-        exchangeRate: formatNumberWithCommas(details[0]?.exchangeRate || ""),
-        amountExchanged: formatNumberWithCommas(
-          details[0]?.amountExchanged || ""
-        ),
+        exchangeRate: details[0]?.exchangeRate || "0",
+        amountExchanged: details[0]?.amountExchanged || "0",
         comments: details[0]?.comments || "",
       });
     }
@@ -60,21 +57,20 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
-      const updatedData = { ...prev, [name]: value };
+      let updatedData = { ...prev, [name]: value };
 
-      // Apply conditions based on currency and input fields
       if (name === "currency") {
         if (value === "USD") {
           updatedData.exchangeRate = "";
           updatedData.amountExchanged = formatNumberWithCommas(
-            stripCommas(updatedData.cashNumber) || ""
+            stripCommas(updatedData.cashNumber) || "0"
           );
         } else if (value === "LL") {
           if (prev.cashNumber && prev.exchangeRate) {
             updatedData.amountExchanged = formatNumberWithCommas(
               (
                 parseFloat(stripCommas(prev.cashNumber)) /
-                parseFloat(stripCommas(prev.exchangeRate))
+                parseFloat(stripCommas(prev.exchangeRate) || 1)
               ).toFixed(2)
             );
           }
@@ -82,47 +78,39 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       }
 
       if (name === "cashNumber") {
-        updatedData.cashNumber = formatNumberWithCommas(
-          value.replace(/,/g, "")
-        ); // Add commas for display
+        const cashNumber = parseFloat(stripCommas(value)) || 0;
+        updatedData.cashNumber = formatNumberWithCommas(cashNumber);
+
         if (prev.currency === "LL" && prev.exchangeRate) {
+          const exchangeRate = parseFloat(stripCommas(prev.exchangeRate)) || 1;
           updatedData.amountExchanged = formatNumberWithCommas(
-            (
-              parseFloat(value.replace(/,/g, "")) /
-              parseFloat(stripCommas(prev.exchangeRate))
-            ).toFixed(2)
+            (cashNumber / exchangeRate).toFixed(2)
           );
         } else if (prev.currency === "USD") {
-          updatedData.amountExchanged = formatNumberWithCommas(
-            value.replace(/,/g, "")
-          );
+          updatedData.amountExchanged = formatNumberWithCommas(cashNumber);
         }
       }
 
       if (name === "exchangeRate" && prev.currency === "LL") {
-        updatedData.exchangeRate = formatNumberWithCommas(
-          value.replace(/,/g, "")
-        ); // Add commas for display
+        const exchangeRate = parseFloat(stripCommas(value)) || 0;
+        updatedData.exchangeRate = formatNumberWithCommas(exchangeRate);
+
         if (prev.cashNumber) {
+          const cashNumber = parseFloat(stripCommas(prev.cashNumber)) || 0;
           updatedData.amountExchanged = formatNumberWithCommas(
-            (
-              parseFloat(stripCommas(prev.cashNumber)) /
-              parseFloat(value.replace(/,/g, ""))
-            ).toFixed(2)
+            (cashNumber / (exchangeRate || 1)).toFixed(2)
           );
         }
       }
 
       if (name === "amountExchanged" && prev.currency === "LL") {
-        updatedData.amountExchanged = formatNumberWithCommas(
-          value.replace(/,/g, "")
-        ); // Add commas for display
+        const amountExchanged = parseFloat(stripCommas(value)) || 0;
+        updatedData.amountExchanged = formatNumberWithCommas(amountExchanged);
+
         if (prev.cashNumber) {
+          const cashNumber = parseFloat(stripCommas(prev.cashNumber)) || 0;
           updatedData.exchangeRate = formatNumberWithCommas(
-            (
-              parseFloat(stripCommas(prev.cashNumber)) /
-              parseFloat(value.replace(/,/g, ""))
-            ).toFixed(2)
+            (cashNumber / (amountExchanged || 1)).toFixed(2)
           );
         }
       }
@@ -140,15 +128,15 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       invoiceId: formData.invoiceNumber,
       details: [
         {
-          cashNumber: stripCommas(formData.cashNumber), // Strip commas before sending
+          cashNumber: stripCommas(formData.cashNumber),
           currency: formData.currency,
-          exchangeRate: stripCommas(formData.exchangeRate), // Strip commas before sending
-          amountExchanged: stripCommas(formData.amountExchanged), // Strip commas before sending
+          exchangeRate: stripCommas(formData.exchangeRate),
+          amountExchanged: stripCommas(formData.amountExchanged),
           comments: formData.comments,
         },
       ],
     };
-    onSave(formattedData); // Pass updated data back to AccountingPage
+    onSave(formattedData);
   };
 
   const handleCustomerSelect = (customer) => {

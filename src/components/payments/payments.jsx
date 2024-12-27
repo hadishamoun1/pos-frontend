@@ -20,7 +20,6 @@ const AccountingPage = () => {
 
   const openNewModal = () => setIsNewModalOpen(true);
   const closeNewModal = () => setIsNewModalOpen(false);
-
   const openEditModal = () => {
     if (selectedRowIndex === null) {
       setNotification({
@@ -34,21 +33,24 @@ const AccountingPage = () => {
     const formattedRow = {
       id: selected.id,
       customer: {
-        id: selected.customerAccountId,
-        name: selected.customerName,
+        id: selected.customerAccountId || "",
+        name: selected.customerName || "",
       },
-      date: selected.date,
-      invoiceId: selected.invoiceNumber,
+      date: selected.date || "",
+      invoiceId: selected.invoiceNumber || "",
       details: [
         {
-          cashNumber: selected.cashNumber,
-          currency: selected.currency,
-          exchangeRate: selected.exchangeRate[0], // Use the first exchange rate
-          amountExchanged: selected.amountExchanged,
-          comments: selected.comments,
+          cashNumber: selected.cashNumber || "0",
+          currency: selected.currency || "",
+          exchangeRate: selected.exchangeRate
+            ? selected.exchangeRate[0] // Assuming it's an array
+            : "0",
+          amountExchanged: selected.amountExchanged || "0",
+          comments: selected.comments || "",
         },
       ],
     };
+
     setSelectedRow(formattedRow);
     setIsEditModalOpen(true);
   };
