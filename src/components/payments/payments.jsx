@@ -9,6 +9,7 @@ import io from "socket.io-client";
 const AccountingPage = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   const [data, setData] = useState([]);
@@ -60,6 +61,47 @@ const AccountingPage = () => {
     setSelectedRow(null);
     setSelectedRowIndex(null);
   };
+  const openDeleteModal = () => {
+    if (selectedRowIndex === null) {
+      setNotification({
+        type: "error",
+        message: "Please select a row to delete.",
+      });
+      return;
+    }
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleDelete = async () => {
+    if (selectedRowIndex === null) return;
+
+    const selectedId = data[selectedRowIndex].id;
+
+    try {
+      await axios.delete(
+        `http://localhost:3000/receipt-vouchers/${selectedId}`
+      );
+      setNotification({
+        type: "success",
+        message: "Receipt voucher deleted successfully!",
+      });
+
+      const newData = data.filter((row) => row.id !== selectedId);
+      setData(newData);
+      setFilteredData(newData);
+      setSelectedRowIndex(null);
+      closeDeleteModal();
+    } catch (err) {
+      setNotification({
+        type: "error",
+        message: "Failed to delete receipt voucher. Please try again.",
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,8 +116,12 @@ const AccountingPage = () => {
           customerAccountId: voucher.customer.id,
           currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
           exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
+          cashNumber:
+            voucher.totalCrLL === "0.00"
+              ? formatNumberWithCommas(voucher.totalCr)
+              : formatNumberWithCommas(voucher.totalCrLL), // Use totalCrLL for LL currency
           amountExchanged: formatNumberWithCommas(voucher.totalCr),
-          cashNumber: formatNumberWithCommas(voucher.totalCr),
+
           invoiceNumber: voucher.invoiceId,
           comments: voucher.comments.join(", "),
           rct: "", // Leave RCT empty for now
@@ -109,8 +155,12 @@ const AccountingPage = () => {
         customerAccountId: voucher.customer.id,
         currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
         exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
+        cashNumber:
+          voucher.totalCrLL === "0.00"
+            ? formatNumberWithCommas(voucher.totalCr)
+            : formatNumberWithCommas(voucher.totalCrLL), // Use totalCrLL for LL currency
         amountExchanged: formatNumberWithCommas(voucher.totalCr),
-        cashNumber: formatNumberWithCommas(voucher.totalCr),
+
         invoiceNumber: voucher.invoiceId,
         comments: voucher.comments.join(", "),
         rct: "", // Leave RCT empty
@@ -206,6 +256,12 @@ const AccountingPage = () => {
             <button className="action-button" onClick={openEditModal}>
               Edit
             </button>
+            <button
+              className="action-button delete-button"
+              onClick={openDeleteModal}
+            >
+              Delete
+            </button>
           </div>
         </div>
 
@@ -255,7 +311,6 @@ const AccountingPage = () => {
           </table>
         )}
       </div>
-
       {isNewModalOpen && (
         <NewRecordModal
           onClose={closeNewModal}
@@ -266,7 +321,6 @@ const AccountingPage = () => {
           }}
         />
       )}
-
       {isEditModalOpen && selectedRow && (
         <EditRecordModal
           selectedRow={selectedRow}
@@ -274,7 +328,16 @@ const AccountingPage = () => {
           onSave={handleUpdateSave}
         />
       )}
-
+      {isDeleteModalOpen && (
+      <NotificationModal
+        type="warning"
+        message="Are you sure you want to delete this receipt voucher?"
+        onClose={closeDeleteModal}
+        onConfirm={handleDelete}
+        confirmLabel="Yes"
+        cancelLabel="No"
+      />
+      )}
       {notification && (
         <NotificationModal
           type={notification.type}

@@ -76,6 +76,38 @@
   background-color: #0056b3;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
+.notification-modal-buttons {
+  display: flex;
+  justify-content: center; /* Center the buttons */
+  gap: 1rem; /* Adds space between buttons */
+  margin-top: 1rem; /* Adds space above the buttons */
+}
+
+.notification-modal-button.confirm-button {
+  background-color: #007bff;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.notification-modal-button.confirm-button:hover {
+  background-color: #0056b3;
+}
+
+.notification-modal-button.cancel-button {
+  background-color: #ccc;
+  color: black;
+  transition: background-color 0.3s ease;
+}
+
+.notification-modal-button.cancel-button:hover {
+  background-color: #999;
+}
+
+.notification-warning-modal .notification-modal-icon {
+  font-size: 3rem;
+  color: #ffcc00; /* Yellow color */
+  margin: 1rem 0;
+}
 
 /* Animations */
 @keyframes notification-fadeInModal {
