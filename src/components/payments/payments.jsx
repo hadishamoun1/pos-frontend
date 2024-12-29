@@ -82,9 +82,8 @@ const AccountingPage = () => {
     const selectedId = data[selectedRowIndex].id;
 
     try {
-      await axios.delete(
-        `http://localhost:3000/receipt-vouchers/${selectedId}`
-      );
+      const baseUrl = process.env.REACT_APP_API_BASE_URL;
+      await axios.delete(`${baseUrl}/receipt-vouchers/${selectedId}`);
       setNotification({
         type: "success",
         message: "Receipt voucher deleted successfully!",
@@ -106,8 +105,9 @@ const AccountingPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const baseUrl = process.env.REACT_APP_API_BASE_URL;
         const response = await axios.get(
-          "http://localhost:3000/receipt-vouchers/v1/specific-fields"
+          `${baseUrl}/receipt-vouchers/v1/specific-fields`
         );
         const formattedData = response.data.map((voucher) => ({
           id: voucher.id,
@@ -140,8 +140,8 @@ const AccountingPage = () => {
     };
 
     fetchData();
-
-    const socket = io("http://localhost:3000");
+    const baseUrl = process.env.REACT_APP_API_BASE_URL;
+    const socket = io(`${baseUrl}`);
 
     socket.on("connect", () => {
       console.log("WebSocket connected:", socket.id);
@@ -193,8 +193,9 @@ const AccountingPage = () => {
   };
   const handleUpdateSave = async (updatedData) => {
     try {
+      const baseUrl = process.env.REACT_APP_API_BASE_URL;
       const response = await axios.put(
-        "http://localhost:3000/receipt-vouchers/v1/bulk",
+        `${baseUrl}/receipt-vouchers/v1/bulk`,
         [updatedData]
       );
 
@@ -256,10 +257,7 @@ const AccountingPage = () => {
             <button className="action-button" onClick={openEditModal}>
               Edit
             </button>
-            <button
-              className="action-button delete-button"
-              onClick={openDeleteModal}
-            >
+            <button className=" delete-button" onClick={openDeleteModal}>
               Delete
             </button>
           </div>
@@ -329,14 +327,14 @@ const AccountingPage = () => {
         />
       )}
       {isDeleteModalOpen && (
-      <NotificationModal
-        type="warning"
-        message="Are you sure you want to delete this receipt voucher?"
-        onClose={closeDeleteModal}
-        onConfirm={handleDelete}
-        confirmLabel="Yes"
-        cancelLabel="No"
-      />
+        <NotificationModal
+          type="warning"
+          message="Are you sure you want to delete this receipt voucher?"
+          onClose={closeDeleteModal}
+          onConfirm={handleDelete}
+          confirmLabel="Yes"
+          cancelLabel="No"
+        />
       )}
       {notification && (
         <NotificationModal

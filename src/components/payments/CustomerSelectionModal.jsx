@@ -5,12 +5,12 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/customers/v1/basic-details"
+          `${baseUrl}/customers/v1/basic-details`
         );
         const data = await response.json();
         setCustomers(data);

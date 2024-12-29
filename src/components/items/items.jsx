@@ -32,7 +32,7 @@ const UniqueItemsPage = () => {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/items/v1/filtered-items"
+          `${baseUrl}/items/v1/filtered-items`
         );
         const data = await response.json();
         setItems(data);
@@ -71,12 +71,12 @@ const UniqueItemsPage = () => {
       return updated;
     });
   };
-
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
       const response = await fetch(
-        "http://localhost:3000/items/v1/create-complete-item",
+        `${baseUrl}/items/v1/create-complete-item`,
         {
           method: "POST",
           headers: {

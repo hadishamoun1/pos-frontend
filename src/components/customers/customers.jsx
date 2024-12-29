@@ -20,12 +20,12 @@ const CreatePreviewCustomers = () => {
   const [hasMore, setHasMore] = useState(true);
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
-
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3000/currency/v1/dropdown/currencycodes"
+          `${baseUrl}/currency/v1/dropdown/currencycodes`
         );
         setCurrencyCodes(response.data);
       } catch (error) {
@@ -42,7 +42,7 @@ const CreatePreviewCustomers = () => {
     try {
       console.log(`Fetching customers for page ${currentPage}`);
       const response = await axios.get(
-        `http://localhost:3000/customers/v1/paginated?page=${currentPage}&limit=50`
+        `${baseUrl}/customers/v1/paginated?page=${currentPage}&limit=50`
       );
 
       setCustomers((prevCustomers) => {
@@ -94,7 +94,7 @@ const CreatePreviewCustomers = () => {
       };
 
       const response = await axios.post(
-        "http://localhost:3000/customers",
+        `${baseUrl}/customers`,
         newCustomer
       );
 

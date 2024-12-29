@@ -12,13 +12,13 @@ const AccountsPage = () => {
   });
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
-
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   // Fetch combined data
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/accounts/v1/combined"
+          `${baseUrl}/accounts/v1/combined`
         );
         const combinedData = await response.json();
         setData(combinedData);
@@ -43,7 +43,7 @@ const AccountsPage = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/accounts", {
+      const response = await fetch(`${baseUrl}/accounts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

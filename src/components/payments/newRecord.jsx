@@ -191,8 +191,9 @@ const NewRecordModal = ({ onClose, onSave }) => {
       }));
 
       // API Call to save the data
+      const baseUrl = process.env.REACT_APP_API_BASE_URL;
       await axios.post(
-        "http://localhost:3000/receipt-vouchers/v1/bulk",
+        `${baseUrl}/receipt-vouchers/v1/bulk`,
         formattedTransactions
       );
 
