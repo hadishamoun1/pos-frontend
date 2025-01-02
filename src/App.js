@@ -27,7 +27,7 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/pos-system" element={<POSSystemPage />} />
-          <Route path="/payments" element={<AccountingPage />} />
+          <Route path="/recivables" element={<AccountingPage />} />
           <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/suppliers" element={<SuppliersPage />} />
@@ -35,6 +35,7 @@ function App() {
           <Route path="/cost-estimator" element={<PricingPage />} />
           <Route path="/customers" element={<CreatePreviewCustomers />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/payments" element={<AccountsPage />} />
         </Routes>
       </Router>
     </QueryClientProvider>
