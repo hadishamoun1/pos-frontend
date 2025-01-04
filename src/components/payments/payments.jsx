@@ -26,6 +26,14 @@ const PaymentsPage = () => {
 
   return (
     <div className="payment-voucher-container">
+      {/* Action Buttons */}
+      <div className="payment-voucher-action-buttons">
+        <button className="payment-voucher-new-btn">New</button>
+        <button className="payment-voucher-edit-btn">Edit</button>
+        <button className="payment-voucher-delete-btn">Delete</button>
+      </div>
+
+      {/* Table */}
       <table className="payment-voucher-table">
         <thead>
           <tr>
