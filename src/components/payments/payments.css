@@ -8,7 +8,6 @@
   border-radius: 15px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   overflow-x: auto; /* Enable horizontal scrolling */
-  white-space: nowrap; /* Prevent table content from wrapping */
 }
 
 /* Table styling */
@@ -20,7 +19,7 @@
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   background: #ffffff;
-  table-layout: fixed; /* Ensures uniform column widths by default */
+  table-layout: fixed; /* Ensures consistent column width */
 }
 
 .payment-voucher-table th,
@@ -30,13 +29,15 @@
   text-align: center;
   font-size: 1rem;
   color: #555;
-  white-space: nowrap; /* Prevent wrapping within table cells */
+  word-wrap: break-word; /* Break words when they exceed the width */
+  white-space: normal; /* Allow wrapping */
+  overflow: hidden; /* Prevent overflow of content */
 }
 
 /* Default width for all columns */
 .payment-voucher-table th,
 .payment-voucher-table td {
-  width: 150px; /* Default width for all columns */
+  width: 110px; /* Default width for all columns */
 }
 
 /* Individual column width control */
