@@ -29,9 +29,9 @@
   text-align: center;
   font-size: 1rem;
   color: #555;
-  word-wrap: break-word; /* Break words when they exceed the width */
-  white-space: normal; /* Allow wrapping */
-  overflow: hidden; /* Prevent overflow of content */
+  word-wrap: break-word; 
+  white-space: normal; 
+  overflow: hidden; 
 }
 
 /* Default width for all columns */
