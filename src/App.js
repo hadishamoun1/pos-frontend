@@ -14,6 +14,7 @@ import ItemCreationPage from "./components/items/items";
 import PricingPage from "./components/cost-estimator/pricingPage";
 import CreatePreviewCustomers from "./components/customers/customers";
 import AccountsPage from "./components/accounts/accounts";
+import PaymentVoucherTable from "./components/payments/payments";
 
 // Initialize QueryClient
 const queryClient = new QueryClient();
@@ -35,7 +36,7 @@ function App() {
           <Route path="/cost-estimator" element={<PricingPage />} />
           <Route path="/customers" element={<CreatePreviewCustomers />} />
           <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/payments" element={<AccountsPage />} />
+          <Route path="/payments" element={<PaymentVoucherTable />} />
         </Routes>
       </Router>
     </QueryClientProvider>

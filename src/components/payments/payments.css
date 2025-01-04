@@ -1,0 +1,96 @@
+/* Container styling */
+.payment-voucher-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  overflow-x: auto; /* Enable horizontal scrolling */
+  white-space: nowrap; /* Prevent table content from wrapping */
+}
+
+/* Table styling */
+.payment-voucher-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  table-layout: fixed; /* Ensures uniform column widths by default */
+}
+
+.payment-voucher-table th,
+.payment-voucher-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f1f1;
+  text-align: center;
+  font-size: 1rem;
+  color: #555;
+  white-space: nowrap; /* Prevent wrapping within table cells */
+}
+
+/* Default width for all columns */
+.payment-voucher-table th,
+.payment-voucher-table td {
+  width: 150px; /* Default width for all columns */
+}
+
+/* Individual column width control */
+.payment-voucher-supplier {
+  width: 200px; /* Custom width for Supplier column */
+}
+
+.payment-voucher-amount {
+  width: 100px; /* Custom width for Amount column */
+}
+
+.payment-voucher-currency {
+  width: 120px; /* Custom width for Currency column */
+}
+
+.payment-voucher-date {
+  width: 150px; /* Custom width for Date column */
+}
+
+.payment-voucher-comments {
+  width: 250px; /* Custom width for Comments column */
+}
+
+/* Header styling */
+.payment-voucher-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+/* Row styling */
+.payment-voucher-table td {
+  background-color: #f9f9f9;
+}
+
+.payment-voucher-table tr:nth-child(even) td {
+  background-color: #f3f4f6;
+}
+
+.payment-voucher-table tbody tr:hover td {
+  background-color: #e3f2fd;
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .payment-voucher-container {
+    padding: 1rem;
+  }
+
+  .payment-voucher-table th,
+  .payment-voucher-table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
