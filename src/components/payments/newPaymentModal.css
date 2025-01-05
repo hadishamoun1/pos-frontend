@@ -11,6 +11,13 @@
   align-items: center;
   z-index: 1000;
 }
+/* Header Styling */
+.payment-voucher-modal-header {
+  display: flex;
+  justify-content: space-between; /* Space between title and buttons */
+  align-items: center;
+  margin-bottom: 1rem;
+}
 
 /* Modal Container */
 .payment-voucher-modal-container {
@@ -19,7 +26,7 @@
   border-radius: 10px;
   width: 100%;
   max-width: 1800px;
-  max-height: 80vh;
+  height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   position: relative;
@@ -167,6 +174,11 @@
   width: 100px;
 }
 
+/* Styling for Save and Cancel Buttons */
+.payment-voucher-modal-actions {
+  display: flex;
+  gap: 0.5rem; /* Space between buttons */
+}
 /* Save and Cancel Buttons */
 .payment-voucher-modal-actions button {
   padding: 0.6rem 1.5rem;
@@ -194,4 +206,31 @@
 
 .payment-voucher-modal-cancel:hover {
   background-color: #c82333;
+}
+/* Add Row Button Styling */
+.payment-voucher-modal-add-row {
+  display: block;
+  margin: 1rem auto;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  transition: all 0.3s ease;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.payment-voucher-modal-add-row:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.payment-voucher-modal-add-row:active {
+  transform: translateY(1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
 }
