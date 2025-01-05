@@ -9,7 +9,7 @@ const PaymentsModal = ({ onClose }) => {
       currency: "",
       date: "",
       type: "",
-      exchangeRate: "",
+      exchangeRate: "1", // Default value for USD
       amountExchanged: "",
       checkNumber: "",
       bankName: "",
@@ -20,16 +20,53 @@ const PaymentsModal = ({ onClose }) => {
     },
   ]);
 
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+  });
+
+  const formatNumber = (value) => {
+    if (!value) return "";
+    return new Intl.NumberFormat().format(value);
+  };
+
   const handleInputChange = (index, e) => {
     const { name, value } = e.target;
     const newRows = [...rows];
-    newRows[index][name] = value;
+    newRows[index][name] =
+      name === "amount" || name === "exchangeRate" || name === "amountExchanged"
+        ? value.replace(/,/g, "")
+        : value;
+
+    const amount = parseFloat(newRows[index].amount || "0");
+    const amountExchanged = parseFloat(newRows[index].amountExchanged || "0");
+    const exchangeRate = parseFloat(newRows[index].exchangeRate || "1");
 
     // Automatically calculate amountExchanged if amount and exchangeRate are provided
     if (name === "amount" || name === "exchangeRate") {
-      const amount = parseFloat(newRows[index].amount || "0");
-      const exchangeRate = parseFloat(newRows[index].exchangeRate || "1");
-      newRows[index].amountExchanged = (amount / exchangeRate).toFixed(2);
+      if (newRows[index].currency === "LL" && exchangeRate > 0) {
+        newRows[index].amountExchanged = (amount / exchangeRate).toFixed(2);
+      }
+    }
+
+    // Automatically calculate exchangeRate if amount and amountExchanged are provided
+    if (name === "amount" || name === "amountExchanged") {
+      if (newRows[index].currency === "LL" && amountExchanged > 0) {
+        newRows[index].exchangeRate = (amount / amountExchanged).toFixed(2);
+      }
+    }
+
+    // Set exchangeRate to 1 and match amountExchanged to amount if currency is USD
+    if (name === "currency" && value === "USD") {
+      newRows[index].exchangeRate = "1";
+      newRows[index].amountExchanged = amount.toFixed(2);
+    }
+
+    // Match amountExchanged to amount if currency is USD
+    if (newRows[index].currency === "USD" && name === "amount") {
+      newRows[index].amountExchanged = amount.toFixed(2);
     }
 
     setRows(newRows);
@@ -44,7 +81,7 @@ const PaymentsModal = ({ onClose }) => {
         currency: "",
         date: "",
         type: "",
-        exchangeRate: "",
+        exchangeRate: "1", // Default value for USD
         amountExchanged: "",
         checkNumber: "",
         bankName: "",
@@ -56,13 +93,33 @@ const PaymentsModal = ({ onClose }) => {
     ]);
   };
 
+  const handleContextMenu = (e, index) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      rowIndex: index,
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+  };
+
+  const handleDeleteRow = () => {
+    const newRows = rows.filter((_, index) => index !== contextMenu.rowIndex);
+    setRows(newRows);
+    handleCloseContextMenu();
+  };
+
   const handleSubmit = () => {
     console.log("Submitted Data:", rows);
     onClose();
   };
 
   return (
-    <div className="payment-voucher-modal-overlay">
+    <div className="payment-voucher-modal-overlay" onClick={handleCloseContextMenu}>
       <div className="payment-voucher-modal-container">
         <div className="payment-voucher-modal-header">
           <h3>New Payment Voucher</h3>
@@ -104,7 +161,10 @@ const PaymentsModal = ({ onClose }) => {
 
           <tbody>
             {rows.map((row, index) => (
-              <tr key={index}>
+              <tr
+                key={index}
+                onContextMenu={(e) => handleContextMenu(e, index)}
+              >
                 {Object.keys(row).map((key) => (
                   <td key={key}>
                     {key === "currency" ||
@@ -143,7 +203,13 @@ const PaymentsModal = ({ onClose }) => {
                           key === "date" || key === "dueDate" ? "date" : "text"
                         }
                         name={key}
-                        value={row[key]}
+                        value={
+                          key === "amount" ||
+                          key === "exchangeRate" ||
+                          key === "amountExchanged"
+                            ? formatNumber(row[key])
+                            : row[key]
+                        }
                         onChange={(e) => handleInputChange(index, e)}
                         placeholder={
                           key === "supplier"
@@ -155,7 +221,7 @@ const PaymentsModal = ({ onClose }) => {
                             : key === "checkNumber"
                             ? "Enter Check"
                             : key === "bankName"
-                            ? "Enter Bank "
+                            ? "Enter Bank"
                             : key === "dueDate"
                             ? "Select Due Date"
                             : key === "paymentNumber"
@@ -164,7 +230,11 @@ const PaymentsModal = ({ onClose }) => {
                             ? "Enter Comments"
                             : ""
                         }
-                        disabled={key === "amountExchanged"}
+                        disabled={
+                          (key === "amountExchanged" &&
+                            row.currency === "USD") ||
+                          (key === "exchangeRate" && row.currency === "USD")
+                        }
                       />
                     )}
                   </td>
@@ -176,6 +246,16 @@ const PaymentsModal = ({ onClose }) => {
         <button onClick={addRow} className="payment-voucher-modal-add-row">
           Add Row
         </button>
+
+        {contextMenu.visible && (
+          <div
+            className="context-menu"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <button onClick={handleDeleteRow}>Delete Row</button>
+            <button onClick={handleCloseContextMenu}>Cancel</button>
+          </div>
+        )}
       </div>
     </div>
   );
