@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
 import "./newPaymentModal.css";
+import axios from "axios";
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([
     {
       supplier: "",
+      supplierId: null,
       amount: "",
       currency: "",
       date: "",
@@ -48,27 +50,23 @@ const PaymentsModal = ({ onClose }) => {
     const amountExchanged = parseFloat(newRows[index].amountExchanged || "0");
     const exchangeRate = parseFloat(newRows[index].exchangeRate || "1");
 
-    // Automatically calculate amountExchanged if amount and exchangeRate are provided
     if (name === "amount" || name === "exchangeRate") {
       if (newRows[index].currency === "LL" && exchangeRate > 0) {
         newRows[index].amountExchanged = (amount / exchangeRate).toFixed(2);
       }
     }
 
-    // Automatically calculate exchangeRate if amount and amountExchanged are provided
     if (name === "amount" || name === "amountExchanged") {
       if (newRows[index].currency === "LL" && amountExchanged > 0) {
         newRows[index].exchangeRate = (amount / amountExchanged).toFixed(2);
       }
     }
 
-    // Set exchangeRate to 1 and match amountExchanged to amount if currency is USD
     if (name === "currency" && value === "USD") {
       newRows[index].exchangeRate = "1";
       newRows[index].amountExchanged = amount.toFixed(2);
     }
 
-    // Match amountExchanged to amount if currency is USD
     if (newRows[index].currency === "USD" && name === "amount") {
       newRows[index].amountExchanged = amount.toFixed(2);
     }
@@ -81,9 +79,10 @@ const PaymentsModal = ({ onClose }) => {
     setIsSupplierModalOpen(true);
   };
 
-  const handleSelectSupplier = (supplierName) => {
+  const handleSelectSupplier = (supplierName, supplierId) => {
     const newRows = [...rows];
     newRows[activeRowIndex].supplier = supplierName;
+    newRows[activeRowIndex].supplierId = supplierId;
     setRows(newRows);
     setIsSupplierModalOpen(false);
   };
@@ -93,6 +92,7 @@ const PaymentsModal = ({ onClose }) => {
       ...rows,
       {
         supplier: "",
+        supplierId: null,
         amount: "",
         currency: "",
         date: "",
@@ -129,9 +129,38 @@ const PaymentsModal = ({ onClose }) => {
     handleCloseContextMenu();
   };
 
-  const handleSubmit = () => {
-    console.log("Submitted Data:", rows);
-    onClose();
+  const handleSubmit = async () => {
+    const payload = rows.map((row) => ({
+      supplierId: row.supplierId,
+      date: row.date,
+      invoiceId: row.paymentNumber,
+      paymentType: row.type,
+      type: row.paymentType,
+      doneBy: "", // This will be populated later
+      details: [
+        {
+          amount: parseFloat(row.amount),
+          currency: row.currency,
+          exchangeRate: row.exchangeRate,
+          checkDueDate: row.dueDate,
+          checkNumber: row.checkNumber,
+          checkDate: row.date,
+          bankName: row.bankName,
+          description: row.comments,
+        },
+      ],
+    }));
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/payment-vouchers/v1/bulk",
+        payload
+      );
+      console.log("Payment Voucher Created", response.data);
+      onClose();
+    } catch (error) {
+      console.error("Error creating payment voucher", error);
+    }
   };
 
   return (
@@ -184,7 +213,6 @@ const PaymentsModal = ({ onClose }) => {
                 key={index}
                 onContextMenu={(e) => handleContextMenu(e, index)}
               >
-                {/* Supplier Column */}
                 <td>
                   <input
                     type="text"
@@ -194,8 +222,6 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Select Supplier"
                   />
                 </td>
-
-                {/* Currency Column */}
                 <td>
                   <select
                     name="currency"
@@ -207,8 +233,6 @@ const PaymentsModal = ({ onClose }) => {
                     <option value="LL">LL</option>
                   </select>
                 </td>
-
-                {/* Amount Column */}
                 <td>
                   <input
                     type="text"
@@ -218,8 +242,6 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Amount"
                   />
                 </td>
-
-                {/* Date Column */}
                 <td>
                   <input
                     type="date"
@@ -228,8 +250,6 @@ const PaymentsModal = ({ onClose }) => {
                     onChange={(e) => handleInputChange(index, e)}
                   />
                 </td>
-
-                {/* Type Column */}
                 <td>
                   <select
                     name="type"
@@ -243,8 +263,6 @@ const PaymentsModal = ({ onClose }) => {
                     <option value="Check LL">Check LL</option>
                   </select>
                 </td>
-
-                {/* Exchange Rate Column */}
                 <td>
                   <input
                     type="text"
@@ -255,8 +273,6 @@ const PaymentsModal = ({ onClose }) => {
                     disabled={row.currency === "USD"}
                   />
                 </td>
-
-                {/* Amount Exchanged Column */}
                 <td>
                   <input
                     type="text"
@@ -267,8 +283,6 @@ const PaymentsModal = ({ onClose }) => {
                     disabled={row.currency === "USD"}
                   />
                 </td>
-
-                {/* Remaining Columns */}
                 <td>
                   <input
                     type="text"
