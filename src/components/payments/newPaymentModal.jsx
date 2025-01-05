@@ -166,7 +166,8 @@ const PaymentsModal = ({ onClose }) => {
                 />
               </td>
               <td>
-                <textarea
+                <input
+                  type="text"
                   name="comments"
                   value={formData.comments}
                   onChange={handleInputChange}

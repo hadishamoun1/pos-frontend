@@ -84,9 +84,8 @@
 .payment-voucher-modal-table input[type="text"],
 .payment-voucher-modal-table input[type="number"],
 .payment-voucher-modal-table input[type="date"],
-.payment-voucher-modal-table textarea,
 .payment-voucher-modal-table select {
-  width: 95%; /* Default width */
+  width: 100%; /* Default width */
   height: 50px; /* Set consistent height */
   padding: 0.4rem;
   font-size: 1.1rem;
@@ -112,12 +111,12 @@
 .payment-voucher-modal-table textarea {
   resize: none;
   min-height: 49px; /* Set consistent height */
-  width:93%;
+  width: 93%;
 }
 
 /* Column Width Control */
 .payment-voucher-modal-supplier {
-  width: 210px;
+  width: 240px;
 }
 
 .payment-voucher-modal-amount {
