@@ -36,7 +36,7 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
         <div className="supplier-modal-header">
           <h3>Select Supplier</h3>
           <button className="supplier-modal-close" onClick={onClose}>
-            ✖
+            close
           </button>
         </div>
         <input

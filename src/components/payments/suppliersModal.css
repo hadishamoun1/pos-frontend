@@ -29,13 +29,19 @@
   }
   
   .supplier-modal-close {
-    background: none;
+    background: #dc3545;
+    color: white;
     border: none;
-    font-size: 1.2rem;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
     cursor: pointer;
-    color: red;
+    transition: all 0.3s ease;
   }
-  
+  /* background: #960110;*/
+  .supplier-modal-close:hover{
+    background: #960110;
+  }
   .supplier-modal-search {
     width: 94%;
     padding: 10px;
