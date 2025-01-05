@@ -43,7 +43,7 @@
   color: #dc3545;
 }
 
-/* Table Styling (Same as main table but scoped for modal) */
+/* Modal Table Styling */
 .payment-voucher-modal-table {
   width: 100%;
   border-collapse: collapse;
@@ -61,8 +61,9 @@
   text-align: center;
   font-size: 1rem;
   color: #555;
-  word-wrap: break-word;
   white-space: normal;
+  word-wrap: break-word;
+  vertical-align: middle;
 }
 
 .payment-voucher-modal-table th {
@@ -77,4 +78,121 @@
 
 .payment-voucher-modal-table tbody tr:hover td {
   background-color: #e3f2fd;
+}
+
+/* Modal Input Fields */
+.payment-voucher-modal-table input[type="text"],
+.payment-voucher-modal-table input[type="number"],
+.payment-voucher-modal-table input[type="date"],
+.payment-voucher-modal-table textarea,
+.payment-voucher-modal-table select {
+  width: 95%; /* Default width */
+  height: 50px; /* Set consistent height */
+  padding: 0.4rem;
+  font-size: 1.1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.payment-voucher-modal-table input[type="text"]:focus,
+.payment-voucher-modal-table input[type="number"]:focus,
+.payment-voucher-modal-table input[type="date"]:focus,
+.payment-voucher-modal-table textarea:focus,
+.payment-voucher-modal-table select:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  background-color: #ffffff;
+  outline: none;
+}
+
+/* Textarea Specific Styling */
+.payment-voucher-modal-table textarea {
+  resize: none;
+  min-height: 49px; /* Set consistent height */
+  width:93%;
+}
+
+/* Column Width Control */
+.payment-voucher-modal-supplier {
+  width: 210px;
+}
+
+.payment-voucher-modal-amount {
+  width: 150px;
+}
+
+.payment-voucher-modal-currency {
+  width: 88px;
+}
+
+.payment-voucher-modal-date {
+  width: 150px;
+}
+
+.payment-voucher-modal-type {
+  width: 133px;
+}
+
+.payment-voucher-modal-exchange-rate {
+  width: 120px;
+}
+
+.payment-voucher-modal-amount-exchanged {
+  width: 150px;
+}
+
+.payment-voucher-modal-check-number {
+  width: 120px;
+}
+
+.payment-voucher-modal-bank-name {
+  width: 130px;
+}
+
+.payment-voucher-modal-due-date {
+  width: 150px;
+}
+
+.payment-voucher-modal-payment-number {
+  width: 120px;
+}
+
+.payment-voucher-modal-comments {
+  width: 200px;
+}
+
+.payment-voucher-modal-payment-type {
+  width: 100px;
+}
+
+/* Save and Cancel Buttons */
+.payment-voucher-modal-actions button {
+  padding: 0.6rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-voucher-modal-save {
+  background-color: #28a745;
+  color: white;
+}
+
+.payment-voucher-modal-save:hover {
+  background-color: #218838;
+}
+
+.payment-voucher-modal-cancel {
+  background-color: #dc3545;
+  color: white;
+}
+
+.payment-voucher-modal-cancel:hover {
+  background-color: #c82333;
 }
