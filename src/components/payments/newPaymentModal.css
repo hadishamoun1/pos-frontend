@@ -1,0 +1,80 @@
+/* Modal Overlay */
+.payment-voucher-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Container */
+.payment-voucher-modal-container {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+/* Close Button */
+.payment-voucher-modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  color: #333;
+  transition: color 0.3s ease;
+}
+
+.payment-voucher-modal-close-btn:hover {
+  color: #dc3545;
+}
+
+/* Table Styling (Same as main table but scoped for modal) */
+.payment-voucher-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+  table-layout: fixed;
+}
+
+.payment-voucher-modal-table th,
+.payment-voucher-modal-table td {
+  padding: 0.9rem;
+  border: 1px solid #ddd;
+  text-align: center;
+  font-size: 1rem;
+  color: #555;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+.payment-voucher-modal-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.payment-voucher-modal-table tbody tr:nth-child(even) td {
+  background-color: #f3f4f6;
+}
+
+.payment-voucher-modal-table tbody tr:hover td {
+  background-color: #e3f2fd;
+}
