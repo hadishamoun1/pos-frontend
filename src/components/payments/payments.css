@@ -165,3 +165,64 @@
 .payment-voucher-done-by {
   width: 100px;
 }
+
+
+.payment-voucher-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.payment-voucher-modal-container {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem;
+  width: 90%;
+  max-width: 800px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.payment-voucher-modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.payment-voucher-modal-close-btn:hover {
+  background: #c82333;
+}
+
+.payment-voucher-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.payment-voucher-modal-table th,
+.payment-voucher-modal-table td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.payment-voucher-modal-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}

@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import "./payments.css";
+import PaymentsModal from "./newPaymentModal";
 
 const PaymentsPage = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const tableData = [
     {
       supplier: "Supplier A",
@@ -28,7 +31,12 @@ const PaymentsPage = () => {
     <div className="payment-voucher-container">
       {/* Action Buttons */}
       <div className="payment-voucher-action-buttons">
-        <button className="payment-voucher-new-btn">New</button>
+        <button
+          className="payment-voucher-new-btn"
+          onClick={() => setIsModalOpen(true)}
+        >
+          New
+        </button>
         <button className="payment-voucher-edit-btn">Edit</button>
         <button className="payment-voucher-delete-btn">Delete</button>
       </div>
@@ -92,6 +100,9 @@ const PaymentsPage = () => {
           ))}
         </tbody>
       </table>
+
+      {/* Modal */}
+      {isModalOpen && <PaymentsModal onClose={() => setIsModalOpen(false)} />}
     </div>
   );
 };

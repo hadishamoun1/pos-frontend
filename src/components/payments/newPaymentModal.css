@@ -17,8 +17,8 @@
   background: #ffffff;
   padding: 1.5rem;
   border-radius: 10px;
-  width: 90%;
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1800px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
