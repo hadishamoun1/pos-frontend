@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./supplierModal.css";
+import "./suppliersModal.css";
 
 const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const [searchQuery, setSearchQuery] = useState("");

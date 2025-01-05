@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SupplierModal from "./suppliersModal";
 import "./newPaymentModal.css";
 
 const PaymentsModal = ({ onClose }) => {
@@ -26,6 +27,9 @@ const PaymentsModal = ({ onClose }) => {
     y: 0,
     rowIndex: null,
   });
+
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [activeRowIndex, setActiveRowIndex] = useState(null);
 
   const formatNumber = (value) => {
     if (!value) return "";
@@ -70,6 +74,18 @@ const PaymentsModal = ({ onClose }) => {
     }
 
     setRows(newRows);
+  };
+
+  const openSupplierModal = (index) => {
+    setActiveRowIndex(index);
+    setIsSupplierModalOpen(true);
+  };
+
+  const handleSelectSupplier = (supplierName) => {
+    const newRows = [...rows];
+    newRows[activeRowIndex].supplier = supplierName;
+    setRows(newRows);
+    setIsSupplierModalOpen(false);
   };
 
   const addRow = () => {
@@ -119,7 +135,10 @@ const PaymentsModal = ({ onClose }) => {
   };
 
   return (
-    <div className="payment-voucher-modal-overlay" onClick={handleCloseContextMenu}>
+    <div
+      className="payment-voucher-modal-overlay"
+      onClick={handleCloseContextMenu}
+    >
       <div className="payment-voucher-modal-container">
         <div className="payment-voucher-modal-header">
           <h3>New Payment Voucher</h3>
@@ -167,9 +186,17 @@ const PaymentsModal = ({ onClose }) => {
               >
                 {Object.keys(row).map((key) => (
                   <td key={key}>
-                    {key === "currency" ||
-                    key === "type" ||
-                    key === "paymentType" ? (
+                    {key === "supplier" ? (
+                      <input
+                        type="text"
+                        value={row.supplier}
+                        readOnly
+                        onClick={() => openSupplierModal(index)}
+                        placeholder="Select Supplier"
+                      />
+                    ) : key === "currency" ||
+                      key === "type" ||
+                      key === "paymentType" ? (
                       <select
                         name={key}
                         value={row[key]}
@@ -211,25 +238,9 @@ const PaymentsModal = ({ onClose }) => {
                             : row[key]
                         }
                         onChange={(e) => handleInputChange(index, e)}
-                        placeholder={
-                          key === "supplier"
-                            ? "Enter Supplier"
-                            : key === "amount"
-                            ? "Enter Amount"
-                            : key === "exchangeRate"
-                            ? "Enter Exchange Rate"
-                            : key === "checkNumber"
-                            ? "Enter Check"
-                            : key === "bankName"
-                            ? "Enter Bank"
-                            : key === "dueDate"
-                            ? "Select Due Date"
-                            : key === "paymentNumber"
-                            ? "Enter Pmt"
-                            : key === "comments"
-                            ? "Enter Comments"
-                            : ""
-                        }
+                        placeholder={`Enter ${
+                          key.charAt(0).toUpperCase() + key.slice(1)
+                        }`}
                         disabled={
                           (key === "amountExchanged" &&
                             row.currency === "USD") ||
@@ -255,6 +266,13 @@ const PaymentsModal = ({ onClose }) => {
             <button onClick={handleDeleteRow}>Delete Row</button>
             <button onClick={handleCloseContextMenu}>Cancel</button>
           </div>
+        )}
+
+        {isSupplierModalOpen && (
+          <SupplierModal
+            onClose={() => setIsSupplierModalOpen(false)}
+            onSelectSupplier={handleSelectSupplier}
+          />
         )}
       </div>
     </div>
