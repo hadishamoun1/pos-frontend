@@ -145,6 +145,25 @@ const PaymentsModal = ({ onClose }) => {
                         name={key}
                         value={row[key]}
                         onChange={(e) => handleInputChange(index, e)}
+                        placeholder={
+                          key === "supplier"
+                            ? "Enter Supplier"
+                            : key === "amount"
+                            ? "Enter Amount"
+                            : key === "exchangeRate"
+                            ? "Enter Exchange Rate"
+                            : key === "checkNumber"
+                            ? "Enter Check"
+                            : key === "bankName"
+                            ? "Enter Bank "
+                            : key === "dueDate"
+                            ? "Select Due Date"
+                            : key === "paymentNumber"
+                            ? "Enter Pmt"
+                            : key === "comments"
+                            ? "Enter Comments"
+                            : ""
+                        }
                         disabled={key === "amountExchanged"}
                       />
                     )}
