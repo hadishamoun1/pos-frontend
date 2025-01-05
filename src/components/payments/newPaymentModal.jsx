@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
+import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
-import axios from "axios";
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([
     {
       supplier: "",
-      supplierId: null,
       amount: "",
       currency: "",
       date: "",
@@ -32,6 +31,12 @@ const PaymentsModal = ({ onClose }) => {
 
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState(null);
+
+  const [isNotificationVisible, setIsNotificationVisible] = useState(false);
+  const [notificationData, setNotificationData] = useState({
+    type: "",
+    message: "",
+  });
 
   const formatNumber = (value) => {
     if (!value) return "";
@@ -79,10 +84,9 @@ const PaymentsModal = ({ onClose }) => {
     setIsSupplierModalOpen(true);
   };
 
-  const handleSelectSupplier = (supplierName, supplierId) => {
+  const handleSelectSupplier = (supplierName) => {
     const newRows = [...rows];
     newRows[activeRowIndex].supplier = supplierName;
-    newRows[activeRowIndex].supplierId = supplierId;
     setRows(newRows);
     setIsSupplierModalOpen(false);
   };
@@ -92,7 +96,6 @@ const PaymentsModal = ({ onClose }) => {
       ...rows,
       {
         supplier: "",
-        supplierId: null,
         amount: "",
         currency: "",
         date: "",
@@ -130,36 +133,49 @@ const PaymentsModal = ({ onClose }) => {
   };
 
   const handleSubmit = async () => {
-    const payload = rows.map((row) => ({
-      supplierId: row.supplierId,
-      date: row.date,
-      invoiceId: row.paymentNumber,
-      paymentType: row.type,
-      type: row.paymentType,
-      doneBy: "", // This will be populated later
-      details: [
-        {
-          amount: parseFloat(row.amount),
-          currency: row.currency,
-          exchangeRate: row.exchangeRate,
-          checkDueDate: row.dueDate,
-          checkNumber: row.checkNumber,
-          checkDate: row.date,
-          bankName: row.bankName,
-          description: row.comments,
-        },
-      ],
-    }));
-
     try {
-      const response = await axios.post(
+      const payload = rows.map((row) => ({
+        supplierId: row.supplierId,
+        date: row.date,
+        invoiceId: row.paymentNumber,
+        paymentType: row.type,
+        type: row.paymentType,
+        doneBy: "", // JWT will add this later
+        details: [
+          {
+            amount: parseFloat(row.amount),
+            currency: row.currency,
+            exchangeRate: row.exchangeRate,
+            checkDueDate: row.dueDate,
+            checkNumber: row.checkNumber,
+            checkDate: row.date,
+            bankName: row.bankName,
+            description: row.comments,
+          },
+        ],
+      }));
+
+      const response = await fetch(
         "http://localhost:3000/payment-vouchers/v1/bulk",
-        payload
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
       );
-      console.log("Payment Voucher Created", response.data);
-      onClose();
+
+      if (!response.ok) {
+        throw new Error("Failed to create payment voucher");
+      }
+
+      setNotificationData({
+        type: "success",
+        message: "Payment voucher created successfully!",
+      });
     } catch (error) {
-      console.error("Error creating payment voucher", error);
+      setNotificationData({ type: "error", message: error.message });
+    } finally {
+      setIsNotificationVisible(true);
     }
   };
 
@@ -206,7 +222,6 @@ const PaymentsModal = ({ onClose }) => {
               <th className="payment-voucher-modal-payment-type">Pmt Type</th>
             </tr>
           </thead>
-
           <tbody>
             {rows.map((row, index) => (
               <tr
@@ -360,6 +375,14 @@ const PaymentsModal = ({ onClose }) => {
           <SupplierModal
             onClose={() => setIsSupplierModalOpen(false)}
             onSelectSupplier={handleSelectSupplier}
+          />
+        )}
+
+        {isNotificationVisible && (
+          <NotificationModal
+            type={notificationData.type}
+            message={notificationData.message}
+            onClose={() => setIsNotificationVisible(false)}
           />
         )}
       </div>
