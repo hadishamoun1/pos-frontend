@@ -16,7 +16,7 @@
     border-radius: 10px;
     padding: 20px;
     width: 400px;
-    max-height: 80vh;
+    height: 90vh;
     overflow-y: auto;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   }
@@ -33,11 +33,11 @@
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: #333;
+    color: red;
   }
   
   .supplier-modal-search {
-    width: 100%;
+    width: 94%;
     padding: 10px;
     margin-bottom: 15px;
     border: 1px solid #ddd;
@@ -49,7 +49,10 @@
     width: 100%;
     border-collapse: collapse;
   }
-  
+  .supplier-modal-table th{
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+  }
   .supplier-modal-table th,
   .supplier-modal-table td {
     text-align: left;
