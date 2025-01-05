@@ -68,7 +68,7 @@
 
 .payment-voucher-table th,
 .payment-voucher-table td {
-  padding: 1rem;
+  padding: 0.9rem;
   border-bottom: 1px solid #f1f1f1;
   text-align: center;
   font-size: 1rem;
@@ -78,12 +78,14 @@
   overflow: hidden;
 }
 
+/* Header styling */
 .payment-voucher-table th {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: #ffffff;
   text-transform: uppercase;
 }
 
+/* Table row styling */
 .payment-voucher-table td {
   background-color: #f9f9f9;
 }
@@ -96,4 +98,69 @@
   background-color: #e3f2fd;
   transform: scale(1.02);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Individual column width control */
+.payment-voucher-supplier {
+  width: 200px;
+}
+
+.payment-voucher-amount {
+  width: 90px;
+}
+
+.payment-voucher-currency {
+  width: 85px;
+}
+
+.payment-voucher-date {
+  width: 100px;
+}
+
+.payment-voucher-type {
+  width: 90px;
+}
+
+.payment-voucher-exchange-rate {
+  width: 100px;
+}
+
+.payment-voucher-amount-exchanged {
+  width: 100px;
+}
+
+.payment-voucher-check-number {
+  width: 90px;
+}
+
+.payment-voucher-bank-name {
+  width: 120px;
+}
+
+.payment-voucher-due-date {
+  width: 100px;
+}
+
+.payment-voucher-payment-number {
+  width: 100px;
+}
+
+.payment-voucher-comments {
+  width: 200px;
+}
+
+.payment-voucher-payment-type {
+  width: 90px;
+}
+
+.payment-voucher-date-created {
+  width: 120px;
+}
+
+.payment-voucher-date-modified {
+  width: 120px;
+}
+
+.payment-voucher-done-by {
+  width: 100px;
 }
