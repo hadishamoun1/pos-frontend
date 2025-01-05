@@ -141,7 +141,7 @@ const PaymentsModal = ({ onClose }) => {
     >
       <div className="payment-voucher-modal-container">
         <div className="payment-voucher-modal-header">
-          <h3>New Payment Voucher</h3>
+          <h1>New Payment Voucher</h1>
           <div className="payment-voucher-modal-actions">
             <button
               onClick={handleSubmit}
