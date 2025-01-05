@@ -159,8 +159,8 @@ const PaymentsModal = ({ onClose }) => {
           <thead>
             <tr>
               <th className="payment-voucher-modal-supplier">Supplier</th>
-              <th className="payment-voucher-modal-amount">Amount</th>
               <th className="payment-voucher-modal-currency">Currency</th>
+              <th className="payment-voucher-modal-amount">Amount</th>
               <th className="payment-voucher-modal-date">Date</th>
               <th className="payment-voucher-modal-type">Type</th>
               <th className="payment-voucher-modal-exchange-rate">Ex Rate</th>
@@ -184,72 +184,146 @@ const PaymentsModal = ({ onClose }) => {
                 key={index}
                 onContextMenu={(e) => handleContextMenu(e, index)}
               >
-                {Object.keys(row).map((key) => (
-                  <td key={key}>
-                    {key === "supplier" ? (
-                      <input
-                        type="text"
-                        value={row.supplier}
-                        readOnly
-                        onClick={() => openSupplierModal(index)}
-                        placeholder="Select Supplier"
-                      />
-                    ) : key === "currency" ||
-                      key === "type" ||
-                      key === "paymentType" ? (
-                      <select
-                        name={key}
-                        value={row[key]}
-                        onChange={(e) => handleInputChange(index, e)}
-                      >
-                        <option value="">Select</option>
-                        {key === "currency" && (
-                          <>
-                            <option value="USD">USD</option>
-                            <option value="LL">LL</option>
-                          </>
-                        )}
-                        {key === "type" && (
-                          <>
-                            <option value="Cash USD">Cash USD</option>
-                            <option value="Cash LL">Cash LL</option>
-                            <option value="Check USD">Check USD</option>
-                            <option value="Check LL">Check LL</option>
-                          </>
-                        )}
-                        {key === "paymentType" && (
-                          <>
-                            <option value="S">S</option>
-                            <option value="G">G</option>
-                          </>
-                        )}
-                      </select>
-                    ) : (
-                      <input
-                        type={
-                          key === "date" || key === "dueDate" ? "date" : "text"
-                        }
-                        name={key}
-                        value={
-                          key === "amount" ||
-                          key === "exchangeRate" ||
-                          key === "amountExchanged"
-                            ? formatNumber(row[key])
-                            : row[key]
-                        }
-                        onChange={(e) => handleInputChange(index, e)}
-                        placeholder={`Enter ${
-                          key.charAt(0).toUpperCase() + key.slice(1)
-                        }`}
-                        disabled={
-                          (key === "amountExchanged" &&
-                            row.currency === "USD") ||
-                          (key === "exchangeRate" && row.currency === "USD")
-                        }
-                      />
-                    )}
-                  </td>
-                ))}
+                {/* Supplier Column */}
+                <td>
+                  <input
+                    type="text"
+                    value={row.supplier}
+                    readOnly
+                    onClick={() => openSupplierModal(index)}
+                    placeholder="Select Supplier"
+                  />
+                </td>
+
+                {/* Currency Column */}
+                <td>
+                  <select
+                    name="currency"
+                    value={row.currency}
+                    onChange={(e) => handleInputChange(index, e)}
+                  >
+                    <option value="">Select Currency</option>
+                    <option value="USD">USD</option>
+                    <option value="LL">LL</option>
+                  </select>
+                </td>
+
+                {/* Amount Column */}
+                <td>
+                  <input
+                    type="text"
+                    name="amount"
+                    value={formatNumber(row.amount)}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Amount"
+                  />
+                </td>
+
+                {/* Date Column */}
+                <td>
+                  <input
+                    type="date"
+                    name="date"
+                    value={row.date}
+                    onChange={(e) => handleInputChange(index, e)}
+                  />
+                </td>
+
+                {/* Type Column */}
+                <td>
+                  <select
+                    name="type"
+                    value={row.type}
+                    onChange={(e) => handleInputChange(index, e)}
+                  >
+                    <option value="">Select</option>
+                    <option value="Cash USD">Cash USD</option>
+                    <option value="Cash LL">Cash LL</option>
+                    <option value="Check USD">Check USD</option>
+                    <option value="Check LL">Check LL</option>
+                  </select>
+                </td>
+
+                {/* Exchange Rate Column */}
+                <td>
+                  <input
+                    type="text"
+                    name="exchangeRate"
+                    value={formatNumber(row.exchangeRate)}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Exchange Rate"
+                    disabled={row.currency === "USD"}
+                  />
+                </td>
+
+                {/* Amount Exchanged Column */}
+                <td>
+                  <input
+                    type="text"
+                    name="amountExchanged"
+                    value={formatNumber(row.amountExchanged)}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Amount Exchanged"
+                    disabled={row.currency === "USD"}
+                  />
+                </td>
+
+                {/* Remaining Columns */}
+                <td>
+                  <input
+                    type="text"
+                    name="checkNumber"
+                    value={row.checkNumber}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Check Number"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    name="bankName"
+                    value={row.bankName}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Bank Name"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    value={row.dueDate}
+                    onChange={(e) => handleInputChange(index, e)}
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    name="paymentNumber"
+                    value={row.paymentNumber}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Payment Number"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    name="comments"
+                    value={row.comments}
+                    onChange={(e) => handleInputChange(index, e)}
+                    placeholder="Enter Comments"
+                  />
+                </td>
+                <td>
+                  <select
+                    name="paymentType"
+                    value={row.paymentType}
+                    onChange={(e) => handleInputChange(index, e)}
+                  >
+                    <option value="">Select</option>
+                    <option value="S">S</option>
+                    <option value="G">G</option>
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
