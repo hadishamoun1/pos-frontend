@@ -27,7 +27,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         amount: detail.amount || "",
         currency: detail.currency || "",
         date: row.date || "",
-        type: row.type || "", // Ensure 'type' is correctly set
+        type: row.type || "",
         exchangeRate: detail.exchangeRate || "1",
         amountExchanged: detail.amountExchanged || "",
         checkNumber: detail.checkNumber || "",
@@ -35,7 +35,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         dueDate: detail.checkDueDate || "",
         paymentNumber: row.paymentNumber || "",
         comments: detail.description || "",
-        paymentType: row.paymentType || "", // Ensure 'paymentType' is correctly set
+        paymentType: row.paymentType || "",
       });
     }
   }, [row]);
@@ -75,31 +75,49 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     return new Intl.NumberFormat().format(value);
   };
 
-  const handleSave = () => {
-    const updatedRow = {
-      ...row,
-      supplierName: rowData.supplier,
+  const handleSave = async () => {
+    const payload = {
+      supplierId: row.supplierId,
       date: rowData.date,
-      type: rowData.type,
-      paymentNumber: rowData.paymentNumber,
+      invoiceId: rowData.paymentNumber,
       paymentType: rowData.paymentType,
+      type: rowData.type,
       details: [
         {
-          ...row.details?.[0],
-          amount: rowData.amount,
+          amount: parseFloat(rowData.amount),
           currency: rowData.currency,
           exchangeRate: rowData.exchangeRate,
-          amountExchanged: rowData.amountExchanged,
           checkNumber: rowData.checkNumber,
-          bankName: rowData.bankName,
+          checkDate: rowData.date,
           checkDueDate: rowData.dueDate,
+          bankName: rowData.bankName,
           description: rowData.comments,
         },
       ],
     };
 
-    onSave(updatedRow);
-    onClose();
+    try {
+      const response = await fetch(
+        `http://localhost:3000/payment-vouchers/${row.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update payment voucher");
+      }
+
+      const updatedRow = await response.json();
+      onSave(updatedRow); // Update parent state with the updated row
+      onClose(); // Close the modal
+    } catch (error) {
+      console.error("Error updating payment voucher:", error.message);
+    }
   };
 
   return (
