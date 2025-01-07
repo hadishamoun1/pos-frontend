@@ -152,7 +152,8 @@ const PaymentsPage = () => {
               <th className="payment-voucher-select">Select</th>
               <th className="payment-voucher-supplier">Supplier</th>
               <th className="payment-voucher-amount">Amount</th>
-              <th className="payment-voucher-currency">Currency</th>
+              <th className="payment-voucher-payment-type">Pmt Type</th>{" "}
+              {/* Moved here */}
               <th className="payment-voucher-date">Date</th>
               <th className="payment-voucher-type">Type</th>
               <th className="payment-voucher-exchange-rate">Ex Rate</th>
@@ -162,7 +163,8 @@ const PaymentsPage = () => {
               <th className="payment-voucher-due-date">Due Date</th>
               <th className="payment-voucher-payment-number">Payment #</th>
               <th className="payment-voucher-comments">Comment</th>
-              <th className="payment-voucher-payment-type">Pmt Type</th>
+              <th className="payment-voucher-currency">Currency</th>{" "}
+              {/* Moved here */}
               <th className="payment-voucher-date-created">Date Created</th>
               <th className="payment-voucher-date-modified">Date Modified</th>
               <th className="payment-voucher-done-by">Done By</th>
@@ -182,9 +184,10 @@ const PaymentsPage = () => {
                 <td className="payment-voucher-amount">
                   {row.details[0]?.amount}
                 </td>
-                <td className="payment-voucher-currency">
-                  {row.details[0]?.currency}
-                </td>
+                <td className="payment-voucher-payment-type">
+                  {row.paymentType}
+                </td>{" "}
+                {/* Moved here */}
                 <td className="payment-voucher-date">{row.date}</td>
                 <td className="payment-voucher-type">{row.type}</td>
                 <td className="payment-voucher-exchange-rate">
@@ -208,9 +211,10 @@ const PaymentsPage = () => {
                 <td className="payment-voucher-comments">
                   {row.details[0]?.description}
                 </td>
-                <td className="payment-voucher-payment-type">
-                  {row.paymentType}
-                </td>
+                <td className="payment-voucher-currency">
+                  {row.details[0]?.currency}
+                </td>{" "}
+                {/* Moved here */}
                 <td className="payment-voucher-date-created">{row.date}</td>
                 <td className="payment-voucher-date-modified">{row.date}</td>
                 <td className="payment-voucher-done-by">{row.doneBy}</td>
