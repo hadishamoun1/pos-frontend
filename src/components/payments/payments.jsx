@@ -7,6 +7,7 @@ const PaymentsPage = () => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedRows, setSelectedRows] = useState([]);
 
   // Fetch payment vouchers from the API
   useEffect(() => {
@@ -32,6 +33,15 @@ const PaymentsPage = () => {
     fetchPaymentVouchers();
   }, []);
 
+  // Handle checkbox selection
+  const handleRowSelect = (id) => {
+    setSelectedRows((prevSelectedRows) =>
+      prevSelectedRows.includes(id)
+        ? prevSelectedRows.filter((rowId) => rowId !== id)
+        : [...prevSelectedRows, id]
+    );
+  };
+
   return (
     <div className="payment-voucher-container">
       {/* Action Buttons */}
@@ -54,6 +64,7 @@ const PaymentsPage = () => {
         <table className="payment-voucher-table">
           <thead>
             <tr>
+              <th className="payment-voucher-select">Select</th>
               <th className="payment-voucher-supplier">Supplier</th>
               <th className="payment-voucher-amount">Amount</th>
               <th className="payment-voucher-currency">Currency</th>
@@ -75,6 +86,13 @@ const PaymentsPage = () => {
           <tbody>
             {tableData.map((row, index) => (
               <tr key={index}>
+                <td className="payment-voucher-select">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.includes(row.id)}
+                    onChange={() => handleRowSelect(row.id)}
+                  />
+                </td>
                 <td className="payment-voucher-supplier">{row.supplierName}</td>
                 <td className="payment-voucher-amount">
                   {row.details[0]?.amount}

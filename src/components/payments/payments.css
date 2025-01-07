@@ -226,3 +226,14 @@
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
 }
+.payment-voucher-select {
+  text-align: center;
+  width: 58px;
+  vertical-align: middle;
+}
+
+.payment-voucher-select input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0 auto;
+  display: block;
+}
