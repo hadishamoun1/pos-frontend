@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect } from "react"; // Fix React hooks import
 import "./payments.css";
-import PaymentsModal from "./newPaymentModal";
+import PaymentsModal from "./newPaymentModal"
+
+
+import EditPaymentModal from "./editPaymentModal"; // Import the edit modal component
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for edit modal
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
+  const [rowToEdit, setRowToEdit] = useState(null); // State for the row being edited
 
   // Fetch payment vouchers from the API
   useEffect(() => {
@@ -42,6 +48,25 @@ const PaymentsPage = () => {
     );
   };
 
+  // Handle Edit Button Click
+  const handleEditClick = () => {
+    if (selectedRows.length !== 1) {
+      alert("Please select exactly one row to edit.");
+      return;
+    }
+    const selectedRowData = tableData.find((row) => row.id === selectedRows[0]);
+    setRowToEdit(selectedRowData);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Save from Edit Modal
+  const handleSaveEdit = (updatedRow) => {
+    setTableData((prevData) =>
+      prevData.map((row) => (row.id === updatedRow.id ? updatedRow : row))
+    );
+    setIsEditModalOpen(false);
+  };
+
   return (
     <div className="payment-voucher-container">
       {/* Action Buttons */}
@@ -52,7 +77,9 @@ const PaymentsPage = () => {
         >
           New
         </button>
-        <button className="payment-voucher-edit-btn">Edit</button>
+        <button className="payment-voucher-edit-btn" onClick={handleEditClick}>
+          Edit
+        </button>
         <button className="payment-voucher-delete-btn">Delete</button>
       </div>
 
@@ -135,8 +162,15 @@ const PaymentsPage = () => {
         </table>
       )}
 
-      {/* Modal */}
+      {/* Modals */}
       {isModalOpen && <PaymentsModal onClose={() => setIsModalOpen(false)} />}
+      {isEditModalOpen && rowToEdit && (
+        <EditPaymentModal
+          row={rowToEdit}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </div>
   );
 };
