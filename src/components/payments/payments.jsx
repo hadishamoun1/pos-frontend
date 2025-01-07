@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from "react"; // Fix React hooks import
 import "./payments.css";
-import PaymentsModal from "./newPaymentModal"
-
-
-import EditPaymentModal from "./editPaymentModal"; // Import the edit modal component
+import PaymentsModal from "./newPaymentModal";
+import EditPaymentModal from "./editPaymentModal";
+import NotificationModal from "../recievables/NotificationModal"; // Import the notification modal
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,28 +12,29 @@ const PaymentsPage = () => {
   const [error, setError] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
   const [rowToEdit, setRowToEdit] = useState(null); // State for the row being edited
+  const [notification, setNotification] = useState(null); // State for notification modal
 
   // Fetch payment vouchers from the API
-  useEffect(() => {
-    const fetchPaymentVouchers = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const response = await fetch(
-          "http://localhost:3000/payment-vouchers/v1/formatted"
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch payment vouchers");
-        }
-        const data = await response.json();
-        setTableData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchPaymentVouchers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await fetch(
+        "http://localhost:3000/payment-vouchers/v1/formatted"
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch payment vouchers");
       }
-    };
+      const data = await response.json();
+      setTableData(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPaymentVouchers();
   }, []);
 
@@ -59,12 +58,71 @@ const PaymentsPage = () => {
     setIsEditModalOpen(true);
   };
 
-  // Handle Save from Edit Modal
-  const handleSaveEdit = (updatedRow) => {
-    setTableData((prevData) =>
-      prevData.map((row) => (row.id === updatedRow.id ? updatedRow : row))
-    );
-    setIsEditModalOpen(false);
+  const handleSaveEdit = async (updatedRow) => {
+    try {
+      // Send the updated row to the API
+      const response = await fetch(
+        `http://localhost:3000/payment-vouchers/${updatedRow.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedRow),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update payment voucher");
+      }
+
+      // Get the updated data from the API response
+      const updatedData = await response.json();
+
+      console.log("Updated Data:", updatedData); // Debugging
+
+      // Update the tableData state with the updated row
+      setTableData((prevData) =>
+        prevData.map((row) =>
+          row.id === updatedData.id
+            ? {
+                ...row,
+                supplierName:
+                  updatedData.supplier?.supplierName || row.supplierName,
+                date: updatedData.date,
+                paymentType: updatedData.paymentType,
+                type: updatedData.type,
+                details: updatedData.details || row.details, // Merge details
+              }
+            : row
+        )
+      );
+
+      console.log("Updated Table Data:", tableData); // Debugging
+
+      // Close the edit modal
+      setIsEditModalOpen(false);
+
+      // Show success notification
+      setNotification({
+        type: "success",
+        message: "Payment voucher updated successfully!",
+      });
+    } catch (error) {
+      console.error(error.message);
+      setNotification({
+        type: "error",
+        message: error.message || "Failed to update payment voucher.",
+      });
+    }
+  };
+
+  // Handle notification close
+  const handleNotificationClose = () => {
+    setNotification(null); // Close the notification modal
+    if (notification?.type === "success") {
+      setIsEditModalOpen(false); // Close the edit modal only on success
+    }
   };
 
   return (
@@ -169,6 +227,13 @@ const PaymentsPage = () => {
           row={rowToEdit}
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveEdit}
+        />
+      )}
+      {notification && (
+        <NotificationModal
+          type={notification.type}
+          message={notification.message}
+          onClose={handleNotificationClose}
         />
       )}
     </div>

@@ -18,7 +18,6 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     paymentType: "",
   });
 
-  // Initialize rowData with row
   useEffect(() => {
     if (row) {
       const detail = row.details?.[0] || {};
@@ -75,11 +74,16 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     return new Intl.NumberFormat().format(value);
   };
 
-  const handleSave = async () => {
-    const payload = {
+  const handleSave = () => {
+    const updatedRow = {
+      ...row,
       supplierId: row.supplierId,
+      supplierName: rowData.supplierName,
+
       date: rowData.date,
-      invoiceId: rowData.paymentNumber,
+      invoiceId: rowData.invoiceId,
+      paymentNumber: rowData.paymentNumber,
+
       paymentType: rowData.paymentType,
       type: rowData.type,
       details: [
@@ -96,28 +100,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
       ],
     };
 
-    try {
-      const response = await fetch(
-        `http://localhost:3000/payment-vouchers/${row.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update payment voucher");
-      }
-
-      const updatedRow = await response.json();
-      onSave(updatedRow); // Update parent state with the updated row
-      onClose(); // Close the modal
-    } catch (error) {
-      console.error("Error updating payment voucher:", error.message);
-    }
+    onSave(updatedRow); // Pass updated data to PaymentsPage
   };
 
   return (
