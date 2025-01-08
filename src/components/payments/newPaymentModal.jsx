@@ -46,6 +46,12 @@ const PaymentsModal = ({ onClose }) => {
   const handleInputChange = (index, e) => {
     const { name, value } = e.target;
     const newRows = [...rows];
+
+    if (name === "paymentType") {
+      // Update currency based on paymentType
+      newRows[index].currency = value.includes("USD") ? "USD" : "LL";
+    }
+
     newRows[index][name] =
       name === "amount" || name === "exchangeRate" || name === "amountExchanged"
         ? value.replace(/,/g, "")
@@ -65,11 +71,6 @@ const PaymentsModal = ({ onClose }) => {
       if (newRows[index].currency === "LL" && amountExchanged > 0) {
         newRows[index].exchangeRate = (amount / amountExchanged).toFixed(2);
       }
-    }
-
-    if (name === "currency" && value === "USD") {
-      newRows[index].exchangeRate = "1";
-      newRows[index].amountExchanged = amount.toFixed(2);
     }
 
     if (newRows[index].currency === "USD" && name === "amount") {
@@ -138,6 +139,7 @@ const PaymentsModal = ({ onClose }) => {
         supplierId: row.supplierId,
         date: row.date,
         paymentNumber: row.paymentNumber,
+        invoiceId: "",
         paymentType: row.paymentType,
         type: row.type,
         doneBy: "", // JWT will add this later
@@ -206,7 +208,6 @@ const PaymentsModal = ({ onClose }) => {
               <th className="payment-voucher-modal-supplier">Supplier</th>
               <th className="payment-voucher-modal-payment-type">Pmt Type</th>
               <th className="payment-voucher-modal-currency">Currency</th>
-              
               <th className="payment-voucher-modal-amount">Amount</th>
               <th className="payment-voucher-modal-date">Date</th>
               <th className="payment-voucher-modal-type">Type</th>
@@ -221,7 +222,6 @@ const PaymentsModal = ({ onClose }) => {
                 Payment #
               </th>
               <th className="payment-voucher-modal-comments">Comment</th>
-              
             </tr>
           </thead>
           <tbody>
@@ -253,15 +253,12 @@ const PaymentsModal = ({ onClose }) => {
                   </select>
                 </td>
                 <td>
-                  <select
+                  <input
+                    type="text"
                     name="currency"
                     value={row.currency}
-                    onChange={(e) => handleInputChange(index, e)}
-                  >
-                    <option value="">Select Currency</option>
-                    <option value="USD">USD</option>
-                    <option value="LL">LL</option>
-                  </select>
+                    readOnly
+                  />
                 </td>
                 <td>
                   <input
@@ -355,7 +352,6 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Comments"
                   />
                 </td>
-               
               </tr>
             ))}
           </tbody>
