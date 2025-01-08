@@ -180,22 +180,28 @@ const PaymentsPage = () => {
   };
   return (
     <div className="payment-voucher-container">
-      <div className="payment-voucher-action-buttons">
-        <button
-          className="payment-voucher-new-btn"
-          onClick={() => setIsModalOpen(true)}
-        >
-          New
-        </button>
-        <button className="payment-voucher-edit-btn" onClick={handleEditClick}>
-          Edit
-        </button>
-        <button
-          className="payment-voucher-delete-btn"
-          onClick={handleDeleteConfirmation}
-        >
-          Delete
-        </button>
+      <div className="payment-voucher-header">
+        <h1 className="payment-voucher-title">PAYMENTS</h1>
+        <div className="payment-voucher-action-buttons">
+          <button
+            className="payment-voucher-new-btn"
+            onClick={() => setIsModalOpen(true)}
+          >
+            New
+          </button>
+          <button
+            className="payment-voucher-edit-btn"
+            onClick={handleEditClick}
+          >
+            Edit
+          </button>
+          <button
+            className="payment-voucher-delete-btn"
+            onClick={handleDeleteConfirmation}
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {error && <p className="error-message">{error}</p>}

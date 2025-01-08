@@ -237,3 +237,17 @@
   margin: 0 auto;
   display: block;
 }
+.payment-voucher-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+}
+
+.payment-voucher-title {
+  font-size: 45px;
+  font-weight:bolder;
+  color: #007bff;
+  margin-left: 7px;
+}
+
