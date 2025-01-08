@@ -21,10 +21,11 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
   useEffect(() => {
     if (row) {
       const detail = row.details?.[0] || {};
+      const derivedCurrency = row.paymentType?.includes("USD") ? "USD" : "LL"; // Derive currency from paymentType
       setRowData({
         supplier: row.supplierName || "",
         amount: detail.amount || "",
-        currency: detail.currency || "",
+        currency: derivedCurrency,
         date: row.date || "",
         type: row.type || "",
         exchangeRate: detail.exchangeRate || "1",
@@ -52,6 +53,11 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
             ? value.replace(/,/g, "")
             : value,
       };
+
+      // Update currency based on paymentType
+      if (name === "paymentType") {
+        updatedData.currency = value.includes("USD") ? "USD" : "LL";
+      }
 
       if (updatedData.currency === "USD") {
         updatedData.exchangeRate = "1";
@@ -159,15 +165,12 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                 </select>
               </td>
               <td>
-                <select
+                <input
+                  type="text"
                   name="currency"
                   value={rowData.currency}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Currency</option>
-                  <option value="USD">USD</option>
-                  <option value="LL">LL</option>
-                </select>
+                  disabled
+                />
               </td>
               <td>
                 <input
