@@ -137,9 +137,9 @@ const PaymentsModal = ({ onClose }) => {
       const payload = rows.map((row) => ({
         supplierId: row.supplierId,
         date: row.date,
-        invoiceId: row.paymentNumber,
-        paymentType: row.type,
-        type: row.paymentType,
+        paymentNumber: row.paymentNumber,
+        paymentType: row.paymentType,
+        type: row.type,
         doneBy: "", // JWT will add this later
         details: [
           {
@@ -204,7 +204,9 @@ const PaymentsModal = ({ onClose }) => {
           <thead>
             <tr>
               <th className="payment-voucher-modal-supplier">Supplier</th>
+              <th className="payment-voucher-modal-payment-type">Pmt Type</th>
               <th className="payment-voucher-modal-currency">Currency</th>
+              
               <th className="payment-voucher-modal-amount">Amount</th>
               <th className="payment-voucher-modal-date">Date</th>
               <th className="payment-voucher-modal-type">Type</th>
@@ -219,7 +221,7 @@ const PaymentsModal = ({ onClose }) => {
                 Payment #
               </th>
               <th className="payment-voucher-modal-comments">Comment</th>
-              <th className="payment-voucher-modal-payment-type">Pmt Type</th>
+              
             </tr>
           </thead>
           <tbody>
@@ -236,6 +238,19 @@ const PaymentsModal = ({ onClose }) => {
                     onClick={() => openSupplierModal(index)}
                     placeholder="Select Supplier"
                   />
+                </td>
+                <td>
+                  <select
+                    name="paymentType"
+                    value={row.paymentType}
+                    onChange={(e) => handleInputChange(index, e)}
+                  >
+                    <option value="">Select</option>
+                    <option value="Cash USD">Cash USD</option>
+                    <option value="Cash LL">Cash LL</option>
+                    <option value="Check USD">Check USD</option>
+                    <option value="Check LL">Check LL</option>
+                  </select>
                 </td>
                 <td>
                   <select
@@ -272,10 +287,8 @@ const PaymentsModal = ({ onClose }) => {
                     onChange={(e) => handleInputChange(index, e)}
                   >
                     <option value="">Select</option>
-                    <option value="Cash USD">Cash USD</option>
-                    <option value="Cash LL">Cash LL</option>
-                    <option value="Check USD">Check USD</option>
-                    <option value="Check LL">Check LL</option>
+                    <option value="S">S</option>
+                    <option value="G">G</option>
                   </select>
                 </td>
                 <td>
@@ -342,17 +355,7 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Comments"
                   />
                 </td>
-                <td>
-                  <select
-                    name="paymentType"
-                    value={row.paymentType}
-                    onChange={(e) => handleInputChange(index, e)}
-                  >
-                    <option value="">Select</option>
-                    <option value="S">S</option>
-                    <option value="G">G</option>
-                  </select>
-                </td>
+               
               </tr>
             ))}
           </tbody>
