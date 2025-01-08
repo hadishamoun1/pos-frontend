@@ -84,15 +84,19 @@ const PaymentsPage = () => {
       // Update the tableData state with the updated row
       setTableData((prevData) =>
         prevData.map((row) =>
-          row.id === updatedData.id
+          row.id === updatedRow.id
             ? {
                 ...row,
-                supplierName:
-                  updatedData.supplier?.supplierName || row.supplierName,
-                date: updatedData.date,
-                paymentType: updatedData.paymentType,
-                type: updatedData.type,
-                details: updatedData.details || row.details, // Merge details
+                supplierName: updatedRow.supplierName,
+                date: updatedRow.date,
+                paymentType: updatedRow.paymentType,
+                type: updatedRow.type,
+                details: updatedRow.details,
+                // Extract and assign the values directly from the `updatedRow`
+                amount: `${updatedRow.details?.[0]?.amount}.00` || "0.00",
+                currency: updatedRow.details?.[0]?.currency || "USD",
+                amountExchanged:
+                  `${updatedRow.details?.[0]?.amountExchanged}.00` || "0.00",
               }
             : row
         )

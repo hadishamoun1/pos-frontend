@@ -100,6 +100,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
           checkDueDate: rowData.dueDate,
           bankName: rowData.bankName,
           description: rowData.comments,
+          amountExchanged: rowData.amountExchanged,
         },
       ],
     };
