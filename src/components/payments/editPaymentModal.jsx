@@ -78,12 +78,10 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     const updatedRow = {
       ...row,
       supplierId: row.supplierId,
-      supplierName: rowData.supplierName,
-
+      supplierName: rowData.supplier,
       date: rowData.date,
-      invoiceId: rowData.invoiceId,
+      invoiceId: rowData.invoiceId || row.paymentNumber,
       paymentNumber: rowData.paymentNumber,
-
       paymentType: rowData.paymentType,
       type: rowData.type,
       details: [
@@ -100,7 +98,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
       ],
     };
 
-    onSave(updatedRow); // Pass updated data to PaymentsPage
+    onSave(updatedRow);
   };
 
   return (
@@ -122,6 +120,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
           <thead>
             <tr>
               <th className="edit-payment-modal-supplier">Supplier</th>
+              <th className="edit-payment-modal-payment-type">Pmt Type</th>
               <th className="edit-payment-modal-currency">Currency</th>
               <th className="edit-payment-modal-amount">Amount</th>
               <th className="edit-payment-modal-date">Date</th>
@@ -133,7 +132,6 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
               <th className="edit-payment-modal-due-date">Due Date</th>
               <th className="edit-payment-modal-payment-number">Payment #</th>
               <th className="edit-payment-modal-comments">Comment</th>
-              <th className="edit-payment-modal-payment-type">Pmt Type</th>
             </tr>
           </thead>
           <tbody>
@@ -146,6 +144,19 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   onChange={handleInputChange}
                   placeholder="Enter Supplier"
                 />
+              </td>
+              <td>
+                <select
+                  name="paymentType"
+                  value={rowData.paymentType}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select</option>
+                  <option value="Cash USD">Cash USD</option>
+                  <option value="Cash LL">Cash LL</option>
+                  <option value="Check USD">Check USD</option>
+                  <option value="Check LL">Check LL</option>
+                </select>
               </td>
               <td>
                 <select
@@ -254,19 +265,6 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   onChange={handleInputChange}
                   placeholder="Enter Comments"
                 />
-              </td>
-              <td>
-                <select
-                  name="paymentType"
-                  value={rowData.paymentType}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select</option>
-                  <option value="Cash USD">Cash USD</option>
-                  <option value="Cash LL">Cash LL</option>
-                  <option value="Check USD">Check USD</option>
-                  <option value="Check LL">Check LL</option>
-                </select>
               </td>
             </tr>
           </tbody>
