@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from "react"; // Fix React hooks import
+import React, { useState, useEffect } from "react";
 import "./payments.css";
 import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
-import NotificationModal from "../recievables/NotificationModal"; // Import the notification modal
+import NotificationModal from "../recievables/NotificationModal";
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for edit modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
-  const [rowToEdit, setRowToEdit] = useState(null); // State for the row being edited
-  const [notification, setNotification] = useState(null); // State for notification modal
+  const [rowToEdit, setRowToEdit] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  // Fetch payment vouchers from the API
   const fetchPaymentVouchers = async () => {
     try {
       setLoading(true);
@@ -38,7 +37,6 @@ const PaymentsPage = () => {
     fetchPaymentVouchers();
   }, []);
 
-  // Handle checkbox selection
   const handleRowSelect = (id) => {
     setSelectedRows((prevSelectedRows) =>
       prevSelectedRows.includes(id)
@@ -47,10 +45,12 @@ const PaymentsPage = () => {
     );
   };
 
-  // Handle Edit Button Click
   const handleEditClick = () => {
     if (selectedRows.length !== 1) {
-      alert("Please select exactly one row to edit.");
+      setNotification({
+        type: "error",
+        message: "Please select exactly one row to edit.",
+      });
       return;
     }
     const selectedRowData = tableData.find((row) => row.id === selectedRows[0]);
@@ -121,17 +121,65 @@ const PaymentsPage = () => {
     }
   };
 
-  // Handle notification close
-  const handleNotificationClose = () => {
-    setNotification(null); // Close the notification modal
-    if (notification?.type === "success") {
-      setIsEditModalOpen(false); // Close the edit modal only on success
+  const handleDeleteConfirmation = () => {
+    if (selectedRows.length === 0) {
+      setNotification({
+        type: "error",
+        message: "Please select at least one row to delete.",
+      });
+      return;
+    }
+    setNotification({
+      type: "warning",
+      message: "Are you sure you want to delete the selected voucher(s)?",
+      onConfirm: handleDelete,
+      confirmLabel: "Yes",
+      cancelLabel: "No",
+      onClose: () => setNotification(null),
+    });
+  };
+
+  const handleDelete = async () => {
+    try {
+      await Promise.all(
+        selectedRows.map((id) =>
+          fetch(`http://localhost:3000/payment-vouchers/${id}`, {
+            method: "DELETE",
+          })
+        )
+      );
+
+      setTableData((prevData) =>
+        prevData.filter((row) => !selectedRows.includes(row.id))
+      );
+
+      setSelectedRows([]);
+
+      setNotification({
+        type: "success",
+        message: "Selected payment voucher(s) deleted successfully!",
+      });
+    } catch (error) {
+      setNotification({
+        type: "error",
+        message: error.message || "Failed to delete payment voucher(s).",
+      });
     }
   };
 
+  const handleNotificationClose = () => {
+    setNotification(null);
+  };
+
+  const formatNumber = (value) => {
+    if (isNaN(value) || value === null) return "0.00";
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
   return (
     <div className="payment-voucher-container">
-      {/* Action Buttons */}
       <div className="payment-voucher-action-buttons">
         <button
           className="payment-voucher-new-btn"
@@ -142,10 +190,14 @@ const PaymentsPage = () => {
         <button className="payment-voucher-edit-btn" onClick={handleEditClick}>
           Edit
         </button>
-        <button className="payment-voucher-delete-btn">Delete</button>
+        <button
+          className="payment-voucher-delete-btn"
+          onClick={handleDeleteConfirmation}
+        >
+          Delete
+        </button>
       </div>
 
-      {/* Error and Loading */}
       {error && <p className="error-message">{error}</p>}
       {loading ? (
         <p className="loading-message">Loading payment vouchers...</p>
@@ -156,8 +208,7 @@ const PaymentsPage = () => {
               <th className="payment-voucher-select">Select</th>
               <th className="payment-voucher-supplier">Supplier</th>
               <th className="payment-voucher-amount">Amount</th>
-              <th className="payment-voucher-payment-type">Pmt Type</th>{" "}
-              {/* Moved here */}
+              <th className="payment-voucher-payment-type">Pmt Type</th>
               <th className="payment-voucher-date">Date</th>
               <th className="payment-voucher-type">Type</th>
               <th className="payment-voucher-exchange-rate">Ex Rate</th>
@@ -167,8 +218,7 @@ const PaymentsPage = () => {
               <th className="payment-voucher-due-date">Due Date</th>
               <th className="payment-voucher-payment-number">Payment #</th>
               <th className="payment-voucher-comments">Comment</th>
-              <th className="payment-voucher-currency">Currency</th>{" "}
-              {/* Moved here */}
+              <th className="payment-voucher-currency">Currency</th>
               <th className="payment-voucher-date-created">Date Created</th>
               <th className="payment-voucher-date-modified">Date Modified</th>
               <th className="payment-voucher-done-by">Done By</th>
@@ -186,19 +236,18 @@ const PaymentsPage = () => {
                 </td>
                 <td className="payment-voucher-supplier">{row.supplierName}</td>
                 <td className="payment-voucher-amount">
-                  {row.details[0]?.amount}
+                  {formatNumber(row.details[0]?.amount)}
                 </td>
                 <td className="payment-voucher-payment-type">
                   {row.paymentType}
-                </td>{" "}
-                {/* Moved here */}
+                </td>
                 <td className="payment-voucher-date">{row.date}</td>
                 <td className="payment-voucher-type">{row.type}</td>
                 <td className="payment-voucher-exchange-rate">
-                  {row.details[0]?.exchangeRate}
+                  {formatNumber(row.details[0]?.exchangeRate)}
                 </td>
                 <td className="payment-voucher-amount-exchanged">
-                  {row.details[0]?.amountExchanged}
+                  {formatNumber(row.details[0]?.amountExchanged)}
                 </td>
                 <td className="payment-voucher-check-number">
                   {row.details[0]?.checkNumber}
@@ -217,8 +266,7 @@ const PaymentsPage = () => {
                 </td>
                 <td className="payment-voucher-currency">
                   {row.details[0]?.currency}
-                </td>{" "}
-                {/* Moved here */}
+                </td>
                 <td className="payment-voucher-date-created">{row.date}</td>
                 <td className="payment-voucher-date-modified">{row.date}</td>
                 <td className="payment-voucher-done-by">{row.doneBy}</td>
@@ -228,7 +276,6 @@ const PaymentsPage = () => {
         </table>
       )}
 
-      {/* Modals */}
       {isModalOpen && <PaymentsModal onClose={() => setIsModalOpen(false)} />}
       {isEditModalOpen && rowToEdit && (
         <EditPaymentModal
@@ -241,7 +288,10 @@ const PaymentsPage = () => {
         <NotificationModal
           type={notification.type}
           message={notification.message}
-          onClose={handleNotificationClose}
+          onClose={notification.onClose || handleNotificationClose}
+          onConfirm={notification.onConfirm}
+          confirmLabel={notification.confirmLabel || "OK"}
+          cancelLabel={notification.cancelLabel}
         />
       )}
     </div>
