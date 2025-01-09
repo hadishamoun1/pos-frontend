@@ -8,6 +8,7 @@ const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [tableData, setTableData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]); // For filtered data
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
@@ -26,6 +27,7 @@ const PaymentsPage = () => {
       }
       const data = await response.json();
       setTableData(data);
+      setFilteredData(data); // Set both tableData and filteredData
     } catch (err) {
       setError(err.message);
     } finally {
@@ -60,7 +62,6 @@ const PaymentsPage = () => {
 
   const handleSaveEdit = async (updatedRow) => {
     try {
-      // Send the updated row to the API
       const response = await fetch(
         `http://localhost:3000/payment-vouchers/${updatedRow.id}`,
         {
@@ -76,44 +77,26 @@ const PaymentsPage = () => {
         throw new Error("Failed to update payment voucher");
       }
 
-      // Get the updated data from the API response
       const updatedData = await response.json();
 
-      console.log("Updated Data:", updatedData); // Debugging
-
-      // Update the tableData state with the updated row
       setTableData((prevData) =>
         prevData.map((row) =>
-          row.id === updatedRow.id
-            ? {
-                ...row,
-                supplierName: updatedRow.supplierName,
-                date: updatedRow.date,
-                paymentType: updatedRow.paymentType,
-                type: updatedRow.type,
-                details: updatedRow.details,
-                // Extract and assign the values directly from the `updatedRow`
-                amount: `${updatedRow.details?.[0]?.amount}.00` || "0.00",
-                currency: updatedRow.details?.[0]?.currency || "USD",
-                amountExchanged:
-                  `${updatedRow.details?.[0]?.amountExchanged}.00` || "0.00",
-              }
-            : row
+          row.id === updatedRow.id ? { ...row, ...updatedRow } : row
         )
       );
 
-      console.log("Updated Table Data:", tableData); // Debugging
+      setFilteredData((prevData) =>
+        prevData.map((row) =>
+          row.id === updatedRow.id ? { ...row, ...updatedRow } : row
+        )
+      );
 
-      // Close the edit modal
       setIsEditModalOpen(false);
-
-      // Show success notification
       setNotification({
         type: "success",
         message: "Payment voucher updated successfully!",
       });
     } catch (error) {
-      console.error(error.message);
       setNotification({
         type: "error",
         message: error.message || "Failed to update payment voucher.",
@@ -153,8 +136,11 @@ const PaymentsPage = () => {
         prevData.filter((row) => !selectedRows.includes(row.id))
       );
 
-      setSelectedRows([]);
+      setFilteredData((prevData) =>
+        prevData.filter((row) => !selectedRows.includes(row.id))
+      );
 
+      setSelectedRows([]);
       setNotification({
         type: "success",
         message: "Selected payment voucher(s) deleted successfully!",
@@ -171,6 +157,12 @@ const PaymentsPage = () => {
     setNotification(null);
   };
 
+  const handleTodayFilter = () => {
+    const today = new Date().toISOString().split("T")[0]; // Get today's date
+    const filtered = tableData.filter((row) => row.date === today);
+    setFilteredData(filtered);
+  };
+
   const formatNumber = (value) => {
     if (isNaN(value) || value === null) return "0.00";
     return new Intl.NumberFormat("en-US", {
@@ -178,10 +170,19 @@ const PaymentsPage = () => {
       maximumFractionDigits: 2,
     }).format(value);
   };
+
   return (
     <div className="payment-voucher-container">
       <div className="payment-voucher-header">
-        <h1 className="payment-voucher-title">PAYMENTS</h1>
+        <div className="payment-voucher-header-content">
+          <h1 className="payment-voucher-title">PAYMENTS</h1>
+          <button
+            className="payment-voucher-today-btn"
+            onClick={handleTodayFilter}
+          >
+            Today
+          </button>
+        </div>
         <div className="payment-voucher-action-buttons">
           <button
             className="payment-voucher-new-btn"
@@ -231,7 +232,7 @@ const PaymentsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, index) => (
+            {filteredData.map((row, index) => (
               <tr key={index}>
                 <td className="payment-voucher-select">
                   <input

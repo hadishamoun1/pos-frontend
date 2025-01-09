@@ -28,6 +28,16 @@
   cursor: pointer;
   transition: all 0.3s ease;
 }
+.payment-voucher-today-btn {
+  margin-top: 20px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
 
 .payment-voucher-new-btn {
   background-color: #007bff;
@@ -35,6 +45,14 @@
 }
 
 .payment-voucher-new-btn:hover {
+  background-color: #0056b3;
+}
+.payment-voucher-today-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.payment-voucher-today-btn:hover {
   background-color: #0056b3;
 }
 
@@ -241,13 +259,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
 }
 
 .payment-voucher-title {
   font-size: 45px;
-  font-weight:bolder;
+  font-weight: bolder;
   color: #007bff;
   margin-left: 7px;
 }
-
