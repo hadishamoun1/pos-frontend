@@ -275,7 +275,7 @@ const AccountingPage = () => {
                 <th>Customer Name</th>
                 <th>Currency</th>
                 <th>Exchange Rate</th>
-                <th>Amount Exchanged</th>
+                <th>Amount Ex</th>
                 <th>Cash Number</th>
                 <th>Date</th>
                 <th>Invoice Number</th>

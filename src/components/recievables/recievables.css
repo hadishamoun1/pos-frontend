@@ -78,12 +78,21 @@
   table-layout: fixed; /* Ensures consistent column widths */
 }
 
-.accounting-table th,
-.accounting-table td {
-  padding: 1rem;
+.accounting-table th {
   border-bottom: 1px solid #f1f1f1;
   text-align: center;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  color: #555;
+  border: 1px solid #ddd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accounting-table td {
+  padding: 0.7rem;
+  border-bottom: 1px solid #f1f1f1;
+  text-align: center;
+  font-size: 1.1rem;
   color: #555;
   border: 1px solid #ddd;
   overflow: hidden;
