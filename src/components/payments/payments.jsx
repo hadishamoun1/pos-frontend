@@ -24,6 +24,8 @@ const PaymentsPage = () => {
     value: null,
   });
 
+  const [filters, setFilters] = useState({}); // State to track active filters
+
   const fetchPaymentVouchers = async () => {
     try {
       setLoading(true);
@@ -47,6 +49,30 @@ const PaymentsPage = () => {
   useEffect(() => {
     fetchPaymentVouchers();
   }, []);
+
+  const fetchFilteredData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      // Build query string from active filters
+      const queryString = new URLSearchParams(filters).toString();
+      const response = await fetch(
+        `http://localhost:3000/payment-vouchers/v1/filter?${queryString}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch filtered payment vouchers");
+      }
+
+      const { data } = await response.json(); // Assuming paginated API
+      setFilteredData(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRowSelect = (id) => {
     setSelectedRows((prevSelectedRows) =>
@@ -166,14 +192,13 @@ const PaymentsPage = () => {
     setNotification(null);
   };
 
-  const handleTodayFilter = () => {
-    const today = new Date().toISOString().split("T")[0]; // Get today's date
-    const filtered = tableData.filter((row) => row.date === today);
-    setFilteredData(filtered);
+  const handleFilterApply = () => {
+    fetchFilteredData();
   };
 
   const handleClearFilters = () => {
-    setFilteredData(tableData); // Reset to original data
+    setFilters({});
+    fetchPaymentVouchers(); // Reset to original data
   };
 
   const handleContextMenu = (e, column, value) => {
@@ -191,17 +216,8 @@ const PaymentsPage = () => {
     const { column, value } = contextMenu;
     if (!column || value === null) return;
 
-    const filtered = tableData.filter((row) => {
-      const columnValue =
-        column === "amount" ||
-        column === "exchangeRate" ||
-        column === "amountExchanged"
-          ? row.details[0]?.[column]
-          : row[column];
-      return columnValue === value;
-    });
-
-    setFilteredData(filtered);
+    setFilters((prevFilters) => ({ ...prevFilters, [column]: value }));
+    
     closeContextMenu();
   };
 
@@ -223,10 +239,10 @@ const PaymentsPage = () => {
         <div className="payment-voucher-header-content">
           <h1 className="payment-voucher-title">PAYMENTS</h1>
           <button
-            className="payment-voucher-today-btn"
-            onClick={handleTodayFilter}
+            className="payment-voucher-filter-btn"
+            onClick={handleFilterApply}
           >
-            Today
+            Apply Filters
           </button>
           <button
             className="payment-voucher-clear-btn"
@@ -296,7 +312,7 @@ const PaymentsPage = () => {
                 <td
                   className="payment-voucher-supplier"
                   onContextMenu={(e) =>
-                    handleContextMenu(e, "supplierName", row.supplierName)
+                    handleContextMenu(e, "supplierId", row.supplierId)
                   }
                 >
                   {row.supplierName}
@@ -304,7 +320,11 @@ const PaymentsPage = () => {
                 <td
                   className="payment-voucher-amount"
                   onContextMenu={(e) =>
-                    handleContextMenu(e, "amount", row.details[0]?.amount)
+                    handleContextMenu(
+                      e,
+                      "amount",
+                      row.details[0]?.amount 
+                    )
                   }
                 >
                   {formatNumber(row.details[0]?.amount)}
@@ -353,36 +373,13 @@ const PaymentsPage = () => {
                 >
                   {formatNumber(row.details[0]?.amountExchanged)}
                 </td>
-                <td
-                  className="payment-voucher-check-number"
-                  onContextMenu={(e) =>
-                    handleContextMenu(
-                      e,
-                      "checkNumber",
-                      row.details[0]?.checkNumber
-                    )
-                  }
-                >
+                <td className="payment-voucher-check-number">
                   {row.details[0]?.checkNumber}
                 </td>
-                <td
-                  className="payment-voucher-bank-name"
-                  onContextMenu={(e) =>
-                    handleContextMenu(e, "bankName", row.details[0]?.bankName)
-                  }
-                >
+                <td className="payment-voucher-bank-name">
                   {row.details[0]?.bankName}
                 </td>
-                <td
-                  className="payment-voucher-due-date"
-                  onContextMenu={(e) =>
-                    handleContextMenu(
-                      e,
-                      "checkDueDate",
-                      row.details[0]?.checkDueDate
-                    )
-                  }
-                >
+                <td className="payment-voucher-due-date">
                   {row.details[0]?.checkDueDate}
                 </td>
                 <td className="payment-voucher-payment-number">
@@ -394,8 +391,12 @@ const PaymentsPage = () => {
                 <td className="payment-voucher-currency">
                   {row.details[0]?.currency}
                 </td>
-                <td className="payment-voucher-date-created">{row.date}</td>
-                <td className="payment-voucher-date-modified">{row.date}</td>
+                <td className="payment-voucher-date-created">
+                  {row.dateCreated}
+                </td>
+                <td className="payment-voucher-date-modified">
+                  {row.dateModified}
+                </td>
                 <td className="payment-voucher-done-by">{row.doneBy}</td>
               </tr>
             ))}
@@ -408,7 +409,7 @@ const PaymentsPage = () => {
           className="context-menu"
           style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
         >
-          <button onClick={handleFilterColumn}>Filter</button>
+          <button onClick={handleFilterColumn}>Add to Filters</button>
         </div>
       )}
 
