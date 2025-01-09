@@ -14,6 +14,7 @@ const sections = [
   { name: "Cost Estimator", image: "/assets/price.webp" },
   { name: "Accounts", image: "/assets/price.webp" },
   { name: "Payments", image: "/assets/payment-voucher.webp" },
+  { name: "Transactions", image: "/assets/payment-voucher.webp" },
 ];
 
 const DashboardPage = () => {
