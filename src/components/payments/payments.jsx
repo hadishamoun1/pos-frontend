@@ -14,6 +14,9 @@ const PaymentsPage = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [rowToEdit, setRowToEdit] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1); // Tracks the current page.
+  const [pageSize] = useState(10); // Defines the number of items per page.
+  const [totalPages, setTotalPages] = useState(0); // Tracks the total number of pages.
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState({
@@ -50,13 +53,18 @@ const PaymentsPage = () => {
     fetchPaymentVouchers();
   }, []);
 
-  const fetchFilteredData = async () => {
+  const fetchFilteredData = async (append = false) => {
     try {
       setLoading(true);
       setError("");
 
-      // Build query string from active filters
-      const queryString = new URLSearchParams(filters).toString();
+      // Build the query string with filters, page, and limit.
+      const queryString = new URLSearchParams({
+        ...filters,
+        page: currentPage,
+        limit: pageSize,
+      }).toString();
+
       const response = await fetch(
         `http://localhost:3000/payment-vouchers/v1/filter?${queryString}`
       );
@@ -65,14 +73,32 @@ const PaymentsPage = () => {
         throw new Error("Failed to fetch filtered payment vouchers");
       }
 
-      const { data } = await response.json(); // Assuming paginated API
-      setFilteredData(data);
+      const { data, total } = await response.json(); // Assuming API provides `total`.
+
+      setTotalPages(Math.ceil(total / pageSize)); // Calculate the total number of pages.
+
+      if (append) {
+        // Append new data if this is a "Load More" operation.
+        setFilteredData((prevData) => [...prevData, ...data]);
+      } else {
+        // Replace data for fresh filters.
+        setFilteredData(data);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleLoadMore = () => {
+    setCurrentPage((prevPage) => prevPage + 1); // Increment the current page.
+  };
+  useEffect(() => {
+    if (Object.keys(filters).length > 0) {
+      fetchFilteredData(true); // Append data when the page changes.
+    }
+  }, [currentPage]);
 
   const handleRowSelect = (id) => {
     setSelectedRows((prevSelectedRows) =>
@@ -193,11 +219,13 @@ const PaymentsPage = () => {
   };
 
   const handleFilterApply = () => {
+    setCurrentPage(1);
     fetchFilteredData();
   };
 
   const handleClearFilters = () => {
     setFilters({});
+    setCurrentPage(1);
     fetchPaymentVouchers(); // Reset to original data
   };
 
@@ -217,7 +245,7 @@ const PaymentsPage = () => {
     if (!column || value === null) return;
 
     setFilters((prevFilters) => ({ ...prevFilters, [column]: value }));
-    
+
     closeContextMenu();
   };
 
@@ -320,11 +348,7 @@ const PaymentsPage = () => {
                 <td
                   className="payment-voucher-amount"
                   onContextMenu={(e) =>
-                    handleContextMenu(
-                      e,
-                      "amount",
-                      row.details[0]?.amount 
-                    )
+                    handleContextMenu(e, "amount", row.details[0]?.amount)
                   }
                 >
                   {formatNumber(row.details[0]?.amount)}
@@ -403,7 +427,13 @@ const PaymentsPage = () => {
           </tbody>
         </table>
       )}
-
+      {currentPage < totalPages && (
+        <div className="load-more-container">
+        <button className="load-more-btn" onClick={handleLoadMore}>
+          Load More
+        </button>
+        </div>
+      )}
       {contextMenu.visible && (
         <div
           className="context-menu"

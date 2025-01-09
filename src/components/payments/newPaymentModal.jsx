@@ -16,7 +16,6 @@ const PaymentsModal = ({ onClose }) => {
       checkNumber: "",
       bankName: "",
       dueDate: "",
-      paymentNumber: "",
       comments: "",
       paymentType: "",
     },
@@ -106,7 +105,7 @@ const PaymentsModal = ({ onClose }) => {
         checkNumber: "",
         bankName: "",
         dueDate: "",
-        paymentNumber: "",
+       
         comments: "",
         paymentType: "",
       },
@@ -138,7 +137,7 @@ const PaymentsModal = ({ onClose }) => {
       const payload = rows.map((row) => ({
         supplierId: row.supplierId,
         date: row.date,
-        paymentNumber: row.paymentNumber,
+       
         invoiceId: "",
         paymentType: row.paymentType,
         type: row.type,
@@ -218,9 +217,7 @@ const PaymentsModal = ({ onClose }) => {
               <th className="payment-voucher-modal-check-number">Check #</th>
               <th className="payment-voucher-modal-bank-name">Bank Name</th>
               <th className="payment-voucher-modal-due-date">Due Date</th>
-              <th className="payment-voucher-modal-payment-number">
-                Payment #
-              </th>
+              
               <th className="payment-voucher-modal-comments">Comment</th>
             </tr>
           </thead>
@@ -334,15 +331,7 @@ const PaymentsModal = ({ onClose }) => {
                     onChange={(e) => handleInputChange(index, e)}
                   />
                 </td>
-                <td>
-                  <input
-                    type="text"
-                    name="paymentNumber"
-                    value={row.paymentNumber}
-                    onChange={(e) => handleInputChange(index, e)}
-                    placeholder="Enter Payment Number"
-                  />
-                </td>
+                
                 <td>
                   <input
                     type="text"

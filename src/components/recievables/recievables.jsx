@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./payments.css";
+import "./recievables.css";
 import NewRecordModal from "./newRecord";
 import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";

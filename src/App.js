@@ -6,7 +6,7 @@ import LoginPage from "./components/login/login";
 import SignupPage from "./components/signup/signup";
 import DashboardPage from "./components/dashboard/dashboard";
 import POSSystemPage from "./components/pos-system/pos";
-import AccountingPage from "./components/recievables/payments";
+import AccountingPage from "./components/recievables/recievables";
 import PurchasesInvoicePage from "./components/purchases-invoice/purchases-invoice";
 import InventoryPage from "./components/inventory/inventory";
 import SuppliersPage from "./components/suppliers/suppliers";

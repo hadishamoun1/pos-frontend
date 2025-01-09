@@ -29,7 +29,7 @@
   transition: all 0.3s ease;
 }
 
-.payment-voucher-today-btn {
+.payment-voucher-filter-btn {
   margin-top: 20px;
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
@@ -50,6 +50,22 @@
   cursor: pointer;
   transition: all 0.3s ease;
 }
+.load-more-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #007bff;
+  color: white;
+}
+.load-more-container{
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
 
 .payment-voucher-new-btn {
   background-color: #007bff;
@@ -59,7 +75,11 @@
 .payment-voucher-new-btn:hover {
   background-color: #0056b3;
 }
-.payment-voucher-today-btn {
+
+.load-more-btn:hover {
+  background-color: #0056b3;
+}
+.payment-voucher-filter-btn {
   background-color: #007bff;
   color: white;
 }
@@ -71,7 +91,7 @@
   background-color: #0056b3;
 }
 
-.payment-voucher-today-btn:hover {
+.payment-voucher-filter-btn:hover {
   background-color: #0056b3;
 }
 
