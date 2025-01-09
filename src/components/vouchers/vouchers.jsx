@@ -4,25 +4,60 @@ import "./vouchers.css";
 const JournalVoucherPage = () => {
   const [date, setDate] = useState("");
   const [entries, setEntries] = useState([
-    { accountName: "", debit: 0, credit: 0, description: "" },
+    {
+      accountNumber: "",
+      accountName: "",
+      currency: "USD",
+      debit: 0,
+      credit: 0,
+      exchangeRate: 1,
+      debitEx: 0,
+      creditEx: 0,
+      description: "",
+      documentNbr: "",
+    },
   ]);
 
   const handleAddRow = () => {
     setEntries([
       ...entries,
-      { accountName: "", debit: 0, credit: 0, description: "" },
+      {
+        accountNumber: "",
+        accountName: "",
+        currency: "USD",
+        debit: 0,
+        credit: 0,
+        exchangeRate: 1,
+        debitEx: 0,
+        creditEx: 0,
+        description: "",
+        documentNbr: "",
+      },
     ]);
-  };
-
-  const handleRemoveRow = (index) => {
-    const updatedEntries = entries.filter((_, i) => i !== index);
-    setEntries(updatedEntries);
   };
 
   const handleInputChange = (index, field, value) => {
     const updatedEntries = [...entries];
-    updatedEntries[index][field] =
-      field === "debit" || field === "credit" ? parseFloat(value) || 0 : value;
+    updatedEntries[index][field] = [
+      "debit",
+      "credit",
+      "exchangeRate",
+      "debitEx",
+      "creditEx",
+    ].includes(field)
+      ? parseFloat(value) || 0
+      : value;
+
+    // Automatically calculate debitEx and creditEx based on exchangeRate
+    if (field === "debit" || field === "exchangeRate") {
+      updatedEntries[index].debitEx =
+        updatedEntries[index].debit * updatedEntries[index].exchangeRate;
+    }
+    if (field === "credit" || field === "exchangeRate") {
+      updatedEntries[index].creditEx =
+        updatedEntries[index].credit * updatedEntries[index].exchangeRate;
+    }
+
     setEntries(updatedEntries);
   };
 
@@ -58,31 +93,59 @@ const JournalVoucherPage = () => {
           />
         </label>
       </div>
+
       <table className="general-vouchers-table">
         <thead>
           <tr>
-            <th>Account Name</th>
-            <th>Debit</th>
-            <th>Credit</th>
-            <th>Description</th>
-            <th>Actions</th>
+            <th className="column-account-number">Account Nb</th>
+            <th className="column-account-name">Account NM</th>
+            <th className="column-currency">Currency</th>
+            <th className="column-debit">Debit</th>
+            <th className="column-credit">Credit</th>
+            <th className="column-exchange-rate">Exc Rate</th>
+            <th className="column-debit-ex">Debit Ex</th>
+            <th className="column-credit-ex">Credit Ex</th>
+            <th className="column-description">Description</th>
+            <th className="column-document-nbr">Doc Nbr</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry, index) => (
             <tr key={index}>
-              <td>
+              <td className="column-account-number">
+                <input
+                  type="text"
+                  value={entry.accountNumber}
+                  onChange={(e) =>
+                    handleInputChange(index, "accountNumber", e.target.value)
+                  }
+                  className="general-vouchers-input"
+                />
+              </td>
+              <td className="column-account-name">
                 <input
                   type="text"
                   value={entry.accountName}
                   onChange={(e) =>
                     handleInputChange(index, "accountName", e.target.value)
                   }
-                  required
                   className="general-vouchers-input"
                 />
               </td>
-              <td>
+              <td className="column-currency">
+                <select
+                  value={entry.currency}
+                  onChange={(e) =>
+                    handleInputChange(index, "currency", e.target.value)
+                  }
+                  className="general-vouchers-input"
+                >
+                  <option value="USD">USD</option>
+                  <option value="LL">LL</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </td>
+              <td className="column-debit">
                 <input
                   type="number"
                   value={entry.debit}
@@ -92,7 +155,7 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td>
+              <td className="column-credit">
                 <input
                   type="number"
                   value={entry.credit}
@@ -102,7 +165,33 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td>
+              <td className="column-exchange-rate">
+                <input
+                  type="number"
+                  value={entry.exchangeRate}
+                  onChange={(e) =>
+                    handleInputChange(index, "exchangeRate", e.target.value)
+                  }
+                  className="general-vouchers-input"
+                />
+              </td>
+              <td className="column-debit-ex">
+                <input
+                  type="number"
+                  value={entry.debitEx}
+                  readOnly
+                  className="general-vouchers-input"
+                />
+              </td>
+              <td className="column-credit-ex">
+                <input
+                  type="number"
+                  value={entry.creditEx}
+                  readOnly
+                  className="general-vouchers-input"
+                />
+              </td>
+              <td className="column-description">
                 <input
                   type="text"
                   value={entry.description}
@@ -112,18 +201,21 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td>
-                <button
-                  className="general-vouchers-delete-btn"
-                  onClick={() => handleRemoveRow(index)}
-                >
-                  Remove
-                </button>
+              <td className="column-document-nbr">
+                <input
+                  type="text"
+                  value={entry.documentNbr}
+                  onChange={(e) =>
+                    handleInputChange(index, "documentNbr", e.target.value)
+                  }
+                  className="general-vouchers-input"
+                />
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
       <div className="general-vouchers-action-buttons">
         <button className="general-vouchers-new-btn" onClick={handleAddRow}>
           Add Row
