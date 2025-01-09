@@ -15,6 +15,15 @@ const PaymentsPage = () => {
   const [rowToEdit, setRowToEdit] = useState(null);
   const [notification, setNotification] = useState(null);
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    column: null,
+    value: null,
+  });
+
   const fetchPaymentVouchers = async () => {
     try {
       setLoading(true);
@@ -163,6 +172,43 @@ const PaymentsPage = () => {
     setFilteredData(filtered);
   };
 
+  const handleClearFilters = () => {
+    setFilteredData(tableData); // Reset to original data
+  };
+
+  const handleContextMenu = (e, column, value) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      column,
+      value,
+    });
+  };
+
+  const handleFilterColumn = () => {
+    const { column, value } = contextMenu;
+    if (!column || value === null) return;
+
+    const filtered = tableData.filter((row) => {
+      const columnValue =
+        column === "amount" ||
+        column === "exchangeRate" ||
+        column === "amountExchanged"
+          ? row.details[0]?.[column]
+          : row[column];
+      return columnValue === value;
+    });
+
+    setFilteredData(filtered);
+    closeContextMenu();
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, column: null, value: null });
+  };
+
   const formatNumber = (value) => {
     if (isNaN(value) || value === null) return "0.00";
     return new Intl.NumberFormat("en-US", {
@@ -172,7 +218,7 @@ const PaymentsPage = () => {
   };
 
   return (
-    <div className="payment-voucher-container">
+    <div className="payment-voucher-container" onClick={closeContextMenu}>
       <div className="payment-voucher-header">
         <div className="payment-voucher-header-content">
           <h1 className="payment-voucher-title">PAYMENTS</h1>
@@ -181,6 +227,12 @@ const PaymentsPage = () => {
             onClick={handleTodayFilter}
           >
             Today
+          </button>
+          <button
+            className="payment-voucher-clear-btn"
+            onClick={handleClearFilters}
+          >
+            Clear Filters
           </button>
         </div>
         <div className="payment-voucher-action-buttons">
@@ -241,28 +293,96 @@ const PaymentsPage = () => {
                     onChange={() => handleRowSelect(row.id)}
                   />
                 </td>
-                <td className="payment-voucher-supplier">{row.supplierName}</td>
-                <td className="payment-voucher-amount">
+                <td
+                  className="payment-voucher-supplier"
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, "supplierName", row.supplierName)
+                  }
+                >
+                  {row.supplierName}
+                </td>
+                <td
+                  className="payment-voucher-amount"
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, "amount", row.details[0]?.amount)
+                  }
+                >
                   {formatNumber(row.details[0]?.amount)}
                 </td>
-                <td className="payment-voucher-payment-type">
+                <td
+                  className="payment-voucher-payment-type"
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, "paymentType", row.paymentType)
+                  }
+                >
                   {row.paymentType}
                 </td>
-                <td className="payment-voucher-date">{row.date}</td>
-                <td className="payment-voucher-type">{row.type}</td>
-                <td className="payment-voucher-exchange-rate">
+                <td
+                  className="payment-voucher-date"
+                  onContextMenu={(e) => handleContextMenu(e, "date", row.date)}
+                >
+                  {row.date}
+                </td>
+                <td
+                  className="payment-voucher-type"
+                  onContextMenu={(e) => handleContextMenu(e, "type", row.type)}
+                >
+                  {row.type}
+                </td>
+                <td
+                  className="payment-voucher-exchange-rate"
+                  onContextMenu={(e) =>
+                    handleContextMenu(
+                      e,
+                      "exchangeRate",
+                      row.details[0]?.exchangeRate
+                    )
+                  }
+                >
                   {formatNumber(row.details[0]?.exchangeRate)}
                 </td>
-                <td className="payment-voucher-amount-exchanged">
+                <td
+                  className="payment-voucher-amount-exchanged"
+                  onContextMenu={(e) =>
+                    handleContextMenu(
+                      e,
+                      "amountExchanged",
+                      row.details[0]?.amountExchanged
+                    )
+                  }
+                >
                   {formatNumber(row.details[0]?.amountExchanged)}
                 </td>
-                <td className="payment-voucher-check-number">
+                <td
+                  className="payment-voucher-check-number"
+                  onContextMenu={(e) =>
+                    handleContextMenu(
+                      e,
+                      "checkNumber",
+                      row.details[0]?.checkNumber
+                    )
+                  }
+                >
                   {row.details[0]?.checkNumber}
                 </td>
-                <td className="payment-voucher-bank-name">
+                <td
+                  className="payment-voucher-bank-name"
+                  onContextMenu={(e) =>
+                    handleContextMenu(e, "bankName", row.details[0]?.bankName)
+                  }
+                >
                   {row.details[0]?.bankName}
                 </td>
-                <td className="payment-voucher-due-date">
+                <td
+                  className="payment-voucher-due-date"
+                  onContextMenu={(e) =>
+                    handleContextMenu(
+                      e,
+                      "checkDueDate",
+                      row.details[0]?.checkDueDate
+                    )
+                  }
+                >
                   {row.details[0]?.checkDueDate}
                 </td>
                 <td className="payment-voucher-payment-number">
@@ -281,6 +401,15 @@ const PaymentsPage = () => {
             ))}
           </tbody>
         </table>
+      )}
+
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+        >
+          <button onClick={handleFilterColumn}>Filter</button>
+        </div>
       )}
 
       {isModalOpen && <PaymentsModal onClose={() => setIsModalOpen(false)} />}
