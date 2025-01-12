@@ -35,13 +35,15 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
     }
   };
 
-  // Recursive function to render accounts, maintaining order and avoiding duplication
   const renderAccounts = (accounts, parentNumber = null) => {
     return accounts
       .filter((account) => account.parentNumber === parentNumber)
       .map((account) => (
         <React.Fragment key={account.id}>
-          <tr className="acc-modal-selection-row">
+          <tr
+            className="acc-modal-selection-row"
+            onClick={() => onSelect(account)} // Trigger parent callback
+          >
             <td className="acc-modal-selection-cell">
               {account.accountNumber}
             </td>
@@ -66,6 +68,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                 <tr
                   key={customer.id}
                   className="acc-modal-selection-row customer-account-row"
+                  onClick={() => onSelect(customer)} // Trigger parent callback
                 >
                   <td className="acc-modal-selection-cell">
                     {customer.accountNumber}
@@ -94,12 +97,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                 <tr
                   key={supplier.id}
                   className="acc-modal-selection-row supplier-account-row"
-                  onMouseEnter={() =>
-                    console.log(`Hovering over ${supplier.accountNumber}`)
-                  } // Optional for debugging
-                  onMouseLeave={() =>
-                    console.log(`Stopped hovering ${supplier.accountNumber}`)
-                  } // Optional for debugging
+                  onClick={() => onSelect(supplier)} // Trigger parent callback
                 >
                   <td className="acc-modal-selection-cell">
                     {supplier.accountNumber}
