@@ -3,6 +3,8 @@ import "./acc-modal-selection.css";
 
 const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]); // To hold the filtered data
+  const [searchQuery, setSearchQuery] = useState(""); // To hold the search query
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
@@ -28,11 +30,33 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
           children: account.children || [],
         }))
       );
+      setFilteredData(
+        combinedData.map((account) => ({
+          ...account,
+          children: account.children || [],
+        }))
+      ); // Initially set filteredData to all accounts
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    // Filter accounts based on accountNumber, accountName, or arabicAccountName
+    const filtered = data.filter(
+      (account) =>
+        account.accountNumber.toLowerCase().includes(query) ||
+        account.accountName.toLowerCase().includes(query) ||
+        (account.arabicAccountName &&
+          account.arabicAccountName.toLowerCase().includes(query))
+    );
+    setFilteredData(filtered);
   };
 
   const renderAccounts = (accounts, parentNumber = null) => {
@@ -44,7 +68,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
             className="acc-modal-selection-row"
             onClick={() => {
               onSelect(account);
-            }} // Trigger parent callback
+            }}
           >
             <td className="acc-modal-selection-cell">
               {account.accountNumber}
@@ -72,7 +96,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                   className="acc-modal-selection-row customer-account-row"
                   onClick={() => {
                     onSelect(customer);
-                  }} // Trigger parent callback
+                  }}
                 >
                   <td className="acc-modal-selection-cell">
                     {customer.accountNumber}
@@ -145,6 +169,14 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
           {error && <p className="error">{error}</p>}
           {!loading && !error && (
             <div className="acc-modal-selection-table-wrapper">
+              {/* Search bar */}
+              <input
+                type="text"
+                className="acc-modal-selection-search-input"
+                placeholder="Search by Account Number, Name, or Arabic Name..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+              />
               <table className="acc-modal-selection-table">
                 <thead>
                   <tr>
@@ -153,7 +185,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                     <th>Arabic Account Name</th>
                   </tr>
                 </thead>
-                <tbody>{renderAccounts(data)}</tbody>
+                <tbody>{renderAccounts(filteredData)}</tbody>
               </table>
             </div>
           )}

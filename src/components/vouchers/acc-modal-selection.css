@@ -71,7 +71,7 @@
 /* Modal Table Styling */
 .acc-modal-selection-table-wrapper {
   overflow-y: auto;
-  overflow-x: hidden; 
+  overflow-x: hidden;
   max-height: 80vh;
   position: relative;
 }
@@ -106,17 +106,17 @@
 }
 
 .acc-modal-selection-table td {
-  background-color: #f9fafb; 
+  background-color: #f9fafb;
 }
 
 .acc-modal-selection-table tr:nth-child(even) td {
-  background-color: #f3f6f9; 
+  background-color: #f3f6f9;
 }
 
 /* Hover effect for all rows */
 .acc-modal-selection-row:hover td {
-  background-color: #e6f2fa !important; 
-  color: #0056b3; 
+  background-color: #e6f2fa !important;
+  color: #0056b3;
 }
 
 /* Fade-in Animation */
@@ -133,31 +133,48 @@
 
 /* General Arabic Styling */
 .arabic-text {
-  font-family: "Amiri", "Arial", sans-serif; 
-  direction: rtl; 
-  text-align: right; 
-  font-size: 1rem; 
-  line-height: 1.6; 
-  word-spacing: 0.1em; 
-  letter-spacing: 0.05em; 
+  font-family: "Amiri", "Arial", sans-serif;
+  direction: rtl;
+  text-align: right;
+  font-size: 1rem;
+  line-height: 1.6;
+  word-spacing: 0.1em;
+  letter-spacing: 0.05em;
 }
 
 /* For Arabic table cells specifically */
 .acc-modal-selection-table td.arabic-text {
-  font-family: "Amiri", "Arial", sans-serif; 
+  font-family: "Amiri", "Arial", sans-serif;
   direction: rtl;
   text-align: right;
   color: #444;
-  background-color: #f9f9f9; 
+  background-color: #f9f9f9;
 }
 
 /* Highlight hover effect for Arabic cells */
 .acc-modal-selection-row:hover td.arabic-text {
-  background-color: #e6f2fa; 
-  color: #0056b3; 
+  background-color: #e6f2fa;
+  color: #0056b3;
 }
 
 .error {
   color: red;
   font-weight: bold;
 }
+/* Search bar styling */
+.acc-modal-selection-search-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px; /* Space between the search bar and the table */
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.acc-modal-selection-search-input:focus {
+  border-color: #007bff; /* Highlight color on focus */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Subtle blue glow on focus */
+}
+
