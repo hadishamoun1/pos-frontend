@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./vouchers.css";
+import AccountSelectionModal from "./acc-modal-selection";
 
 const JournalVoucherPage = () => {
   const [date, setDate] = useState("");
@@ -17,7 +18,8 @@ const JournalVoucherPage = () => {
       documentNbr: "",
     },
   ]);
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentRowIndex, setCurrentRowIndex] = useState(null);
   const handleAddRow = () => {
     setEntries([
       ...entries,
@@ -61,6 +63,19 @@ const JournalVoucherPage = () => {
     setEntries(updatedEntries);
   };
 
+  const handleAccountSelection = (account) => {
+    const updatedEntries = [...entries];
+    updatedEntries[currentRowIndex].accountNumber = account.accountNumber;
+    updatedEntries[currentRowIndex].accountName = account.accountName;
+    setEntries(updatedEntries);
+    setIsModalOpen(false);
+  };
+
+  const handleAccountNumberClick = (index) => {
+    setCurrentRowIndex(index);
+    setIsModalOpen(true);
+  };
+
   const totalDebit = entries.reduce(
     (sum, entry) => sum + (entry.debit || 0),
     0
@@ -78,6 +93,12 @@ const JournalVoucherPage = () => {
 
   return (
     <div className="general-vouchers-container">
+      <AccountSelectionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleAccountSelection}
+      />
+
       <div className="general-vouchers-header">
         <h2 className="general-vouchers-title">Journal Voucher</h2>
       </div>
@@ -112,14 +133,15 @@ const JournalVoucherPage = () => {
         <tbody>
           {entries.map((entry, index) => (
             <tr key={index}>
-              <td className="column-account-number">
+              <td
+                className="column-account-number"
+                onClick={() => handleAccountNumberClick(index)}
+              >
                 <input
                   type="text"
                   value={entry.accountNumber}
                   placeholder="Acc Number"
-                  onChange={(e) =>
-                    handleInputChange(index, "accountNumber", e.target.value)
-                  }
+                  readOnly
                   className="general-vouchers-input"
                 />
               </td>
@@ -128,6 +150,7 @@ const JournalVoucherPage = () => {
                   type="text"
                   value={entry.accountName}
                   placeholder="Account Name"
+                  readOnly
                   onChange={(e) =>
                     handleInputChange(index, "accountName", e.target.value)
                   }
@@ -137,7 +160,6 @@ const JournalVoucherPage = () => {
               <td className="column-currency">
                 <select
                   value={entry.currency}
-
                   onChange={(e) =>
                     handleInputChange(index, "currency", e.target.value)
                   }

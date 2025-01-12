@@ -114,3 +114,22 @@
     transform: translateY(0);
   }
 }
+.error {
+  color: red;
+  font-weight: bold;
+}
+
+.acc-modal-selection-row:hover {
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+
+.acc-modal-selection-table th,
+.acc-modal-selection-table td {
+  padding: 10px;
+  text-align: left;
+}
+
+.acc-modal-selection-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
