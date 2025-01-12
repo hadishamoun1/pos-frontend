@@ -256,7 +256,7 @@ const AccountsPage = () => {
             </button>
           </div>
         </div>
-      )}
+      )} 
     </div>
   );
 };

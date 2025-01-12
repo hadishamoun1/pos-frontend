@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import "./acc-modal-selection.css";
 
 const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
-  const [accounts, setAccounts] = useState([]);
-  const [sortedAccounts, setSortedAccounts] = useState([]);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (isOpen) {
@@ -17,23 +17,17 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        "http://localhost:3000/accounts/v1/combined"
-      );
+      const response = await fetch(`${baseUrl}/accounts/v1/combined`);
       if (!response.ok) {
         throw new Error("Failed to fetch accounts data");
       }
-      const data = await response.json();
-
-      // Ensure all accounts have `children` initialized as an array
-      const accountsWithChildren = data.map((account) => ({
-        ...account,
-        children: account.children || [],
-      }));
-
-      setAccounts(accountsWithChildren);
-      const sorted = sortAccounts(accountsWithChildren);
-      setSortedAccounts(sorted);
+      const combinedData = await response.json();
+      setData(
+        combinedData.map((account) => ({
+          ...account,
+          children: account.children || [],
+        }))
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -41,46 +35,94 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
     }
   };
 
-  const sortAccounts = (accounts) => {
-    const accountMap = new Map();
+  // Recursive function to render accounts, maintaining order and avoiding duplication
+  const renderAccounts = (accounts, parentNumber = null) => {
+    return accounts
+      .filter((account) => account.parentNumber === parentNumber)
+      .map((account) => (
+        <React.Fragment key={account.id}>
+          <tr className="acc-modal-selection-row">
+            <td className="acc-modal-selection-cell">
+              {account.accountNumber}
+            </td>
+            <td className="acc-modal-selection-cell">{account.accountName}</td>
+            <td
+              className="acc-modal-selection-cell arabic-text"
+              style={{
+                textAlign: "right",
+                direction: "rtl",
+              }}
+            >
+              {account.arabicAccountName || "N/A"}
+            </td>
+          </tr>
 
-    // Step 1: Map accounts by their accountNumber
-    accounts.forEach((account) => {
-      account.children = account.children || []; // Ensure children is always an array
-      accountMap.set(account.accountNumber, account);
-    });
+          {/* Render customer accounts under 4111 */}
+          {account.accountNumber === "4111" &&
+            account.children &&
+            account.children
+              .filter((child) => child.accountNumber.startsWith("4111"))
+              .map((customer) => (
+                <tr
+                  key={customer.id}
+                  className="acc-modal-selection-row customer-account-row"
+                >
+                  <td className="acc-modal-selection-cell">
+                    {customer.accountNumber}
+                  </td>
+                  <td className="acc-modal-selection-cell">
+                    {customer.accountName}
+                  </td>
+                  <td
+                    className="acc-modal-selection-cell arabic-text"
+                    style={{
+                      textAlign: "right",
+                      direction: "rtl",
+                    }}
+                  >
+                    {customer.arabicAccountName || "N/A"}
+                  </td>
+                </tr>
+              ))}
 
-    // Step 2: Populate children relationships
-    accounts.forEach((account) => {
-      if (account.parentNumber) {
-        const parent = accountMap.get(account.parentNumber);
-        if (parent) {
-          parent.children.push(account);
-        }
-      }
-    });
+          {/* Render supplier accounts under 4011 */}
+          {account.accountNumber === "4011" &&
+            account.children &&
+            account.children
+              .filter((child) => child.accountNumber.startsWith("4011"))
+              .map((supplier) => (
+                <tr
+                  key={supplier.id}
+                  className="acc-modal-selection-row supplier-account-row"
+                  onMouseEnter={() =>
+                    console.log(`Hovering over ${supplier.accountNumber}`)
+                  } // Optional for debugging
+                  onMouseLeave={() =>
+                    console.log(`Stopped hovering ${supplier.accountNumber}`)
+                  } // Optional for debugging
+                >
+                  <td className="acc-modal-selection-cell">
+                    {supplier.accountNumber}
+                  </td>
+                  <td className="acc-modal-selection-cell">
+                    {supplier.accountName}
+                  </td>
+                  <td
+                    className="acc-modal-selection-cell arabic-text"
+                    style={{
+                      textAlign: "right",
+                      direction: "rtl",
+                    }}
+                  >
+                    {supplier.arabicAccountName || "N/A"}
+                  </td>
+                </tr>
+              ))}
 
-    // Step 3: Recursively flatten the hierarchy
-    const flattenAccounts = (accountList, result = [], level = 0) => {
-      accountList.forEach((account) => {
-        account.level = level; // Add level for indentation
-        result.push(account);
-        if (account.children && account.children.length > 0) {
-          flattenAccounts(account.children, result, level + 1);
-        }
-      });
-      return result;
-    };
-
-    // Get root accounts (accounts without a parent)
-    const rootAccounts = accounts.filter((account) => !account.parentNumber);
-
-    return flattenAccounts(rootAccounts);
-  };
-
-  const handleSelectAccount = (account) => {
-    onSelect(account);
-    onClose();
+          {/* Recursively render other children */}
+          {renderAccounts(accounts, account.accountNumber)}
+        </React.Fragment>
+      ));
   };
 
   if (!isOpen) return null;
@@ -107,28 +149,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                     <th>Arabic Account Name</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {sortedAccounts.map((account) => (
-                    <tr
-                      key={account.id}
-                      onClick={() =>
-                        handleSelectAccount({
-                          accountNumber: account.accountNumber,
-                          accountName: account.accountName,
-                        })
-                      }
-                      className="acc-modal-selection-row"
-                    >
-                      <td style={{ paddingLeft: `${account.level * 20}px` }}>
-                        {account.accountNumber}
-                      </td>
-                      <td>{account.accountName}</td>
-                      <td className="arabic-text">
-                        {account.arabicAccountName}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                <tbody>{renderAccounts(data)}</tbody>
               </table>
             </div>
           )}
