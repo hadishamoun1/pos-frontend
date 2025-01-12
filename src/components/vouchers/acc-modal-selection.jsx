@@ -42,7 +42,9 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
         <React.Fragment key={account.id}>
           <tr
             className="acc-modal-selection-row"
-            onClick={() => onSelect(account)} // Trigger parent callback
+            onClick={() => {
+              onSelect(account);
+            }} // Trigger parent callback
           >
             <td className="acc-modal-selection-cell">
               {account.accountNumber}
@@ -68,7 +70,9 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                 <tr
                   key={customer.id}
                   className="acc-modal-selection-row customer-account-row"
-                  onClick={() => onSelect(customer)} // Trigger parent callback
+                  onClick={() => {
+                    onSelect(customer);
+                  }} // Trigger parent callback
                 >
                   <td className="acc-modal-selection-cell">
                     {customer.accountNumber}
@@ -97,7 +101,9 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                 <tr
                   key={supplier.id}
                   className="acc-modal-selection-row supplier-account-row"
-                  onClick={() => onSelect(supplier)} // Trigger parent callback
+                  onClick={() => {
+                    onSelect(supplier);
+                  }}
                 >
                   <td className="acc-modal-selection-cell">
                     {supplier.accountNumber}
