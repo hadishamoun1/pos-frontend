@@ -18,9 +18,13 @@
   border-radius: 10px;
   padding: 2rem;
   width: 90%;
-  max-width: 600px;
+  max-height: 90vh;
+  max-width: 800px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.3s ease-in-out;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Modal Header Styling */
@@ -29,7 +33,12 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #e6e9ef;
+  background: #ffffff;
+  padding: 1rem;
   margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .acc-modal-selection-header h2 {
@@ -60,22 +69,30 @@
 }
 
 /* Modal Table Styling */
+.acc-modal-selection-table-wrapper {
+  overflow-y: auto;
+  overflow-x: hidden; 
+  max-height: 80vh;
+  position: relative;
+}
+
 .acc-modal-selection-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   border-radius: 10px;
-  overflow: hidden;
+  table-layout: fixed;
 }
 
 .acc-modal-selection-table th,
 .acc-modal-selection-table td {
   padding: 1rem;
   text-align: center;
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: #555;
   border: 1px solid #e6e9ef;
+  word-wrap: break-word;
 }
 
 .acc-modal-selection-table th {
@@ -83,24 +100,23 @@
   color: #ffffff;
   text-transform: uppercase;
   font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .acc-modal-selection-table td {
-  background-color: #f9fafb;
+  background-color: #f9fafb; 
 }
 
 .acc-modal-selection-table tr:nth-child(even) td {
-  background-color: #f3f6f9;
+  background-color: #f3f6f9; 
 }
 
-.acc-modal-selection-row {
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.acc-modal-selection-row:hover {
-  background-color: #e2f0fb;
-  transform: scale(1.02);
+/* Hover effect for all rows */
+.acc-modal-selection-row:hover td {
+  background-color: #e6f2fa !important; 
+  color: #0056b3; 
 }
 
 /* Fade-in Animation */
@@ -114,22 +130,34 @@
     transform: translateY(0);
   }
 }
+
+/* General Arabic Styling */
+.arabic-text {
+  font-family: "Amiri", "Arial", sans-serif; 
+  direction: rtl; 
+  text-align: right; 
+  font-size: 1rem; 
+  line-height: 1.6; 
+  word-spacing: 0.1em; 
+  letter-spacing: 0.05em; 
+}
+
+/* For Arabic table cells specifically */
+.acc-modal-selection-table td.arabic-text {
+  font-family: "Amiri", "Arial", sans-serif; 
+  direction: rtl;
+  text-align: right;
+  color: #444;
+  background-color: #f9f9f9; 
+}
+
+/* Highlight hover effect for Arabic cells */
+.acc-modal-selection-row:hover td.arabic-text {
+  background-color: #e6f2fa; 
+  color: #0056b3; 
+}
+
 .error {
   color: red;
   font-weight: bold;
-}
-
-.acc-modal-selection-row:hover {
-  background-color: #f5f5f5;
-  cursor: pointer;
-}
-
-.acc-modal-selection-table th,
-.acc-modal-selection-table td {
-  padding: 10px;
-  text-align: left;
-}
-
-.acc-modal-selection-table tr:nth-child(even) {
-  background-color: #f9f9f9;
 }
