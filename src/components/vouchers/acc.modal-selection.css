@@ -1,0 +1,116 @@
+/* Modal Overlay Styling */
+.acc-modal-selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Container Styling */
+.acc-modal-selection-container {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Modal Header Styling */
+.acc-modal-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #e6e9ef;
+  margin-bottom: 1rem;
+}
+
+.acc-modal-selection-header h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007bff;
+  margin: 0;
+}
+
+.acc-modal-selection-close-btn {
+  background: #dc3545;
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.3s ease;
+}
+
+.acc-modal-selection-close-btn:hover {
+  background: #b02a37;
+}
+
+/* Modal Table Styling */
+.acc-modal-selection-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.acc-modal-selection-table th,
+.acc-modal-selection-table td {
+  padding: 1rem;
+  text-align: center;
+  font-size: 1rem;
+  color: #555;
+  border: 1px solid #e6e9ef;
+}
+
+.acc-modal-selection-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.acc-modal-selection-table td {
+  background-color: #f9fafb;
+}
+
+.acc-modal-selection-table tr:nth-child(even) td {
+  background-color: #f3f6f9;
+}
+
+.acc-modal-selection-row {
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.acc-modal-selection-row:hover {
+  background-color: #e2f0fb;
+  transform: scale(1.02);
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
