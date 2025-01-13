@@ -99,8 +99,8 @@
 .general-vouchers-table-container {
   flex: 1;
   overflow-y: auto;
-  max-height: calc(100vh - 350px); /* Adjust for header and footer space */
-  margin-bottom: 1rem;
+  max-height: calc(100vh - 470px); /* Adjust for header and footer space */
+
 }
 
 .general-vouchers-table {
@@ -149,7 +149,7 @@
 .general-vouchers-add-row-container {
   display: flex;
   justify-content: flex-start;
-  margin-top: 1rem;
+ 
 }
 
 .general-vouchers-new-btn {
