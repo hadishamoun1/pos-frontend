@@ -161,6 +161,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(0, 64, 133, 0.2);
+  width: 10%;
 }
 
 .general-vouchers-new-btn:hover {
