@@ -20,6 +20,7 @@ const JournalVoucherPage = () => {
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
+
   const handleAddRow = () => {
     setEntries([
       ...entries,
@@ -50,7 +51,6 @@ const JournalVoucherPage = () => {
       ? parseFloat(value) || 0
       : value;
 
-    // Automatically calculate debitEx and creditEx based on exchangeRate
     if (field === "debit" || field === "exchangeRate") {
       updatedEntries[index].debitEx =
         updatedEntries[index].debit * updatedEntries[index].exchangeRate;
@@ -98,7 +98,6 @@ const JournalVoucherPage = () => {
         onClose={() => setIsModalOpen(false)}
         onSelect={handleAccountSelection}
       />
-
       <div className="general-vouchers-header">
         <h2 className="general-vouchers-title">Journal Voucher</h2>
       </div>
@@ -113,30 +112,34 @@ const JournalVoucherPage = () => {
             className="general-vouchers-input"
           />
         </label>
+        <button
+          className="general-vouchers-submit-btn"
+          onClick={handleSubmit}
+          disabled={totalDebit !== totalCredit || totalDebit === 0}
+        >
+          Submit
+        </button>
       </div>
 
       <table className="general-vouchers-table">
         <thead>
           <tr>
-            <th className="column-account-number">Account Nb</th>
-            <th className="column-account-name">Account NM</th>
-            <th className="column-currency">Currency</th>
-            <th className="column-debit">Debit</th>
-            <th className="column-credit">Credit</th>
-            <th className="column-exchange-rate">Exc Rate</th>
-            <th className="column-debit-ex">Debit Ex</th>
-            <th className="column-credit-ex">Credit Ex</th>
-            <th className="column-description">Description</th>
-            <th className="column-document-nbr">Doc Nbr</th>
+            <th>Account Nb</th>
+            <th>Account NM</th>
+            <th>Currency</th>
+            <th>Debit</th>
+            <th>Credit</th>
+            <th>Exc Rate</th>
+            <th>Debit Ex</th>
+            <th>Credit Ex</th>
+            <th>Description</th>
+            <th>Doc Nbr</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry, index) => (
             <tr key={index}>
-              <td
-                className="column-account-number"
-                onClick={() => handleAccountNumberClick(index)}
-              >
+              <td onClick={() => handleAccountNumberClick(index)}>
                 <input
                   type="text"
                   value={entry.accountNumber}
@@ -145,19 +148,16 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-account-name">
+              <td>
                 <input
                   type="text"
                   value={entry.accountName}
                   placeholder="Account Name"
                   readOnly
-                  onChange={(e) =>
-                    handleInputChange(index, "accountName", e.target.value)
-                  }
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-currency">
+              <td>
                 <select
                   value={entry.currency}
                   onChange={(e) =>
@@ -170,10 +170,9 @@ const JournalVoucherPage = () => {
                   <option value="EUR">EUR</option>
                 </select>
               </td>
-              <td className="column-debit">
+              <td>
                 <input
                   type="number"
-                  placeholder="Debit Amount"
                   value={entry.debit}
                   onChange={(e) =>
                     handleInputChange(index, "debit", e.target.value)
@@ -181,10 +180,9 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-credit">
+              <td>
                 <input
                   type="number"
-                  placeholder="Credit Amount"
                   value={entry.credit}
                   onChange={(e) =>
                     handleInputChange(index, "credit", e.target.value)
@@ -192,7 +190,7 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-exchange-rate">
+              <td>
                 <input
                   type="number"
                   value={entry.exchangeRate}
@@ -202,28 +200,25 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-debit-ex">
+              <td>
                 <input
                   type="number"
-                  placeholder="Debit Ex"
                   value={entry.debitEx}
                   readOnly
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-credit-ex">
+              <td>
                 <input
                   type="number"
-                  placeholder="Credit Ex"
                   value={entry.creditEx}
                   readOnly
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-description">
+              <td>
                 <input
                   type="text"
-                  placeholder="Description"
                   value={entry.description}
                   onChange={(e) =>
                     handleInputChange(index, "description", e.target.value)
@@ -231,10 +226,9 @@ const JournalVoucherPage = () => {
                   className="general-vouchers-input"
                 />
               </td>
-              <td className="column-document-nbr">
+              <td>
                 <input
                   type="text"
-                  placeholder="Doc Nbr"
                   value={entry.documentNbr}
                   onChange={(e) =>
                     handleInputChange(index, "documentNbr", e.target.value)
@@ -247,23 +241,12 @@ const JournalVoucherPage = () => {
         </tbody>
       </table>
 
-      <div className="general-vouchers-action-buttons">
-        <button className="general-vouchers-new-btn" onClick={handleAddRow}>
-          Add Row
-        </button>
-      </div>
+      <button className="general-vouchers-new-btn" onClick={handleAddRow}>
+        Add Row
+      </button>
       <div className="general-vouchers-summary">
         <span>Total Debit: {totalDebit}</span>
         <span>Total Credit: {totalCredit}</span>
-      </div>
-      <div className="general-vouchers-action-buttons">
-        <button
-          className="general-vouchers-submit-btn"
-          onClick={handleSubmit}
-          disabled={totalDebit !== totalCredit || totalDebit === 0}
-        >
-          Submit
-        </button>
       </div>
     </div>
   );
