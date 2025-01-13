@@ -120,130 +120,130 @@ const JournalVoucherPage = () => {
           Submit
         </button>
       </div>
-
-      <table className="general-vouchers-table">
-        <thead>
-          <tr>
-            <th>Account Nb</th>
-            <th>Account NM</th>
-            <th>Currency</th>
-            <th>Debit</th>
-            <th>Credit</th>
-            <th>Exc Rate</th>
-            <th>Debit Ex</th>
-            <th>Credit Ex</th>
-            <th>Description</th>
-            <th>Doc Nbr</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry, index) => (
-            <tr key={index}>
-              <td onClick={() => handleAccountNumberClick(index)}>
-                <input
-                  type="text"
-                  value={entry.accountNumber}
-                  placeholder="Acc Number"
-                  readOnly
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={entry.accountName}
-                  placeholder="Account Name"
-                  readOnly
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <select
-                  value={entry.currency}
-                  onChange={(e) =>
-                    handleInputChange(index, "currency", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                >
-                  <option value="USD">USD</option>
-                  <option value="LL">LL</option>
-                  <option value="EUR">EUR</option>
-                </select>
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={entry.debit}
-                  onChange={(e) =>
-                    handleInputChange(index, "debit", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={entry.credit}
-                  onChange={(e) =>
-                    handleInputChange(index, "credit", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={entry.exchangeRate}
-                  onChange={(e) =>
-                    handleInputChange(index, "exchangeRate", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={entry.debitEx}
-                  readOnly
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={entry.creditEx}
-                  readOnly
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={entry.description}
-                  onChange={(e) =>
-                    handleInputChange(index, "description", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={entry.documentNbr}
-                  onChange={(e) =>
-                    handleInputChange(index, "documentNbr", e.target.value)
-                  }
-                  className="general-vouchers-input"
-                />
-              </td>
+      <div className="general-vouchers-table-container">
+        <table className="general-vouchers-table">
+          <thead>
+            <tr>
+              <th>Account Nb</th>
+              <th>Account NM</th>
+              <th>Currency</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Exc Rate</th>
+              <th>Debit Ex</th>
+              <th>Credit Ex</th>
+              <th>Description</th>
+              <th>Doc Nbr</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <button className="general-vouchers-new-btn" onClick={handleAddRow}>
-        Add Row
-      </button>
+          </thead>
+          <tbody>
+            {entries.map((entry, index) => (
+              <tr key={index}>
+                <td onClick={() => handleAccountNumberClick(index)}>
+                  <input
+                    type="text"
+                    value={entry.accountNumber}
+                    readOnly
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={entry.accountName}
+                    readOnly
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <select
+                    value={entry.currency}
+                    onChange={(e) =>
+                      handleInputChange(index, "currency", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="LL">LL</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.debit}
+                    onChange={(e) =>
+                      handleInputChange(index, "debit", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.credit}
+                    onChange={(e) =>
+                      handleInputChange(index, "credit", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.exchangeRate}
+                    onChange={(e) =>
+                      handleInputChange(index, "exchangeRate", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.debitEx}
+                    readOnly
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.creditEx}
+                    readOnly
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={entry.description}
+                    onChange={(e) =>
+                      handleInputChange(index, "description", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={entry.documentNbr}
+                    onChange={(e) =>
+                      handleInputChange(index, "documentNbr", e.target.value)
+                    }
+                    className="general-vouchers-input"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="general-vouchers-add-row-container">
+        <button className="general-vouchers-new-btn" onClick={handleAddRow}>
+          Add Row
+        </button>
+      </div>
       <div className="general-vouchers-summary">
         <span>Total Debit: {totalDebit}</span>
         <span>Total Credit: {totalCredit}</span>

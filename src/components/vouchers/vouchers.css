@@ -8,9 +8,10 @@
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
-  min-height: 100vh;
+  min-height: 93vh;
   font-family: "Inter", sans-serif;
   color: #333;
+  position: relative;
 }
 
 /* Header Styling */
@@ -205,11 +206,6 @@
   .general-vouchers-table td {
     font-size: 1rem;
     padding: 1rem;
-  }
-
-  .general-vouchers-action-buttons button {
-    font-size: 1rem;
-    padding: 0.8rem 1.5rem;
   }
 
   .general-vouchers-summary {
