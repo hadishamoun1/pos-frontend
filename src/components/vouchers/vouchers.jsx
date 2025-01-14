@@ -143,6 +143,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="text"
                     value={entry.accountNumber}
+                    placeholder="Account Number"
                     readOnly
                     className="general-vouchers-input"
                   />
@@ -152,6 +153,7 @@ const JournalVoucherPage = () => {
                     type="text"
                     value={entry.accountName}
                     readOnly
+                    placeholder="Account Name"
                     className="general-vouchers-input"
                   />
                 </td>
@@ -172,6 +174,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.debit}
+                    placeholder="Debit Number"
                     onChange={(e) =>
                       handleInputChange(index, "debit", e.target.value)
                     }
@@ -182,6 +185,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.credit}
+                    placeholder="Credit Number"
                     onChange={(e) =>
                       handleInputChange(index, "credit", e.target.value)
                     }
@@ -192,6 +196,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.exchangeRate}
+                    placeholder="Exchange Rate"
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
@@ -202,6 +207,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.debitEx}
+                    placeholder="Debit Ex Num"
                     readOnly
                     className="general-vouchers-input"
                   />
@@ -210,6 +216,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.creditEx}
+                    placeholder="Credit Ex Num"
                     readOnly
                     className="general-vouchers-input"
                   />
@@ -218,6 +225,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="text"
                     value={entry.description}
+                    placeholder="Description"
                     onChange={(e) =>
                       handleInputChange(index, "description", e.target.value)
                     }
@@ -228,6 +236,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="text"
                     value={entry.documentNbr}
+                    placeholder="Doc Nbr"
                     onChange={(e) =>
                       handleInputChange(index, "documentNbr", e.target.value)
                     }
