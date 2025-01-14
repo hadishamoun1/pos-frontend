@@ -124,16 +124,16 @@ const JournalVoucherPage = () => {
         <table className="general-vouchers-table">
           <thead>
             <tr>
-              <th>Account Nb</th>
-              <th>Account NM</th>
-              <th>Currency</th>
-              <th>Debit</th>
-              <th>Credit</th>
-              <th>Exc Rate</th>
-              <th>Debit Ex</th>
-              <th>Credit Ex</th>
-              <th>Description</th>
-              <th>Doc Nbr</th>
+              <th className="column-account-number">Account Nb</th>
+              <th className="column-account-name">Account Name</th>
+              <th className="column-currency">Currency</th>
+              <th className="column-debit">Debit</th>
+              <th className="column-credit">Credit</th>
+              <th className="column-exchange-rate">Exc Rate</th>
+              <th className="column-debit-ex">Debit Ex</th>
+              <th className="column-credit-ex">Credit Ex</th>
+              <th className="column-description">Description</th>
+              <th className="column-document-nbr">Doc Nbr</th>
             </tr>
           </thead>
           <tbody>
@@ -145,7 +145,7 @@ const JournalVoucherPage = () => {
                     value={entry.accountNumber}
                     placeholder="Account Number"
                     readOnly
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-account-number"
                   />
                 </td>
                 <td>
@@ -154,7 +154,7 @@ const JournalVoucherPage = () => {
                     value={entry.accountName}
                     readOnly
                     placeholder="Account Name"
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-account-name"
                   />
                 </td>
                 <td>
@@ -163,7 +163,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "currency", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-currency"
                   >
                     <option value="USD">USD</option>
                     <option value="LL">LL</option>
@@ -178,7 +178,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "debit", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-debit"
                   />
                 </td>
                 <td>
@@ -189,7 +189,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "credit", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-credit"
                   />
                 </td>
                 <td>
@@ -200,7 +200,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-exchange-rate"
                   />
                 </td>
                 <td>
@@ -209,7 +209,7 @@ const JournalVoucherPage = () => {
                     value={entry.debitEx}
                     placeholder="Debit Ex Num"
                     readOnly
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-debit-ex"
                   />
                 </td>
                 <td>
@@ -218,7 +218,7 @@ const JournalVoucherPage = () => {
                     value={entry.creditEx}
                     placeholder="Credit Ex Num"
                     readOnly
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-credit-ex"
                   />
                 </td>
                 <td>
@@ -229,7 +229,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "description", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-description"
                   />
                 </td>
                 <td>
@@ -240,7 +240,7 @@ const JournalVoucherPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "documentNbr", e.target.value)
                     }
-                    className="general-vouchers-input"
+                    className="general-vouchers-input column-document-nbr"
                   />
                 </td>
               </tr>
