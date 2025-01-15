@@ -220,12 +220,12 @@
 .general-vouchers-summary {
   position: sticky;
   bottom: 0;
-  background-color: #e9f5fe;
+  background: linear-gradient(180deg, #0980ff, #0056b3);
   border-radius: 15px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   font-size: 1.4rem;
   font-weight: 600;
-  color: #333;
+  color: #faf8f8;
   padding: 1.5rem;
   display: flex;
   justify-content: space-between;
@@ -233,7 +233,7 @@
 }
 
 .general-vouchers-summary span {
-  color: #28a745;
+  color: #ffffff;
   font-weight: bold;
 }
 
