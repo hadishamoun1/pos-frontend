@@ -233,7 +233,7 @@
 }
 /* General text styling for Total Debit and Total Credit */
 .summary-total-txt {
-  color: #ffffff; /* Keeps the text color white */
+  color: #ffffff; 
   font-weight: bold;
 }
 
