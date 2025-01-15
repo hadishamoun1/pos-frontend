@@ -20,6 +20,12 @@ const JournalVoucherPage = () => {
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+  });
 
   const handleAddRow = () => {
     setEntries([
@@ -76,6 +82,27 @@ const JournalVoucherPage = () => {
     setIsModalOpen(true);
   };
 
+  const handleRightClick = (event, rowIndex) => {
+    event.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      rowIndex,
+    });
+  };
+
+  const handleDeleteRow = () => {
+    if (contextMenu.rowIndex !== null) {
+      setEntries(entries.filter((_, index) => index !== contextMenu.rowIndex));
+      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+  };
+
   const totalDebit = entries.reduce(
     (sum, entry) => sum + (entry.debit || 0),
     0
@@ -92,7 +119,10 @@ const JournalVoucherPage = () => {
   };
 
   return (
-    <div className="general-vouchers-container">
+    <div
+      className="general-vouchers-container"
+      onClick={handleCloseContextMenu}
+    >
       <AccountSelectionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -124,7 +154,7 @@ const JournalVoucherPage = () => {
         <table className="general-vouchers-table">
           <thead>
             <tr>
-              <th className="column-account-number">Account Nb</th>
+              <th className="column-account-number">Acc Nb</th>
               <th className="column-account-name">Account Name</th>
               <th className="column-currency">Currency</th>
               <th className="column-debit">Debit</th>
@@ -138,12 +168,12 @@ const JournalVoucherPage = () => {
           </thead>
           <tbody>
             {entries.map((entry, index) => (
-              <tr key={index}>
+              <tr key={index} onContextMenu={(e) => handleRightClick(e, index)}>
                 <td onClick={() => handleAccountNumberClick(index)}>
                   <input
                     type="text"
                     value={entry.accountNumber}
-                    placeholder="Account Number"
+                    placeholder="Acc Nbr"
                     readOnly
                     className="general-vouchers-input column-account-number"
                   />
@@ -257,6 +287,16 @@ const JournalVoucherPage = () => {
         <span>Total Debit: {totalDebit}</span>
         <span>Total Credit: {totalCredit}</span>
       </div>
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button className="context-menu-item" onClick={handleDeleteRow}>
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 };
