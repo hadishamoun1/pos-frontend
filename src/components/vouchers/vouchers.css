@@ -231,6 +231,28 @@
   justify-content: space-between;
   z-index: 10;
 }
+/* General text styling for Total Debit and Total Credit */
+.summary-total-txt {
+  color: #ffffff; /* Keeps the text color white */
+  font-weight: bold;
+}
+
+/* Dynamic styling for numbers */
+.summary-total-txt .number {
+  padding: 0.2rem 0.5rem; 
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.summary-total-txt .number.equal {
+  color: greenyellow; 
+  border: 3px solid greenyellow; 
+}
+
+.summary-total-txt .number.not-equal {
+  color: red; 
+  border: 3px solid red; 
+}
 
 .general-vouchers-summary span {
   color: #ffffff;

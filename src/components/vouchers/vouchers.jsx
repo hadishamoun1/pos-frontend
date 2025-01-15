@@ -117,6 +117,7 @@ const JournalVoucherPage = () => {
     console.log(journalVoucher);
     alert("Journal Voucher Submitted");
   };
+  const isEqual = totalDebit === totalCredit;
 
   return (
     <div
@@ -284,9 +285,20 @@ const JournalVoucherPage = () => {
         </button>
       </div>
       <div className="general-vouchers-summary">
-        <span>Total Debit: {totalDebit}</span>
-        <span>Total Credit: {totalCredit}</span>
+        <span className="summary-total-txt">
+          Total Debit:{" "}
+          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+            {totalDebit}
+          </span>
+        </span>
+        <span className="summary-total-txt">
+          Total Credit:{" "}
+          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+            {totalCredit}
+          </span>
+        </span>
       </div>
+
       {contextMenu.visible && (
         <div
           className="context-menu"
