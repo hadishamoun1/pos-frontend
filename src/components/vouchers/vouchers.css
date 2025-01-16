@@ -2,13 +2,14 @@
 .general-vouchers-container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 2rem;
+  gap: 2.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   background: linear-gradient(135deg, #f3f8fc, #ffffff);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
-  min-height: 93vh;
+  min-height: 100vh;
   font-family: "Inter", sans-serif;
   color: #333;
   position: relative;
@@ -96,15 +97,17 @@
 /* Table Styling */
 .general-vouchers-table-container {
   flex: 1;
-  overflow-y: auto;
-  max-height: calc(100vh - 470px);
+  overflow-x: auto;
+  max-height: calc(100vh - 475px);
+  width: 100%;
 }
 
 .general-vouchers-table {
-  width: 100%;
+  scroll-behavior: smooth;
+  width: 2300px;
   border-collapse: collapse;
   border-radius: 10px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   background: #ffffff;
 }
@@ -123,27 +126,36 @@
 /* Column Widths */
 .general-vouchers-table th.column-account-number,
 .general-vouchers-table td.column-account-number {
-  width: 6%;
+  width: 7%;
 }
 
+.general-vouchers-table th.column-debit-usd,
+.general-vouchers-table td.column-debit-usd {
+  width: 8%;
+}
+
+.general-vouchers-table th.column-credit-usd,
+.general-vouchers-table td.column-credit-usd {
+  width: 8%;
+}
 .general-vouchers-table th.column-account-name,
 .general-vouchers-table td.column-account-name {
-  width: 15%;
+  width: 13%;
 }
 
 .general-vouchers-table th.column-currency,
 .general-vouchers-table td.column-currency {
-  width: 4%;
+  width: 6%;
 }
 
 .general-vouchers-table th.column-debit,
 .general-vouchers-table td.column-debit {
-  width: 10%;
+  width: 8%;
 }
 
 .general-vouchers-table th.column-credit,
 .general-vouchers-table td.column-credit {
-  width: 10%;
+  width: 8%;
 }
 
 .general-vouchers-table th.column-exchange-rate,
@@ -153,22 +165,24 @@
 
 .general-vouchers-table th.column-debit-ex,
 .general-vouchers-table td.column-debit-ex {
-  width: 10%;
+  width: 8%;
 }
 
 .general-vouchers-table th.column-credit-ex,
 .general-vouchers-table td.column-credit-ex {
-  width: 10%;
+  width: 8%;
 }
 
 .general-vouchers-table th.column-description,
 .general-vouchers-table td.column-description {
   width: 10%;
+  min-width: 250px;
 }
 
 .general-vouchers-table th.column-document-nbr,
 .general-vouchers-table td.column-document-nbr {
-  width: 7%;
+  
+  min-width: 120px;
 }
 
 .general-vouchers-table th {
@@ -209,6 +223,7 @@
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(0, 64, 133, 0.2);
   width: 10%;
+  margin-top: 20px;
 }
 
 .general-vouchers-new-btn:hover {
@@ -219,8 +234,8 @@
 /* Summary Section */
 .general-vouchers-summary {
   position: sticky;
-  bottom: 0;
-  background: linear-gradient(180deg, #0980ff, #0056b3);
+  bottom: 0px;
+  background: linear-gradient(360deg, #0980ff, #0056b3);
   border-radius: 15px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   font-size: 1.4rem;
@@ -233,25 +248,25 @@
 }
 /* General text styling for Total Debit and Total Credit */
 .summary-total-txt {
-  color: #ffffff; 
+  color: #ffffff;
   font-weight: bold;
 }
 
 /* Dynamic styling for numbers */
 .summary-total-txt .number {
-  padding: 0.2rem 0.5rem; 
+  padding: 0.2rem 0.5rem;
   border-radius: 5px;
   font-weight: bold;
 }
 
 .summary-total-txt .number.equal {
-  color: greenyellow; 
-  border: 3px solid greenyellow; 
+  color: greenyellow;
+  border: 3px solid greenyellow;
 }
 
 .summary-total-txt .number.not-equal {
-  color: red; 
-  border: 3px solid red; 
+  color: red;
+  border: 3px solid red;
 }
 
 .general-vouchers-summary span {

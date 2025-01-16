@@ -120,196 +120,221 @@ const JournalVoucherPage = () => {
   const isEqual = totalDebit === totalCredit;
 
   return (
-    <div
-      className="general-vouchers-container"
-      onClick={handleCloseContextMenu}
-    >
-      <AccountSelectionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelect={handleAccountSelection}
+<div
+  className="general-vouchers-container"
+  onClick={handleCloseContextMenu}
+>
+  <AccountSelectionModal
+    isOpen={isModalOpen}
+    onClose={() => setIsModalOpen(false)}
+    onSelect={handleAccountSelection}
+  />
+  <div className="general-vouchers-header">
+    <h2 className="general-vouchers-title">Journal Voucher</h2>
+  </div>
+  <div className="general-vouchers-date-wrapper">
+    <label className="general-vouchers-label">
+      Date:
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        required
+        className="general-vouchers-input"
       />
-      <div className="general-vouchers-header">
-        <h2 className="general-vouchers-title">Journal Voucher</h2>
-      </div>
-      <div className="general-vouchers-date-wrapper">
-        <label className="general-vouchers-label">
-          Date:
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            className="general-vouchers-input"
-          />
-        </label>
-        <button
-          className="general-vouchers-submit-btn"
-          onClick={handleSubmit}
-          disabled={totalDebit !== totalCredit || totalDebit === 0}
-        >
-          Submit
-        </button>
-      </div>
-      <div className="general-vouchers-table-container">
-        <table className="general-vouchers-table">
-          <thead>
-            <tr>
-              <th className="column-account-number">Acc Nb</th>
-              <th className="column-account-name">Account Name</th>
-              <th className="column-currency">Currency</th>
-              <th className="column-debit">Debit</th>
-              <th className="column-credit">Credit</th>
-              <th className="column-exchange-rate">Exc Rate</th>
-              <th className="column-debit-ex">Debit Ex</th>
-              <th className="column-credit-ex">Credit Ex</th>
-              <th className="column-description">Description</th>
-              <th className="column-document-nbr">Doc Nbr</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry, index) => (
-              <tr key={index} onContextMenu={(e) => handleRightClick(e, index)}>
-                <td onClick={() => handleAccountNumberClick(index)}>
-                  <input
-                    type="text"
-                    value={entry.accountNumber}
-                    placeholder="Acc Nbr"
-                    readOnly
-                    className="general-vouchers-input column-account-number"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={entry.accountName}
-                    readOnly
-                    placeholder="Account Name"
-                    className="general-vouchers-input column-account-name"
-                  />
-                </td>
-                <td>
-                  <select
-                    value={entry.currency}
-                    onChange={(e) =>
-                      handleInputChange(index, "currency", e.target.value)
-                    }
-                    className="general-vouchers-input column-currency"
-                  >
-                    <option value="USD">USD</option>
-                    <option value="LL">LL</option>
-                    <option value="EUR">EUR</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={entry.debit}
-                    placeholder="Debit Number"
-                    onChange={(e) =>
-                      handleInputChange(index, "debit", e.target.value)
-                    }
-                    className="general-vouchers-input column-debit"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={entry.credit}
-                    placeholder="Credit Number"
-                    onChange={(e) =>
-                      handleInputChange(index, "credit", e.target.value)
-                    }
-                    className="general-vouchers-input column-credit"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={entry.exchangeRate}
-                    placeholder="Exchange Rate"
-                    onChange={(e) =>
-                      handleInputChange(index, "exchangeRate", e.target.value)
-                    }
-                    className="general-vouchers-input column-exchange-rate"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={entry.debitEx}
-                    placeholder="Debit Ex Num"
-                    readOnly
-                    className="general-vouchers-input column-debit-ex"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={entry.creditEx}
-                    placeholder="Credit Ex Num"
-                    readOnly
-                    className="general-vouchers-input column-credit-ex"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={entry.description}
-                    placeholder="Description"
-                    onChange={(e) =>
-                      handleInputChange(index, "description", e.target.value)
-                    }
-                    className="general-vouchers-input column-description"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    value={entry.documentNbr}
-                    placeholder="Doc Nbr"
-                    onChange={(e) =>
-                      handleInputChange(index, "documentNbr", e.target.value)
-                    }
-                    className="general-vouchers-input column-document-nbr"
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="general-vouchers-add-row-container">
-        <button className="general-vouchers-new-btn" onClick={handleAddRow}>
-          Add Row
-        </button>
-      </div>
-      <div className="general-vouchers-summary">
-        <span className="summary-total-txt">
-          Total Debit:{" "}
-          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-            {totalDebit}
-          </span>
-        </span>
-        <span className="summary-total-txt">
-          Total Credit:{" "}
-          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-            {totalCredit}
-          </span>
-        </span>
-      </div>
+    </label>
+    <button
+      className="general-vouchers-submit-btn"
+      onClick={handleSubmit}
+      disabled={totalDebit !== totalCredit || totalDebit === 0}
+    >
+      Submit
+    </button>
+  </div>
+  <div className="general-vouchers-table-container">
+    <table className="general-vouchers-table">
+      <thead>
+        <tr>
+          <th className="column-account-number">Acc Nb</th>
+          <th className="column-account-name">Account Name</th>
+          <th className="column-currency">Currency</th>
+          <th className="column-debit">Debit</th>
+          <th className="column-credit">Credit</th>
+          <th className="column-exchange-rate">Exc Rate</th>
+          <th className="column-debit-usd">Debit USD</th>
+          <th className="column-credit-usd">Credit USD</th>
+          <th className="column-debit-ex">Debit LL</th>
+          <th className="column-credit-ex">Credit LL</th>
+          <th className="column-description">Description</th>
+          <th className="column-document-nbr">Doc Nbr</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry, index) => (
+          <tr key={index} onContextMenu={(e) => handleRightClick(e, index)}>
+            <td onClick={() => handleAccountNumberClick(index)}>
+              <input
+                type="text"
+                value={entry.accountNumber}
+                placeholder="Acc Nbr"
+                readOnly
+                className="general-vouchers-input column-account-number"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                value={entry.accountName}
+                readOnly
+                placeholder="Account Name"
+                className="general-vouchers-input column-account-name"
+              />
+            </td>
+            <td>
+              <select
+                value={entry.currency}
+                onChange={(e) =>
+                  handleInputChange(index, "currency", e.target.value)
+                }
+                className="general-vouchers-input column-currency"
+              >
+                <option value="USD">USD</option>
+                <option value="LL">LL</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.debit}
+                placeholder="Debit Number"
+                onChange={(e) =>
+                  handleInputChange(index, "debit", e.target.value)
+                }
+                className="general-vouchers-input column-debit"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.credit}
+                placeholder="Credit Number"
+                onChange={(e) =>
+                  handleInputChange(index, "credit", e.target.value)
+                }
+                className="general-vouchers-input column-credit"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.exchangeRate}
+                placeholder="Exchange Rate"
+                onChange={(e) =>
+                  handleInputChange(index, "exchangeRate", e.target.value)
+                }
+                className="general-vouchers-input column-exchange-rate"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.debitUSD}
+                placeholder="Debit USD"
+                onChange={(e) =>
+                  handleInputChange(index, "debitUSD", e.target.value)
+                }
+                className="general-vouchers-input column-debit-usd"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.creditUSD}
+                placeholder="Credit USD"
+                onChange={(e) =>
+                  handleInputChange(index, "creditUSD", e.target.value)
+                }
+                className="general-vouchers-input column-credit-usd"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.debitEx}
+                placeholder="Debit Ex Num"
+                readOnly
+                className="general-vouchers-input column-debit-ex"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                value={entry.creditEx}
+                placeholder="Credit Ex Num"
+                readOnly
+                className="general-vouchers-input column-credit-ex"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                value={entry.description}
+                placeholder="Description"
+                onChange={(e) =>
+                  handleInputChange(index, "description", e.target.value)
+                }
+                className="general-vouchers-input column-description"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                value={entry.documentNbr}
+                placeholder="Doc Nbr"
+                onChange={(e) =>
+                  handleInputChange(index, "documentNbr", e.target.value)
+                }
+                className="general-vouchers-input column-document-nbr"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <div className="general-vouchers-add-row-container">
+    <button className="general-vouchers-new-btn" onClick={handleAddRow}>
+      Add Row
+    </button>
+  </div>
+  <div className="general-vouchers-summary">
+    <span className="summary-total-txt">
+      Total Debit:{" "}
+      <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+        {totalDebit}
+      </span>
+    </span>
+    <span className="summary-total-txt">
+      Total Credit:{" "}
+      <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+        {totalCredit}
+      </span>
+    </span>
+  </div>
 
-      {contextMenu.visible && (
-        <div
-          className="context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          <button className="context-menu-item" onClick={handleDeleteRow}>
-            Delete
-          </button>
-        </div>
-      )}
+  {contextMenu.visible && (
+    <div
+      className="context-menu"
+      style={{ top: contextMenu.y, left: contextMenu.x }}
+    >
+      <button className="context-menu-item" onClick={handleDeleteRow}>
+        Delete
+      </button>
     </div>
+  )}
+</div>
+
   );
 };
 
