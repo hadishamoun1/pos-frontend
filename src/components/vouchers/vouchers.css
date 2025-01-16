@@ -104,7 +104,7 @@
 
 .general-vouchers-table {
   scroll-behavior: smooth;
-  width: 2300px;
+  width: 2320px;
   border-collapse: collapse;
   border-radius: 10px;
   overflow-x: auto;
@@ -157,6 +157,10 @@
 .general-vouchers-table td.column-credit {
   width: 8%;
 }
+.general-vouchers-table th.column-exchange-rate-eur-usd,
+.general-vouchers-table td.column-exchange-rate-eur-usd {
+  width: 10%;
+}
 
 .general-vouchers-table th.column-exchange-rate,
 .general-vouchers-table td.column-exchange-rate {
@@ -181,8 +185,8 @@
 
 .general-vouchers-table th.column-document-nbr,
 .general-vouchers-table td.column-document-nbr {
-  min-width: 20px;
-  max-width: 21px;
+  min-width: 120px;
+  max-width: 121px;
 }
 
 .general-vouchers-table th {

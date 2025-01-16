@@ -160,6 +160,9 @@ const JournalVoucherPage = () => {
               <th className="column-currency">Currency</th>
               <th className="column-debit">Debit</th>
               <th className="column-credit">Credit</th>
+
+              <th className="column-exchange-rate-eur-usd">Exc (EUR to USD)</th>
+
               <th className="column-exchange-rate">Exc Rate</th>
 
               <th className="column-debit-usd">Debit USD</th>
@@ -225,6 +228,24 @@ const JournalVoucherPage = () => {
                       handleInputChange(index, "credit", e.target.value)
                     }
                     className="general-vouchers-input column-credit"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={entry.exchangeRateEURtoUSD || ""}
+                    placeholder="Exc  EUR to USD"
+                    disabled={entry.currency !== "EUR"}
+                    onChange={(e) =>
+                      handleInputChange(
+                        index,
+                        "exchangeRateEURtoUSD",
+                        e.target.value
+                      )
+                    }
+                    className={`general-vouchers-input column-exchange-rate-eur-usd ${
+                      entry.currency !== "EUR" ? "disabled-input" : ""
+                    }`}
                   />
                 </td>
                 <td>
