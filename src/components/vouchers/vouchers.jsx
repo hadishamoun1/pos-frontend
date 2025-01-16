@@ -9,11 +9,13 @@ const JournalVoucherPage = () => {
       accountNumber: "",
       accountName: "",
       currency: "USD",
-      debit: "",
-      credit: "",
+      debit: 0,
+      credit: 0,
       exchangeRate: 1,
-      debitEx: "",
-      creditEx: "",
+      debitUSD: 0,
+      creditUSD: 0,
+      debitEx: 0,
+      creditEx: 0,
       description: "",
       documentNbr: "",
     },
@@ -34,11 +36,13 @@ const JournalVoucherPage = () => {
         accountNumber: "",
         accountName: "",
         currency: "USD",
-        debit: "",
-        credit: "",
+        debit: 0,
+        credit: 0,
         exchangeRate: 1,
-        debitEx: "",
-        creditEx: "",
+        debitUSD: 0,
+        creditUSD: 0,
+        debitEx: 0,
+        creditEx: 0,
         description: "",
         documentNbr: "",
       },
@@ -53,6 +57,8 @@ const JournalVoucherPage = () => {
       "exchangeRate",
       "debitEx",
       "creditEx",
+      "debitUSD",
+      "creditUSD",
     ].includes(field)
       ? parseFloat(value) || 0
       : value;
@@ -133,6 +139,7 @@ const JournalVoucherPage = () => {
     console.log(journalVoucher);
     alert("Journal Voucher Submitted");
   };
+
   const isEqual = totalDebit === totalCredit;
   const isUSDEqual = totalDebitUSD === totalCreditUSD;
   const isLLEqual = totalDebitLL === totalCreditLL;
@@ -178,14 +185,10 @@ const JournalVoucherPage = () => {
               <th className="column-currency">Currency</th>
               <th className="column-debit">Debit</th>
               <th className="column-credit">Credit</th>
-
               <th className="column-exchange-rate-eur-usd">Exc (EUR to USD)</th>
-
               <th className="column-exchange-rate">Exc Rate</th>
-
               <th className="column-debit-usd">Debit USD</th>
               <th className="column-credit-usd">Credit USD</th>
-
               <th className="column-debit-ex">Debit LL</th>
               <th className="column-credit-ex">Credit LL</th>
               <th className="column-description">Description</th>
@@ -252,7 +255,7 @@ const JournalVoucherPage = () => {
                   <input
                     type="number"
                     value={entry.exchangeRateEURtoUSD || ""}
-                    placeholder="Exc  EUR to USD"
+                    placeholder="Exc EUR to USD"
                     disabled={entry.currency !== "EUR"}
                     onChange={(e) =>
                       handleInputChange(
