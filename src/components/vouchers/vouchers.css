@@ -181,8 +181,8 @@
 
 .general-vouchers-table th.column-document-nbr,
 .general-vouchers-table td.column-document-nbr {
-  
-  min-width: 120px;
+  min-width: 20px;
+  max-width: 21px;
 }
 
 .general-vouchers-table th {
@@ -272,6 +272,13 @@
 .general-vouchers-summary span {
   color: #ffffff;
   font-weight: bold;
+}
+
+.disabled-input {
+  background-color: #e0e0e0;
+  color: #f3f8fc;
+  border: 1px solid #d0d5da;
+  cursor: not-allowed;
 }
 
 /* Responsive Design */
