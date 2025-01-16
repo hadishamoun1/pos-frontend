@@ -239,12 +239,12 @@
 .general-vouchers-summary {
   position: sticky;
   bottom: 0;
-  background: linear-gradient(360deg, #0980ff, #0056b3);
+  background: rgb(252, 252, 252);
   border-radius: 15px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   font-size: 1.2rem;
   font-weight: 600;
-  color: #faf8f8;
+
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -257,10 +257,7 @@
 }
 
 /* General text styling for Total Debit and Total Credit */
-.summary-total-txt {
-  color: #ffffff;
-  font-weight: bold;
-}
+
 
 /* Dynamic styling for numbers */
 .summary-total-txt .number {
@@ -270,8 +267,8 @@
 }
 
 .summary-total-txt .number.equal {
-  color: greenyellow;
-  border: 3px solid greenyellow;
+  color: #0980ff;
+  border: 3px solid #0980ff;
 }
 
 .summary-total-txt .number.not-equal {
@@ -280,7 +277,7 @@
 }
 
 .general-vouchers-summary span {
-  color: #ffffff;
+  color: #0980ff;
   font-weight: bold;
 }
 
