@@ -111,6 +111,22 @@ const JournalVoucherPage = () => {
     (sum, entry) => sum + (entry.credit || 0),
     0
   );
+  const totalDebitUSD = entries.reduce(
+    (sum, entry) => sum + (entry.currency === "EUR" ? entry.debitUSD || 0 : 0),
+    0
+  );
+  const totalCreditUSD = entries.reduce(
+    (sum, entry) => sum + (entry.currency === "EUR" ? entry.creditUSD || 0 : 0),
+    0
+  );
+  const totalDebitLL = entries.reduce(
+    (sum, entry) => sum + (entry.debitEx || 0),
+    0
+  );
+  const totalCreditLL = entries.reduce(
+    (sum, entry) => sum + (entry.creditEx || 0),
+    0
+  );
 
   const handleSubmit = () => {
     const journalVoucher = { date, entries };
@@ -118,6 +134,8 @@ const JournalVoucherPage = () => {
     alert("Journal Voucher Submitted");
   };
   const isEqual = totalDebit === totalCredit;
+  const isUSDEqual = totalDebitUSD === totalCreditUSD;
+  const isLLEqual = totalDebitLL === totalCreditLL;
 
   return (
     <div
@@ -338,18 +356,48 @@ const JournalVoucherPage = () => {
         </button>
       </div>
       <div className="general-vouchers-summary">
-        <span className="summary-total-txt">
-          Total Debit:{" "}
-          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-            {totalDebit}
+        <div className="summary-row">
+          <span className="summary-total-txt">
+            Total Debit:{" "}
+            <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+              {totalDebit.toFixed(2)}
+            </span>
           </span>
-        </span>
-        <span className="summary-total-txt">
-          Total Credit:{" "}
-          <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-            {totalCredit}
+          <span className="summary-total-txt">
+            Total Credit:{" "}
+            <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
+              {totalCredit.toFixed(2)}
+            </span>
           </span>
-        </span>
+        </div>
+        <div className="summary-row">
+          <span className="summary-total-txt">
+            Total Debit USD:{" "}
+            <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
+              {totalDebitUSD.toFixed(2)}
+            </span>
+          </span>
+          <span className="summary-total-txt">
+            Total Credit USD:{" "}
+            <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
+              {totalCreditUSD.toFixed(2)}
+            </span>
+          </span>
+        </div>
+        <div className="summary-row">
+          <span className="summary-total-txt">
+            Total Debit LL:{" "}
+            <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
+              {totalDebitLL.toFixed(2)}
+            </span>
+          </span>
+          <span className="summary-total-txt">
+            Total Credit LL:{" "}
+            <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
+              {totalCreditLL.toFixed(2)}
+            </span>
+          </span>
+        </div>
       </div>
 
       {contextMenu.visible && (
