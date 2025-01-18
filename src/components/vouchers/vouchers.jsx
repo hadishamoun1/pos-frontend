@@ -8,14 +8,15 @@ const JournalVoucherPage = () => {
     {
       accountNumber: "",
       accountName: "",
-      currency: "USD",
-      debit: 0,
-      credit: 0,
-      exchangeRate: 1,
-      debitUSD: 0,
-      creditUSD: 0,
-      debitEx: 0,
-      creditEx: 0,
+      currency: "",
+      debit: "",
+      credit: "",
+      exchangeRate: "1",
+      exchangeRateEURtoUSD: "1",
+      debitUSD: "",
+      creditUSD: "",
+      debitEx: "",
+      creditEx: "",
       description: "",
       documentNbr: "",
     },
@@ -29,20 +30,35 @@ const JournalVoucherPage = () => {
     rowIndex: null,
   });
 
+  const parseNumber = (value) => {
+    if (value === "" || value === null || value === undefined) return 0;
+    const stringValue = value.toString().replace(/,/g, "");
+    return isNaN(stringValue) ? 0 : parseFloat(stringValue);
+  };
+
+  const formatNumber = (value) => {
+    if (value === null || value === undefined || value === "") return "";
+    return parseFloat(value).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   const handleAddRow = () => {
     setEntries([
       ...entries,
       {
         accountNumber: "",
         accountName: "",
-        currency: "USD",
-        debit: 0,
-        credit: 0,
-        exchangeRate: 1,
-        debitUSD: 0,
-        creditUSD: 0,
-        debitEx: 0,
-        creditEx: 0,
+        currency: "",
+        debit: "",
+        credit: "",
+        exchangeRate: "1",
+        exchangeRateEURtoUSD: "1",
+        debitUSD: "",
+        creditUSD: "",
+        debitEx: "",
+        creditEx: "",
         description: "",
         documentNbr: "",
       },
@@ -51,27 +67,59 @@ const JournalVoucherPage = () => {
 
   const handleInputChange = (index, field, value) => {
     const updatedEntries = [...entries];
-    updatedEntries[index][field] = [
-      "debit",
-      "credit",
-      "exchangeRate",
-      "debitEx",
-      "creditEx",
-      "debitUSD",
-      "creditUSD",
-    ].includes(field)
-      ? parseFloat(value) || 0
-      : value;
+    updatedEntries[index][field] = value;
 
-    if (field === "debit" || field === "exchangeRate") {
-      updatedEntries[index].debitEx =
-        updatedEntries[index].debit * updatedEntries[index].exchangeRate;
-    }
-    if (field === "credit" || field === "exchangeRate") {
-      updatedEntries[index].creditEx =
-        updatedEntries[index].credit * updatedEntries[index].exchangeRate;
+    const entry = updatedEntries[index];
+    const debit = parseNumber(entry.debit);
+    const credit = parseNumber(entry.credit);
+    const exchangeRate = parseNumber(entry.exchangeRate);
+    const exchangeRateEURtoUSD = parseNumber(entry.exchangeRateEURtoUSD);
+
+    if (field === "currency") {
+      if (value === "USD") {
+        entry.debitEx = (debit * exchangeRate).toString();
+        entry.creditEx = (credit * exchangeRate).toString();
+        entry.debitUSD = debit.toString();
+        entry.creditUSD = credit.toString();
+      } else if (value === "LL") {
+        entry.debitUSD = (debit / exchangeRate).toString();
+        entry.creditUSD = (credit / exchangeRate).toString();
+        entry.debitEx = debit.toString();
+        entry.creditEx = credit.toString();
+      } else if (value === "EUR") {
+        entry.debitUSD = (debit * exchangeRateEURtoUSD).toString();
+        entry.creditUSD = (credit * exchangeRateEURtoUSD).toString();
+        entry.debitEx = (parseNumber(entry.debitUSD) * exchangeRate).toString();
+        entry.creditEx = (
+          parseNumber(entry.creditUSD) * exchangeRate
+        ).toString();
+      }
     }
 
+    if (entry.currency === "USD") {
+      entry.debitUSD = debit.toString();
+      entry.creditUSD = credit.toString();
+      entry.debitEx = (debit * exchangeRate).toString();
+      entry.creditEx = (credit * exchangeRate).toString();
+    } else if (entry.currency === "LL") {
+      entry.debitUSD = (debit / exchangeRate).toString();
+      entry.creditUSD = (credit / exchangeRate).toString();
+      entry.debitEx = debit.toString();
+      entry.creditEx = credit.toString();
+    } else if (entry.currency === "EUR") {
+      entry.debitUSD = (debit * exchangeRateEURtoUSD).toString();
+      entry.creditUSD = (credit * exchangeRateEURtoUSD).toString();
+      entry.debitEx = (parseNumber(entry.debitUSD) * exchangeRate).toString();
+      entry.creditEx = (parseNumber(entry.creditUSD) * exchangeRate).toString();
+    }
+
+    setEntries(updatedEntries);
+  };
+
+  const handleInputBlur = (index, field) => {
+    const updatedEntries = [...entries];
+    const value = parseNumber(updatedEntries[index][field]);
+    updatedEntries[index][field] = formatNumber(value);
     setEntries(updatedEntries);
   };
 
@@ -109,29 +157,23 @@ const JournalVoucherPage = () => {
     setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   };
 
-  const totalDebit = entries.reduce(
-    (sum, entry) => sum + (entry.debit || 0),
-    0
+  const totalDebit = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0)
   );
-  const totalCredit = entries.reduce(
-    (sum, entry) => sum + (entry.credit || 0),
-    0
+  const totalCredit = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0)
   );
-  const totalDebitUSD = entries.reduce(
-    (sum, entry) => sum + (entry.currency === "EUR" ? entry.debitUSD || 0 : 0),
-    0
+  const totalDebitUSD = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0)
   );
-  const totalCreditUSD = entries.reduce(
-    (sum, entry) => sum + (entry.currency === "EUR" ? entry.creditUSD || 0 : 0),
-    0
+  const totalCreditUSD = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.creditUSD), 0)
   );
-  const totalDebitLL = entries.reduce(
-    (sum, entry) => sum + (entry.debitEx || 0),
-    0
+  const totalDebitLL = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.debitEx), 0)
   );
-  const totalCreditLL = entries.reduce(
-    (sum, entry) => sum + (entry.creditEx || 0),
-    0
+  const totalCreditLL = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
   const handleSubmit = () => {
@@ -224,6 +266,9 @@ const JournalVoucherPage = () => {
                     }
                     className="general-vouchers-input column-currency"
                   >
+                    <option value="" disabled hidden>
+                      Select
+                    </option>
                     <option value="USD">USD</option>
                     <option value="LL">LL</option>
                     <option value="EUR">EUR</option>
@@ -231,30 +276,32 @@ const JournalVoucherPage = () => {
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={entry.debit}
-                    placeholder="Debit Number"
+                    placeholder="Debit"
                     onChange={(e) =>
                       handleInputChange(index, "debit", e.target.value)
                     }
+                    onBlur={() => handleInputBlur(index, "debit")}
                     className="general-vouchers-input column-debit"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={entry.credit}
-                    placeholder="Credit Number"
+                    placeholder="Credit"
                     onChange={(e) =>
                       handleInputChange(index, "credit", e.target.value)
                     }
+                    onBlur={() => handleInputBlur(index, "credit")}
                     className="general-vouchers-input column-credit"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
-                    value={entry.exchangeRateEURtoUSD || ""}
+                    type="text"
+                    value={entry.exchangeRateEURtoUSD}
                     placeholder="Exc EUR to USD"
                     disabled={entry.currency !== "EUR"}
                     onChange={(e) =>
@@ -264,6 +311,9 @@ const JournalVoucherPage = () => {
                         e.target.value
                       )
                     }
+                    onBlur={() =>
+                      handleInputBlur(index, "exchangeRateEURtoUSD")
+                    }
                     className={`general-vouchers-input column-exchange-rate-eur-usd ${
                       entry.currency !== "EUR" ? "disabled-input" : ""
                     }`}
@@ -271,61 +321,65 @@ const JournalVoucherPage = () => {
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={entry.exchangeRate}
                     placeholder="Exchange Rate"
                     onChange={(e) =>
                       handleInputChange(index, "exchangeRate", e.target.value)
                     }
+                    onBlur={() => handleInputBlur(index, "exchangeRate")}
                     className="general-vouchers-input column-exchange-rate"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={entry.debitUSD}
                     placeholder="Debit USD"
-                    disabled={entry.currency !== "EUR"}
+                    readOnly={entry.currency === "USD"}
                     onChange={(e) =>
                       handleInputChange(index, "debitUSD", e.target.value)
                     }
+                    onBlur={() => handleInputBlur(index, "debitUSD")}
                     className={`general-vouchers-input column-debit-usd ${
-                      entry.currency !== "EUR" ? "disabled-input" : ""
+                      entry.currency === "USD" ? "readonly-input" : ""
                     }`}
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
+                    type="text"
                     value={entry.creditUSD}
                     placeholder="Credit USD"
-                    disabled={entry.currency !== "EUR"}
+                    readOnly={entry.currency === "USD"}
                     onChange={(e) =>
                       handleInputChange(index, "creditUSD", e.target.value)
                     }
+                    onBlur={() => handleInputBlur(index, "creditUSD")}
                     className={`general-vouchers-input column-credit-usd ${
-                      entry.currency !== "EUR" ? "disabled-input" : ""
+                      entry.currency === "USD" ? "readonly-input" : ""
                     }`}
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
-                    value={entry.debitEx}
-                    placeholder="Debit Ex Num"
+                    type="text"
+                    value={formatNumber(entry.debitEx)}
+                    placeholder="Debit LL"
                     readOnly
                     className="general-vouchers-input column-debit-ex"
                   />
                 </td>
                 <td>
                   <input
-                    type="number"
-                    value={entry.creditEx}
-                    placeholder="Credit Ex Num"
+                    type="text"
+                    value={formatNumber(entry.creditEx)}
+                    placeholder="Credit LL"
                     readOnly
                     className="general-vouchers-input column-credit-ex"
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -363,13 +417,13 @@ const JournalVoucherPage = () => {
           <span className="summary-total-txt">
             Total Debit:{" "}
             <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-              {totalDebit.toFixed(2)}
+              {formatNumber(totalDebit)}
             </span>
           </span>
           <span className="summary-total-txt">
             Total Credit:{" "}
             <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-              {totalCredit.toFixed(2)}
+              {formatNumber(totalCredit)}
             </span>
           </span>
         </div>
@@ -377,13 +431,13 @@ const JournalVoucherPage = () => {
           <span className="summary-total-txt">
             Total Debit USD:{" "}
             <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
-              {totalDebitUSD.toFixed(2)}
+              {formatNumber(totalDebitUSD)}
             </span>
           </span>
           <span className="summary-total-txt">
             Total Credit USD:{" "}
             <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
-              {totalCreditUSD.toFixed(2)}
+              {formatNumber(totalCreditUSD)}
             </span>
           </span>
         </div>
@@ -391,13 +445,13 @@ const JournalVoucherPage = () => {
           <span className="summary-total-txt">
             Total Debit LL:{" "}
             <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
-              {totalDebitLL.toFixed(2)}
+              {formatNumber(totalDebitLL)}
             </span>
           </span>
           <span className="summary-total-txt">
             Total Credit LL:{" "}
             <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
-              {totalCreditLL.toFixed(2)}
+              {formatNumber(totalCreditLL)}
             </span>
           </span>
         </div>

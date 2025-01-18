@@ -145,7 +145,7 @@
 
 .general-vouchers-table th.column-currency,
 .general-vouchers-table td.column-currency {
-  width: 6%;
+  width: 7%;
 }
 
 .general-vouchers-table th.column-debit,
@@ -244,7 +244,7 @@
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   font-size: 1.2rem;
   font-weight: 600;
-  border: 2px solid #007bff;
+  border: 3px solid #007bff;
   padding: 1rem;
   display: flex;
   flex-direction: column;
