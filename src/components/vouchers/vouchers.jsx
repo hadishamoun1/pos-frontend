@@ -318,32 +318,34 @@ const JournalVoucherPage = () => {
         <h2 className="general-vouchers-title">Journal Voucher</h2>
       </div>
       <div className="general-vouchers-date-wrapper">
-        <label className="general-vouchers-label">
-          Date:
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            className="general-vouchers-input"
-          />
-        </label>
-        <label className="general-vouchers-label">
-          Type:
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            required
-            className="general-vouchers-input"
-          >
-            <option value="" disabled hidden>
-              Select Type
-            </option>
-            <option value="S">S</option>
-            <option value="G">G</option>
-            {/* Add other types if necessary */}
-          </select>
-        </label>
+        <div className="date-type">
+          <label className="general-vouchers-label">
+            Date:
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="general-vouchers-input"
+            />
+          </label>
+          <label className="general-vouchers-label">
+            Type:
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              required
+              className="general-vouchers-input"
+            >
+              <option value="" disabled hidden>
+                Select Type
+              </option>
+              <option value="S">S</option>
+              <option value="G">G</option>
+              {/* Add other types if necessary */}
+            </select>
+          </label>
+        </div>
         <button
           className="general-vouchers-submit-btn"
           onClick={handleSubmit}
