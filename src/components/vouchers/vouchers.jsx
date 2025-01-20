@@ -2,11 +2,17 @@ import React, { useState } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
 import axios from "axios";
+import NotificationModal from "../recievables/NotificationModal";
 
 const JournalVoucherPage = () => {
   const [date, setDate] = useState("");
-  const [accountId, setAccountId] = useState(null);
-  const [accountName, setAccountName] = useState("");
+  const [type, setType] = useState("");
+  const [notification, setNotification] = useState({
+    visible: false,
+    type: "",
+    message: "",
+    onConfirm: null,
+  });
   const [entries, setEntries] = useState([
     {
       accountId: null,
@@ -130,19 +136,21 @@ const JournalVoucherPage = () => {
 
   const handleAccountSelection = (account) => {
     if (currentRowIndex === null) {
-      // Set top-level account
-      setAccountId(account.id);
-      setAccountName(account.accountName);
-    } else {
-      // Set account for the selected entry
-      const updatedEntries = [...entries];
-      updatedEntries[currentRowIndex].accountId = account.id;
-      updatedEntries[currentRowIndex].accountNumber = account.accountNumber;
-      updatedEntries[currentRowIndex].accountName = account.accountName;
-      console.log(updatedEntries);
-      setEntries(updatedEntries);
+      // If no specific row is selected, show an error or handle as needed
+
+      alert("Please select a row to assign an account.");
+      return;
     }
-    setIsModalOpen(false);
+
+    // Set account for the selected entry
+    const updatedEntries = [...entries];
+    updatedEntries[currentRowIndex].accountId = account.id; // Set the accountId
+    updatedEntries[currentRowIndex].accountNumber = account.accountNumber; // Set the accountNumber
+    updatedEntries[currentRowIndex].accountName = account.accountName; // Set the accountName
+
+    console.log("Updated entries after account selection:", updatedEntries); // Log updated entries
+    setEntries(updatedEntries); // Update the state with modified entries
+    setIsModalOpen(false); // Close the modal
   };
 
   const handleAccountNumberClick = (index) => {
@@ -191,22 +199,43 @@ const JournalVoucherPage = () => {
   );
 
   const handleSubmit = async () => {
+    console.log("Current entries state:", entries);
     try {
-      console.log("Current entries state:", entries); // Log entries before submission
+      // Validate that every entry has an accountId
+      const invalidEntries = entries.filter((entry) => !entry.accountId);
+      if (invalidEntries.length > 0) {
+        setNotification({
+          visible: true,
+          type: "error",
+          message: "All entries must have a valid account selected.",
+        });
 
-      // Extract the top-level accountId from the first entry or validate its presence
-      const topLevelAccountId = entries[0]?.accountId;
-      if (!topLevelAccountId) {
-        alert("Please select a top-level account for the Journal Voucher.");
+        console.log("Invalid entries:", invalidEntries);
+        return;
+      }
+      if (!type) {
+        setNotification({
+          type: "error",
+          message: "Please select a type for the Journal Voucher.",
+          visible: true,
+        });
+        return;
+      }
+      if (!date) {
+        setNotification({
+          type: "error",
+          message: "Please select a date for the Journal Voucher.",
+          visible: true,
+        });
         return;
       }
 
       // Prepare the payload
       const payload = {
         date,
-        jvType: "S", // Replace with actual JV type if needed
+        jvType: type,
         details: entries.map((entry) => ({
-          accountId: entry.accountId, // Include accountId for each entry
+          accountId: entry.accountId,
           description: entry.description,
           debit: entry.debit,
           debitUSD: entry.debitUSD,
@@ -229,7 +258,12 @@ const JournalVoucherPage = () => {
       );
 
       if (response.status === 201) {
-        alert("Journal Voucher submitted successfully!");
+        setNotification({
+          visible: true,
+          type: "success",
+          message: "Journal Voucher submitted successfully!",
+        });
+
         console.log("Response:", response.data);
 
         // Reset the form
@@ -258,7 +292,11 @@ const JournalVoucherPage = () => {
         "Error submitting journal voucher:",
         error.response || error.message
       );
-      alert("Failed to submit the journal voucher. Please try again.");
+      setNotification({
+        visible: true,
+        type: "error",
+        message: "Failed to submit the journal voucher. Please try again.",
+      });
     }
   };
 
@@ -289,6 +327,22 @@ const JournalVoucherPage = () => {
             required
             className="general-vouchers-input"
           />
+        </label>
+        <label className="general-vouchers-label">
+          Type:
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            required
+            className="general-vouchers-input"
+          >
+            <option value="" disabled hidden>
+              Select Type
+            </option>
+            <option value="S">S</option>
+            <option value="G">G</option>
+            {/* Add other types if necessary */}
+          </select>
         </label>
         <button
           className="general-vouchers-submit-btn"
@@ -546,6 +600,16 @@ const JournalVoucherPage = () => {
             Delete
           </button>
         </div>
+      )}
+      {notification.visible && (
+        <NotificationModal
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification({ ...notification, visible: false })}
+          onConfirm={notification.onConfirm}
+          confirmLabel="OK"
+          cancelLabel={notification.type === "warning" ? "Cancel" : null}
+        />
       )}
     </div>
   );
