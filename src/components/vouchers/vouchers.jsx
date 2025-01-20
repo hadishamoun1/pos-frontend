@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
+import axios from "axios";
 
 const JournalVoucherPage = () => {
   const [date, setDate] = useState("");
+  const [accountId, setAccountId] = useState(null);
+  const [accountName, setAccountName] = useState("");
   const [entries, setEntries] = useState([
     {
+      accountId: null,
       accountNumber: "",
       accountName: "",
       currency: "",
@@ -48,6 +52,7 @@ const JournalVoucherPage = () => {
     setEntries([
       ...entries,
       {
+        accountId: "",
         accountNumber: "",
         accountName: "",
         currency: "",
@@ -124,10 +129,19 @@ const JournalVoucherPage = () => {
   };
 
   const handleAccountSelection = (account) => {
-    const updatedEntries = [...entries];
-    updatedEntries[currentRowIndex].accountNumber = account.accountNumber;
-    updatedEntries[currentRowIndex].accountName = account.accountName;
-    setEntries(updatedEntries);
+    if (currentRowIndex === null) {
+      // Set top-level account
+      setAccountId(account.id);
+      setAccountName(account.accountName);
+    } else {
+      // Set account for the selected entry
+      const updatedEntries = [...entries];
+      updatedEntries[currentRowIndex].accountId = account.id;
+      updatedEntries[currentRowIndex].accountNumber = account.accountNumber;
+      updatedEntries[currentRowIndex].accountName = account.accountName;
+      console.log(updatedEntries);
+      setEntries(updatedEntries);
+    }
     setIsModalOpen(false);
   };
 
@@ -176,10 +190,76 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
-  const handleSubmit = () => {
-    const journalVoucher = { date, entries };
-    console.log(journalVoucher);
-    alert("Journal Voucher Submitted");
+  const handleSubmit = async () => {
+    try {
+      console.log("Current entries state:", entries); // Log entries before submission
+
+      // Extract the top-level accountId from the first entry or validate its presence
+      const topLevelAccountId = entries[0]?.accountId;
+      if (!topLevelAccountId) {
+        alert("Please select a top-level account for the Journal Voucher.");
+        return;
+      }
+
+      // Prepare the payload
+      const payload = {
+        date,
+        jvType: "S", // Replace with actual JV type if needed
+        details: entries.map((entry) => ({
+          accountId: entry.accountId, // Include accountId for each entry
+          description: entry.description,
+          debit: entry.debit,
+          debitUSD: entry.debitUSD,
+          debitLL: entry.debitEx,
+          credit: entry.credit,
+          creditUSD: entry.creditUSD,
+          creditLL: entry.creditEx,
+          currency: entry.currency,
+          exchangeRateEURtoUSD: entry.exchangeRateEURtoUSD,
+          exchangeRate: entry.exchangeRate,
+          docNbr: entry.documentNbr,
+        })),
+      };
+      console.log("Payload to be sent:", JSON.stringify(payload, null, 2));
+
+      // Make the API call
+      const response = await axios.post(
+        "http://localhost:3000/journal-vouchers",
+        payload
+      );
+
+      if (response.status === 201) {
+        alert("Journal Voucher submitted successfully!");
+        console.log("Response:", response.data);
+
+        // Reset the form
+        setDate("");
+        setEntries([
+          {
+            accountId: null,
+            accountNumber: "",
+            accountName: "",
+            currency: "",
+            debit: "",
+            credit: "",
+            exchangeRate: "1",
+            exchangeRateEURtoUSD: "1",
+            debitUSD: "",
+            creditUSD: "",
+            debitEx: "",
+            creditEx: "",
+            description: "",
+            documentNbr: "",
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error(
+        "Error submitting journal voucher:",
+        error.response || error.message
+      );
+      alert("Failed to submit the journal voucher. Please try again.");
+    }
   };
 
   const isEqual = totalDebit === totalCredit;
