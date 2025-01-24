@@ -379,26 +379,28 @@ const JournalVoucherPage = () => {
             </select>
           </label>
         </div>
-        <button
-          className="open-journal-list-btn"
-          onClick={() => setIsJournalListOpen(true)}
-        >
-          Open Journal List
-        </button>
-        <JournalListsModal
-          isOpen={isJournalListOpen}
-          onClose={() => setIsJournalListOpen(false)}
-          journalData={journalData}
-          onView={handleView}
-        />
+        <div>
+          <button
+            className="open-journal-list-btn"
+            onClick={() => setIsJournalListOpen(true)}
+          >
+            Open Journal List
+          </button>
+          <JournalListsModal
+            isOpen={isJournalListOpen}
+            onClose={() => setIsJournalListOpen(false)}
+            journalData={journalData}
+            onView={handleView}
+          />
 
-        <button
-          className="general-vouchers-submit-btn"
-          onClick={handleSubmit}
-          disabled={totalDebit !== totalCredit || totalDebit === 0}
-        >
-          Submit
-        </button>
+          <button
+            className="general-vouchers-submit-btn"
+            onClick={handleSubmit}
+            disabled={totalDebit !== totalCredit || totalDebit === 0}
+          >
+            Submit
+          </button>
+        </div>
       </div>
       <div className="general-vouchers-table-container">
         <table className="general-vouchers-table">

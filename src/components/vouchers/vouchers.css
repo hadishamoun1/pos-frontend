@@ -41,8 +41,8 @@
   font-size: 1.2rem;
   color: #555;
   display: flex;
-  flex-direction: row; 
-  align-items: center; 
+  flex-direction: row;
+  align-items: center;
   gap: 5px;
 }
 
@@ -81,8 +81,24 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+  margin-left: 10px;
 }
 
+.open-journal-list-btn {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+}
+.open-journal-list-btn:hover {
+  background-color: #0056b3;
+  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+}
 .general-vouchers-submit-btn:hover {
   background-color: #1e7e34;
   box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
