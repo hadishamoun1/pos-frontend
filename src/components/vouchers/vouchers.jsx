@@ -1,10 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
 import axios from "axios";
 import NotificationModal from "../recievables/NotificationModal";
+import JournalListsModal from "./journal-list-modal";
 
 const JournalVoucherPage = () => {
+  const [isJournalListOpen, setIsJournalListOpen] = useState(false);
+  const [journalData, setJournalData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [date, setDate] = useState("");
   const [type, setType] = useState("");
   const [notification, setNotification] = useState({
@@ -307,6 +311,32 @@ const JournalVoucherPage = () => {
   const isUSDEqual = totalDebitUSD === totalCreditUSD;
   const isLLEqual = totalDebitLL === totalCreditLL;
 
+  // Fetch journal data from API
+  const fetchJournalData = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/journal-vouchers/v1/list"
+      );
+      setJournalData(response.data); // Update the journalData state
+    } catch (error) {
+      console.error("Error fetching journal data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isJournalListOpen) {
+      fetchJournalData();
+    }
+  }, [isJournalListOpen]);
+
+  const handleView = (journal) => {
+    console.log("View journal:", journal);
+    // Handle the view action (e.g., navigate to a details page or open another modal)
+  };
+
   return (
     <div
       className="general-vouchers-container"
@@ -349,6 +379,19 @@ const JournalVoucherPage = () => {
             </select>
           </label>
         </div>
+        <button
+          className="open-journal-list-btn"
+          onClick={() => setIsJournalListOpen(true)}
+        >
+          Open Journal List
+        </button>
+        <JournalListsModal
+          isOpen={isJournalListOpen}
+          onClose={() => setIsJournalListOpen(false)}
+          journalData={journalData}
+          onView={handleView}
+        />
+
         <button
           className="general-vouchers-submit-btn"
           onClick={handleSubmit}
