@@ -231,21 +231,24 @@ const JournalVoucherPage = () => {
       }
 
       // Prepare the payload
+      const removeCommas = (value) =>
+        typeof value === "string" ? value.replace(/,/g, "") : value;
+
       const payload = {
         date,
         jvType: type,
         details: entries.map((entry) => ({
           accountId: entry.accountId,
           description: entry.description,
-          debit: entry.debit,
-          debitUSD: entry.debitUSD,
-          debitLL: entry.debitEx,
-          credit: entry.credit,
-          creditUSD: entry.creditUSD,
-          creditLL: entry.creditEx,
+          debit: removeCommas(entry.debit),
+          debitUSD: removeCommas(entry.debitUSD),
+          debitLL: removeCommas(entry.debitEx),
+          credit: removeCommas(entry.credit),
+          creditUSD: removeCommas(entry.creditUSD),
+          creditLL: removeCommas(entry.creditEx),
           currency: entry.currency,
-          exchangeRateEURtoUSD: entry.exchangeRateEURtoUSD,
-          exchangeRate: entry.exchangeRate,
+          exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
+          exchangeRate: removeCommas(entry.exchangeRate),
           docNbr: entry.documentNbr,
         })),
       };
