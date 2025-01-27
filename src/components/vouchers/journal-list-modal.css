@@ -10,6 +10,15 @@
   align-items: center;
 }
 
+.journal-list-table tbody tr {
+  transition: background-color 0.3s ease; 
+}
+
+.journal-list-table tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.2); 
+  cursor: pointer;
+}
+
 .journal-list-modal {
   background: #fff;
   border-radius: 8px;
@@ -42,10 +51,18 @@
   border-collapse: collapse;
 }
 
+.journal-list-table th {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
 .journal-list-table th,
 .journal-list-table td {
   padding: 10px;
-  text-align: left;
+  text-align: center;
   border: 1px solid #ccc;
 }
 
