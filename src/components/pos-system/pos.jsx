@@ -128,7 +128,6 @@ const POSSystemPage = () => {
         <table className="pos-page-inventory-table">
           <thead>
             <tr>
-              <th></th>
               <th>Origin</th>
               <th>Item</th>
               <th>Box</th>
@@ -141,14 +140,6 @@ const POSSystemPage = () => {
           <tbody>
             {tableData.map((row, index) => (
               <tr key={index}>
-                <td className="pos-page-delete-cell">
-                  <button
-                    className="pos-page-delete-button"
-                    onClick={() => deleteRow(index)}
-                  >
-                    🗑️
-                  </button>
-                </td>
                 <td>
                   <input
                     type="text"
