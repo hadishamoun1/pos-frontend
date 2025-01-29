@@ -83,15 +83,17 @@ const POSSystemPage = () => {
             />
           </div>
 
-          <div className="pos-page-input-row">
+          {/* Dropdowns & Checkbox Row */}
+          <div className="pos-page-toolbar-row">
+            {/* Left Side: Dropdowns */}
             <div className="pos-page-dropdown-container">
               <select className="pos-page-exchange-rate-dropdown">
-                <option value="usd">USD Exchange Rate</option>
-                <option value="eur">EUR Exchange Rate</option>
+                <option value="usd">USD Ex Rate</option>
+                <option value="eur">EUR Ex Rate</option>
               </select>
 
               <select className="pos-page-vat-dropdown">
-                <option value="" disabled selected>
+                <option value="" disabled hidden>
                   VAT
                 </option>
                 <option value="0">0%</option>
@@ -100,10 +102,16 @@ const POSSystemPage = () => {
               </select>
             </div>
 
-            <label className="pos-page-checkbox-container">
-              <input type="checkbox" />
-              <span className="pos-page-checkbox-label">Company Name</span>
-            </label>
+            {/* Right Side: Company Name Checkbox */}
+            <div className="pos-page-checkbox-container">
+              <input type="checkbox" id="company-name-checkbox" />
+              <label
+                htmlFor="company-name-checkbox"
+                className="pos-page-checkbox-label"
+              >
+                Company Name
+              </label>
+            </div>
           </div>
 
           {/* Customer name input row */}
@@ -116,10 +124,11 @@ const POSSystemPage = () => {
           </div>
         </div>
 
+        {/* Inventory Table */}
         <table className="pos-page-inventory-table">
           <thead>
             <tr>
-              <th></th> {/* Empty header for delete button */}
+              <th></th>
               <th>Origin</th>
               <th>Item</th>
               <th>Box</th>
