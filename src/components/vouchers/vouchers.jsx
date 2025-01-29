@@ -11,6 +11,8 @@ const JournalVoucherPage = () => {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState("");
   const [type, setType] = useState("");
+  const [viewMode, setViewMode] = useState(false);
+
   const [notification, setNotification] = useState({
     visible: false,
     type: "",
@@ -26,7 +28,7 @@ const JournalVoucherPage = () => {
       debit: "",
       credit: "",
       exchangeRate: "1",
-      exchangeRateEURtoUSD: "1",
+      exchangeRateEURtoUSD: "",
       debitUSD: "",
       creditUSD: "",
       debitEx: "",
@@ -69,7 +71,7 @@ const JournalVoucherPage = () => {
         debit: "",
         credit: "",
         exchangeRate: "1",
-        exchangeRateEURtoUSD: "1",
+        exchangeRateEURtoUSD: "",
         debitUSD: "",
         creditUSD: "",
         debitEx: "",
@@ -284,7 +286,7 @@ const JournalVoucherPage = () => {
             debit: "",
             credit: "",
             exchangeRate: "1",
-            exchangeRateEURtoUSD: "1",
+            exchangeRateEURtoUSD: "",
             debitUSD: "",
             creditUSD: "",
             debitEx: "",
@@ -332,17 +334,83 @@ const JournalVoucherPage = () => {
     }
   }, [isJournalListOpen]);
 
+  // Fetch a single journal voucher by ID
+  const fetchJournalVoucherById = async (id) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/journal-vouchers/${id}`
+      );
+
+      const journalVoucher = response.data;
+
+      // Auto-fill the form fields with the fetched data
+      setDate(journalVoucher.date);
+      setType(journalVoucher.jvType);
+      setEntries(
+        journalVoucher.details.map((detail) => ({
+          accountId: detail.accountId,
+          accountNumber: detail.account.accountNumber,
+          accountName: detail.account.accountName,
+          currency: detail.currency,
+          debit: detail.dr,
+          credit: detail.cr,
+          exchangeRate: detail.exRateUSD,
+          exchangeRateEURtoUSD: detail.exRateEUROToUSD,
+          debitUSD: detail.drUSD,
+          creditUSD: detail.crUSD,
+          debitEx: detail.drLL,
+          creditEx: detail.crLL,
+          description: detail.description,
+          documentNbr: detail.docNbr,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching journal voucher by ID:", error);
+      setNotification({
+        visible: true,
+        type: "error",
+        message: "Failed to fetch journal voucher details. Please try again.",
+      });
+    }
+  };
+
+  // Handle the "View" button click
   const handleView = (journal) => {
     console.log("View journal:", journal);
-    // Handle the view action (e.g., navigate to a details page or open another modal)
+    setIsJournalListOpen(false); // Close the journal list modal
+    fetchJournalVoucherById(journal.id); // Fetch and fill the form with details
+    setViewMode(true);
+  };
+
+  const handleReset = () => {
+    setDate(""); // Clear date
+    setType(""); // Clear type
+    setEntries([
+      // Reset entries to the initial empty state
+      {
+        accountId: null,
+        accountNumber: "",
+        accountName: "",
+        currency: "",
+        debit: "",
+        credit: "",
+        exchangeRate: "1",
+        exchangeRateEURtoUSD: "",
+        debitUSD: "",
+        creditUSD: "",
+        debitEx: "",
+        creditEx: "",
+        description: "",
+        documentNbr: "",
+      },
+    ]);
+    setViewMode(false); // Disable view mode to allow editing
   };
 
   return (
     <div>
       <div
-        className={`general-vouchers-container ${
-          isJournalListOpen 
-        }`}
+        className={`general-vouchers-container ${isJournalListOpen}`}
         onClick={handleCloseContextMenu}
       >
         <AccountSelectionModal
@@ -362,6 +430,7 @@ const JournalVoucherPage = () => {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
+                disabled={viewMode}
                 className="general-vouchers-input"
               />
             </label>
@@ -371,6 +440,7 @@ const JournalVoucherPage = () => {
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 required
+                disabled={viewMode}
                 className="general-vouchers-input"
               >
                 <option value="" disabled hidden>
@@ -383,6 +453,9 @@ const JournalVoucherPage = () => {
             </label>
           </div>
           <div>
+            <button className="new-btn" onClick={handleReset}>
+              New
+            </button>
             <button
               className="open-journal-list-btn"
               onClick={() => setIsJournalListOpen(true)}
@@ -438,6 +511,7 @@ const JournalVoucherPage = () => {
                       value={entry.accountNumber}
                       placeholder="Acc Nbr"
                       readOnly
+                      disabled={viewMode}
                       className="general-vouchers-input column-account-number"
                     />
                   </td>
@@ -447,6 +521,7 @@ const JournalVoucherPage = () => {
                       value={entry.accountName}
                       readOnly
                       placeholder="Account Name"
+                      disabled={viewMode}
                       className="general-vouchers-input column-account-name"
                     />
                   </td>
@@ -457,6 +532,7 @@ const JournalVoucherPage = () => {
                         handleInputChange(index, "currency", e.target.value)
                       }
                       className="general-vouchers-input column-currency"
+                      disabled={viewMode}
                     >
                       <option value="" disabled hidden>
                         Select
@@ -475,6 +551,8 @@ const JournalVoucherPage = () => {
                         handleInputChange(index, "debit", e.target.value)
                       }
                       onBlur={() => handleInputBlur(index, "debit")}
+                      readOnly={viewMode}
+                      disabled={viewMode} // Disable in view mode
                       className="general-vouchers-input column-debit"
                     />
                   </td>
@@ -487,6 +565,8 @@ const JournalVoucherPage = () => {
                         handleInputChange(index, "credit", e.target.value)
                       }
                       onBlur={() => handleInputBlur(index, "credit")}
+                      readOnly={viewMode}
+                      disabled={viewMode} // Disable in view mode
                       className="general-vouchers-input column-credit"
                     />
                   </td>
@@ -494,7 +574,6 @@ const JournalVoucherPage = () => {
                     <input
                       type="text"
                       value={entry.exchangeRateEURtoUSD}
-                      placeholder="Exc EUR to USD"
                       disabled={entry.currency !== "EUR"}
                       onChange={(e) =>
                         handleInputChange(
@@ -506,6 +585,8 @@ const JournalVoucherPage = () => {
                       onBlur={() =>
                         handleInputBlur(index, "exchangeRateEURtoUSD")
                       }
+                      readOnly={viewMode}
+                      // Disable in view mode
                       className={`general-vouchers-input column-exchange-rate-eur-usd ${
                         entry.currency !== "EUR" ? "disabled-input" : ""
                       }`}
@@ -521,6 +602,8 @@ const JournalVoucherPage = () => {
                       }
                       onBlur={() => handleInputBlur(index, "exchangeRate")}
                       className="general-vouchers-input column-exchange-rate"
+                      readOnly={viewMode}
+                      disabled={viewMode} // Disable in view mode
                     />
                   </td>
                   <td>
@@ -529,6 +612,7 @@ const JournalVoucherPage = () => {
                       value={entry.debitUSD}
                       placeholder="Debit USD"
                       readOnly={entry.currency === "USD"}
+                      disabled={viewMode}
                       onChange={(e) =>
                         handleInputChange(index, "debitUSD", e.target.value)
                       }
@@ -544,6 +628,7 @@ const JournalVoucherPage = () => {
                       value={entry.creditUSD}
                       placeholder="Credit USD"
                       readOnly={entry.currency === "USD"}
+                      disabled={viewMode}
                       onChange={(e) =>
                         handleInputChange(index, "creditUSD", e.target.value)
                       }
@@ -557,6 +642,7 @@ const JournalVoucherPage = () => {
                     <input
                       type="text"
                       value={formatNumber(entry.debitEx)}
+                      disabled={viewMode}
                       placeholder="Debit LL"
                       readOnly
                       className="general-vouchers-input column-debit-ex"
@@ -566,6 +652,7 @@ const JournalVoucherPage = () => {
                     <input
                       type="text"
                       value={formatNumber(entry.creditEx)}
+                      disabled={viewMode}
                       placeholder="Credit LL"
                       readOnly
                       className="general-vouchers-input column-credit-ex"
@@ -576,6 +663,7 @@ const JournalVoucherPage = () => {
                     <input
                       type="text"
                       value={entry.description}
+                      disabled={viewMode}
                       placeholder="Description"
                       onChange={(e) =>
                         handleInputChange(index, "description", e.target.value)
@@ -587,6 +675,7 @@ const JournalVoucherPage = () => {
                     <input
                       type="text"
                       value={entry.documentNbr}
+                      disabled={viewMode}
                       placeholder="Doc Nbr"
                       onChange={(e) =>
                         handleInputChange(index, "documentNbr", e.target.value)

@@ -321,7 +321,6 @@
   gap: 50px;
 }
 
-
 .journal-list-modal-overlay {
   position: fixed;
   top: 0;
@@ -333,6 +332,47 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
+}
+
+/* General styles for disabled inputs */
+.general-vouchers-input[disabled],
+.general-vouchers-input:disabled {
+  background-color: #f9f9f9;
+  color: #333;
+  border: 1px solid #ccc;
+  cursor: not-allowed;
+}
+
+/* Adjust text alignment for read-only inputs */
+.general-vouchers-input[readonly] {
+  background-color: #f9f9f9;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+/* Specific styles for table cells with disabled inputs */
+.general-vouchers-table td input[disabled] {
+  background-color: transparent;
+  color: #000;
+  border: none;
+  cursor: default;
+}
+.new-btn {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+  margin-right: 10px;
+}
+
+.new-btn:hover {
+  background-color: #0056b3;
+  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
 }
 
 /* Responsive Design */
