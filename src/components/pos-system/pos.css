@@ -1,230 +1,248 @@
-.pos-container {
+/* 🔹 General Page Container */
+.pos-page-container {
   display: flex;
   height: 100vh;
   padding: 1rem;
   gap: 1rem;
+  background-color: #f4f7fc;
 }
 
-.pos-left,
-.pos-center,
-.pos-right {
+/* 🔹 Left and Right Sidebar Containers */
+.pos-page-left,
+.pos-page-right {
+  flex: 1;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 🔹 Styling Left (Requests) */
+.pos-page-left {
+  border: 3px solid #ffcc00;
+}
+
+/* 🔹 Styling Right (Invoices) */
+.pos-page-right {
+  border: 3px solid #ff4d4d;
+}
+
+/* 🔹 Center Section */
+.pos-page-center {
+  flex: 3;
   background-color: #ffffff;
   padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.pos-left {
-  flex: 1;
-  border: 3px solid yellow;
-}
-
-.pos-right {
-  flex: 1;
-  border: 3px solid red;
-}
-
-.pos-center {
-  flex: 2;
-  background-color: #ffffff;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow-y: auto;
 }
 
-.inventory-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-  margin-top: 12rem;
-}
-
-.inventory-table th,
-.inventory-table td {
-  padding: 0.5rem;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inventory-table th {
-  background-color: #007bff;
-  color: white;
-}
-
-.inventory-table tr:hover {
-  background-color: #f1f1f1;
-}
-
-.inventory-table td {
-  color: #333;
-}
-
-.add-row-button {
-  padding: 0.5rem 1rem;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.add-row-button:hover {
-  background-color: #0056b3;
-}
-.button-container {
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  margin-top: 1rem;
-}
-.delete-cell {
-  width: 10px;
-  text-align: center;
-}
-
-.delete-button {
-  background: none;
-  border: none;
-  color: red;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-}
-
-.delete-button:hover {
-  color: darkred;
-}
-
-.toolbar {
-  position: absolute;
-  top: 0;
-  width: 100%;
+/* 🔹 Toolbar */
+.pos-page-toolbar {
+  position: relative;
+  margin-top: 0.2rem;
+  width: 95%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   align-items: flex-start;
   padding: 1rem;
-  box-sizing: border-box;
+  background: #ffffff;
+  border-bottom: 2px solid #ddd;
+  z-index: 2;
 }
 
-.button-row {
+/* 🔹 Toolbar Buttons */
+.pos-page-button-row {
   display: flex;
   width: 100%;
   gap: 1rem;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 1rem;
 }
 
-.date-input {
-  margin-left: auto;
-  padding: 0.4rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.pos-page-toolbar-button {
+  padding: 0.8rem 1.5rem;
   font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-.input-row {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
+.pos-page-toolbar-button:hover {
+  transform: scale(1.05);
 }
 
-.customer-name-input {
-  width: 19.5%;
+/* 🔹 Button Colors */
+.pos-page-red-button {
+  background-color: #e74c3c;
+}
+.pos-page-red-button:hover {
+  background-color: #c0392b;
+}
+
+.pos-page-yellow-button {
+  background-color: #f1c40f;
+}
+.pos-page-yellow-button:hover {
+  background-color: #d4ac0d;
+}
+
+.pos-page-blue-button {
+  background-color: #007bff;
+}
+.pos-page-blue-button:hover {
+  background-color: #0056b3;
+}
+
+/* 🔹 Date Input */
+.pos-page-date-input {
   padding: 0.5rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  color: #333;
+  background: #f8f9fa;
 }
 
-.customer-name-row {
+/* 🔹 Dropdowns & Checkboxes */
+.pos-page-dropdown-container {
+  display: flex;
+  gap: 1rem;
+}
+
+.pos-page-exchange-rate-dropdown,
+.pos-page-vat-dropdown {
+  padding: 0.6rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 2px solid #007bff;
+  background: #f8f9fa;
+  color: #333;
+  font-weight: bold;
+}
+
+/* 🔹 Customer Name Input */
+.pos-page-customer-name-row {
   width: 100%;
   display: flex;
   justify-content: flex-start;
   margin-top: 0.5rem;
 }
 
-.toolbar-button {
-  padding: 0.6rem 1.2rem;
+.pos-page-customer-name-input {
+  width: 40%;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-weight: bold;
+}
+
+/* 🔹 Table Styles */
+.pos-page-inventory-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-top: 3rem; /* 🔹 Increased Space Between Table and Upper Container */
+  background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 🔹 Table Header */
+.pos-page-inventory-table th {
+  padding: 0.7rem; /* Increased height */
+  text-align: center; /* Centered text */
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-bottom: 2px solid #ddd;
+  font-size: 1rem;
+}
+
+/* 🔹 Table Rows */
+.pos-page-inventory-table tr {
+  transition: background 0.3s ease;
+}
+
+.pos-page-inventory-table tr:hover {
+  background: #e3eaf5;
+}
+
+/* 🔹 Table Cells */
+.pos-page-inventory-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+  font-size: 1rem;
+  background: #f9fafc;
+  transition: background 0.3s ease;
+  text-align: center; /* Centered text in table cells */
+}
+
+.pos-page-inventory-table td:hover {
+  background: #dfe6f1;
+}
+
+/* 🔹 Input Fields in Table */
+.pos-page-inventory-table input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center; /* Centered text */
+  background: #f8f9fa;
+  font-weight: bold;
+}
+
+/* 🔹 Add Row Button */
+.pos-page-add-row-button {
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
   font-size: 1rem;
   font-weight: bold;
+  transition: transform 0.2s ease;
+  margin-top: 1rem;
+}
+
+.pos-page-add-row-button:hover {
+  transform: scale(1.05);
+}
+
+/* 🔹 Delete Button */
+.pos-page-delete-cell {
+  width: 50px;
+  text-align: center;
+}
+
+.pos-page-delete-button {
+  background: none;
   border: none;
-  border-radius: 5px;
-  color: white;
+  color: red;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  font-size: 1.5rem;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
-/* Button colors */
-.red-button {
-  background-color: #e74c3c;
+.pos-page-delete-button:hover {
+  color: darkred;
+  transform: scale(1.2);
 }
 
-.red-button:hover {
-  background-color: #c0392b;
-}
-
-.yellow-button {
-  background-color: #f1c40f;
-}
-
-.blue-button {
-  background-color: #007bff;
-}
-
-.blue-button:hover {
-  background-color: #0056b3;
-}
-
-.yellow-button:hover {
-  background-color: #d4ac0d;
-}
-
-.exchange-rate-dropdown,
-.vat-dropdown {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-}
-.dropdown-container {
-  display: flex;
-  gap: 0.5rem; 
-}
-
-.vat-dropdown {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  
-}
-
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.checkbox-label {
-  font-size: 1rem;
-  color: #333;
-}
-.container-header {
+/* 🔹 Sidebar Headers */
+.pos-page-container-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -235,21 +253,25 @@
   margin-bottom: 1rem;
 }
 
-.header-icon {
-  font-size: 1.5rem;
+.pos-page-header-icon {
+  font-size: 1.8rem;
   color: #555;
 }
 
-.header-text {
+.pos-page-header-text {
   color: #333;
+  font-size: 1.2rem;
+  font-weight: bold;
 }
 
-.search-input {
+/* 🔹 Search Input */
+.pos-page-search-input {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.7rem;
   margin: 0.5rem 0;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-weight: bold;
 }

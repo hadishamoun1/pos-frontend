@@ -15,7 +15,6 @@ const POSSystemPage = () => {
     },
   ]);
 
-  // Set the current date as default for the date input
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -46,70 +45,78 @@ const POSSystemPage = () => {
   };
 
   return (
-    <div className="pos-container">
+    <div className="pos-page-container">
       {/* Left Container - Requests */}
-      <div className="pos-left">
-        <div className="container-header">
-          <FaClipboardList className="header-icon" />
-          <span className="header-text">Requests</span>
+      <div className="pos-page-left">
+        <div className="pos-page-container-header">
+          <FaClipboardList className="pos-page-header-icon" />
+          <span className="pos-page-header-text">Requests</span>
         </div>
         <input
           type="text"
           placeholder="Search Requests"
-          className="search-input"
+          className="pos-page-search-input"
         />
-        {/* Add content for requests here */}
       </div>
 
-      <div className="pos-center">
+      <div className="pos-page-center">
         {/* Toolbar section */}
-        <div className="toolbar">
-          <div className="button-row">
-            <button className="toolbar-button blue-button">New</button>
-            <button className="toolbar-button blue-button">Request</button>
-            <button className="toolbar-button red-button">Issue</button>
-            <button className="toolbar-button yellow-button">Offer</button>
+        <div className="pos-page-toolbar">
+          <div className="pos-page-button-row">
+            <button className="pos-page-toolbar-button pos-page-blue-button">
+              New
+            </button>
+            <button className="pos-page-toolbar-button pos-page-blue-button">
+              Request
+            </button>
+            <button className="pos-page-toolbar-button pos-page-red-button">
+              Issue
+            </button>
+            <button className="pos-page-toolbar-button pos-page-yellow-button">
+              Offer
+            </button>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="date-input"
+              className="pos-page-date-input"
             />
           </div>
 
-          <div className="input-row">
-  <div className="dropdown-container">
-    <select className="exchange-rate-dropdown">
-      <option value="usd">USD Exchange Rate</option>
-      <option value="eur">EUR Exchange Rate</option>
-    </select>
+          <div className="pos-page-input-row">
+            <div className="pos-page-dropdown-container">
+              <select className="pos-page-exchange-rate-dropdown">
+                <option value="usd">USD Exchange Rate</option>
+                <option value="eur">EUR Exchange Rate</option>
+              </select>
 
-    <select className="vat-dropdown">
-      <option value="" disabled selected>VAT</option>
-      <option value="0">0%</option>
-      <option value="6">6%</option>
-      <option value="11">11%</option>
-    </select>
-  </div>
+              <select className="pos-page-vat-dropdown">
+                <option value="" disabled selected>
+                  VAT
+                </option>
+                <option value="0">0%</option>
+                <option value="6">6%</option>
+                <option value="11">11%</option>
+              </select>
+            </div>
 
-  <label className="checkbox-container">
-    <input type="checkbox" />
-    <span className="checkbox-label">Company Name</span>
-  </label>
-</div>
-
+            <label className="pos-page-checkbox-container">
+              <input type="checkbox" />
+              <span className="pos-page-checkbox-label">Company Name</span>
+            </label>
+          </div>
 
           {/* Customer name input row */}
-          <div className="customer-name-row">
+          <div className="pos-page-customer-name-row">
             <input
               type="text"
               placeholder="Enter Customer Name"
-              className="customer-name-input"
+              className="pos-page-customer-name-input"
             />
           </div>
         </div>
 
-        <table className="inventory-table">
+        <table className="pos-page-inventory-table">
           <thead>
             <tr>
               <th></th> {/* Empty header for delete button */}
@@ -125,9 +132,9 @@ const POSSystemPage = () => {
           <tbody>
             {tableData.map((row, index) => (
               <tr key={index}>
-                <td className="delete-cell">
+                <td className="pos-page-delete-cell">
                   <button
-                    className="delete-button"
+                    className="pos-page-delete-button"
                     onClick={() => deleteRow(index)}
                   >
                     🗑️
@@ -208,25 +215,24 @@ const POSSystemPage = () => {
           </tbody>
         </table>
 
-        <div className="button-container">
-          <button onClick={addRow} className="add-row-button">
+        <div className="pos-page-button-container">
+          <button onClick={addRow} className="pos-page-add-row-button">
             Add Row
           </button>
         </div>
       </div>
 
       {/* Right Container - Invoices */}
-      <div className="pos-right">
-        <div className="container-header">
-          <FaFileInvoiceDollar className="header-icon" />
-          <span className="header-text">Invoices</span>
+      <div className="pos-page-right">
+        <div className="pos-page-container-header">
+          <FaFileInvoiceDollar className="pos-page-header-icon" />
+          <span className="pos-page-header-text">Invoices</span>
         </div>
         <input
           type="text"
           placeholder="Search Invoices"
-          className="search-input"
+          className="pos-page-search-input"
         />
-        {/* Add content for invoices here */}
       </div>
     </div>
   );
