@@ -7,6 +7,8 @@ const POSSystemPage = () => {
     {
       origin: "",
       item: "",
+      length:"",
+      width:"",
       box: "",
       sheet: "",
       quantity: "",
@@ -17,12 +19,6 @@ const POSSystemPage = () => {
 
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
-
-  const handleInputChange = (index, field, value) => {
-    const newData = [...tableData];
-    newData[index][field] = value;
-    setTableData(newData);
-  };
 
   const addRow = () => {
     setTableData([
@@ -37,6 +33,24 @@ const POSSystemPage = () => {
         price: "",
       },
     ]);
+  };
+  const handleInputChange = (index, field, value) => {
+    const newData = [...tableData];
+
+    if (field === "item") {
+      // Ensure numbers are followed by "ملم" without adding unnecessary spaces
+      const match = value.match(/^(\d+(\.\d+)?)(\s*ملم)?(.*)?$/); // Match number, "ملم", and additional text
+      const numberPart = match?.[1] || ""; // Numeric part
+      const hasMlm = match?.[3] !== undefined; // Check if "ملم" exists in input
+      const textPart = match?.[4] || ""; // Remaining user input, including spaces
+
+      // Preserve "ملم" if typed, otherwise do nothing extra
+      newData[index][field] = `${numberPart}${hasMlm ? "ملم" : ""}${textPart}`;
+    } else {
+      newData[index][field] = value; // Handle other fields normally
+    }
+
+    setTableData(newData);
   };
 
   return (
@@ -128,6 +142,8 @@ const POSSystemPage = () => {
             <tr>
               <th>Origin</th>
               <th>Item</th>
+              <th>Length</th>
+              <th>Width</th>
               <th>Box</th>
               <th>Sheet</th>
               <th>Quantity</th>
@@ -156,6 +172,26 @@ const POSSystemPage = () => {
                       handleInputChange(index, "item", e.target.value)
                     }
                     placeholder="Enter item"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.length}
+                    onChange={(e) =>
+                      handleInputChange(index, "length", e.target.value)
+                    }
+                    placeholder="Enter box"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    value={row.width}
+                    onChange={(e) =>
+                      handleInputChange(index, "width", e.target.value)
+                    }
+                    placeholder="Enter box"
                   />
                 </td>
                 <td>

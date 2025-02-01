@@ -28,6 +28,7 @@
 
 /* Inventory Table */
 .pos-page-inventory-table {
+  table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
   margin-top: 1.5rem;
@@ -36,10 +37,15 @@
 }
 
 .pos-page-inventory-table th {
-  background-color: #007bff;
-  color: #ffffff;
-  padding: 1rem;
+  padding: 1rem; /* Increased height */
+  text-align: center; /* Centered text */
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  font-weight: bold;
   text-transform: uppercase;
+  border-left: 2px solid #ddd;
+  border-right: 2px solid #ddd;
+  font-size: 1rem;
 }
 
 .pos-page-inventory-table td {
@@ -59,10 +65,23 @@
 
 /* Input Styling */
 .pos-page-inventory-table input {
-  width: 90%;
-  padding: 0.4rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 90%; 
+  height: 1.5rem; 
+  padding: 0.4rem; 
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  font-size: 1.1rem; /* ✅ Increased font size for better readability */
+  text-align: center;
+  background: #f8f9fa;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.pos-page-inventory-table input:focus {
+  border-color: #0056b3;
+  background-color: #ffffff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 /* Sidebar Headers */
 .pos-page-container-header {
@@ -300,4 +319,19 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow-y: auto;
+}
+/* ✅ Ensures Arabic text appears correctly */
+.pos-page-inventory-table td:nth-child(2) input {
+  direction: rtl; /* Forces Right-to-Left text */
+  text-align: right; /* Aligns Arabic words to the right */
+  font-family: "Tajawal", sans-serif; /* Arabic-friendly font */
+  font-size: 1.2rem;
+  padding-right: 0.5rem;
+  unicode-bidi: plaintext; /* Prevents mixing errors */
+}
+
+/* 🔹 Adjusting Input Placeholder */
+.pos-page-inventory-table td:nth-child(2) input::placeholder {
+  text-align: right;
+  font-size: 1rem;
 }
