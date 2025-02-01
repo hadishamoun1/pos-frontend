@@ -39,14 +39,9 @@ const POSSystemPage = () => {
     ]);
   };
 
-  const deleteRow = (index) => {
-    const newData = tableData.filter((_, i) => i !== index);
-    setTableData(newData);
-  };
-
   return (
     <div className="pos-page-container">
-      {/* Left Container - Requests */}
+      {/* Left Sidebar */}
       <div className="pos-page-left">
         <div className="pos-page-container-header">
           <FaClipboardList className="pos-page-header-icon" />
@@ -59,8 +54,8 @@ const POSSystemPage = () => {
         />
       </div>
 
+      {/* Center Section */}
       <div className="pos-page-center">
-        {/* Toolbar section */}
         <div className="pos-page-toolbar">
           <div className="pos-page-button-row">
             <button className="pos-page-toolbar-button pos-page-blue-button">
@@ -83,7 +78,7 @@ const POSSystemPage = () => {
             />
           </div>
 
-          {/* Dropdowns & Checkbox Row */}
+          {/* Restored: Dropdowns & Checkbox Row */}
           <div className="pos-page-toolbar-row">
             {/* Left Side: Dropdowns */}
             <div className="pos-page-dropdown-container">
@@ -114,7 +109,7 @@ const POSSystemPage = () => {
             </div>
           </div>
 
-          {/* Customer name input row */}
+          {/* Restored: Customer Name Input Row */}
           <div className="pos-page-customer-name-row">
             <label className="pos-page-customer-name-label">
               Customer Name
@@ -225,7 +220,7 @@ const POSSystemPage = () => {
         </div>
       </div>
 
-      {/* Right Container - Invoices */}
+      {/* Right Sidebar */}
       <div className="pos-page-right">
         <div className="pos-page-container-header">
           <FaFileInvoiceDollar className="pos-page-header-icon" />
