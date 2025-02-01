@@ -116,6 +116,9 @@ const POSSystemPage = () => {
 
           {/* Customer name input row */}
           <div className="pos-page-customer-name-row">
+            <label className="pos-page-customer-name-label">
+              Customer Name
+            </label>
             <input
               type="text"
               placeholder="Enter Customer Name"

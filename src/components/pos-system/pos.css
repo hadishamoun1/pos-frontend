@@ -41,10 +41,14 @@
 /* 🔹 Toolbar Row: Proper Flexbox for Alignment */
 .pos-page-toolbar-row {
   display: flex;
-  justify-content: space-between; 
+  justify-content: space-between;
   align-items: center;
   width: 100%;
   padding: 0.5rem 0;
+}
+.pos-page-toolbar {
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid rgb(175, 175, 175);
 }
 
 /* 🔹 Toolbar Buttons */
@@ -108,7 +112,7 @@
 .pos-page-dropdown-container {
   display: flex;
   gap: 1rem;
-  flex-grow: 1; 
+  flex-grow: 1;
 }
 
 /* 🔹 Adjusted Dropdown Sizes */
@@ -142,12 +146,13 @@
 .pos-page-customer-name-row {
   width: 100%;
   display: flex;
-  justify-content: flex-start;
-  margin-top: 0.5rem;
+  flex-direction: column; /* Ensures label appears above input */
+  align-items: flex-start;
+  margin-top: 0.8rem;
 }
 
 .pos-page-customer-name-input {
-  width: 40%;
+  width: 30%; 
   padding: 0.6rem;
   font-size: 1rem;
   border: 2px solid #007bff;
@@ -187,6 +192,14 @@
 
 .pos-page-inventory-table tr:hover {
   background: #e3eaf5;
+}
+/* 🔹 Customer Name Label */
+.pos-page-customer-name-label {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 0.3rem;
+  display: block; /* Ensures it appears above the input */
 }
 
 /* 🔹 Table Cells */
@@ -293,6 +306,7 @@
   align-items: center;
   width: 100%;
   padding: 0.5rem 0;
+  margin-top: 0.5rem;
 }
 
 .pos-page-dropdown-container {
