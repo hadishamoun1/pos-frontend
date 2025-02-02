@@ -146,7 +146,7 @@ const POSSystemPage = () => {
               <th>Width</th>
               <th>Box</th>
               <th>Sheet</th>
-              <th>Quantity</th>
+              <th>Qty</th>
               <th>SQM</th>
               <th>Price</th>
             </tr>
@@ -161,7 +161,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "origin", e.target.value)
                     }
-                    placeholder="Enter origin"
+                   
                   />
                 </td>
                 <td>
@@ -171,7 +171,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "item", e.target.value)
                     }
-                    placeholder="Enter item"
+                    
                   />
                 </td>
                 <td>
@@ -181,7 +181,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "length", e.target.value)
                     }
-                    placeholder="Enter box"
+                   
                   />
                 </td>
                 <td>
@@ -191,7 +191,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "width", e.target.value)
                     }
-                    placeholder="Enter box"
+                   
                   />
                 </td>
                 <td>
@@ -201,7 +201,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "box", e.target.value)
                     }
-                    placeholder="Enter box"
                   />
                 </td>
                 <td>
@@ -211,7 +210,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "sheet", e.target.value)
                     }
-                    placeholder="Enter sheet"
                   />
                 </td>
                 <td>
@@ -221,7 +219,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "quantity", e.target.value)
                     }
-                    placeholder="Enter quantity"
                   />
                 </td>
                 <td>
@@ -231,7 +228,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "sqm", e.target.value)
                     }
-                    placeholder="Enter sqm"
                   />
                 </td>
                 <td>
@@ -241,7 +237,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "price", e.target.value)
                     }
-                    placeholder="Enter price"
                   />
                 </td>
               </tr>

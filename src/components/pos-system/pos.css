@@ -37,8 +37,8 @@
 }
 
 .pos-page-inventory-table th {
-  padding: 1rem; /* Increased height */
-  text-align: center; /* Centered text */
+  padding: 0.7rem;
+  text-align: center;
   background: linear-gradient(to right, #007bff, #0056b3);
   color: white;
   font-weight: bold;
@@ -46,43 +46,65 @@
   border-left: 2px solid #ddd;
   border-right: 2px solid #ddd;
   font-size: 1rem;
+  vertical-align: middle;
+}
+
+/* Adjust Column Widths */
+.pos-page-inventory-table th:nth-child(1),
+.pos-page-inventory-table td:nth-child(1) {
+  width: 18%; /* Origin */
+}
+
+.pos-page-inventory-table th:nth-child(2),
+.pos-page-inventory-table td:nth-child(2) {
+  width: 21%; /* Item */
+}
+
+.pos-page-inventory-table th:nth-child(3),
+.pos-page-inventory-table td:nth-child(3),
+.pos-page-inventory-table th:nth-child(4),
+.pos-page-inventory-table td:nth-child(4),
+.pos-page-inventory-table th:nth-child(5),
+.pos-page-inventory-table td:nth-child(5),
+.pos-page-inventory-table th:nth-child(6),
+.pos-page-inventory-table td:nth-child(6),
+.pos-page-inventory-table th:nth-child(7),
+.pos-page-inventory-table td:nth-child(7),
+.pos-page-inventory-table th:nth-child(8),
+.pos-page-inventory-table td:nth-child(8),
+.pos-page-inventory-table th:nth-child(9),
+.pos-page-inventory-table td:nth-child(9) {
+  width: 9%; /* Remaining Columns */
 }
 
 .pos-page-inventory-table td {
-  padding: 0.8rem;
   text-align: center;
+  vertical-align: middle;
+  padding: 0.4rem;
   border: 1px solid #ddd;
 }
 
-/* Row Hover Effect */
-.pos-page-inventory-table tbody tr {
-  transition: background-color 0.3s ease;
-}
-
-.pos-page-inventory-table tbody tr:hover {
-  background-color: #e3f2fd; /* Light blue */
-}
-
-/* Input Styling */
-.pos-page-inventory-table input {
-  width: 90%; 
-  height: 1.5rem; 
-  padding: 0.4rem; 
-  border: 2px solid #007bff;
+.pos-page-inventory-table td input {
+  width: 85%;
+  height: 2.5rem;
+  padding-left: 0.5rem;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 1.1rem; /* ✅ Increased font size for better readability */
+  font-size: 1.1rem;
   text-align: center;
   background: #f8f9fa;
-  font-weight: bold;
   transition: all 0.3s ease;
+  margin: 0 auto;
+  display: block;
 }
 
-.pos-page-inventory-table input:focus {
+.pos-page-inventory-table td input:focus {
   border-color: #0056b3;
   background-color: #ffffff;
   outline: none;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
+
 /* Sidebar Headers */
 .pos-page-container-header {
   display: flex;
@@ -116,6 +138,7 @@
   background: #f8f9fa;
   font-weight: bold;
 }
+
 /* Add Row Button */
 .pos-page-add-row-button {
   padding: 0.8rem 1.5rem;
@@ -153,10 +176,11 @@
   color: darkred;
   transform: scale(1.2);
 }
+
 .pos-page-customer-name-row {
   width: 100%;
   display: flex;
-  flex-direction: column; /* Ensures label appears above input */
+  flex-direction: column;
   align-items: flex-start;
   margin-top: 0.8rem;
 }
@@ -166,7 +190,7 @@
   font-weight: bold;
   color: #333;
   margin-bottom: 0.3rem;
-  display: block; /* Ensures it appears above the input */
+  display: block;
 }
 
 .pos-page-customer-name-input {
@@ -178,6 +202,7 @@
   background: #f8f9fa;
   font-weight: bold;
 }
+
 /* Date Input */
 .pos-page-date-input {
   padding: 0.5rem;
@@ -195,7 +220,6 @@
   flex-grow: 1;
 }
 
-/* Adjusted Dropdown Sizes */
 .pos-page-exchange-rate-dropdown,
 .pos-page-vat-dropdown {
   padding: 0.6rem;
@@ -208,12 +232,12 @@
   width: 18%;
 }
 
-/* Company Name Checkbox (Aligned to Right) */
+/* Company Name Checkbox */
 .pos-page-checkbox-container {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  white-space: nowrap; /* Prevents text from wrapping */
+  white-space: nowrap;
 }
 
 .pos-page-checkbox-label {
@@ -221,6 +245,7 @@
   color: #333;
   font-weight: bold;
 }
+
 /* Toolbar Row */
 .pos-page-toolbar-row {
   display: flex;
@@ -260,10 +285,10 @@
   transform: scale(1.05);
 }
 
-/* Button Colors */
 .pos-page-red-button {
   background-color: #e74c3c;
 }
+
 .pos-page-red-button:hover {
   background-color: #c0392b;
 }
@@ -271,6 +296,7 @@
 .pos-page-yellow-button {
   background-color: #f1c40f;
 }
+
 .pos-page-yellow-button:hover {
   background-color: #d4ac0d;
 }
@@ -278,59 +304,21 @@
 .pos-page-blue-button {
   background-color: #007bff;
 }
+
 .pos-page-blue-button:hover {
   background-color: #0056b3;
 }
-/* General Page Container */
-.pos-page-container {
-  display: flex;
-  height: 96vh;
-  padding: 1rem;
-  gap: 1rem;
-  background-color: #f4f7fc;
-}
 
-/* Left and Right Sidebar Containers */
-.pos-page-left,
-.pos-page-right {
-  flex: 1;
-  background: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* Styling Left (Requests) */
-.pos-page-left {
-  border: 3px solid #ffcc00;
-}
-
-/* Styling Right (Invoices) */
-.pos-page-right {
-  border: 3px solid #ff4d4d;
-}
-
-/* Center Section */
-.pos-page-center {
-  flex: 3;
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow-y: auto;
-}
-/* ✅ Ensures Arabic text appears correctly */
+/* RTL for Arabic Text in Item Column */
 .pos-page-inventory-table td:nth-child(2) input {
-  direction: rtl; /* Forces Right-to-Left text */
-  text-align: right; /* Aligns Arabic words to the right */
-  font-family: "Tajawal", sans-serif; /* Arabic-friendly font */
+  direction: rtl;
+  text-align: right;
+  font-family: "Tajawal", sans-serif;
   font-size: 1.2rem;
   padding-right: 0.5rem;
-  unicode-bidi: plaintext; /* Prevents mixing errors */
+  unicode-bidi: plaintext;
 }
 
-/* 🔹 Adjusting Input Placeholder */
 .pos-page-inventory-table td:nth-child(2) input::placeholder {
   text-align: right;
   font-size: 1rem;
