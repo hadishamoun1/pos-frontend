@@ -1,7 +1,7 @@
 import React from "react";
 import "./searchModal.css";
 
-const SearchModal = ({ isOpen, onClose }) => {
+const SearchModal = ({ isOpen, onClose, onConfirm }) => {
   if (!isOpen) return null;
 
   return (
@@ -10,9 +10,14 @@ const SearchModal = ({ isOpen, onClose }) => {
         {/* Modal Header */}
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
-          <button className="search-modal-close-button" onClick={onClose}>
-            Close
-          </button>
+          <div className="search-modal-buttons">
+            <button className="search-modal-ok-button" onClick={onConfirm}>
+              OK
+            </button>
+            <button className="search-modal-close-button" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
