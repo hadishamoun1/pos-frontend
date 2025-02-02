@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa";
 import "./pos.css";
+import SearchModal from "./searchModal";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([
@@ -17,6 +18,15 @@ const POSSystemPage = () => {
     },
   ]);
 
+  const [isModalOpen, setModalOpen] = useState(false);
+
+  const handleSearchClick = () => {
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+  };
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -110,13 +120,19 @@ const POSSystemPage = () => {
             <label className="pos-page-customer-name-label">
               Customer Name
             </label>
-            <div style={{ display: "flex", width: "100%", alignItems: "center" }}>
+            <div
+              style={{ display: "flex", width: "100%", alignItems: "center" }}
+            >
               <input
                 type="text"
                 placeholder="Enter Customer Name"
                 className="pos-page-customer-name-input"
               />
-              <button className="pos-page-toolbar-button pos-page-blue-button" style={{ marginLeft: "auto" }}>
+              <button
+                className="pos-page-toolbar-button pos-page-blue-button"
+                style={{ marginLeft: "auto" }}
+                onClick={handleSearchClick}
+              >
                 Search
               </button>
             </div>
@@ -240,6 +256,7 @@ const POSSystemPage = () => {
           className="pos-page-search-input"
         />
       </div>
+      <SearchModal isOpen={isModalOpen} onClose={handleCloseModal} />
     </div>
   );
 };
