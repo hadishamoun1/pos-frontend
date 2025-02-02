@@ -7,8 +7,8 @@ const POSSystemPage = () => {
     {
       origin: "",
       item: "",
-      length:"",
-      width:"",
+      length: "",
+      width: "",
       box: "",
       sheet: "",
       quantity: "",
@@ -20,34 +20,18 @@ const POSSystemPage = () => {
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
-  const addRow = () => {
-    setTableData([
-      ...tableData,
-      {
-        origin: "",
-        item: "",
-        box: "",
-        sheet: "",
-        quantity: "",
-        sqm: "",
-        price: "",
-      },
-    ]);
-  };
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
 
     if (field === "item") {
-      // Ensure numbers are followed by "ملم" without adding unnecessary spaces
-      const match = value.match(/^(\d+(\.\d+)?)(\s*ملم)?(.*)?$/); // Match number, "ملم", and additional text
-      const numberPart = match?.[1] || ""; // Numeric part
-      const hasMlm = match?.[3] !== undefined; // Check if "ملم" exists in input
-      const textPart = match?.[4] || ""; // Remaining user input, including spaces
+      const match = value.match(/^(\d+(\.\d+)?)(\s*ملم)?(.*)?$/);
+      const numberPart = match?.[1] || "";
+      const hasMlm = match?.[3] !== undefined;
+      const textPart = match?.[4] || "";
 
-      // Preserve "ملم" if typed, otherwise do nothing extra
       newData[index][field] = `${numberPart}${hasMlm ? "ملم" : ""}${textPart}`;
     } else {
-      newData[index][field] = value; // Handle other fields normally
+      newData[index][field] = value;
     }
 
     setTableData(newData);
@@ -94,7 +78,6 @@ const POSSystemPage = () => {
 
           {/* Restored: Dropdowns & Checkbox Row */}
           <div className="pos-page-toolbar-row">
-            {/* Left Side: Dropdowns */}
             <div className="pos-page-dropdown-container">
               <select className="pos-page-exchange-rate-dropdown">
                 <option value="usd">USD Ex Rate</option>
@@ -111,7 +94,6 @@ const POSSystemPage = () => {
               </select>
             </div>
 
-            {/* Right Side: Company Name Checkbox */}
             <div className="pos-page-checkbox-container">
               <input type="checkbox" id="company-name-checkbox" />
               <label
@@ -128,11 +110,16 @@ const POSSystemPage = () => {
             <label className="pos-page-customer-name-label">
               Customer Name
             </label>
-            <input
-              type="text"
-              placeholder="Enter Customer Name"
-              className="pos-page-customer-name-input"
-            />
+            <div style={{ display: "flex", width: "100%", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Enter Customer Name"
+                className="pos-page-customer-name-input"
+              />
+              <button className="pos-page-toolbar-button pos-page-blue-button" style={{ marginLeft: "auto" }}>
+                Search
+              </button>
+            </div>
           </div>
         </div>
 
@@ -161,7 +148,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "origin", e.target.value)
                     }
-                   
                   />
                 </td>
                 <td>
@@ -171,7 +157,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "item", e.target.value)
                     }
-                    
                   />
                 </td>
                 <td>
@@ -181,7 +166,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "length", e.target.value)
                     }
-                   
                   />
                 </td>
                 <td>
@@ -191,7 +175,6 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "width", e.target.value)
                     }
-                   
                   />
                 </td>
                 <td>
@@ -243,12 +226,6 @@ const POSSystemPage = () => {
             ))}
           </tbody>
         </table>
-
-        <div className="pos-page-button-container">
-          <button onClick={addRow} className="pos-page-add-row-button">
-            Add Row
-          </button>
-        </div>
       </div>
 
       {/* Right Sidebar */}
