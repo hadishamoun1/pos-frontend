@@ -17,31 +17,28 @@
   background-color: #ffffff;
   border-radius: 8px;
   padding: 2rem;
-  width: 50%;
-  max-width: 600px;
-  text-align: center;
+  width: 80%;
+  max-width: 800px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-/* Modal Title */
+/* Modal Header */
+.search-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .search-modal-title {
   font-size: 1.5rem;
-  margin-bottom: 1rem;
-  color: #333;
   font-weight: bold;
+  color: #333;
 }
 
-/* Modal Body */
-.search-modal-body {
-  font-size: 1rem;
-  margin-bottom: 2rem;
-  color: #555;
-}
-
-/* Close Button */
 .search-modal-close-button {
-  padding: 0.5rem 1.5rem;
-  background-color: #007bff;
+  padding: 0.5rem 1rem;
+  background-color: #e74c3c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -51,5 +48,55 @@
 }
 
 .search-modal-close-button:hover {
-  background-color: #0056b3;
+  background-color: #c0392b;
+}
+
+/* Search Input */
+.search-modal-input {
+  width: 96%;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Results Table */
+.search-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.search-modal-table th,
+.search-modal-table td {
+  text-align: center;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.search-modal-table th {
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  text-transform: uppercase;
+}
+
+/* ✅ Center the checkbox inside its column */
+.search-modal-table td:first-child {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.search-modal-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Checkbox */
+.search-modal-select-checkbox {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+  display: block;
+  margin: auto;
 }
