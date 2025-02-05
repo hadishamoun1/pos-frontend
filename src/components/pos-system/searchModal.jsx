@@ -52,9 +52,12 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
         {/* Modal Header */}
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
-          <div>
+          <div className="search-modal-buttons">
             <button className="search-modal-close-button" onClick={onClose}>
               Close
+            </button>
+            <button className="search-modal-ok-button" onClick={handleOk}>
+              OK
             </button>
           </div>
         </div>
@@ -75,11 +78,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
               <th>Select</th>
               <th>Origin</th>
               <th>Item</th>
-              <th>Thickness</th>
+              <th>Type</th>
               <th>Length</th>
               <th>Width</th>
-              <th>Sheets Per Box</th>
-              <th>Type</th>
+              <th>Sheets / Box</th>
             </tr>
           </thead>
           <tbody>
@@ -101,24 +103,16 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
                         item.itemName
                       }`}
                     </td>
-                    <td>{thickness.thickness}</td>
+                    <td>{item.type}</td>
                     <td>{variant.length}</td>
                     <td>{variant.width}</td>
                     <td>{variant.sheetsPerBox}</td>
-                    <td>{item.type}</td>
                   </tr>
                 ))
               )
             )}
           </tbody>
         </table>
-
-        {/* Modal Footer */}
-        <div className="search-modal-footer">
-          <button className="search-modal-ok-button" onClick={handleOk}>
-            OK
-          </button>
-        </div>
       </div>
     </div>
   );
