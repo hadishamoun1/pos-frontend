@@ -1,7 +1,49 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./searchModal.css";
 
-const SearchModal = ({ isOpen, onClose, onConfirm }) => {
+const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
+  const [items, setItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchItems();
+    }
+  }, [isOpen]);
+
+  const fetchItems = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/items/v1/filtered-items"
+      );
+      setItems(response.data);
+    } catch (error) {
+      console.error("Error fetching items:", error);
+    }
+  };
+
+  const handleSelect = (itemId) => {
+    const newSelectedItems = new Set(selectedItems);
+    if (newSelectedItems.has(itemId)) {
+      newSelectedItems.delete(itemId);
+    } else {
+      newSelectedItems.add(itemId);
+    }
+    setSelectedItems(newSelectedItems);
+  };
+
+  const handleOk = () => {
+    const selectedData = items.filter((item) => selectedItems.has(item.id));
+    onSelectItems(selectedData);
+    onClose();
+  };
+
+  const filteredItems = items.filter((item) =>
+    item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -10,10 +52,7 @@ const SearchModal = ({ isOpen, onClose, onConfirm }) => {
         {/* Modal Header */}
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
-          <div className="search-modal-buttons">
-            <button className="search-modal-ok-button" onClick={onConfirm}>
-              OK
-            </button>
+          <div>
             <button className="search-modal-close-button" onClick={onClose}>
               Close
             </button>
@@ -25,6 +64,8 @@ const SearchModal = ({ isOpen, onClose, onConfirm }) => {
           type="text"
           placeholder="Enter search term"
           className="search-modal-input"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
 
         {/* Results Table */}
@@ -34,44 +75,50 @@ const SearchModal = ({ isOpen, onClose, onConfirm }) => {
               <th>Select</th>
               <th>Origin</th>
               <th>Item</th>
+              <th>Thickness</th>
               <th>Length</th>
               <th>Width</th>
-              <th>Type</th>
               <th>Sheets Per Box</th>
+              <th>Type</th>
             </tr>
           </thead>
           <tbody>
-            {/* Example row, replace with dynamic data */}
-            <tr>
-              <td>
-                <input
-                  type="checkbox"
-                  className="search-modal-select-checkbox"
-                />
-              </td>
-              <td>Lebanon</td>
-              <td>5.5mm White</td>
-              <td>200</td>
-              <td>100</td>
-              <td>Box</td>
-              <td>50</td>
-            </tr>
-            <tr>
-              <td>
-                <input
-                  type="checkbox"
-                  className="search-modal-select-checkbox"
-                />
-              </td>
-              <td>China</td>
-              <td>3.2mm Clear</td>
-              <td>300</td>
-              <td>150</td>
-              <td>Sheet</td>
-              <td>40</td>
-            </tr>
+            {filteredItems.flatMap((item) =>
+              item.thicknesses.flatMap((thickness) =>
+                thickness.variants.map((variant, index) => (
+                  <tr key={`${item.id}-${index}`}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        className="search-modal-select-checkbox"
+                        checked={selectedItems.has(item.id)}
+                        onChange={() => handleSelect(item.id)}
+                      />
+                    </td>
+                    <td>{variant.origin}</td>
+                    <td style={{ direction: "rtl", textAlign: "right" }}>
+                      {`${parseFloat(thickness.thickness)} ملم ${
+                        item.itemName
+                      }`}
+                    </td>
+                    <td>{thickness.thickness}</td>
+                    <td>{variant.length}</td>
+                    <td>{variant.width}</td>
+                    <td>{variant.sheetsPerBox}</td>
+                    <td>{item.type}</td>
+                  </tr>
+                ))
+              )
+            )}
           </tbody>
         </table>
+
+        {/* Modal Footer */}
+        <div className="search-modal-footer">
+          <button className="search-modal-ok-button" onClick={handleOk}>
+            OK
+          </button>
+        </div>
       </div>
     </div>
   );
