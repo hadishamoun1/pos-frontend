@@ -104,8 +104,8 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
                       }`}
                     </td>
                     <td>{item.type}</td>
-                    <td>{variant.length}</td>
-                    <td>{variant.width}</td>
+                    <td>{Math.floor(variant.length)}</td>
+                    <td>{Math.floor(variant.width)}</td>
                     <td>{variant.sheetsPerBox}</td>
                   </tr>
                 ))
