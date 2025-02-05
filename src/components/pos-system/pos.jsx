@@ -26,7 +26,6 @@ const POSSystemPage = () => {
       width: item.width || "",
       box: item.type === "box" ? 1 : "",
       sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
-      quantity: "",
       sqm: "",
       price: "",
     }));
@@ -175,7 +174,7 @@ const POSSystemPage = () => {
               <th>Width</th>
               <th>Box</th>
               <th>Sheet</th>
-              <th>Qty</th>
+
               <th>SQM</th>
               <th>Price</th>
             </tr>
@@ -223,15 +222,7 @@ const POSSystemPage = () => {
                     readOnly={row.type === "box"}
                   />
                 </td>
-                <td>
-                  <input
-                    type="number"
-                    value={row.quantity}
-                    onChange={(e) =>
-                      handleInputChange(index, "quantity", e.target.value)
-                    }
-                  />
-                </td>
+
                 <td>
                   <input
                     type="number"
