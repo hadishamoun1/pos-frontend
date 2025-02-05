@@ -81,7 +81,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
               <th>Type</th>
               <th>Length</th>
               <th>Width</th>
-              <th>Sheets / Box</th>
+              <th>Sheets/Box</th>
             </tr>
           </thead>
           <tbody>

@@ -118,3 +118,7 @@
   display: block;
   margin: auto;
 }
+.search-modal-table th:last-child,
+.search-modal-table td:last-child {
+  width: 10%; /* You can adjust this percentage */
+}
