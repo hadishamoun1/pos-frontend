@@ -24,18 +24,34 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     }
   };
 
-  const handleSelect = (itemId) => {
+  const handleSelect = (uniqueId) => {
     const newSelectedItems = new Set(selectedItems);
-    if (newSelectedItems.has(itemId)) {
-      newSelectedItems.delete(itemId);
+    if (newSelectedItems.has(uniqueId)) {
+      newSelectedItems.delete(uniqueId);
     } else {
-      newSelectedItems.add(itemId);
+      newSelectedItems.add(uniqueId);
     }
     setSelectedItems(newSelectedItems);
   };
-
   const handleOk = () => {
-    const selectedData = items.filter((item) => selectedItems.has(item.id));
+    const selectedData = items
+      .flatMap((item) =>
+        item.thicknesses.flatMap((thickness) =>
+          thickness.variants.map((variant) => ({
+            origin: variant.origin,
+            item: `${parseFloat(thickness.thickness)} ملم ${item.itemName}`,
+            type: item.type,
+            length: Math.floor(variant.length),
+            width: Math.floor(variant.width),
+            sheetsPerBox: variant.sheetsPerBox,
+            box: item.type === "box" ? 1 : "", // Box is 1 if type is box
+            sheet: item.type === "sheet" ? 1 : variant.sheetsPerBox, // Sheet is 1 if type is sheet
+            uniqueId: `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`,
+          }))
+        )
+      )
+      .filter((row) => selectedItems.has(row.uniqueId));
+
     onSelectItems(selectedData);
     onClose();
   };
@@ -87,28 +103,31 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           <tbody>
             {filteredItems.flatMap((item) =>
               item.thicknesses.flatMap((thickness) =>
-                thickness.variants.map((variant, index) => (
-                  <tr key={`${item.id}-${index}`}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        className="search-modal-select-checkbox"
-                        checked={selectedItems.has(item.id)}
-                        onChange={() => handleSelect(item.id)}
-                      />
-                    </td>
-                    <td>{variant.origin}</td>
-                    <td style={{ direction: "rtl", textAlign: "right" }}>
-                      {`${parseFloat(thickness.thickness)} ملم ${
-                        item.itemName
-                      }`}
-                    </td>
-                    <td>{item.type}</td>
-                    <td>{Math.floor(variant.length)}</td>
-                    <td>{Math.floor(variant.width)}</td>
-                    <td>{variant.sheetsPerBox}</td>
-                  </tr>
-                ))
+                thickness.variants.map((variant, index) => {
+                  const uniqueId = `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`;
+                  return (
+                    <tr key={`${item.id}-${index}`}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="search-modal-select-checkbox"
+                          checked={selectedItems.has(uniqueId)}
+                          onChange={() => handleSelect(uniqueId)}
+                        />
+                      </td>
+                      <td>{variant.origin}</td>
+                      <td style={{ direction: "rtl", textAlign: "right" }}>
+                        {`${parseFloat(thickness.thickness)} ملم ${
+                          item.itemName
+                        }`}
+                      </td>
+                      <td>{item.type}</td>
+                      <td>{Math.floor(variant.length)}</td>
+                      <td>{Math.floor(variant.width)}</td>
+                      <td>{variant.sheetsPerBox}</td>
+                    </tr>
+                  );
+                })
               )
             )}
           </tbody>

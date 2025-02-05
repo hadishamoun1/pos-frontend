@@ -323,3 +323,11 @@
   text-align: right;
   font-size: 1rem;
 }
+.pos-selected-row {
+  background-color: #c5e1ff !important;
+}
+
+input:disabled {
+  background: #353434;
+  cursor: not-allowed;
+}

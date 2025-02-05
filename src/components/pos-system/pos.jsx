@@ -4,21 +4,10 @@ import "./pos.css";
 import SearchModal from "./searchModal";
 
 const POSSystemPage = () => {
-  const [tableData, setTableData] = useState([
-    {
-      origin: "",
-      item: "",
-      length: "",
-      width: "",
-      box: "",
-      sheet: "",
-      quantity: "",
-      sqm: "",
-      price: "",
-    },
-  ]);
-
+  const [tableData, setTableData] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -27,28 +16,64 @@ const POSSystemPage = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
   };
+
+  const handleSelectItems = (selectedItems) => {
+    const updatedData = selectedItems.map((item) => ({
+      origin: item.origin || "",
+      item: item.item || "",
+      type: item.type || "",
+      length: item.length || "",
+      width: item.width || "",
+      box: item.type === "box" ? 1 : "",
+      sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
+      quantity: "",
+      sqm: "",
+      price: "",
+    }));
+
+    setTableData((prevData) => [...prevData, ...updatedData]);
+  };
+
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
-
-    if (field === "item") {
-      const match = value.match(/^(\d+(\.\d+)?)(\s*ملم)?(.*)?$/);
-      const numberPart = match?.[1] || "";
-      const hasMlm = match?.[3] !== undefined;
-      const textPart = match?.[4] || "";
-
-      newData[index][field] = `${numberPart}${hasMlm ? "ملم" : ""}${textPart}`;
-    } else {
-      newData[index][field] = value;
-    }
-
+    newData[index][field] = value;
     setTableData(newData);
   };
 
+  const handleRightClick = (event, index) => {
+    event.preventDefault();
+    setSelectedRowIndex(index);
+    setContextMenu({
+      x: event.pageX,
+      y: event.pageY,
+    });
+  };
+
+  const handleRowClick = (index) => {
+    setSelectedRowIndex(index);
+    setContextMenu(null);
+  };
+
+  const handleDeleteRow = () => {
+    if (selectedRowIndex !== null) {
+      const updatedTable = tableData.filter(
+        (_, index) => index !== selectedRowIndex
+      );
+      setTableData(updatedTable);
+      setContextMenu(null);
+      setSelectedRowIndex(null);
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
   return (
-    <div className="pos-page-container">
+    <div className="pos-page-container" onClick={handleCloseContextMenu}>
       {/* Left Sidebar */}
       <div className="pos-page-left">
         <div className="pos-page-container-header">
@@ -86,7 +111,7 @@ const POSSystemPage = () => {
             />
           </div>
 
-          {/* Restored: Dropdowns & Checkbox Row */}
+          {/* Dropdowns & Checkbox Row */}
           <div className="pos-page-toolbar-row">
             <div className="pos-page-dropdown-container">
               <select className="pos-page-exchange-rate-dropdown">
@@ -115,7 +140,7 @@ const POSSystemPage = () => {
             </div>
           </div>
 
-          {/* Restored: Customer Name Input Row */}
+          {/* Customer Name Input Row */}
           <div className="pos-page-customer-name-row">
             <label className="pos-page-customer-name-label">
               Customer Name
@@ -145,6 +170,7 @@ const POSSystemPage = () => {
             <tr>
               <th>Origin</th>
               <th>Item</th>
+              <th>Type</th>
               <th>Length</th>
               <th>Width</th>
               <th>Box</th>
@@ -156,42 +182,26 @@ const POSSystemPage = () => {
           </thead>
           <tbody>
             {tableData.map((row, index) => (
-              <tr key={index}>
+              <tr
+                key={index}
+                onClick={() => handleRowClick(index)}
+                onContextMenu={(e) => handleRightClick(e, index)}
+                className={index === selectedRowIndex ? "pos-selected-row" : ""}
+              >
                 <td>
-                  <input
-                    type="text"
-                    value={row.origin}
-                    onChange={(e) =>
-                      handleInputChange(index, "origin", e.target.value)
-                    }
-                  />
+                  <input type="text" value={row.origin} readOnly />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    value={row.item}
-                    onChange={(e) =>
-                      handleInputChange(index, "item", e.target.value)
-                    }
-                  />
+                  <input type="text" value={row.item} readOnly />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    value={row.length}
-                    onChange={(e) =>
-                      handleInputChange(index, "length", e.target.value)
-                    }
-                  />
+                  <input type="text" value={row.type} readOnly />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    value={row.width}
-                    onChange={(e) =>
-                      handleInputChange(index, "width", e.target.value)
-                    }
-                  />
+                  <input type="text" value={row.length} readOnly />
+                </td>
+                <td>
+                  <input type="text" value={row.width} readOnly />
                 </td>
                 <td>
                   <input
@@ -200,6 +210,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "box", e.target.value)
                     }
+                    disabled={row.type === "sheet"}
                   />
                 </td>
                 <td>
@@ -209,6 +220,7 @@ const POSSystemPage = () => {
                     onChange={(e) =>
                       handleInputChange(index, "sheet", e.target.value)
                     }
+                    readOnly={row.type === "box"}
                   />
                 </td>
                 <td>
@@ -256,7 +268,24 @@ const POSSystemPage = () => {
           className="pos-page-search-input"
         />
       </div>
-      <SearchModal isOpen={isModalOpen} onClose={handleCloseModal} />
+
+      {/* Context Menu for Right Click */}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button className="delete-button" onClick={handleDeleteRow}>
+            Delete
+          </button>
+        </div>
+      )}
+
+      <SearchModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSelectItems={handleSelectItems}
+      />
     </div>
   );
 };
