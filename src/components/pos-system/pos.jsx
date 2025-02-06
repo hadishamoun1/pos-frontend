@@ -26,7 +26,7 @@ const POSSystemPage = () => {
       width: item.width || "",
       box: item.type === "box" ? 1 : "",
       sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
-      sqm: "",
+      sqm: calculateSQM(item.length, item.width, item.type, 1, 1), // Default box & sheet = 1
       price: "",
     }));
 
@@ -36,9 +36,31 @@ const POSSystemPage = () => {
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
+  // Function to calculate SQM based on type
+  const calculateSQM = (length, width, type, box, sheet) => {
+    if (!length || !width) return "";
+    if (type === "box") {
+      return (length * width * box * sheet).toFixed(2); // Ensure 2 decimal places
+    } else if (type === "sheet") {
+      return (length * width * sheet).toFixed(2);
+    }
+    return "";
+  };
+
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
     newData[index][field] = value;
+
+    if (["length", "width", "box", "sheet"].includes(field)) {
+      newData[index].sqm = calculateSQM(
+        newData[index].length,
+        newData[index].width,
+        newData[index].type,
+        newData[index].box,
+        newData[index].sheet
+      );
+    }
+
     setTableData(newData);
   };
 
@@ -174,7 +196,6 @@ const POSSystemPage = () => {
               <th>Width</th>
               <th>Box</th>
               <th>Sheet</th>
-
               <th>SQM</th>
               <th>Price</th>
             </tr>
@@ -222,15 +243,8 @@ const POSSystemPage = () => {
                     readOnly={row.type === "box"}
                   />
                 </td>
-
                 <td>
-                  <input
-                    type="number"
-                    value={row.sqm}
-                    onChange={(e) =>
-                      handleInputChange(index, "sqm", e.target.value)
-                    }
-                  />
+                  <input type="text" value={row.sqm} readOnly />
                 </td>
                 <td>
                   <input
