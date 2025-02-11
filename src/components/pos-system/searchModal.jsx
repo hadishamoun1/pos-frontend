@@ -52,8 +52,8 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       .flatMap((item) =>
         item.thicknesses.flatMap((thickness) =>
           thickness.variants.map((variant) => {
-            const box = item.type === "box" ? 1 : ""; // Default box to 1
-            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox; // Default sheet
+            const box = item.type === "box" ? 1 : ""; 
+            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox; 
 
             return {
               origin: variant.origin,
@@ -78,7 +78,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       )
       .filter((row) => selectedItems.has(row.uniqueId));
 
-    onSelectItems(selectedData); // Send updated data with SQM
+    onSelectItems(selectedData); 
     onClose();
   };
 

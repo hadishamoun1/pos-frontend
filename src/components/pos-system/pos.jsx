@@ -70,11 +70,11 @@ const POSSystemPage = () => {
         newData[index].length,
         newData[index].width,
         newData[index].type,
-        newData[index].box || 1, // Box defaults to 1
+        newData[index].box || 1, 
         newData[index].sheet
       );
     } else {
-      newData[index].sqm = ""; // Reset sqm if any field is missing
+      newData[index].sqm = ""; 
     }
 
     setTableData(newData);
