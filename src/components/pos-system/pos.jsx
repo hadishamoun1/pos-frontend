@@ -28,6 +28,7 @@ const POSSystemPage = () => {
       sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
       sqm: item.sqm,
       price: "",
+      total: "0.00",
     }));
 
     setTableData((prevData) => [...prevData, ...updatedData]);
@@ -70,12 +71,16 @@ const POSSystemPage = () => {
         newData[index].length,
         newData[index].width,
         newData[index].type,
-        newData[index].box || 1, 
+        newData[index].box || 1,
         newData[index].sheet
       );
     } else {
-      newData[index].sqm = ""; 
+      newData[index].sqm = "";
     }
+
+    const price = parseFloat(newData[index].price) || 0;
+    const sqm = parseFloat(newData[index].sqm) || 0;
+    newData[index].total = (sqm * price).toFixed(2);
 
     setTableData(newData);
   };
@@ -214,6 +219,7 @@ const POSSystemPage = () => {
               <th>Sheet</th>
               <th>SQM</th>
               <th>Price</th>
+              <th>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -271,6 +277,9 @@ const POSSystemPage = () => {
                     }
                   />
                 </td>
+                <td>
+                  <input type="text" value={row.total} readOnly />
+                </td>{" "}
               </tr>
             ))}
           </tbody>

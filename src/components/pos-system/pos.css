@@ -28,7 +28,7 @@
 
 /* Inventory Table */
 .pos-page-inventory-table {
-  table-layout: fixed;
+  overflow-x: auto;
   width: 100%;
   border-collapse: collapse;
   margin-top: 1.5rem;
@@ -52,7 +52,7 @@
 /* Adjust Column Widths */
 .pos-page-inventory-table th:nth-child(1),
 .pos-page-inventory-table td:nth-child(1) {
-  width: 18%; /* Origin */
+  width: 16%; /* Origin */
 }
 
 .pos-page-inventory-table th:nth-child(2),
@@ -75,6 +75,10 @@
 .pos-page-inventory-table th:nth-child(9),
 .pos-page-inventory-table td:nth-child(9) {
   width: 9%; /* Remaining Columns */
+}
+.pos-page-inventory-table td:nth-child(10) {
+width: 11%;
+min-width: 100px;
 }
 
 .pos-page-inventory-table td {
