@@ -28,12 +28,46 @@
 
 /* Inventory Table */
 .pos-page-inventory-table {
-  overflow-x: auto;
   width: 100%;
   border-collapse: collapse;
   margin-top: 1.5rem;
   border-radius: 8px;
-  overflow: hidden;
+}
+/* Scrollbar Styling */
+.pos-page-inventory-table-container::-webkit-scrollbar {
+  height: 8px; 
+}
+
+.pos-page-inventory-table-container::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 4px;
+}
+
+.pos-page-inventory-table-container::-webkit-scrollbar-thumb {
+  background: #007bff;
+  border-radius: 4px;
+}
+
+.pos-page-inventory-table-container::-webkit-scrollbar-thumb:hover {
+  background: #0056b3;
+}
+
+/* Scrollable Table Container */
+.pos-page-inventory-table-container {
+  width: 100%;
+  max-height: 670px; 
+  overflow-y: auto; 
+  display: block;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+.pos-page-inventory-table thead {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  z-index: 10;
 }
 
 .pos-page-inventory-table th {
@@ -77,8 +111,8 @@
   width: 9%; /* Remaining Columns */
 }
 .pos-page-inventory-table td:nth-child(10) {
-width: 11%;
-min-width: 100px;
+  width: 11%;
+  min-width: 100px;
 }
 
 .pos-page-inventory-table td {
