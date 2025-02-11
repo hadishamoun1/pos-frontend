@@ -26,7 +26,7 @@ const POSSystemPage = () => {
       width: item.width || "",
       box: item.type === "box" ? 1 : "",
       sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
-      sqm: calculateSQM(item.length, item.width, item.type, 1, 1), // Default box & sheet = 1
+      sqm: item.sqm,
       price: "",
     }));
 
@@ -36,14 +36,27 @@ const POSSystemPage = () => {
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
-  // Function to calculate SQM based on type
+  // Function to calculate SQM based on type (converting cm to meters)
   const calculateSQM = (length, width, type, box, sheet) => {
-    if (!length || !width) return "";
-    if (type === "box") {
-      return (length * width * box * sheet).toFixed(2); // Ensure 2 decimal places
-    } else if (type === "sheet") {
-      return (length * width * sheet).toFixed(2);
+    if (
+      !length ||
+      !width ||
+      box === "" ||
+      sheet === "" ||
+      sheet === undefined
+    ) {
+      return ""; // Prevent premature calculation
     }
+
+    const lengthInMeters = length / 100; // Convert cm to meters
+    const widthInMeters = width / 100; // Convert cm to meters
+
+    if (type === "box") {
+      return (lengthInMeters * widthInMeters * box * sheet).toFixed(2);
+    } else if (type === "sheet") {
+      return (lengthInMeters * widthInMeters * sheet).toFixed(2);
+    }
+
     return "";
   };
 
@@ -51,14 +64,17 @@ const POSSystemPage = () => {
     const newData = [...tableData];
     newData[index][field] = value;
 
-    if (["length", "width", "box", "sheet"].includes(field)) {
+    // Automatically calculate sqm when all necessary fields are filled
+    if (newData[index].length && newData[index].width && newData[index].sheet) {
       newData[index].sqm = calculateSQM(
         newData[index].length,
         newData[index].width,
         newData[index].type,
-        newData[index].box,
+        newData[index].box || 1, // Box defaults to 1
         newData[index].sheet
       );
+    } else {
+      newData[index].sqm = ""; // Reset sqm if any field is missing
     }
 
     setTableData(newData);

@@ -33,26 +33,52 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     }
     setSelectedItems(newSelectedItems);
   };
+  const calculateSQM = (length, width, type, box, sheet) => {
+    if (!length || !width || !sheet) return ""; // Prevent empty values
+
+    const lengthInMeters = length / 100; // Convert cm to meters
+    const widthInMeters = width / 100; // Convert cm to meters
+
+    if (type === "box") {
+      return (lengthInMeters * widthInMeters * box * sheet).toFixed(2);
+    } else if (type === "sheet") {
+      return (lengthInMeters * widthInMeters * sheet).toFixed(2);
+    }
+    return "";
+  };
+
   const handleOk = () => {
     const selectedData = items
       .flatMap((item) =>
         item.thicknesses.flatMap((thickness) =>
-          thickness.variants.map((variant) => ({
-            origin: variant.origin,
-            item: `${parseFloat(thickness.thickness)} ملم ${item.itemName}`,
-            type: item.type,
-            length: Math.floor(variant.length),
-            width: Math.floor(variant.width),
-            sheetsPerBox: variant.sheetsPerBox,
-            box: item.type === "box" ? 1 : "", // Box is 1 if type is box
-            sheet: item.type === "sheet" ? 1 : variant.sheetsPerBox, // Sheet is 1 if type is sheet
-            uniqueId: `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`,
-          }))
+          thickness.variants.map((variant) => {
+            const box = item.type === "box" ? 1 : ""; // Default box to 1
+            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox; // Default sheet
+
+            return {
+              origin: variant.origin,
+              item: `${parseFloat(thickness.thickness)} ملم ${item.itemName}`,
+              type: item.type,
+              length: Math.floor(variant.length),
+              width: Math.floor(variant.width),
+              sheetsPerBox: variant.sheetsPerBox,
+              box: box,
+              sheet: sheet,
+              sqm: calculateSQM(
+                variant.length,
+                variant.width,
+                item.type,
+                box,
+                sheet
+              ), // Auto-calculate SQM
+              uniqueId: `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`,
+            };
+          })
         )
       )
       .filter((row) => selectedItems.has(row.uniqueId));
 
-    onSelectItems(selectedData);
+    onSelectItems(selectedData); // Send updated data with SQM
     onClose();
   };
 
