@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa";
 import "./pos.css";
 import SearchModal from "./searchModal";
+import RequestCard from "./requests";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -127,6 +128,7 @@ const POSSystemPage = () => {
           placeholder="Search Requests"
           className="pos-page-search-input"
         />
+        <RequestCard />
       </div>
 
       {/* Center Section */}
