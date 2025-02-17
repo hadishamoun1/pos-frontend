@@ -11,7 +11,7 @@ const RequestCard = () => {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/requests");
+      const response = await axios.get("http://localhost:3000/requests/v1/filtered");
       setRequests(response.data);
     } catch (error) {
       console.error("Error fetching requests:", error);
@@ -30,7 +30,7 @@ const RequestCard = () => {
               <strong>Date:</strong> {request.requestDate}
             </p>
             <p>
-              <strong>Customer:</strong> {request.customer.customerName}
+              <strong>Customer:</strong> {request.customerName}
             </p>
             <p>
               <strong>Total:</strong> ${request.grandTotal}
