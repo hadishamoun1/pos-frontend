@@ -9,6 +9,7 @@ const POSSystemPage = () => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
+  const [selectedCustomerName, setSelectedCustomerName] = useState("");
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -33,6 +34,25 @@ const POSSystemPage = () => {
     }));
 
     setTableData((prevData) => [...prevData, ...updatedData]);
+  };
+
+  // Autofill table when a request is clicked
+  const handleSelectRequest = (request) => {
+    setSelectedCustomerName(request.customerName);
+    const updatedData = request.details.map((detail) => ({
+      origin: detail.origin,
+      item: detail.itemName,
+      type: detail.type,
+      length: detail.length,
+      width: detail.width,
+      box: detail.box || "",
+      sheet: detail.sheet || detail.sheetPerBox || "",
+      sqm: detail.sqm,
+      price: detail.price,
+      total: detail.total,
+    }));
+
+    setTableData(updatedData);
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -128,7 +148,7 @@ const POSSystemPage = () => {
           placeholder="Search Requests"
           className="pos-page-search-input"
         />
-        <RequestCard />
+        <RequestCard onSelectRequest={handleSelectRequest} />
       </div>
 
       {/* Center Section */}
@@ -194,8 +214,10 @@ const POSSystemPage = () => {
             >
               <input
                 type="text"
+                value={selectedCustomerName}
                 placeholder="Enter Customer Name"
                 className="pos-page-customer-name-input"
+                readOnly
               />
               <button
                 className="pos-page-toolbar-button pos-page-blue-button"
