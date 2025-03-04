@@ -35,11 +35,11 @@
 }
 /* Scrollbar Styling */
 .pos-page-inventory-table-container::-webkit-scrollbar {
-  height: 8px; 
+  height: 8px;
 }
 
 .pos-page-inventory-table-container::-webkit-scrollbar-track {
-  background: #f1f1f1; 
+  background: #f1f1f1;
   border-radius: 4px;
 }
 
@@ -55,8 +55,8 @@
 /* Scrollable Table Container */
 .pos-page-inventory-table-container {
   width: 100%;
-  max-height: 670px; 
-  overflow-y: auto; 
+  max-height: 670px;
+  overflow-y: auto;
   display: block;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -368,4 +368,66 @@
 input:disabled {
   background: #353434;
   cursor: not-allowed;
+}
+
+/* 🔹 Customer Search Container */
+.pos-page-customer-search-container {
+  position: relative;
+  width: 100%;
+}
+
+/* 🔹 Input Field */
+.pos-page-customer-name-input {
+  width: 20%;
+  padding: 10px;
+  margin-right: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  transition: all 0.3s ease-in-out;
+}
+
+.pos-page-customer-name-input:focus {
+  border-color: #007bff;
+  box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+}
+
+/* 🔹 Suggestions Dropdown */
+.customer-suggestions-dropdown {
+  position: absolute;
+  width: 25%;
+  max-height: 250px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+  list-style: none;
+  margin: 5px 0 0;
+  padding: 0;
+  z-index: 1000;
+}
+
+/* 🔹 Each Suggestion Item */
+.customer-suggestions-dropdown li {
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Hover Effect */
+.customer-suggestions-dropdown li:hover,
+.customer-suggestions-dropdown li.selected {
+  background: #007bff;
+  color: white;
+}
+
+/* 🔹 No Suggestions Message */
+.no-suggestions {
+  padding: 12px;
+  color: #999;
+  text-align: center;
 }

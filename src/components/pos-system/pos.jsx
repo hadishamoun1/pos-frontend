@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa";
 import "./pos.css";
 import SearchModal from "./searchModal";
 import RequestCard from "./requests";
+import InvoiceCreation from "./invoiceCreation";
+import axios from "axios";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -10,6 +12,10 @@ const POSSystemPage = () => {
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState("");
+  const [customerInput, setCustomerInput] = useState("");
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -135,6 +141,60 @@ const POSSystemPage = () => {
     setContextMenu(null);
   };
 
+  const fetchCustomers = async (query) => {
+    if (!query) {
+      setCustomerSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/customers/v1/search`,
+        {
+          params: { query },
+        }
+      );
+      setCustomerSuggestions(response.data);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      setCustomerSuggestions([]);
+    }
+  };
+  // Handle input change
+  const handleCustomerInputChange = (e) => {
+    const query = e.target.value;
+    setCustomerInput(query);
+
+    if (query.length > 1) {
+      fetchCustomers(query); // ✅ Fetch only if input length > 1
+    } else {
+      setCustomerSuggestions([]); // ✅ Clear suggestions if input is too short
+    }
+  };
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomerId(customer.id);
+    setSelectedCustomerName(customer.customerName);
+    setCustomerInput(customer.customerName);
+    setCustomerSuggestions([]); // Hide suggestions
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (customerSuggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      setHighlightedIndex((prevIndex) =>
+        prevIndex < customerSuggestions.length - 1 ? prevIndex + 1 : prevIndex
+      );
+    } else if (e.key === "ArrowUp") {
+      setHighlightedIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : 0));
+    } else if (e.key === "Enter" && highlightedIndex !== -1) {
+      handleCustomerSelect(customerSuggestions[highlightedIndex]);
+    }
+  };
+
   return (
     <div className="pos-page-container" onClick={handleCloseContextMenu}>
       {/* Left Sidebar */}
@@ -209,16 +269,33 @@ const POSSystemPage = () => {
             <label className="pos-page-customer-name-label">
               Customer Name
             </label>
-            <div
-              style={{ display: "flex", width: "100%", alignItems: "center" }}
-            >
+            <div className="pos-page-customer-search-container">
+              {/* Customer Search Input */}
               <input
                 type="text"
-                value={selectedCustomerName}
-                placeholder="Enter Customer Name"
+                value={customerInput}
+                onChange={handleCustomerInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Search Customer Name"
                 className="pos-page-customer-name-input"
-                readOnly
               />
+
+              {/* Suggestions Dropdown */}
+              {customerSuggestions.length > 0 && (
+                <ul className="customer-suggestions-dropdown">
+                  {customerSuggestions.map((customer, index) => (
+                    <li
+                      key={customer.id}
+                      className={index === highlightedIndex ? "selected" : ""}
+                      onClick={() => handleCustomerSelect(customer)}
+                    >
+                      {customer.customerName}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+          
               <button
                 className="pos-page-toolbar-button pos-page-blue-button"
                 style={{ marginLeft: "auto" }}
