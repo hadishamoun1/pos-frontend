@@ -239,8 +239,10 @@ const POSSystemPage = () => {
           <div className="pos-page-toolbar-row">
             <div className="pos-page-dropdown-container">
               <select className="pos-page-exchange-rate-dropdown">
-                <option value="usd">USD Ex Rate</option>
-                <option value="eur">EUR Ex Rate</option>
+                value={currencyRate}
+                onChange={(e) => setCurrencyRate(e.target.value)}
+                <option value="89000">89,000</option>
+                <option value="1500">1500</option>
               </select>
 
               <select className="pos-page-vat-dropdown">
@@ -295,7 +297,6 @@ const POSSystemPage = () => {
                 </ul>
               )}
 
-          
               <button
                 className="pos-page-toolbar-button pos-page-blue-button"
                 style={{ marginLeft: "auto" }}

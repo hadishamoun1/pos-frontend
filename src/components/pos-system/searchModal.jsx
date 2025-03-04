@@ -56,6 +56,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
             const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox; 
 
             return {
+              itemVariantId: variant.id,
               origin: variant.origin,
               item: `${parseFloat(thickness.thickness)} ملم ${item.itemName}`,
               type: item.type,
