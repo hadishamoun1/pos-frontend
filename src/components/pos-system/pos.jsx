@@ -6,6 +6,7 @@ import RequestCard from "./requests";
 import InvoiceCreation from "./invoiceCreation";
 import InvoicesList from "./invoiceList";
 import axios from "axios";
+import NotificationModal from "../recievables/NotificationModal";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -21,6 +22,7 @@ const POSSystemPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [vat, setVat] = useState("11");
+  const [selectedInvoiceType, setSelectedInvoiceType] = useState("Both");
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -29,6 +31,22 @@ const POSSystemPage = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
   };
+  // ✅ Function to show notification modal
+  const showNotification = (type, message, onConfirm = null) => {
+    setNotification({ show: true, type, message, onConfirm });
+  };
+
+  // ✅ Close notification modal
+  const closeNotification = () => {
+    setNotification({ show: false, type: "", message: "", onConfirm: null });
+  };
+
+  const [notification, setNotification] = useState({
+    show: false,
+    type: "",
+    message: "",
+    onConfirm: null,
+  });
 
   const handleSelectItems = (selectedItems) => {
     const updatedData = selectedItems.map((item) => ({
@@ -48,23 +66,47 @@ const POSSystemPage = () => {
     setTableData((prevData) => [...prevData, ...updatedData]);
   };
 
-  // Autofill table when a request is clicked
   const handleSelectRequest = (request) => {
-    setSelectedCustomerName(request.customerName);
+    console.log("Selected Request:", request); // ✅ Debugging: Log the request data
+
+    if (!request) return;
+
+    // ✅ Set customer name and ID
+    setSelectedCustomerName(request.customerName || ""); // Ensure there's a fallback
+    setSelectedCustomerId(request.customerId || null); // Ensure ID is stored
+
+    // ✅ Debugging logs
+    console.log("Customer Name:", request.customerName);
+    console.log("Customer ID:", request.customerId);
+
+    // ✅ Ensure details exist before mapping
+    if (!request.details || !Array.isArray(request.details)) {
+      console.warn("Request details missing or invalid:", request.details);
+      return;
+    }
+
+    // ✅ Map request details correctly
     const updatedData = request.details.map((detail) => ({
-      origin: detail.origin,
-      item: detail.itemName,
-      type: detail.type,
-      length: detail.length,
-      width: detail.width,
-      box: detail.box || "",
-      sheet: detail.sheet || detail.sheetPerBox || "",
-      sqm: detail.sqm,
-      price: detail.price,
-      total: detail.total,
+      itemVariantId: detail.itemVariantId || null, // Ensure itemVariantId is present
+      origin: detail.origin || "",
+      item: detail.itemName || "",
+      type: detail.type || "", // Ensure type is filled
+      length: detail.length || "",
+      width: detail.width || "",
+      box: detail.type === "box" ? detail.box || 1 : "", // If it's a box, assign box
+      sheet:
+        detail.type === "sheet" ? detail.sheet || detail.sheetPerBox || 1 : "", // If sheet, ensure it's set
+      sqm: detail.sqm || "",
+      price: detail.price || "",
+      total: detail.total || "0.00",
     }));
 
+    console.log("Updated Table Data:", updatedData); // ✅ Debugging: Log the new data
+
     setTableData(updatedData);
+
+    // ✅ Also update the invoice type dynamically
+    setSelectedInvoiceType(request.invoiceType || "Both");
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -179,13 +221,29 @@ const POSSystemPage = () => {
   };
 
   // Handle customer selection
-  const handleCustomerSelect = (customer) => {
+  const handleCustomerSelect = async (customer) => {
     setSelectedCustomerId(customer.id);
     setSelectedCustomerName(customer.customerName);
     setCustomerInput(customer.customerName);
     setCustomerSuggestions([]); // Hide suggestions
-  };
 
+    try {
+      // Fetch the customer's invoice type
+      const response = await axios.get(
+        `http://localhost:3000/customers/${customer.id}`
+      );
+      const customerData = response.data;
+
+      if (customerData.invoiceType) {
+        setSelectedInvoiceType(customerData.invoiceType || "Both"); // Set invoice type (S, G, or Both)
+      } else {
+        setSelectedInvoiceType("Both"); // Default to 'Both' if missing
+      }
+    } catch (error) {
+      console.error("Error fetching customer details:", error);
+      setSelectedInvoiceType("Both"); // Default fallback
+    }
+  };
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
     if (customerSuggestions.length === 0) return;
@@ -251,12 +309,16 @@ const POSSystemPage = () => {
         invoiceData
       );
       console.log("Invoice Created:", response.data);
-      alert(`Invoice ${invoiceType} created successfully!`);
+      showNotification(
+        "success",
+        `Invoice ${invoiceType} created successfully!`
+      );
     } catch (err) {
       console.error("Error creating invoice:", err);
       console.error("Server Response:", err.response?.data);
-      setError(
-        `Failed to create invoice. Error: ${
+      showNotification(
+        "error",
+        `Failed to create invoice. ${
           err.response?.data?.message || err.message
         }`
       );
@@ -267,6 +329,62 @@ const POSSystemPage = () => {
 
   const handleSelectInvoice = (invoice) => {
     console.log("Selected Invoice:", invoice);
+  };
+
+  const handleCreateRequest = async () => {
+    if (!selectedCustomerId || tableData.length === 0) {
+      showNotification("error", "Customer and items are required.");
+      return;
+    }
+
+    setLoading(true);
+
+    // Calculate totals
+    const totalAmount = tableData.reduce(
+      (acc, item) => acc + Number(item.total || 0),
+      0
+    );
+    const vatAmount = totalAmount * (Number(vat) / 100);
+    const grandTotal = totalAmount + vatAmount;
+
+    // Format the request payload exactly as expected by the API
+    const requestData = {
+      customerId: selectedCustomerId,
+      requestDate: date,
+      totalAmount: totalAmount.toFixed(2), // Ensure numbers are properly formatted
+      vatAmount: vatAmount.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      details: tableData.map((item) => ({
+        itemVariantId: item.itemVariantId, // Make sure this is defined
+        sqm: Number(item.sqm),
+        price: Number(item.price),
+        total: Number(item.total),
+      })),
+    };
+
+    console.log("📤 Sending Request Data:", requestData);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/requests",
+        requestData
+      );
+      console.log("✅ Request Created:", response.data);
+      showNotification("success", "Request created successfully!");
+
+      // Clear table after successful request
+      setTableData([]);
+    } catch (err) {
+      console.error("❌ Error creating request:", err);
+      showNotification(
+        "error",
+        `Failed to create request. ${
+          err.response?.data?.message || err.message
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -286,29 +404,51 @@ const POSSystemPage = () => {
       </div>
 
       {/* Center Section */}
+      {/* Center Section */}
       <div className="pos-page-center">
         <div className="pos-page-toolbar">
           <div className="pos-page-button-row">
             <button className="pos-page-toolbar-button pos-page-blue-button">
               New
             </button>
-            <button className="pos-page-toolbar-button pos-page-blue-button">
-              Request
-            </button>
-            <button
-              className="pos-page-toolbar-button pos-page-red-button"
-              onClick={() => handleCreateInvoice("S")}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Issue"}
-            </button>
-            <button
-              className="pos-page-toolbar-button pos-page-yellow-button"
-              onClick={() => handleCreateInvoice("G")}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Offer"}
-            </button>
+
+            {/* ✅ Show "Request" button for both "S" and "G" customers */}
+            {(selectedInvoiceType === "S" ||
+              selectedInvoiceType === "G" ||
+              selectedInvoiceType === "Both") && (
+              <button
+                className="pos-page-toolbar-button pos-page-blue-button"
+                onClick={handleCreateRequest} // ✅ Calls function
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Request"}
+              </button>
+            )}
+
+            {/* ✅ Show "Issue" button only if invoiceType is 'S' or 'Both' */}
+            {(selectedInvoiceType === "S" ||
+              selectedInvoiceType === "Both") && (
+              <button
+                className="pos-page-toolbar-button pos-page-red-button"
+                onClick={() => handleCreateInvoice("S")}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Issue"}
+              </button>
+            )}
+
+            {/* ✅ Show "Offer" button only if invoiceType is 'G' or 'Both' */}
+            {(selectedInvoiceType === "G" ||
+              selectedInvoiceType === "Both") && (
+              <button
+                className="pos-page-toolbar-button pos-page-yellow-button"
+                onClick={() => handleCreateInvoice("G")}
+                disabled={loading}
+              >
+                {loading ? "Processing..." : "Offer"}
+              </button>
+            )}
+
             <input
               type="date"
               value={date}
@@ -319,9 +459,11 @@ const POSSystemPage = () => {
           {/* Dropdowns & Checkbox Row */}
           <div className="pos-page-toolbar-row">
             <div className="pos-page-dropdown-container">
-              <select className="pos-page-exchange-rate-dropdown">
+              <select
+                className="pos-page-exchange-rate-dropdown"
                 value={currencyRate}
                 onChange={(e) => setCurrencyRate(e.target.value)}
+              >
                 <option value="89000">89,000</option>
                 <option value="1500">1500</option>
               </select>
@@ -498,6 +640,16 @@ const POSSystemPage = () => {
             Delete
           </button>
         </div>
+      )}
+
+      {/* Notification Modal */}
+      {notification.show && (
+        <NotificationModal
+          type={notification.type}
+          message={notification.message}
+          onClose={closeNotification}
+          onConfirm={notification.onConfirm || closeNotification}
+        />
       )}
 
       <SearchModal

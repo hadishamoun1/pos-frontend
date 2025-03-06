@@ -93,10 +93,7 @@ const CreatePreviewCustomers = () => {
         location: formData.location,
       };
 
-      const response = await axios.post(
-        `${baseUrl}/customers`,
-        newCustomer
-      );
+      const response = await axios.post(`${baseUrl}/customers`, newCustomer);
 
       setCustomers((prevCustomers) => [...prevCustomers, response.data]);
       setFormData({
@@ -166,6 +163,7 @@ const CreatePreviewCustomers = () => {
                   <option value="">Select Type</option>
                   <option value="S">S</option>
                   <option value="G">G</option>
+                  <option value="Both">Both</option>
                 </select>
               </td>
             </tr>
