@@ -16,6 +16,10 @@ const POSSystemPage = () => {
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [currencyRate, setCurrencyRate] = useState("89000");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [vat, setVat] = useState("11");
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -27,6 +31,7 @@ const POSSystemPage = () => {
 
   const handleSelectItems = (selectedItems) => {
     const updatedData = selectedItems.map((item) => ({
+      itemVariantId: item.itemVariantId,
       origin: item.origin || "",
       item: item.item || "",
       type: item.type || "",
@@ -195,6 +200,70 @@ const POSSystemPage = () => {
     }
   };
 
+  // Handle Invoice Creation (Issue = "S", Offer = "G")
+  const handleCreateInvoice = async (invoiceType) => {
+    if (!selectedCustomerId || tableData.length === 0) {
+      setError("Customer and items are required.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    const formattedItems = tableData.map((item) => {
+      const unitPrice = Number(item.price) || 0; // ✅ Ensure it's a number
+      const sqm = Number(item.sqm) || 0;
+      const vatRate = Number(vat) / 100; // ✅ Ensure VAT rate is a number
+
+      const totalAmount = sqm * unitPrice;
+      const vatAmount = totalAmount * vatRate;
+
+      return {
+        itemVariantId: item.itemVariantId, // ✅ Ensure this exists
+        sqm: sqm, // ✅ Send as a number
+        unitPrice: unitPrice,
+        vat: vatAmount,
+      };
+    });
+
+    const invoiceData = {
+      customerId: selectedCustomerId,
+      invoiceType,
+      date,
+      currencyRate: parseFloat(currencyRate) || 1,
+      items: formattedItems,
+    };
+
+    // 🔍 Log before sending to see what is being sent
+    console.log("Invoice Data Payload:", JSON.stringify(invoiceData, null, 2));
+    console.log("📤 Sending Invoice Data:", {
+      customerId: selectedCustomerId,
+      invoiceType,
+      date,
+      currencyRate: Number(currencyRate), // ✅ Convert to a number
+      items: formattedItems,
+    });
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3000/invoices",
+        invoiceData
+      );
+      console.log("Invoice Created:", response.data);
+      alert(`Invoice ${invoiceType} created successfully!`);
+    } catch (err) {
+      console.error("Error creating invoice:", err);
+      console.error("Server Response:", err.response?.data);
+      setError(
+        `Failed to create invoice. Error: ${
+          err.response?.data?.message || err.message
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="pos-page-container" onClick={handleCloseContextMenu}>
       {/* Left Sidebar */}
@@ -221,17 +290,24 @@ const POSSystemPage = () => {
             <button className="pos-page-toolbar-button pos-page-blue-button">
               Request
             </button>
-            <button className="pos-page-toolbar-button pos-page-red-button">
-              Issue
+            <button
+              className="pos-page-toolbar-button pos-page-red-button"
+              onClick={() => handleCreateInvoice("S")}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Issue"}
             </button>
-            <button className="pos-page-toolbar-button pos-page-yellow-button">
-              Offer
+            <button
+              className="pos-page-toolbar-button pos-page-yellow-button"
+              onClick={() => handleCreateInvoice("G")}
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Offer"}
             </button>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="pos-page-date-input"
             />
           </div>
 
@@ -245,10 +321,11 @@ const POSSystemPage = () => {
                 <option value="1500">1500</option>
               </select>
 
-              <select className="pos-page-vat-dropdown">
-                <option value="" disabled hidden>
-                  VAT
-                </option>
+              <select
+                className="pos-page-vat-dropdown"
+                value={vat}
+                onChange={(e) => setVat(e.target.value)}
+              >
                 <option value="0">0%</option>
                 <option value="6">6%</option>
                 <option value="11">11%</option>
