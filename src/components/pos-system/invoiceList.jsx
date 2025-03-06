@@ -24,7 +24,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
 
   return (
     <>
-      <h2 className="invoices-list-title">Invoices</h2>
+    
       {loading && <p>Loading...</p>}
       {error && <p className="error">{error}</p>}
 
