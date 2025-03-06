@@ -4,6 +4,7 @@ import "./pos.css";
 import SearchModal from "./searchModal";
 import RequestCard from "./requests";
 import InvoiceCreation from "./invoiceCreation";
+import InvoicesList from "./invoiceList";
 import axios from "axios";
 
 const POSSystemPage = () => {
@@ -264,6 +265,10 @@ const POSSystemPage = () => {
     }
   };
 
+  const handleSelectInvoice = (invoice) => {
+    console.log("Selected Invoice:", invoice);
+  };
+
   return (
     <div className="pos-page-container" onClick={handleCloseContextMenu}>
       {/* Left Sidebar */}
@@ -474,11 +479,13 @@ const POSSystemPage = () => {
           <FaFileInvoiceDollar className="pos-page-header-icon" />
           <span className="pos-page-header-text">Invoices</span>
         </div>
+
         <input
           type="text"
           placeholder="Search Invoices"
           className="pos-page-search-input"
         />
+        <InvoicesList onSelectInvoice={handleSelectInvoice} />
       </div>
 
       {/* Context Menu for Right Click */}

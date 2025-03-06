@@ -1,0 +1,77 @@
+/* Invoice List */
+.invoices-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Invoice Card */
+.invoice-item {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 14px 18px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.invoice-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Gradient line on the left */
+.invoice-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 5px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+/* Invoice Header */
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.invoice-number {
+  color: #007bff;
+}
+
+.invoice-date {
+  color: #666;
+  font-size: 13px;
+}
+
+/* Invoice Details */
+.invoice-details {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.invoice-customer {
+  color: #333;
+  font-weight: 500;
+}
+
+.invoice-total {
+  font-weight: 600;
+  color: #333;
+}
