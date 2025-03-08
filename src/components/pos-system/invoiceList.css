@@ -1,4 +1,4 @@
-/* Invoice List */
+/* ✅ Invoice List (Scrollable but Tooltip Visible) */
 .invoices-list {
   list-style: none;
   padding: 0;
@@ -6,9 +6,19 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 770px; /* ✅ Keep it scrollable */
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative; /* ✅ Ensure tooltip doesn't get clipped */
+
+  /* ✅ Hide scrollbar for Chrome, Edge, Safari */
+  &::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
 }
 
-/* Invoice Card */
+/* ✅ Invoice Card */
 .invoice-item {
   display: flex;
   flex-direction: column;
@@ -19,15 +29,17 @@
   transition: all 0.3s ease-in-out;
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+  min-height: 70px;
+  overflow: visible !important; /* ✅ Fix tooltip cutoff */
 }
 
 .invoice-item:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  background-color: #ffe7e7;
 }
 
-/* Gradient line on the left */
+/* ✅ Gradient line on the left */
 .invoice-item::before {
   content: "";
   position: absolute;
@@ -35,19 +47,19 @@
   left: 0;
   height: 100%;
   width: 5px;
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, #ff6161, #ff0202);
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
 }
 
-/* Invoice Header */
+/* ✅ Invoice Header */
 .invoice-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
-  margin-bottom: 5px;
+  margin-bottom: 9px;
 }
 
 .invoice-number {
@@ -56,21 +68,85 @@
 
 .invoice-date {
   color: #666;
-  font-size: 13px;
 }
 
-/* Invoice Details */
+/* ✅ Invoice Details */
 .invoice-details {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: 17px;
 }
 
+/* ✅ Customer Name Container */
+.invoice-customer-container {
+  position: relative;
+  display: inline-block;
+  max-width: 140px;
+  cursor: pointer;
+  overflow: visible;
+}
+
+/* ✅ Truncated Customer Name */
 .invoice-customer {
   color: #333;
   font-weight: 500;
+  font-size: 14px;
+  display: block;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* ✅ Tooltip - Now Wraps Long Names */
+.tooltip {
+  position: absolute;
+  bottom: 120%;
+  left: 100%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 20, 0.95);
+  color: white;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  white-space: normal; /* ✅ Allows text to wrap */
+  width: 270px; /* ✅ Limits width */
+  text-align: center;
+  word-wrap: break-word; /* ✅ Ensures long words break */
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ✅ Adjust Tooltip if Near Left Edge */
+.invoice-customer-container .tooltip.left-adjust {
+  left: 0;
+  transform: none;
+}
+
+/* ✅ Tooltip Arrow */
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(20, 20, 20, 0.95) transparent transparent transparent;
+}
+
+/* ✅ Show Tooltip on Hover */
+.invoice-customer-container:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ✅ Invoice Total */
 .invoice-total {
   font-weight: 600;
   color: #333;

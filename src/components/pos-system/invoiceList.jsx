@@ -6,6 +6,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hoveredInvoiceId, setHoveredInvoiceId] = useState(null);
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -24,7 +25,6 @@ const InvoicesList = ({ onSelectInvoice }) => {
 
   return (
     <>
-    
       {loading && <p>Loading...</p>}
       {error && <p className="error">{error}</p>}
 
@@ -39,9 +39,35 @@ const InvoicesList = ({ onSelectInvoice }) => {
               <span className="invoice-number">{invoice.invoiceNumber}</span>
               <span className="invoice-date">{invoice.date}</span>
             </div>
+
             <div className="invoice-details">
-              <span className="invoice-customer">{invoice.customer.customerName}</span>
-              <span className="invoice-total">Total: ${invoice.grandTotal}</span>
+              <div
+                className="invoice-customer-container"
+                onMouseEnter={(e) => {
+                  const tooltip = e.currentTarget.querySelector(".tooltip");
+                  if (tooltip) {
+                    const rect = tooltip.getBoundingClientRect();
+                    if (rect.left < 0) {
+                      tooltip.classList.add("left-adjust");
+                    } else {
+                      tooltip.classList.remove("left-adjust");
+                    }
+                  }
+                }}
+              >
+                <span className="invoice-customer">
+                  {invoice.customer.customerName}
+                </span>
+                {invoice.customer.customerName.length > 15 && (
+                  <span className="tooltip">
+                    {invoice.customer.customerName}
+                  </span>
+                )}
+              </div>
+
+              <span className="invoice-total">
+                Total: ${invoice.grandTotal}
+              </span>
             </div>
           </li>
         ))}
