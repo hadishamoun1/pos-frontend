@@ -68,30 +68,30 @@ const POSSystemPage = () => {
 
   const handleSelectRequest = (request) => {
     console.log("Selected Request:", request); // ✅ Debugging: Log the request data
-  
+
     if (!request) return;
-  
+
     // ✅ Extract customer name & ID
     const customerName = request.customerName || "";
     const customerId = request.customerId || null;
-  
+
     console.log("Extracted Customer Name:", customerName);
     console.log("Extracted Customer ID:", customerId);
-  
+
     // ✅ Set customer state
     setCustomerInput(customerName);
     setSelectedCustomerId(customerId);
-  
+
     // ✅ Ensure details exist before mapping
     if (!request.details || !Array.isArray(request.details)) {
       console.warn("Request details missing or invalid:", request.details);
       return;
     }
-  
+
     // ✅ Map request details correctly using itemVariant data
     const updatedData = request.details.map((detail) => {
       const isBox = detail.itemType === "box"; // ✅ Get type from API
-  
+
       return {
         itemVariantId: detail.itemVariantId || null, // ✅ Ensure itemVariantId is present
         item: detail.itemName || "", // ✅ Get item name from itemVariant
@@ -107,15 +107,15 @@ const POSSystemPage = () => {
         total: detail.total || "0.00",
       };
     });
-  
+
     console.log("Updated Table Data:", updatedData); // ✅ Debugging: Log the new data
-  
+
     setTableData(updatedData);
-  
+
     // ✅ Also update the invoice type dynamically
     setSelectedInvoiceType(request.invoiceType || "Both");
   };
-  
+
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -335,7 +335,42 @@ const POSSystemPage = () => {
   };
 
   const handleSelectInvoice = (invoice) => {
-    console.log("Selected Invoice:", invoice);
+    console.log("Selected Invoice:", invoice); // ✅ Debugging
+
+    if (!invoice) return;
+
+    // ✅ Update UI fields
+    setCustomerInput(invoice.customerName);
+    setSelectedCustomerId(invoice.customerId);
+    setCurrencyRate(invoice.currencyRate.toString());
+    setVat(invoice.vatPercentage.toString());
+
+    // ✅ Format table data properly
+    const updatedTableData = invoice.items
+      .map((item) => {
+        if (!item.itemVariantId || !item.itemName) {
+          console.warn("Skipping invalid item:", item);
+          return null;
+        }
+
+        return {
+          origin: item.origin || "",
+          item: item.itemName || "",
+          type: item.itemType || "",
+          length: item.length || "",
+          width: item.width || "",
+          sqm: item.sqm || "",
+          price: item.unitPrice || "",
+          total: item.totalAmount || "0.00",
+          box: item.itemType === "box" ? item.quantity : "",
+          sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
+        };
+      })
+      .filter(Boolean); // ✅ Remove any null values
+
+    console.log("Updated Table Data:", updatedTableData);
+
+    setTableData(updatedTableData);
   };
 
   const handleCreateRequest = async () => {
@@ -366,7 +401,7 @@ const POSSystemPage = () => {
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),
-        quantity: item.box ? Number(item.box) : Number(item.sheet)
+        quantity: item.box ? Number(item.box) : Number(item.sheet),
       })),
     };
 
