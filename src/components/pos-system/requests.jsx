@@ -32,7 +32,7 @@ const RequestCard = ({ onSelectRequest }) => {
             className="request-card"
             onClick={() => onSelectRequest(request)} // Pass selected request
           >
-            <h4>Request #{request.id}</h4>
+            <h4>{request.requestNumber}</h4>
             <p>
               <strong>Date:</strong> {request.requestDate}
             </p>

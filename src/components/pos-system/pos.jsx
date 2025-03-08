@@ -68,47 +68,54 @@ const POSSystemPage = () => {
 
   const handleSelectRequest = (request) => {
     console.log("Selected Request:", request); // ✅ Debugging: Log the request data
-
+  
     if (!request) return;
-
-    // ✅ Set customer name and ID
-    setSelectedCustomerName(request.customerName || ""); // Ensure there's a fallback
-    setSelectedCustomerId(request.customerId || null); // Ensure ID is stored
-
-    // ✅ Debugging logs
-    console.log("Customer Name:", request.customerName);
-    console.log("Customer ID:", request.customerId);
-
+  
+    // ✅ Extract customer name & ID
+    const customerName = request.customerName || "";
+    const customerId = request.customerId || null;
+  
+    console.log("Extracted Customer Name:", customerName);
+    console.log("Extracted Customer ID:", customerId);
+  
+    // ✅ Set customer state
+    setCustomerInput(customerName);
+    setSelectedCustomerId(customerId);
+  
     // ✅ Ensure details exist before mapping
     if (!request.details || !Array.isArray(request.details)) {
       console.warn("Request details missing or invalid:", request.details);
       return;
     }
-
-    // ✅ Map request details correctly
-    const updatedData = request.details.map((detail) => ({
-      itemVariantId: detail.itemVariantId || null, // Ensure itemVariantId is present
-      origin: detail.origin || "",
-      item: detail.itemName || "",
-      type: detail.type || "", // Ensure type is filled
-      length: detail.length || "",
-      width: detail.width || "",
-      box: detail.type === "box" ? detail.box || 1 : "", // If it's a box, assign box
-      sheet:
-        detail.type === "sheet" ? detail.sheet || detail.sheetPerBox || 1 : "", // If sheet, ensure it's set
-      sqm: detail.sqm || "",
-      price: detail.price || "",
-      total: detail.total || "0.00",
-    }));
-
+  
+    // ✅ Map request details correctly using itemVariant data
+    const updatedData = request.details.map((detail) => {
+      const isBox = detail.itemType === "box"; // ✅ Get type from API
+  
+      return {
+        itemVariantId: detail.itemVariantId || null, // ✅ Ensure itemVariantId is present
+        item: detail.itemName || "", // ✅ Get item name from itemVariant
+        origin: detail.origin || "",
+        thickness: detail.thickness || "", // ✅ Fetch thickness
+        length: detail.length || "",
+        width: detail.width || "",
+        type: detail.itemType || "", // ✅ Use itemType from API
+        box: isBox ? detail.quantity || 0 : "", // ✅ Set box quantity
+        sheet: isBox ? detail.sheetsPerBox : detail.quantity || 0, // ✅ Set sheet quantity
+        sqm: detail.sqm || "",
+        price: detail.price || "",
+        total: detail.total || "0.00",
+      };
+    });
+  
     console.log("Updated Table Data:", updatedData); // ✅ Debugging: Log the new data
-
+  
     setTableData(updatedData);
-
+  
     // ✅ Also update the invoice type dynamically
     setSelectedInvoiceType(request.invoiceType || "Both");
   };
-
+  
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -359,6 +366,7 @@ const POSSystemPage = () => {
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),
+        quantity: item.box ? Number(item.box) : Number(item.sheet)
       })),
     };
 
