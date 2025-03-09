@@ -212,6 +212,7 @@
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
+
 .pos-page-delete-button:hover {
   color: darkred;
   transform: scale(1.2);
@@ -327,6 +328,10 @@
 
 .pos-page-red-button {
   background-color: #e74c3c;
+}
+.pos-page-green-button{
+  background-color: rgb(5, 189, 5);
+
 }
 
 .pos-page-red-button:hover {
