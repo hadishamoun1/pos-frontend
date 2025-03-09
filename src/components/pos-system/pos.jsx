@@ -94,7 +94,7 @@ const POSSystemPage = () => {
 
       return {
         itemVariantId: detail.itemVariantId || null, // ✅ Ensure itemVariantId is present
-        item: detail.itemName || "", // ✅ Get item name from itemVariant
+        item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
         origin: detail.origin || "",
         thickness: detail.thickness || "", // ✅ Fetch thickness
         length: detail.length || "",
@@ -276,19 +276,26 @@ const POSSystemPage = () => {
     setLoading(true);
     setError("");
 
+    const vatPercentageValue = Number(vat); // ✅ Get the VAT % from dropdown
+    const vatRate = vatPercentageValue / 100; // ✅ Convert to decimal
+
     const formattedItems = tableData.map((item) => {
-      const unitPrice = Number(item.price) || 0; // ✅ Ensure it's a number
+      const unitPrice = Number(item.price) || 0;
       const sqm = Number(item.sqm) || 0;
-      const vatRate = Number(vat) / 100; // ✅ Ensure VAT rate is a number
+
+      // ✅ Determine correct quantity based on item type
+      const quantity =
+        item.type === "box" ? Number(item.box) : Number(item.sheet);
 
       const totalAmount = sqm * unitPrice;
-      const vatAmount = totalAmount * vatRate;
+      const vatAmount = totalAmount * vatRate; // ✅ Apply VAT dynamically
 
       return {
-        itemVariantId: item.itemVariantId, // ✅ Ensure this exists
-        sqm: sqm, // ✅ Send as a number
+        itemVariantId: item.itemVariantId,
+        sqm: sqm,
         unitPrice: unitPrice,
-        vat: vatAmount,
+        vat: vatAmount, // ✅ VAT calculated dynamically
+        quantity, // ✅ Correct quantity assigned
       };
     });
 
@@ -297,32 +304,24 @@ const POSSystemPage = () => {
       invoiceType,
       date,
       currencyRate: parseFloat(currencyRate) || 1,
+      vatPercentage: vatPercentageValue, // ✅ Save the VAT percentage
       items: formattedItems,
     };
 
-    // 🔍 Log before sending to see what is being sent
-    console.log("Invoice Data Payload:", JSON.stringify(invoiceData, null, 2));
-    console.log("📤 Sending Invoice Data:", {
-      customerId: selectedCustomerId,
-      invoiceType,
-      date,
-      currencyRate: Number(currencyRate), // ✅ Convert to a number
-      items: formattedItems,
-    });
+    console.log("📤 Sending Invoice Data:", invoiceData);
 
     try {
       const response = await axios.post(
         "http://localhost:3000/invoices",
         invoiceData
       );
-      console.log("Invoice Created:", response.data);
+      console.log("✅ Invoice Created:", response.data);
       showNotification(
         "success",
         `Invoice ${invoiceType} created successfully!`
       );
     } catch (err) {
-      console.error("Error creating invoice:", err);
-      console.error("Server Response:", err.response?.data);
+      console.error("❌ Error creating invoice:", err);
       showNotification(
         "error",
         `Failed to create invoice. ${
@@ -339,11 +338,20 @@ const POSSystemPage = () => {
 
     if (!invoice) return;
 
+    // ✅ Extract VAT and Currency Rate properly
+    const vatPercentage = invoice.vatPercentage
+      ? parseFloat(invoice.vatPercentage).toString() // Convert "6.0000" -> "6"
+      : "11"; // Default to 11% if missing
+
+    const currencyRateValue = invoice.currencyRate
+      ? parseFloat(invoice.currencyRate).toString() // Ensure valid conversion
+      : "89000"; // Default currency rate
+
     // ✅ Update UI fields
     setCustomerInput(invoice.customerName);
     setSelectedCustomerId(invoice.customerId);
-    setCurrencyRate(invoice.currencyRate.toString());
-    setVat(invoice.vatPercentage.toString());
+    setCurrencyRate(currencyRateValue); // ✅ Ensure currency rate updates
+    setVat(vatPercentage); // ✅ Ensure VAT dropdown updates
 
     // ✅ Format table data properly
     const updatedTableData = invoice.items
@@ -355,7 +363,7 @@ const POSSystemPage = () => {
 
         return {
           origin: item.origin || "",
-          item: item.itemName || "",
+          item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
           type: item.itemType || "",
           length: item.length || "",
           width: item.width || "",
