@@ -23,6 +23,8 @@ const POSSystemPage = () => {
   const [error, setError] = useState("");
   const [vat, setVat] = useState("11");
   const [selectedInvoiceType, setSelectedInvoiceType] = useState("Both");
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -71,6 +73,9 @@ const POSSystemPage = () => {
 
     if (!request) return;
 
+    setSelectedRequestId(request.id || null);
+    setSelectedInvoiceId(null);
+    console.log(`select request :${selectedRequestId}`);
     // ✅ Extract customer name & ID
     const customerName = request.customerName || "";
     const customerId = request.customerId || null;
@@ -141,6 +146,16 @@ const POSSystemPage = () => {
     }
 
     return "";
+  };
+
+  const handleNewTransaction = () => {
+    setTableData([]);
+    setSelectedCustomerId(null);
+    setCustomerInput("");
+    setCurrencyRate("89000");
+    setVat("11");
+    setSelectedInvoiceId(null);
+    setSelectedRequestId(null);
   };
 
   const handleInputChange = (index, field, value) => {
@@ -380,6 +395,60 @@ const POSSystemPage = () => {
 
     setTableData(updatedTableData);
   };
+  const handleEditRequest = async () => {
+    if (!selectedRequestId || tableData.length === 0) {
+      showNotification("error", "No request selected or items missing.");
+      return;
+    }
+
+    setLoading(true);
+
+    // Calculate totals
+    const totalAmount = tableData.reduce(
+      (acc, item) => acc + Number(item.total || 0),
+      0
+    );
+    const vatAmount = totalAmount * (Number(vat) / 100);
+    const grandTotal = totalAmount + vatAmount;
+
+    // Prepare the updated request payload
+    const updatedRequestData = {
+      requestId: selectedRequestId, // ✅ Ensure we are updating the correct request
+      customerId: selectedCustomerId,
+      requestDate: date,
+      totalAmount: totalAmount.toFixed(2),
+      vatAmount: vatAmount.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      details: tableData.map((item) => ({
+        itemVariantId: item.itemVariantId, // Ensure this exists
+        sqm: Number(item.sqm),
+        price: Number(item.price),
+        total: Number(item.total),
+        quantity: item.box ? Number(item.box) : Number(item.sheet),
+      })),
+    };
+
+    console.log("📤 Updating Request:", updatedRequestData);
+
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/requests/${selectedRequestId}`,
+        updatedRequestData
+      );
+      console.log("✅ Request Updated:", response.data);
+      showNotification("success", "Request updated successfully!");
+    } catch (err) {
+      console.error("❌ Error updating request:", err);
+      showNotification(
+        "error",
+        `Failed to update request. ${
+          err.response?.data?.message || err.message
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateRequest = async () => {
     if (!selectedCustomerId || tableData.length === 0) {
@@ -459,22 +528,32 @@ const POSSystemPage = () => {
       <div className="pos-page-center">
         <div className="pos-page-toolbar">
           <div className="pos-page-button-row">
-            <button className="pos-page-toolbar-button pos-page-blue-button">
+            <button
+              className="pos-page-toolbar-button pos-page-blue-button"
+              onClick={handleNewTransaction}
+            >
               New
             </button>
 
-            {/* ✅ Show "Request" button for both "S" and "G" customers */}
-            {(selectedInvoiceType === "S" ||
-              selectedInvoiceType === "G" ||
-              selectedInvoiceType === "Both") && (
-              <button
-                className="pos-page-toolbar-button pos-page-blue-button"
-                onClick={handleCreateRequest} // ✅ Calls function
-                disabled={loading}
-              >
-                {loading ? "Processing..." : "Request"}
-              </button>
-            )}
+            {/* ✅ Request / Edit Request Button */}
+            {selectedInvoiceId === null &&
+              (selectedInvoiceType === "S" ||
+                selectedInvoiceType === "G" ||
+                selectedInvoiceType === "Both") && (
+                <button
+                  className="pos-page-toolbar-button pos-page-blue-button"
+                  onClick={
+                    selectedRequestId ? handleEditRequest : handleCreateRequest
+                  }
+                  disabled={loading}
+                >
+                  {loading
+                    ? "Processing..."
+                    : selectedRequestId
+                    ? "Edit Request"
+                    : "Request"}
+                </button>
+              )}
 
             {/* ✅ Show "Issue" button only if invoiceType is 'S' or 'Both' */}
             {(selectedInvoiceType === "S" ||
@@ -482,7 +561,7 @@ const POSSystemPage = () => {
               <button
                 className="pos-page-toolbar-button pos-page-red-button"
                 onClick={() => handleCreateInvoice("S")}
-                disabled={loading}
+                disabled={loading || selectedRequestId !== null}
               >
                 {loading ? "Processing..." : "Issue"}
               </button>
@@ -494,7 +573,7 @@ const POSSystemPage = () => {
               <button
                 className="pos-page-toolbar-button pos-page-yellow-button"
                 onClick={() => handleCreateInvoice("G")}
-                disabled={loading}
+                disabled={loading || selectedRequestId !== null}
               >
                 {loading ? "Processing..." : "Offer"}
               </button>
