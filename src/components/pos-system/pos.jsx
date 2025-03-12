@@ -7,6 +7,9 @@ import InvoiceCreation from "./invoiceCreation";
 import InvoicesList from "./invoiceList";
 import axios from "axios";
 import NotificationModal from "../recievables/NotificationModal";
+import Toolbar from "./Components/Toolbar";
+import CustomerDetails from "./Components/CustomerDetails";
+import InventoryTable from "./Components/InventoryTable";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -536,237 +539,42 @@ const POSSystemPage = () => {
       {/* Center Section */}
       <div className="pos-page-center">
         <div className="pos-page-toolbar">
-          <div className="pos-page-button-row">
-            {/* ✅ New Transaction Button */}
-            <button
-              className="pos-page-toolbar-button pos-page-blue-button"
-              onClick={handleNewTransaction}
-            >
-              New
-            </button>
+          <Toolbar
+            handleNewTransaction={handleNewTransaction}
+            handleEditInvoice={handleEditInvoice}
+            handleEditRequest={handleEditRequest}
+            handleCreateRequest={handleCreateRequest}
+            handleCreateInvoice={handleCreateInvoice}
+            loading={loading}
+            selectedInvoiceId={selectedInvoiceId}
+            selectedRequestId={selectedRequestId}
+            selectedInvoiceType={selectedInvoiceType}
+            date={date}
+            setDate={setDate}
+          />
 
-            {/* ✅ Show "Edit Invoice" when an invoice is selected */}
-            {selectedInvoiceId !== null ? (
-              <button
-                className="pos-page-toolbar-button pos-page-green-button"
-                onClick={handleEditInvoice} // ✅ Edit Invoice Function
-                disabled={loading}
-              >
-                {loading ? "Processing..." : "Edit Invoice"}
-              </button>
-            ) : (
-              <>
-                {/* ✅ Request / Edit Request Button */}
-                {selectedInvoiceType &&
-                  (selectedInvoiceType === "S" ||
-                    selectedInvoiceType === "G" ||
-                    selectedInvoiceType === "Both") && (
-                    <button
-                      className="pos-page-toolbar-button pos-page-blue-button"
-                      onClick={
-                        selectedRequestId
-                          ? handleEditRequest
-                          : handleCreateRequest
-                      }
-                      disabled={loading}
-                    >
-                      {loading
-                        ? "Processing..."
-                        : selectedRequestId
-                        ? "Edit Request"
-                        : "Request"}
-                    </button>
-                  )}
-
-                {/* ✅ Show "Issue" button only if invoiceType is 'S' or 'Both' */}
-                {(selectedInvoiceType === "S" ||
-                  selectedInvoiceType === "Both") && (
-                  <button
-                    className="pos-page-toolbar-button pos-page-red-button"
-                    onClick={() => handleCreateInvoice("S")}
-                    disabled={loading || selectedRequestId !== null}
-                  >
-                    {loading ? "Processing..." : "Issue"}
-                  </button>
-                )}
-
-                {/* ✅ Show "Offer" button only if invoiceType is 'G' or 'Both' */}
-                {(selectedInvoiceType === "G" ||
-                  selectedInvoiceType === "Both") && (
-                  <button
-                    className="pos-page-toolbar-button pos-page-yellow-button"
-                    onClick={() => handleCreateInvoice("G")}
-                    disabled={loading || selectedRequestId !== null}
-                  >
-                    {loading ? "Processing..." : "Offer"}
-                  </button>
-                )}
-              </>
-            )}
-
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-
-          {/* Dropdowns & Checkbox Row */}
-          <div className="pos-page-toolbar-row">
-            <div className="pos-page-dropdown-container">
-              <select
-                className="pos-page-exchange-rate-dropdown"
-                value={currencyRate}
-                onChange={(e) => setCurrencyRate(e.target.value)}
-              >
-                <option value="89000">89,000</option>
-                <option value="1500">1500</option>
-              </select>
-
-              <select
-                className="pos-page-vat-dropdown"
-                value={vat}
-                onChange={(e) => setVat(e.target.value)}
-              >
-                <option value="0">0%</option>
-                <option value="6">6%</option>
-                <option value="11">11%</option>
-              </select>
-            </div>
-
-            <div className="pos-page-checkbox-container">
-              <input type="checkbox" id="company-name-checkbox" />
-              <label
-                htmlFor="company-name-checkbox"
-                className="pos-page-checkbox-label"
-              >
-                Company Name
-              </label>
-            </div>
-          </div>
-
-          {/* Customer Name Input Row */}
-          <div className="pos-page-customer-name-row">
-            <label className="pos-page-customer-name-label">
-              Customer Name
-            </label>
-            <div className="pos-page-customer-search-container">
-              {/* Customer Search Input */}
-              <input
-                type="text"
-                value={customerInput}
-                onChange={handleCustomerInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Search Customer Name"
-                className="pos-page-customer-name-input"
-              />
-
-              {/* Suggestions Dropdown */}
-              {customerSuggestions.length > 0 && (
-                <ul className="customer-suggestions-dropdown">
-                  {customerSuggestions.map((customer, index) => (
-                    <li
-                      key={customer.id}
-                      className={index === highlightedIndex ? "selected" : ""}
-                      onClick={() => handleCustomerSelect(customer)}
-                    >
-                      {customer.customerName}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <button
-                className="pos-page-toolbar-button pos-page-blue-button"
-                style={{ marginLeft: "auto" }}
-                onClick={handleSearchClick}
-              >
-                Search
-              </button>
-            </div>
-          </div>
+          <CustomerDetails
+            currencyRate={currencyRate}
+            setCurrencyRate={setCurrencyRate}
+            vat={vat}
+            setVat={setVat}
+            customerInput={customerInput}
+            handleCustomerInputChange={handleCustomerInputChange}
+            handleKeyDown={handleKeyDown}
+            customerSuggestions={customerSuggestions}
+            handleCustomerSelect={handleCustomerSelect}
+            highlightedIndex={highlightedIndex}
+            handleSearchClick={handleSearchClick}
+          />
         </div>
         <div className="pos-page-inventory-table-container">
-          {/* Inventory Table */}
-          <table className="pos-page-inventory-table">
-            <thead>
-              <tr>
-                <th>Origin</th>
-                <th>Item</th>
-                <th>Type</th>
-                <th>Length</th>
-                <th>Width</th>
-                <th>Box</th>
-                <th>Sheet</th>
-                <th>SQM</th>
-                <th>Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, index) => (
-                <tr
-                  key={index}
-                  onClick={() => handleRowClick(index)}
-                  onContextMenu={(e) => handleRightClick(e, index)}
-                  className={
-                    index === selectedRowIndex ? "pos-selected-row" : ""
-                  }
-                >
-                  <td>
-                    <input type="text" value={row.origin} readOnly />
-                  </td>
-                  <td>
-                    <input type="text" value={row.item} readOnly />
-                  </td>
-                  <td>
-                    <input type="text" value={row.type} readOnly />
-                  </td>
-                  <td>
-                    <input type="text" value={row.length} readOnly />
-                  </td>
-                  <td>
-                    <input type="text" value={row.width} readOnly />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={row.box}
-                      onChange={(e) =>
-                        handleInputChange(index, "box", e.target.value)
-                      }
-                      disabled={row.type === "sheet"}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={row.sheet}
-                      onChange={(e) =>
-                        handleInputChange(index, "sheet", e.target.value)
-                      }
-                      readOnly={row.type === "box"}
-                    />
-                  </td>
-                  <td>
-                    <input type="text" value={row.sqm} readOnly />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      value={row.price}
-                      onChange={(e) =>
-                        handleInputChange(index, "price", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input type="text" value={row.total} readOnly />
-                  </td>{" "}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <InventoryTable
+            tableData={tableData}
+            handleRowClick={handleRowClick}
+            handleRightClick={handleRightClick}
+            selectedRowIndex={selectedRowIndex}
+            handleInputChange={handleInputChange}
+          />
         </div>
       </div>
 
