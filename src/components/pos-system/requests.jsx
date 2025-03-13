@@ -30,7 +30,7 @@ const RequestCard = ({ onSelectRequest }) => {
           <li
             key={request.id}
             className="request-item"
-            onClick={() => onSelectRequest(request)} // Pass selected request
+            onClick={() => onSelectRequest(request)} 
           >
             {/* Request Header */}
             <div className="request-header">
