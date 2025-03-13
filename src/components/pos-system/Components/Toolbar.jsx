@@ -80,6 +80,7 @@ const Toolbar = ({
 
       <div className="pos-page-date-wrapper">
         <input
+          className="pos-page-date-picker"
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}

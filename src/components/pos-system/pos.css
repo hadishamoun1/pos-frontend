@@ -242,16 +242,68 @@
   font-weight: bold;
 }
 
-/* Date Input */
-.pos-page-button-row input[type="date"] {
-  padding: 0.5rem;
-  border: 2px solid #007bff;
-  border-radius: 8px;
-  font-size: 1rem;
+/* 📅 Modern & Creative Date Picker */
+.pos-page-date-picker {
+  padding: 0.5rem 0.5rem;
+  width: 170px; /* Consistent width */
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font-size: 1.2rem;
   color: #333;
-  background: #f8f9fa;
+  background: #fff;
   cursor: pointer;
+  border-color: #007bff;
+  outline: none;
+  transition: all 0.3s ease-in-out;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0px 5px 15px rgba(0, 123, 255, 0.15);
+  position: relative;
 }
+
+/* 🔹 Add Hover & Focus Effects */
+.pos-page-date-picker:hover,
+.pos-page-date-picker:focus {
+  border-color: #007bff;
+
+  transform: scale(1.03);
+}
+
+/* 🔹 Floating Label Effect */
+.pos-page-date-picker::before {
+  content: "Select Date";
+  position: absolute;
+  top: -12px;
+  left: 10px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #007bff;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+}
+
+/* 🔹 Show Floating Label When Focused */
+.pos-page-date-picker:focus::before {
+  opacity: 1;
+}
+
+/* 🔹 Custom Calendar Icon */
+.pos-page-date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(30%) sepia(100%) saturate(500%) hue-rotate(190deg);
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+/* 🔹 Animate Icon on Hover */
+.pos-page-date-picker:hover::-webkit-calendar-picker-indicator {
+  transform: scale(1.2);
+}
+
 
 /* Dropdowns & Checkboxes */
 .pos-page-dropdown-container {
