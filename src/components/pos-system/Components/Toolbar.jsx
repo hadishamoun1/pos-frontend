@@ -78,12 +78,13 @@ const Toolbar = ({
         </>
       )}
 
-      {/* ✅ Date Picker */}
-      <input
-        type="date"
-        value={date} 
-        onChange={(e) => setDate(e.target.value)} 
-      />
+      <div className="pos-page-date-wrapper">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </div>
     </div>
   );
 };

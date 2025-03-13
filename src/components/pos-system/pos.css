@@ -15,7 +15,6 @@
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  
 }
 
 /* Center Section */
@@ -212,7 +211,6 @@
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
-
 .pos-page-delete-button:hover {
   color: darkred;
   transform: scale(1.2);
@@ -245,13 +243,14 @@
 }
 
 /* Date Input */
-.pos-page-date-input {
+.pos-page-button-row input[type="date"] {
   padding: 0.5rem;
   border: 2px solid #007bff;
   border-radius: 8px;
   font-size: 1rem;
   color: #333;
   background: #f8f9fa;
+  cursor: pointer;
 }
 
 /* Dropdowns & Checkboxes */
@@ -304,10 +303,13 @@
 /* Button Row */
 .pos-page-button-row {
   display: flex;
-  width: 100%;
-  gap: 1rem;
-  justify-content: flex-start;
   align-items: center;
+  width: 100%;
+  gap: 10px;
+}
+
+.pos-page-date-wrapper {
+  margin-left: auto;
 }
 
 /* Toolbar Buttons */
@@ -329,9 +331,8 @@
 .pos-page-red-button {
   background-color: #e74c3c;
 }
-.pos-page-green-button{
+.pos-page-green-button {
   background-color: rgb(5, 189, 5);
-
 }
 
 .pos-page-red-button:hover {
