@@ -71,57 +71,57 @@ const POSSystemPage = () => {
     setTableData((prevData) => [...prevData, ...updatedData]);
   };
 
-  const handleSelectRequest = (request) => {
-    console.log("Selected Request:", request); // ✅ Debugging: Log the request data
+  const handleSelectRequest = async (request) => {
+    console.log("Selected Request:", request); // ✅ Debugging
 
     if (!request) return;
 
     setSelectedRequestId(request.id || null);
     setSelectedInvoiceId(null);
-    console.log(`select request :${selectedRequestId}`);
-    // ✅ Extract customer name & ID
+
     const customerName = request.customerName || "";
     const customerId = request.customerId || null;
-
     console.log("Extracted Customer Name:", customerName);
     console.log("Extracted Customer ID:", customerId);
 
-    // ✅ Set customer state
     setCustomerInput(customerName);
     setSelectedCustomerId(customerId);
 
-    // ✅ Ensure details exist before mapping
     if (!request.details || !Array.isArray(request.details)) {
       console.warn("Request details missing or invalid:", request.details);
       return;
     }
 
-    // ✅ Map request details correctly using itemVariant data
     const updatedData = request.details.map((detail) => {
-      const isBox = detail.itemType === "box"; // ✅ Get type from API
+      const isBox = detail.itemType === "box";
 
       return {
-        itemVariantId: detail.itemVariantId || null, // ✅ Ensure itemVariantId is present
+        itemVariantId: detail.itemVariantId || null,
         item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
         origin: detail.origin || "",
-        thickness: detail.thickness || "", // ✅ Fetch thickness
+        thickness: detail.thickness || "",
         length: detail.length || "",
         width: detail.width || "",
-        type: detail.itemType || "", // ✅ Use itemType from API
-        box: isBox ? detail.quantity || 0 : "", // ✅ Set box quantity
-        sheet: isBox ? detail.sheetsPerBox : detail.quantity || 0, // ✅ Set sheet quantity
+        type: detail.itemType || "",
+        box: isBox ? detail.quantity || 0 : "",
+        sheet: isBox ? detail.sheetsPerBox : detail.quantity || 0,
         sqm: detail.sqm || "",
         price: detail.price || "",
         total: detail.total || "0.00",
       };
     });
 
-    console.log("Updated Table Data:", updatedData); // ✅ Debugging: Log the new data
-
+    console.log("Updated Table Data:", updatedData);
     setTableData(updatedData);
 
-    // ✅ Also update the invoice type dynamically
-    setSelectedInvoiceType(request.invoiceType || "Both");
+    // ✅ Set invoice type from the request
+    if (request.invoiceType) {
+      console.log(`Invoice Type from Request: ${request.invoiceType}`);
+      setSelectedInvoiceType(request.invoiceType);
+    } else {
+      console.log("No invoice type in request, setting to 'Both'");
+      setSelectedInvoiceType("Both"); // Default to "Both" if not found
+    }
   };
 
   const today = new Date().toISOString().split("T")[0];
