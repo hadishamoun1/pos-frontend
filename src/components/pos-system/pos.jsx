@@ -70,32 +70,31 @@ const POSSystemPage = () => {
 
     setTableData((prevData) => [...prevData, ...updatedData]);
   };
-
-  const handleSelectRequest = async (request) => {
-    console.log("Selected Request:", request); // ✅ Debugging
-
-    if (!request) return;
-
-    setSelectedRequestId(request.id || null);
+  const handleSelectRequest = async (requestId) => {
+    console.log("Fetching request details for ID:", requestId);
+    
+    if (!requestId) return;
+  
+    setSelectedRequestId(requestId);
     setSelectedInvoiceId(null);
-
-    const customerName = request.customerName || "";
-    const customerId = request.customerId || null;
-    console.log("Extracted Customer Name:", customerName);
-    console.log("Extracted Customer ID:", customerId);
-
-    setCustomerInput(customerName);
-    setSelectedCustomerId(customerId);
-
-    if (!request.details || !Array.isArray(request.details)) {
-      console.warn("Request details missing or invalid:", request.details);
-      return;
-    }
-
-    const updatedData = request.details.map((detail) => {
-      const isBox = detail.itemType === "box";
-
-      return {
+    setLoading(true);
+  
+    try {
+      // ✅ Fetch full request details
+      const response = await axios.get(`http://localhost:3000/requests/${requestId}`);
+      const request = response.data;
+  
+      console.log("Fetched Request:", request);
+  
+      // ✅ Set customer details
+      setCustomerInput(request.customerName || "");
+      setSelectedCustomerId(request.customerId || null);
+      
+      // ✅ Set invoice type
+      setSelectedInvoiceType(request.invoiceType || "Both");
+  
+      // ✅ Map details properly
+      const updatedData = request.details.map((detail) => ({
         itemVariantId: detail.itemVariantId || null,
         item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
         origin: detail.origin || "",
@@ -103,27 +102,23 @@ const POSSystemPage = () => {
         length: detail.length || "",
         width: detail.width || "",
         type: detail.itemType || "",
-        box: isBox ? detail.quantity || 0 : "",
-        sheet: isBox ? detail.sheetsPerBox : detail.quantity || 0,
+        box: detail.itemType === "box" ? detail.quantity || 0 : "",
+        sheet: detail.itemType === "sheet" ? detail.quantity || 0 : detail.sheetsPerBox,
         sqm: detail.sqm || "",
         price: detail.price || "",
         total: detail.total || "0.00",
-      };
-    });
-
-    console.log("Updated Table Data:", updatedData);
-    setTableData(updatedData);
-
-    // ✅ Set invoice type from the request
-    if (request.invoiceType) {
-      console.log(`Invoice Type from Request: ${request.invoiceType}`);
-      setSelectedInvoiceType(request.invoiceType);
-    } else {
-      console.log("No invoice type in request, setting to 'Both'");
-      setSelectedInvoiceType("Both"); // Default to "Both" if not found
+      }));
+  
+      console.log("Updated Table Data:", updatedData);
+      setTableData(updatedData);
+    } catch (error) {
+      console.error("Error fetching request details:", error);
+      showNotification("error", "Failed to fetch request details.");
+    } finally {
+      setLoading(false);
     }
   };
-
+  
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -159,6 +154,7 @@ const POSSystemPage = () => {
     setVat("11");
     setSelectedInvoiceId(null);
     setSelectedRequestId(null);
+    setSelectedInvoiceType("Both"); 
   };
 
   const handleInputChange = (index, field, value) => {

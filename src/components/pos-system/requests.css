@@ -8,15 +8,10 @@
   gap: 12px;
 
   /* ✅ Enable scrolling */
-  max-height: 770px; /* Adjust height as needed */
+  max-height: 750px; /* Adjust based on UI */
   overflow-y: auto;
   overflow-x: hidden;
-
-  /* ✅ Hide scrollbar for Chrome, Edge, Safari */
-  &::-webkit-scrollbar {
-    width: 0px;
-    background: transparent;
-  }
+  position: relative; /* Needed for proper positioning */
 }
 
 /* ✅ Request Card */
@@ -111,10 +106,10 @@
   font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
-  white-space: normal; 
-  width: 270px; 
+  white-space: normal;
+  width: 270px;
   text-align: center;
-  word-wrap: break-word; 
+  word-wrap: break-word;
   box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
   opacity: 0;
   visibility: hidden;
@@ -151,4 +146,28 @@
 .request-total {
   font-weight: 600;
   color: #333;
+}
+.request-load-more-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  color: white;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* ✅ Button Hover Effect */
+.request-load-more-button:hover {
+  background-color: #0056b3;
+}
+
+/* ✅ Disabled Button */
+.request-load-more-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
 }
