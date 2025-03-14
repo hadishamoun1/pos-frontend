@@ -1,21 +1,36 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./invoiceList.css";
 import PropTypes from "prop-types";
 
 const InvoicesList = ({ onSelectInvoice }) => {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const invoicesListRef = useRef(null);
 
   useEffect(() => {
-    fetchInvoices();
+    fetchInvoices(1);
   }, []);
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = async (pageNum) => {
+    if (!hasMore || loading) return;
+
+    setLoading(true);
     try {
-      const response = await axios.get("http://localhost:3000/invoices");
-      setInvoices(response.data);
+      const response = await axios.get(
+        `http://localhost:3000/invoices/filtered?page=${pageNum}`
+      );
+
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setInvoices((prevInvoices) => [...prevInvoices, ...response.data.data]);
+        setPage(pageNum);
+        setHasMore(pageNum < response.data.totalPages);
+      } else {
+        console.error("Unexpected response format:", response.data);
+      }
     } catch (err) {
       setError("Failed to fetch invoices");
     } finally {
@@ -23,48 +38,69 @@ const InvoicesList = ({ onSelectInvoice }) => {
     }
   };
 
-  const handleInvoiceClick = async (invoice) => {
-    try {
-      const response = await axios.get(
-        `http://localhost:3000/invoices/v1/${invoice.id}`
-      );
-      const fullInvoice = response.data;
-      console.log("Fetched Invoice Details:", fullInvoice); // ✅ Debugging log
+  useEffect(() => {
+    const handleScroll = () => {
+      if (invoicesListRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } =
+          invoicesListRef.current;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
 
-      onSelectInvoice(fullInvoice); // ✅ Pass full invoice object to POSSystemPage
-    } catch (error) {
-      console.error("Error fetching invoice details:", error);
+        if (isAtBottom && hasMore) {
+          fetchInvoices(page + 1);
+        }
+      }
+    };
+
+    const invoicesList = invoicesListRef.current;
+    if (invoicesList) {
+      invoicesList.addEventListener("scroll", handleScroll);
     }
-  };
+
+    return () => {
+      if (invoicesList) {
+        invoicesList.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [hasMore, page]);
 
   return (
-    <>
-      {loading && <p>Loading...</p>}
+    <div className="invoices-container" ref={invoicesListRef}>
       {error && <p className="error">{error}</p>}
 
       <ul className="invoices-list">
-        {invoices.map((invoice) => (
-          <li
-            key={invoice.id}
-            className="invoice-item"
-            onClick={() => handleInvoiceClick(invoice)} // ✅ Call API before passing
+        {invoices.length === 0 ? (
+          <p className="no-invoices">No Invoices Found</p>
+        ) : (
+          invoices.map((invoice) => (
+            <li
+              key={invoice.id}
+              className="invoice-item"
+              onClick={() => onSelectInvoice(invoice)}
+            >
+              <div className="invoice-header">
+                <span className="invoice-number">{invoice.invoiceNumber}</span>
+                <span className="invoice-date">{invoice.date}</span>
+              </div>
+              <div className="invoice-details">
+                <span className="invoice-customer">{invoice.customerName}</span>
+                <span className="invoice-total">
+                  Total: ${Number(invoice.grandTotal).toFixed(2)}
+                </span>
+              </div>
+            </li>
+          ))
+        )}
+        {hasMore && (
+          <button
+            className="invoice-load-more-button"
+            onClick={() => fetchInvoices(page + 1)}
+            disabled={loading}
           >
-            <div className="invoice-header">
-              <span className="invoice-number">{invoice.invoiceNumber}</span>
-              <span className="invoice-date">{invoice.date}</span>
-            </div>
-            <div className="invoice-details">
-              <span className="invoice-customer">
-                {invoice.customer.customerName}
-              </span>
-              <span className="invoice-total">
-                Total: ${invoice.grandTotal}
-              </span>
-            </div>
-          </li>
-        ))}
+            {loading ? "Loading..." : "Load More"}
+          </button>
+        )}
       </ul>
-    </>
+    </div>
   );
 };
 
