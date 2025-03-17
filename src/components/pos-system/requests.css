@@ -171,3 +171,20 @@
   background-color: #aaa;
   cursor: not-allowed;
 }
+/* ✅ Make new request blink for 36 seconds */
+/* ✅ Make new request blink for 36 seconds */
+@keyframes blink-effect {
+  0% {
+    background-color: #ffd700;
+  } /* Gold */
+  50% {
+    background-color: transparent;
+  } /* Normal */
+  100% {
+    background-color: #ffd700;
+  } /* Gold */
+}
+
+.blink {
+  animation: blink-effect 2s ease-in-out 18; /* 2s per cycle, repeats 18 times (36 seconds) */
+}

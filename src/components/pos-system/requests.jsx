@@ -9,6 +9,7 @@ const RequestCard = ({ onSelectRequest }) => {
   const [page, setPage] = useState(1); // Track current page
   const [hasMore, setHasMore] = useState(true); // Track if more data exists
   const [loading, setLoading] = useState(false); // Track loading state
+  const [newRequestIds, setNewRequestIds] = useState([]); // ✅ Track newly added request IDs
 
   const requestListRef = useRef(null); // Reference for the list container
   const socketRef = useRef(null); // ✅ Reference for WebSocket connection
@@ -25,12 +26,25 @@ const RequestCard = ({ onSelectRequest }) => {
         if (prevRequests.some((req) => req.id === newRequest.id)) {
           return prevRequests;
         }
+
+        // ✅ Add the new request ID to the list of newRequestIds
+        setNewRequestIds((prevIds) => [newRequest.id, ...prevIds]);
+
+        // ✅ Remove the highlight after a short delay (2s)
+        setTimeout(() => {
+          setNewRequestIds((prevIds) =>
+            prevIds.filter((id) => id !== newRequest.id)
+          );
+        }, 10000);
+
         return [newRequest, ...prevRequests]; // Add new request at the top
       });
     });
 
     return () => {
-      socketRef.current.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, []);
 
@@ -62,7 +76,7 @@ const RequestCard = ({ onSelectRequest }) => {
         console.error("Unexpected response format:", response.data);
       }
     } catch (error) {
-      console.error("Error fetching requests:", error);
+      console.error("❌ Error fetching requests:", error);
     } finally {
       setLoading(false);
     }
@@ -76,8 +90,10 @@ const RequestCard = ({ onSelectRequest }) => {
         ) : (
           requests.map((request) => (
             <li
-              key={request.id}
-              className="request-item"
+              key={`request-${request.id}`} // ✅ Ensuring unique key
+              className={`request-item ${
+                newRequestIds.includes(request.id) ? "blink" : "" // ✅ Add blink effect if new
+              }`} // ✅ Check if the request is in the list of new requests
               onClick={() => onSelectRequest(request.id)}
             >
               <div className="request-header">
@@ -100,7 +116,7 @@ const RequestCard = ({ onSelectRequest }) => {
                 </div>
 
                 <span className="request-total">
-                  Total: ${Number(request.grandTotal).toFixed(2)}
+                  Total: ${Number(request.grandTotal || 0).toFixed(2)}
                 </span>
               </div>
             </li>

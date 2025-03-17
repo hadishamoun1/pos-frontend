@@ -25,7 +25,15 @@ const InvoicesList = ({ onSelectInvoice }) => {
       );
 
       if (response.data?.data && Array.isArray(response.data.data)) {
-        setInvoices((prevInvoices) => [...prevInvoices, ...response.data.data]);
+        setInvoices((prevInvoices) => {
+          // ✅ Prevent duplicates before adding new invoices
+          const newInvoices = response.data.data.filter(
+            (newInvoice) =>
+              !prevInvoices.some((inv) => inv.id === newInvoice.id)
+          );
+          return [...prevInvoices, ...newInvoices];
+        });
+
         setPage(pageNum);
         setHasMore(pageNum < response.data.totalPages);
       } else {
@@ -88,7 +96,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
         ) : (
           invoices.map((invoice) => (
             <li
-              key={invoice.id}
+              key={`invoice-${invoice.id}`} // ✅ Ensure unique key
               className="invoice-item"
               onClick={() => handleInvoiceClick(invoice)}
             >
