@@ -186,5 +186,5 @@
 }
 
 .blink {
-  animation: blink-effect 2s ease-in-out 18; /* 2s per cycle, repeats 18 times (36 seconds) */
+  animation: blink-effect 2s ease-in-out 5; /* 2s per cycle, repeats 18 times (36 seconds) */
 }
