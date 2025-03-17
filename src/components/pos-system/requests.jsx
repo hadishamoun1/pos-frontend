@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import "./requests.css"; // Ensure this file has styles
+import "./requests.css";
 import PropTypes from "prop-types";
+import { io } from "socket.io-client"; // ✅ Import WebSocket Client
 
 const RequestCard = ({ onSelectRequest }) => {
   const [requests, setRequests] = useState([]); // Store request data
@@ -10,9 +11,31 @@ const RequestCard = ({ onSelectRequest }) => {
   const [loading, setLoading] = useState(false); // Track loading state
 
   const requestListRef = useRef(null); // Reference for the list container
+  const socketRef = useRef(null); // ✅ Reference for WebSocket connection
+
+  // ✅ Connect WebSocket on Mount
+  useEffect(() => {
+    socketRef.current = io("http://localhost:3000"); // Adjust URL to match your backend WebSocket
+
+    socketRef.current.on("newRequest", (newRequest) => {
+      console.log("✅ New Request Received:", newRequest);
+
+      setRequests((prevRequests) => {
+        // ✅ Ensure no duplicates
+        if (prevRequests.some((req) => req.id === newRequest.id)) {
+          return prevRequests;
+        }
+        return [newRequest, ...prevRequests]; // Add new request at the top
+      });
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
-    fetchRequests(1); // Fetch first page on component mount
+    fetchRequests(1);
   }, []);
 
   const fetchRequests = async (pageNum) => {
@@ -47,32 +70,29 @@ const RequestCard = ({ onSelectRequest }) => {
 
   return (
     <div className="requests-container">
-      {/* ✅ Scrollable List */}
       <ul className="requests-list" ref={requestListRef}>
         {requests.length === 0 ? (
           <p className="no-requests">No Requests Found</p>
         ) : (
           requests.map((request) => (
             <li
-              key={request.id} // ✅ Ensuring unique keys
+              key={request.id}
               className="request-item"
               onClick={() => onSelectRequest(request.id)}
             >
-              {/* Request Header */}
               <div className="request-header">
                 <span className="request-number">{request.requestNumber}</span>
                 <span className="request-date">{request.requestDate}</span>
               </div>
 
-              {/* Request Details */}
               <div className="request-details">
                 <div className="request-customer-container">
                   <span className="request-customer">
-                    {request.customerName.length > 15
+                    {request.customerName && request.customerName.length > 15
                       ? request.customerName.slice(0, 15) + "..."
-                      : request.customerName}
+                      : request.customerName || "Unknown"}
                   </span>
-                  {request.customerName.length > 15 && (
+                  {request.customerName && request.customerName.length > 15 && (
                     <span className="request-tooltip">
                       {request.customerName}
                     </span>
@@ -87,7 +107,6 @@ const RequestCard = ({ onSelectRequest }) => {
           ))
         )}
 
-        {/* ✅ Load More Button (Inside scrollable container) */}
         {hasMore && (
           <button
             className="request-load-more-button"
@@ -102,7 +121,6 @@ const RequestCard = ({ onSelectRequest }) => {
   );
 };
 
-// Prop validation
 RequestCard.propTypes = {
   onSelectRequest: PropTypes.func.isRequired,
 };
