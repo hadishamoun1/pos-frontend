@@ -28,6 +28,7 @@ const POSSystemPage = () => {
   const [selectedInvoiceType, setSelectedInvoiceType] = useState("Both");
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+  const [isEditable, setIsEditable] = useState(true);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -36,12 +37,11 @@ const POSSystemPage = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
   };
-  // ✅ Function to show notification modal
+
   const showNotification = (type, message, onConfirm = null) => {
     setNotification({ show: true, type, message, onConfirm });
   };
 
-  // ✅ Close notification modal
   const closeNotification = () => {
     setNotification({ show: false, type: "", message: "", onConfirm: null });
   };
@@ -70,30 +70,29 @@ const POSSystemPage = () => {
 
     setTableData((prevData) => [...prevData, ...updatedData]);
   };
+
   const handleSelectRequest = async (requestId) => {
     console.log("Fetching request details for ID:", requestId);
-    
+
     if (!requestId) return;
-  
+
     setSelectedRequestId(requestId);
     setSelectedInvoiceId(null);
     setLoading(true);
-  
+    setIsEditable(false);
+
     try {
-      // ✅ Fetch full request details
-      const response = await axios.get(`http://localhost:3000/requests/${requestId}`);
+      const response = await axios.get(
+        `http://localhost:3000/requests/${requestId}`
+      );
       const request = response.data;
-  
+
       console.log("Fetched Request:", request);
-  
-      // ✅ Set customer details
+
       setCustomerInput(request.customerName || "");
       setSelectedCustomerId(request.customerId || null);
-      
-      // ✅ Set invoice type
       setSelectedInvoiceType(request.invoiceType || "Both");
-  
-      // ✅ Map details properly
+
       const updatedData = request.details.map((detail) => ({
         itemVariantId: detail.itemVariantId || null,
         item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
@@ -103,13 +102,15 @@ const POSSystemPage = () => {
         width: detail.width || "",
         type: detail.itemType || "",
         box: detail.itemType === "box" ? detail.quantity || 0 : "",
-        sheet: detail.itemType === "sheet" ? detail.quantity || 0 : detail.sheetsPerBox,
+        sheet:
+          detail.itemType === "sheet"
+            ? detail.quantity || 0
+            : detail.sheetsPerBox,
         sqm: detail.sqm || "",
         price: detail.price || "",
         total: detail.total || "0.00",
       }));
-  
-      console.log("Updated Table Data:", updatedData);
+
       setTableData(updatedData);
     } catch (error) {
       console.error("Error fetching request details:", error);
@@ -118,11 +119,10 @@ const POSSystemPage = () => {
       setLoading(false);
     }
   };
-  
+
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
-  // Function to calculate SQM based on type (converting cm to meters)
   const calculateSQM = (length, width, type, box, sheet) => {
     if (
       !length ||
@@ -154,14 +154,14 @@ const POSSystemPage = () => {
     setVat("11");
     setSelectedInvoiceId(null);
     setSelectedRequestId(null);
-    setSelectedInvoiceType("Both"); 
+    setSelectedInvoiceType("Both");
+    setIsEditable(true);
   };
 
   const handleInputChange = (index, field, value) => {
     const newData = [...tableData];
     newData[index][field] = value;
 
-    // Automatically calculate sqm when all necessary fields are filled
     if (newData[index].length && newData[index].width && newData[index].sheet) {
       newData[index].sqm = calculateSQM(
         newData[index].length,
@@ -229,19 +229,18 @@ const POSSystemPage = () => {
       setCustomerSuggestions([]);
     }
   };
-  // Handle input change
+
   const handleCustomerInputChange = (e) => {
     const query = e.target.value;
     setCustomerInput(query);
 
     if (query.length > 1) {
-      fetchCustomers(query); // ✅ Fetch only if input length > 1
+      fetchCustomers(query); // Fetch only if input length > 1
     } else {
-      setCustomerSuggestions([]); // ✅ Clear suggestions if input is too short
+      setCustomerSuggestions([]); // Clear suggestions if input is too short
     }
   };
 
-  // Handle customer selection
   const handleCustomerSelect = async (customer) => {
     setSelectedCustomerId(customer.id);
     setSelectedCustomerName(customer.customerName);
@@ -249,7 +248,6 @@ const POSSystemPage = () => {
     setCustomerSuggestions([]); // Hide suggestions
 
     try {
-      // Fetch the customer's invoice type
       const response = await axios.get(
         `http://localhost:3000/customers/${customer.id}`
       );
@@ -265,7 +263,7 @@ const POSSystemPage = () => {
       setSelectedInvoiceType("Both"); // Default fallback
     }
   };
-  // Handle keyboard navigation
+
   const handleKeyDown = (e) => {
     if (customerSuggestions.length === 0) return;
 
@@ -280,7 +278,6 @@ const POSSystemPage = () => {
     }
   };
 
-  // Handle Invoice Creation (Issue = "S", Offer = "G")
   const handleCreateInvoice = async (invoiceType) => {
     if (!selectedCustomerId || tableData.length === 0) {
       setError("Customer and items are required.");
@@ -290,26 +287,24 @@ const POSSystemPage = () => {
     setLoading(true);
     setError("");
 
-    const vatPercentageValue = Number(vat); // ✅ Get the VAT % from dropdown
-    const vatRate = vatPercentageValue / 100; // ✅ Convert to decimal
+    const vatPercentageValue = Number(vat);
+    const vatRate = vatPercentageValue / 100;
 
     const formattedItems = tableData.map((item) => {
       const unitPrice = Number(item.price) || 0;
       const sqm = Number(item.sqm) || 0;
-
-      // ✅ Determine correct quantity based on item type
       const quantity =
         item.type === "box" ? Number(item.box) : Number(item.sheet);
 
       const totalAmount = sqm * unitPrice;
-      const vatAmount = totalAmount * vatRate; // ✅ Apply VAT dynamically
+      const vatAmount = totalAmount * vatRate;
 
       return {
         itemVariantId: item.itemVariantId,
         sqm: sqm,
         unitPrice: unitPrice,
-        vat: vatAmount, // ✅ VAT calculated dynamically
-        quantity, // ✅ Correct quantity assigned
+        vat: vatAmount,
+        quantity,
       };
     });
 
@@ -318,7 +313,7 @@ const POSSystemPage = () => {
       invoiceType,
       date,
       currencyRate: parseFloat(currencyRate) || 1,
-      vatPercentage: vatPercentageValue, // ✅ Save the VAT percentage
+      vatPercentage: vatPercentageValue,
       items: formattedItems,
     };
 
@@ -348,29 +343,26 @@ const POSSystemPage = () => {
   };
 
   const handleSelectInvoice = (invoice) => {
-    console.log("Selected Invoice:", invoice); // ✅ Debugging
+    console.log("Selected Invoice:", invoice);
 
     if (!invoice) return;
 
     setSelectedInvoiceId(invoice.invoiceId || null);
     setSelectedRequestId(null);
 
-    // ✅ Extract VAT and Currency Rate properly
     const vatPercentage = invoice.vatPercentage
-      ? parseFloat(invoice.vatPercentage).toString() // Convert "6.0000" -> "6"
-      : "11"; // Default to 11% if missing
+      ? parseFloat(invoice.vatPercentage).toString()
+      : "11";
 
     const currencyRateValue = invoice.currencyRate
-      ? parseFloat(invoice.currencyRate).toString() // Ensure valid conversion
-      : "89000"; // Default currency rate
+      ? parseFloat(invoice.currencyRate).toString()
+      : "89000";
 
-    // ✅ Update UI fields
     setCustomerInput(invoice.customerName);
     setSelectedCustomerId(invoice.customerId);
-    setCurrencyRate(currencyRateValue); // ✅ Ensure currency rate updates
-    setVat(vatPercentage); // ✅ Ensure VAT dropdown updates
+    setCurrencyRate(currencyRateValue);
+    setVat(vatPercentage);
 
-    // ✅ Format table data properly
     const updatedTableData = invoice.items
       .map((item) => {
         if (!item.itemVariantId || !item.itemName) {
@@ -391,7 +383,7 @@ const POSSystemPage = () => {
           sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
         };
       })
-      .filter(Boolean); // ✅ Remove any null values
+      .filter(Boolean);
 
     console.log("Updated Table Data:", updatedTableData);
 
@@ -403,14 +395,19 @@ const POSSystemPage = () => {
   }, [selectedInvoiceId]);
 
   const handleEditRequest = async () => {
+    setIsEditable(true);
+    console.log("isEditable:", isEditable);
+  };
+
+  const handleSaveRequest = async () => {
     if (!selectedRequestId || tableData.length === 0) {
       showNotification("error", "No request selected or items missing.");
+      setIsEditable(false);
       return;
     }
 
     setLoading(true);
 
-    // Calculate totals
     const totalAmount = tableData.reduce(
       (acc, item) => acc + Number(item.total || 0),
       0
@@ -418,24 +415,21 @@ const POSSystemPage = () => {
     const vatAmount = totalAmount * (Number(vat) / 100);
     const grandTotal = totalAmount + vatAmount;
 
-    // Prepare the updated request payload
     const updatedRequestData = {
-      requestId: selectedRequestId, // ✅ Ensure we are updating the correct request
+      requestId: selectedRequestId,
       customerId: selectedCustomerId,
       requestDate: date,
       totalAmount: totalAmount.toFixed(2),
       vatAmount: vatAmount.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
       details: tableData.map((item) => ({
-        itemVariantId: item.itemVariantId, // Ensure this exists
+        itemVariantId: item.itemVariantId,
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),
         quantity: item.box ? Number(item.box) : Number(item.sheet),
       })),
     };
-
-    console.log("📤 Updating Request:", updatedRequestData);
 
     try {
       const response = await axios.put(
@@ -444,6 +438,7 @@ const POSSystemPage = () => {
       );
       console.log("✅ Request Updated:", response.data);
       showNotification("success", "Request updated successfully!");
+      setIsEditable(false);
     } catch (err) {
       console.error("❌ Error updating request:", err);
       showNotification(
@@ -454,11 +449,14 @@ const POSSystemPage = () => {
       );
     } finally {
       setLoading(false);
+      setIsEditable(false); // Disable editing mode after saving
     }
   };
+
   const handleEditInvoice = async () => {
     console.log("Editinggg");
   };
+
   const handleCreateRequest = async () => {
     if (!selectedCustomerId || tableData.length === 0) {
       showNotification("error", "Customer and items are required.");
@@ -467,7 +465,6 @@ const POSSystemPage = () => {
 
     setLoading(true);
 
-    // Calculate totals
     const totalAmount = tableData.reduce(
       (acc, item) => acc + Number(item.total || 0),
       0
@@ -475,15 +472,14 @@ const POSSystemPage = () => {
     const vatAmount = totalAmount * (Number(vat) / 100);
     const grandTotal = totalAmount + vatAmount;
 
-    // Format the request payload exactly as expected by the API
     const requestData = {
       customerId: selectedCustomerId,
       requestDate: date,
-      totalAmount: totalAmount.toFixed(2), // Ensure numbers are properly formatted
+      totalAmount: totalAmount.toFixed(2),
       vatAmount: vatAmount.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
       details: tableData.map((item) => ({
-        itemVariantId: item.itemVariantId, // Make sure this is defined
+        itemVariantId: item.itemVariantId,
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),
@@ -501,8 +497,7 @@ const POSSystemPage = () => {
       console.log("✅ Request Created:", response.data);
       showNotification("success", "Request created successfully!");
 
-      // Clear table after successful request
-      setTableData([]);
+      setTableData([]); // Clear table after request creation
     } catch (err) {
       console.error("❌ Error creating request:", err);
       showNotification(
@@ -538,6 +533,7 @@ const POSSystemPage = () => {
           <Toolbar
             handleNewTransaction={handleNewTransaction}
             handleEditInvoice={handleEditInvoice}
+            handleSaveRequest={handleSaveRequest}
             handleEditRequest={handleEditRequest}
             handleCreateRequest={handleCreateRequest}
             handleCreateInvoice={handleCreateInvoice}
@@ -547,6 +543,7 @@ const POSSystemPage = () => {
             selectedInvoiceType={selectedInvoiceType}
             date={date}
             setDate={setDate}
+            isEditable={isEditable}
           />
 
           <CustomerDetails
@@ -570,6 +567,8 @@ const POSSystemPage = () => {
             handleRightClick={handleRightClick}
             selectedRowIndex={selectedRowIndex}
             handleInputChange={handleInputChange}
+            isEditable={isEditable}
+            selectedRequestId={selectedRequestId}
           />
         </div>
       </div>

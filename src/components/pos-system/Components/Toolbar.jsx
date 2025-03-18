@@ -12,7 +12,12 @@ const Toolbar = ({
   selectedInvoiceType,
   date, // ✅ Receive date as a prop
   setDate, // ✅ Receive setDate as a prop
+  handleSaveRequest, // Function to save the request
+  isEditable, // This would indicate if the request is editable
 }) => {
+  // Debugging: log the isEditable value
+  console.log("isEditable in toolbar:", isEditable);
+
   return (
     <div className="pos-page-button-row">
       {/* ✅ New Transaction Button */}
@@ -76,6 +81,17 @@ const Toolbar = ({
             </button>
           )}
         </>
+      )}
+
+      {/* ✅ Show Save Request button when a request is being edited */}
+      {selectedRequestId !== null && isEditable && (
+        <button
+          className="pos-page-toolbar-button pos-page-green-button"
+          onClick={handleSaveRequest} // Trigger saving the edited request
+          disabled={loading}
+        >
+          {loading ? "Saving..." : "Save Request"}
+        </button>
       )}
 
       <div className="pos-page-date-wrapper">
