@@ -17,30 +17,40 @@ import AccountsPage from "./components/accounts/accounts";
 import PaymentVoucherTable from "./components/payments/payments";
 import JournalVoucherPage from "./components/vouchers/vouchers";
 
+// Import the BlinkingRequestsProvider to manage the blinking state
+import { BlinkingRequestsProvider } from "./components/blink/blink-cards";
+
 // Initialize QueryClient
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/pos-system" element={<POSSystemPage />} />
-          <Route path="/recivables" element={<AccountingPage />} />
-          <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/suppliers" element={<SuppliersPage />} />
-          <Route path="/items" element={<ItemCreationPage />} />
-          <Route path="/cost-estimator" element={<PricingPage />} />
-          <Route path="/customers" element={<CreatePreviewCustomers />} />
-          <Route path="/accounts" element={<AccountsPage />} />
-          <Route path="/payments" element={<PaymentVoucherTable />} />
-          <Route path="/transactions" element={<JournalVoucherPage />} />
-        </Routes>
-      </Router>
+      <BlinkingRequestsProvider>
+        {" "}
+        {/* Wrap your whole app with BlinkingRequestsProvider */}
+        <Router>
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/pos-system" element={<POSSystemPage />} />
+            <Route path="/recivables" element={<AccountingPage />} />
+            <Route
+              path="/purchases-invoice"
+              element={<PurchasesInvoicePage />}
+            />
+            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/items" element={<ItemCreationPage />} />
+            <Route path="/cost-estimator" element={<PricingPage />} />
+            <Route path="/customers" element={<CreatePreviewCustomers />} />
+            <Route path="/accounts" element={<AccountsPage />} />
+            <Route path="/payments" element={<PaymentVoucherTable />} />
+            <Route path="/transactions" element={<JournalVoucherPage />} />
+          </Routes>
+        </Router>
+      </BlinkingRequestsProvider>
     </QueryClientProvider>
   );
 }

@@ -2,44 +2,34 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./requests.css";
 import PropTypes from "prop-types";
-import { io } from "socket.io-client"; // ✅ Import WebSocket Client
+import { io } from "socket.io-client";
+import { useBlinkingRequests } from "../blink/blink-cards"; // Import the custom hook
 
 const RequestCard = ({ onSelectRequest }) => {
-  const [requests, setRequests] = useState([]); // Store request data
-  const [page, setPage] = useState(1); // Track current page
-  const [hasMore, setHasMore] = useState(true); // Track if more data exists
-  const [loading, setLoading] = useState(false); // Track loading state
-  const [newRequestBatch, setNewRequestBatch] = useState([]); // Track newly added request IDs
-  const [batchStartTime, setBatchStartTime] = useState(null); // Track the batch start time
-  const [batchEndTime, setBatchEndTime] = useState(null); // Track the batch end time for blinking requests
+  const [requests, setRequests] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const { addRequestToBlink, isRequestBlinking } = useBlinkingRequests(); // Use context to manage blinking
 
-  const requestListRef = useRef(null); // Reference for the list container
-  const socketRef = useRef(null); // WebSocket connection
+  const requestListRef = useRef(null);
+  const socketRef = useRef(null);
 
   // Connect WebSocket on Mount
   useEffect(() => {
-    socketRef.current = io("http://localhost:3000"); // Adjust URL to match your backend WebSocket
+    socketRef.current = io("http://localhost:3000");
 
     socketRef.current.on("newRequest", (newRequest) => {
       console.log("New Request Received:", newRequest);
 
+      // Add the new request to the global blinking state
+      addRequestToBlink(newRequest.id);
+
       setRequests((prevRequests) => {
-        // Ensure no duplicates
         if (prevRequests.some((req) => req.id === newRequest.id)) {
           return prevRequests;
         }
-
-        // If it's the first request or if a batch is already running, add it to the batch
-        if (!batchStartTime) {
-          // Start a new batch for the first request and set the batch end time (10 seconds)
-          setBatchStartTime(Date.now());
-          setBatchEndTime(Date.now() + 10000); // Set blinking duration to 10 seconds
-        }
-
-        // Add new request to the batch
-        setNewRequestBatch((prevBatch) => [...prevBatch, newRequest.id]);
-
-        return [newRequest, ...prevRequests]; // Add new request at the top
+        return [newRequest, ...prevRequests];
       });
     });
 
@@ -48,7 +38,7 @@ const RequestCard = ({ onSelectRequest }) => {
         socketRef.current.disconnect();
       }
     };
-  }, [batchStartTime]);
+  }, [addRequestToBlink]);
 
   useEffect(() => {
     fetchRequests(1);
@@ -65,7 +55,6 @@ const RequestCard = ({ onSelectRequest }) => {
 
       if (response.data?.data && Array.isArray(response.data.data)) {
         setRequests((prevRequests) => {
-          // Remove duplicates
           const newRequests = response.data.data.filter(
             (newReq) => !prevRequests.some((req) => req.id === newReq.id)
           );
@@ -84,14 +73,6 @@ const RequestCard = ({ onSelectRequest }) => {
     }
   };
 
-  // Function to check if a request is currently blinking
-  const isBlinking = (requestId) => {
-    if (newRequestBatch.includes(requestId) && Date.now() < batchEndTime) {
-      return true;
-    }
-    return false;
-  };
-
   return (
     <div className="requests-container">
       <ul className="requests-list" ref={requestListRef}>
@@ -100,10 +81,10 @@ const RequestCard = ({ onSelectRequest }) => {
         ) : (
           requests.map((request) => (
             <li
-              key={`request-${request.id}`} // Ensuring unique key
+              key={`request-${request.id}`}
               className={`request-item ${
-                isBlinking(request.id) ? "blink" : "" // Apply blinking effect to requests in the batch
-              }`} // Check if the request is in the same batch
+                isRequestBlinking(request.id) ? "blink" : ""
+              }`} // Check if the request is blinking
               onClick={() => onSelectRequest(request.id)}
             >
               <div className="request-header">
