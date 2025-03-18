@@ -3,14 +3,16 @@ import axios from "axios";
 import "./requests.css";
 import PropTypes from "prop-types";
 import { io } from "socket.io-client";
-import { useBlinkingRequests } from "../blink/blink-cards"; // Import the custom hook
+import { useBlinkingItems } from "../blink/blink-cards"; // Import the generic blinking context
 
 const RequestCard = ({ onSelectRequest }) => {
   const [requests, setRequests] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { addRequestToBlink, isRequestBlinking } = useBlinkingRequests(); // Use context to manage blinking
+
+  // Using the blinking logic from the context for both requests and invoices
+  const { addItemToBlink, isItemBlinking } = useBlinkingItems();
 
   const requestListRef = useRef(null);
   const socketRef = useRef(null);
@@ -23,7 +25,7 @@ const RequestCard = ({ onSelectRequest }) => {
       console.log("New Request Received:", newRequest);
 
       // Add the new request to the global blinking state
-      addRequestToBlink(newRequest.id);
+      addItemToBlink(newRequest.id);
 
       setRequests((prevRequests) => {
         if (prevRequests.some((req) => req.id === newRequest.id)) {
@@ -38,7 +40,7 @@ const RequestCard = ({ onSelectRequest }) => {
         socketRef.current.disconnect();
       }
     };
-  }, [addRequestToBlink]);
+  }, [addItemToBlink]);
 
   useEffect(() => {
     fetchRequests(1);
@@ -83,8 +85,8 @@ const RequestCard = ({ onSelectRequest }) => {
             <li
               key={`request-${request.id}`}
               className={`request-item ${
-                isRequestBlinking(request.id) ? "blink" : ""
-              }`} // Check if the request is blinking
+                isItemBlinking(request.id) ? "blink" : ""
+              }`} // Apply blinking effect
               onClick={() => onSelectRequest(request.id)}
             >
               <div className="request-header">

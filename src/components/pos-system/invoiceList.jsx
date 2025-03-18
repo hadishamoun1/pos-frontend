@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./invoiceList.css";
 import PropTypes from "prop-types";
+import { io } from "socket.io-client"; // WebSocket client
+import { useBlinkingItems } from "../blink/blink-cards"; // Import the updated context
 
 const InvoicesList = ({ onSelectInvoice }) => {
   const [invoices, setInvoices] = useState([]); // Stores invoice data
@@ -9,56 +11,41 @@ const InvoicesList = ({ onSelectInvoice }) => {
   const [hasMore, setHasMore] = useState(true); // Tracks if more invoices exist
   const [loading, setLoading] = useState(false); // Tracks loading state
   const [error, setError] = useState(""); // Stores errors
+  const [newInvoiceBatch, setNewInvoiceBatch] = useState([]); // Tracks new invoices to blink
+  const [batchEndTime, setBatchEndTime] = useState(null); // Tracks the batch end time for blinking
+
   const invoicesListRef = useRef(null); // Reference to invoices container
+  const socketRef = useRef(null); // WebSocket connection reference
+
+  // Using the blinking logic from the context
+  const { addItemToBlink, isItemBlinking } = useBlinkingItems();
 
   useEffect(() => {
-    fetchInvoices(1);
-  }, []);
+    fetchInvoices(1); // Fetch invoices when the component mounts
 
-  const fetchInvoices = async (pageNum) => {
-    if (!hasMore || loading) return;
+    // Set up the WebSocket client
+    socketRef.current = io("http://localhost:3000"); // Adjust URL to match your backend WebSocket
 
-    setLoading(true);
-    try {
-      const response = await axios.get(
-        `http://localhost:3000/invoices/filtered?page=${pageNum}`
-      );
+    // Listen for the newInvoice event
+    socketRef.current.on("newInvoice", (invoice) => {
+      console.log("New Invoice Received:", invoice);
 
-      if (response.data?.data && Array.isArray(response.data.data)) {
-        setInvoices((prevInvoices) => {
-          // ✅ Prevent duplicates before adding new invoices
-          const newInvoices = response.data.data.filter(
-            (newInvoice) =>
-              !prevInvoices.some((inv) => inv.id === newInvoice.id)
-          );
-          return [...prevInvoices, ...newInvoices];
-        });
+      // Add the new invoice to the batch of blinking invoices
+      addItemToBlink(invoice.id);
 
-        setPage(pageNum);
-        setHasMore(pageNum < response.data.totalPages);
-      } else {
-        console.error("❌ Unexpected response format:", response.data);
+      // Add the new invoice to the invoices list
+      setInvoices((prevInvoices) => {
+        const updatedInvoices = [invoice, ...prevInvoices]; // Make sure it's added to the start of the list
+        return updatedInvoices;
+      });
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
       }
-    } catch (err) {
-      setError("Failed to fetch invoices");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInvoiceClick = async (invoice) => {
-    try {
-      const response = await axios.get(
-        `http://localhost:3000/invoices/v1/${invoice.id}`
-      );
-      const fullInvoice = response.data;
-      console.log("✅ Fetched Invoice Details:", fullInvoice);
-
-      onSelectInvoice(fullInvoice);
-    } catch (error) {
-      console.error("❌ Error fetching invoice details:", error);
-    }
-  };
+    };
+  }, [batchEndTime, addItemToBlink]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,6 +72,59 @@ const InvoicesList = ({ onSelectInvoice }) => {
     };
   }, [hasMore, page]);
 
+  const fetchInvoices = async (pageNum) => {
+    if (!hasMore || loading) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/invoices/filtered?page=${pageNum}`
+      );
+
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setInvoices((prevInvoices) => {
+          // Prevent duplicates before adding new invoices
+          const newInvoices = response.data.data.filter(
+            (newInvoice) =>
+              !prevInvoices.some((inv) => inv.id === newInvoice.id)
+          );
+          return [...prevInvoices, ...newInvoices];
+        });
+
+        setPage(pageNum);
+        setHasMore(pageNum < response.data.totalPages);
+      } else {
+        console.error("Unexpected response format:", response.data);
+      }
+    } catch (err) {
+      setError("Failed to fetch invoices");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInvoiceClick = async (invoice) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/invoices/v1/${invoice.id}`
+      );
+      const fullInvoice = response.data;
+      console.log("Fetched Invoice Details:", fullInvoice);
+
+      onSelectInvoice(fullInvoice);
+    } catch (error) {
+      console.error("Error fetching invoice details:", error);
+    }
+  };
+
+  // Function to check if an invoice is currently blinking
+  const isInvoiceBlinking = (invoiceId) => {
+    if (newInvoiceBatch.includes(invoiceId) && Date.now() < batchEndTime) {
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div className="invoices-container" ref={invoicesListRef}>
       {loading && <p>Loading...</p>}
@@ -96,8 +136,10 @@ const InvoicesList = ({ onSelectInvoice }) => {
         ) : (
           invoices.map((invoice) => (
             <li
-              key={`invoice-${invoice.id}`} // ✅ Ensure unique key
-              className="invoice-item"
+              key={`invoice-${invoice.id}`}
+              className={`invoice-item ${
+                isItemBlinking(invoice.id) ? "blink" : ""
+              }`}
               onClick={() => handleInvoiceClick(invoice)}
             >
               <div className="invoice-header">
@@ -106,12 +148,13 @@ const InvoicesList = ({ onSelectInvoice }) => {
               </div>
               <div className="invoice-details">
                 <div className="invoice-customer-container">
+                  {/* Access customerName directly */}
                   <span className="invoice-customer">
-                    {invoice.customerName.length > 15
+                    {invoice.customerName?.length > 15
                       ? invoice.customerName.slice(0, 15) + "..."
-                      : invoice.customerName}
+                      : invoice.customerName || "Unknown"}
                   </span>
-                  {invoice.customerName.length > 15 && (
+                  {invoice.customerName?.length > 15 && (
                     <span className="invoice-tooltip">
                       {invoice.customerName}
                     </span>
@@ -125,7 +168,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
             </li>
           ))
         )}
-        {/* ✅ Load More Button (Appears at the end of the scrollable container) */}
+        {/* Load More Button */}
         {hasMore && (
           <button
             className="invoice-load-more-button"

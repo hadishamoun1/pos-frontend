@@ -173,3 +173,19 @@
   background-color: #aaa;
   cursor: not-allowed;
 }
+/* CSS for blinking effect */
+@keyframes blink-effect {
+  0% {
+    background-color: #ffd700;
+  } /* Gold */
+  50% {
+    background-color: transparent;
+  } /* Normal */
+  100% {
+    background-color: #ffd700;
+  } /* Gold */
+}
+
+.blink {
+  animation: blink-effect 2s ease-in-out 5; /* 2s per cycle, repeats 5 times */
+}

@@ -18,7 +18,7 @@ import PaymentVoucherTable from "./components/payments/payments";
 import JournalVoucherPage from "./components/vouchers/vouchers";
 
 // Import the BlinkingRequestsProvider to manage the blinking state
-import { BlinkingRequestsProvider } from "./components/blink/blink-cards";
+import { BlinkingItemsProvider } from "./components/blink/blink-cards";
 
 // Initialize QueryClient
 const queryClient = new QueryClient();
@@ -26,7 +26,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BlinkingRequestsProvider>
+      <BlinkingItemsProvider>
         {" "}
         {/* Wrap your whole app with BlinkingRequestsProvider */}
         <Router>
@@ -50,7 +50,7 @@ function App() {
             <Route path="/transactions" element={<JournalVoucherPage />} />
           </Routes>
         </Router>
-      </BlinkingRequestsProvider>
+      </BlinkingItemsProvider>
     </QueryClientProvider>
   );
 }

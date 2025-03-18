@@ -2,13 +2,13 @@ import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
-import { BlinkingRequestsProvider } from "./components/blink/blink-cards"; // Import the provider
+import { BlinkingItemsProvider  } from "./components/blink/blink-cards"; // Import the provider
 
 ReactDOM.render(
   <React.StrictMode>
-    <BlinkingRequestsProvider>
+    <BlinkingItemsProvider >
       <App />
-    </BlinkingRequestsProvider>
+    </BlinkingItemsProvider >
   </React.StrictMode>,
   document.getElementById("root")
 );
