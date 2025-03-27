@@ -15,7 +15,7 @@ const PricingTable = () => {
       sheet: 100,
       sqm: 250.5,
       price: 15,
-      vat: 10,
+      vat: `${10}%`,
       total: 4132.5,
     },
     {
@@ -28,7 +28,7 @@ const PricingTable = () => {
       sheet: 40,
       sqm: 85,
       price: 17,
-      vat: 8,
+      vat: `${8}%`,
       total: 1564.2,
     },
   ];

@@ -143,27 +143,27 @@ const InvoicesList = ({ onSelectInvoice }) => {
               onClick={() => handleInvoiceClick(invoice)}
             >
               <div className="invoice-header">
+                {/* Access customerName directly */}
+                <span className="invoice-customer">
+                  {invoice.customerName?.length > 15
+                    ? invoice.customerName.slice(0, 15) + "..."
+                    : invoice.customerName || "Unknown"}
+                </span>
+                {invoice.customerName?.length > 15 && (
+                  <span className="invoice-tooltip">
+                    {invoice.customerName}
+                  </span>
+                )}
                 <span className="invoice-number">{invoice.invoiceNumber}</span>
-                <span className="invoice-date">{invoice.date}</span>
               </div>
               <div className="invoice-details">
                 <div className="invoice-customer-container">
-                  {/* Access customerName directly */}
-                  <span className="invoice-customer">
-                    {invoice.customerName?.length > 15
-                      ? invoice.customerName.slice(0, 15) + "..."
-                      : invoice.customerName || "Unknown"}
+                  <span className="invoice-total">
+                    Total: ${Number(invoice.grandTotal).toFixed(2)}
                   </span>
-                  {invoice.customerName?.length > 15 && (
-                    <span className="invoice-tooltip">
-                      {invoice.customerName}
-                    </span>
-                  )}
                 </div>
 
-                <span className="invoice-total">
-                  Total: ${Number(invoice.grandTotal).toFixed(2)}
-                </span>
+                <span className="invoice-date">{invoice.date}</span>
               </div>
             </li>
           ))
