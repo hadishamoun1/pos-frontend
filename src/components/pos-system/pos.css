@@ -304,7 +304,6 @@
   transform: scale(1.2);
 }
 
-
 /* Dropdowns & Checkboxes */
 .pos-page-dropdown-container {
   display: flex;
@@ -490,4 +489,11 @@ input:disabled {
   padding: 12px;
   color: #999;
   text-align: center;
+}
+/* New panel */
+.new-pos-panel {
+  width: 40%;
+  background-color: #f7f7f7;
+  border-left: 1px solid #ddd;
+  padding: 20px;
 }

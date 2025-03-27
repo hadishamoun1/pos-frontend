@@ -10,6 +10,7 @@ import NotificationModal from "../recievables/NotificationModal";
 import Toolbar from "./Components/Toolbar";
 import CustomerDetails from "./Components/CustomerDetails";
 import InventoryTable from "./Components/InventoryTable";
+import ToggleSwitch from "./Components/ToggleSwitch";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -29,6 +30,8 @@ const POSSystemPage = () => {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
   const [isEditable, setIsEditable] = useState(true);
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [showOnlyCenter, setShowOnlyCenter] = useState(false);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -361,6 +364,7 @@ const POSSystemPage = () => {
     setCustomerInput(invoice.customerName);
     setSelectedCustomerId(invoice.customerId);
     setCurrencyRate(currencyRateValue);
+    setIsEditable(false);
     setVat(vatPercentage);
 
     const updatedTableData = invoice.items
@@ -381,6 +385,7 @@ const POSSystemPage = () => {
           total: item.totalAmount || "0.00",
           box: item.itemType === "box" ? item.quantity : "",
           sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
+          itemVariantId: item.itemVariantId,
         };
       })
       .filter(Boolean);
@@ -393,6 +398,19 @@ const POSSystemPage = () => {
   useEffect(() => {
     console.log("Updated selected invoice id:", selectedInvoiceId);
   }, [selectedInvoiceId]);
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.altKey && e.code === "KeyA") {
+        e.preventDefault();
+        setShowOnlyCenter((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const handleEditRequest = async () => {
     setIsEditable(true);
@@ -454,7 +472,51 @@ const POSSystemPage = () => {
   };
 
   const handleEditInvoice = async () => {
-    console.log("Editinggg");
+    setIsEditable(true);
+  };
+
+  const handleSaveInvoice = async () => {
+    if (!selectedInvoiceId) {
+      console.error("Invoice ID is missing.");
+      return; // Prevent saving if there's no invoice ID
+    }
+
+    setLoading(true);
+
+    // Ensure that the data is formatted to match backend expectations
+    const formattedItems = tableData.map((item) => ({
+      itemVariantId: item.itemVariantId, // Make sure this is correctly set
+      sqm: parseFloat(item.sqm) || 0, // Ensure it's a number
+      unitPrice: parseFloat(item.price) || 0, // Ensure it's a number
+      vat: parseFloat(item.vat) || 0, // Ensure it's a number
+      quantity: parseInt(item.box || item.sheet, 10), // Handle quantity based on type
+    }));
+
+    const invoiceData = {
+      id: selectedInvoiceId, // Ensure the invoiceId is passed
+      customerId: selectedCustomerId,
+      invoiceType: selectedInvoiceType, // Ensure the invoice type is correctly set
+      date,
+      currencyRate: parseFloat(currencyRate) || 1, // Ensure currencyRate is a number
+      vatPercentage: parseFloat(vat) || 0, // Ensure VAT percentage is a number
+      items: formattedItems, // Array of items formatted for backend
+    };
+
+    console.log("📤 Sending Invoice Data:", invoiceData);
+
+    try {
+      const response = await axios.put(
+        `http://localhost:3000/invoices/${selectedInvoiceId}`, // Make sure the ID is in the URL
+        invoiceData
+      );
+      console.log("Invoice Updated:", response.data);
+      showNotification("success", "Invoice updated successfully!");
+    } catch (err) {
+      console.error("Error saving invoice:", err);
+      showNotification("error", `Failed to save invoice: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateRequest = async () => {
@@ -514,26 +576,32 @@ const POSSystemPage = () => {
   return (
     <div className="pos-page-container" onClick={handleCloseContextMenu}>
       {/* Left Sidebar */}
-      <div className="pos-page-left">
-        <div className="pos-page-container-header">
-          <FaClipboardList className="pos-page-header-icon" />
-          <span className="pos-page-header-text">Requests</span>
+      {!showOnlyCenter && (
+        <div className="pos-page-left">
+          <div className="pos-page-container-header">
+            <FaClipboardList className="pos-page-header-icon" />
+            <span className="pos-page-header-text">Requests</span>
+          </div>
+          <input
+            type="text"
+            placeholder="Search Requests"
+            className="pos-page-search-input"
+          />
+          <RequestCard onSelectRequest={handleSelectRequest} />
         </div>
-        <input
-          type="text"
-          placeholder="Search Requests"
-          className="pos-page-search-input"
-        />
-        <RequestCard onSelectRequest={handleSelectRequest} />
-      </div>
+      )}
 
       {/* Center Section */}
-      <div className="pos-page-center">
+
+      <div
+        className={`pos-page-center ${showOnlyCenter ? "expanded-center" : ""}`}
+      >
         <div className="pos-page-toolbar">
           <Toolbar
             handleNewTransaction={handleNewTransaction}
             handleEditInvoice={handleEditInvoice}
             handleSaveRequest={handleSaveRequest}
+            handleSaveInvoice={handleSaveInvoice}
             handleEditRequest={handleEditRequest}
             handleCreateRequest={handleCreateRequest}
             handleCreateInvoice={handleCreateInvoice}
@@ -573,20 +641,26 @@ const POSSystemPage = () => {
         </div>
       </div>
 
-      {/* Right Sidebar */}
-      <div className="pos-page-right">
-        <div className="pos-page-container-header">
-          <FaFileInvoiceDollar className="pos-page-header-icon" />
-          <span className="pos-page-header-text">Invoices</span>
-        </div>
+      {showOnlyCenter && (
+        <div className="new-pos-panel">Hello, I'm the new panel</div>
+      )}
 
-        <input
-          type="text"
-          placeholder="Search Invoices"
-          className="pos-page-search-input"
-        />
-        <InvoicesList onSelectInvoice={handleSelectInvoice} />
-      </div>
+      {/* Right Sidebar */}
+      {!showOnlyCenter && (
+        <div className="pos-page-right">
+          <div className="pos-page-container-header">
+            <FaFileInvoiceDollar className="pos-page-header-icon" />
+            <span className="pos-page-header-text">Invoices</span>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Search Invoices"
+            className="pos-page-search-input"
+          />
+          <InvoicesList onSelectInvoice={handleSelectInvoice} />
+        </div>
+      )}
 
       {/* Context Menu for Right Click */}
       {contextMenu && (
