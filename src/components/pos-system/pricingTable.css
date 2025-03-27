@@ -1,0 +1,112 @@
+/* Outer Container */
+.pricing-table-container {
+  display: flex;
+  height: 96vh;
+  width: 45%;
+  background-color: #f4f7fc;
+}
+
+/* Inner Panel Style (like pos-page-center) */
+.pricing-table-content {
+  flex: 1;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Search Input (same style as pos-page-customer-name-input but renamed) */
+.pricing-table-search-input {
+  width: 30%;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+/* Table Styling (like pos-page-inventory-table) */
+.pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+/* Table Header */
+.pricing-table thead {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(#007bff, #0056b3);
+  color: white;
+  z-index: 10;
+}
+
+.pricing-table th {
+  padding: 0.7rem;
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  border-left: 2px solid #ddd;
+  border-right: 2px solid #ddd;
+}
+
+/* Table Body */
+.pricing-table td {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.4rem;
+  border: 1px solid #ddd;
+  font-size: 0.95rem;
+}
+
+/* Adjusting Column Widths (optional) */
+.pricing-table th:nth-child(1),
+.pricing-table td:nth-child(1) {
+  width: 14%; /* Invoice Date */
+}
+
+.pricing-table th:nth-child(2),
+.pricing-table td:nth-child(2) {
+  width: 10%; /* Invoice Number */
+}
+
+.pricing-table th:nth-child(3),
+.pricing-table td:nth-child(3) {
+  width: 5%; /* Origin */
+}
+
+.pricing-table th:nth-child(4) {
+  width: 15%; /* Item */
+}
+.pricing-table td:nth-child(4) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(0.75rem, 1.2vw, 1rem);
+}
+
+.pricing-table th:nth-child(5),
+.pricing-table td:nth-child(5),
+.pricing-table th:nth-child(6),
+.pricing-table td:nth-child(6),
+.pricing-table th:nth-child(7),
+.pricing-table td:nth-child(7),
+.pricing-table th:nth-child(8),
+.pricing-table td:nth-child(8),
+.pricing-table th:nth-child(9),
+.pricing-table td:nth-child(9),
+.pricing-table th:nth-child(10),
+.pricing-table td:nth-child(10),
+.pricing-table th:nth-child(11),
+.pricing-table td:nth-child(11) {
+  width: 7%;
+}
