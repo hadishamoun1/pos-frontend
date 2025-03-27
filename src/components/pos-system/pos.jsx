@@ -10,7 +10,8 @@ import NotificationModal from "../recievables/NotificationModal";
 import Toolbar from "./Components/Toolbar";
 import CustomerDetails from "./Components/CustomerDetails";
 import InventoryTable from "./Components/InventoryTable";
-import ToggleSwitch from "./Components/ToggleSwitch";
+import PricingTable from "./pricingTable";
+
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -467,7 +468,7 @@ const POSSystemPage = () => {
       );
     } finally {
       setLoading(false);
-      setIsEditable(false); // Disable editing mode after saving
+      setIsEditable(false);
     }
   };
 
@@ -478,35 +479,35 @@ const POSSystemPage = () => {
   const handleSaveInvoice = async () => {
     if (!selectedInvoiceId) {
       console.error("Invoice ID is missing.");
-      return; // Prevent saving if there's no invoice ID
+      return;
     }
 
     setLoading(true);
 
     // Ensure that the data is formatted to match backend expectations
     const formattedItems = tableData.map((item) => ({
-      itemVariantId: item.itemVariantId, // Make sure this is correctly set
-      sqm: parseFloat(item.sqm) || 0, // Ensure it's a number
-      unitPrice: parseFloat(item.price) || 0, // Ensure it's a number
-      vat: parseFloat(item.vat) || 0, // Ensure it's a number
-      quantity: parseInt(item.box || item.sheet, 10), // Handle quantity based on type
+      itemVariantId: item.itemVariantId,
+      sqm: parseFloat(item.sqm) || 0,
+      unitPrice: parseFloat(item.price) || 0,
+      vat: parseFloat(item.vat) || 0,
+      quantity: parseInt(item.box || item.sheet, 10),
     }));
 
     const invoiceData = {
-      id: selectedInvoiceId, // Ensure the invoiceId is passed
+      id: selectedInvoiceId,
       customerId: selectedCustomerId,
-      invoiceType: selectedInvoiceType, // Ensure the invoice type is correctly set
+      invoiceType: selectedInvoiceType,
       date,
-      currencyRate: parseFloat(currencyRate) || 1, // Ensure currencyRate is a number
-      vatPercentage: parseFloat(vat) || 0, // Ensure VAT percentage is a number
-      items: formattedItems, // Array of items formatted for backend
+      currencyRate: parseFloat(currencyRate) || 1,
+      vatPercentage: parseFloat(vat) || 0,
+      items: formattedItems,
     };
 
     console.log("📤 Sending Invoice Data:", invoiceData);
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/invoices/${selectedInvoiceId}`, // Make sure the ID is in the URL
+        `http://localhost:3000/invoices/${selectedInvoiceId}`,
         invoiceData
       );
       console.log("Invoice Updated:", response.data);
@@ -641,9 +642,7 @@ const POSSystemPage = () => {
         </div>
       </div>
 
-      {showOnlyCenter && (
-        <div className="new-pos-panel">Hello, I'm the new panel</div>
-      )}
+      {showOnlyCenter && <PricingTable />}
 
       {/* Right Sidebar */}
       {!showOnlyCenter && (
