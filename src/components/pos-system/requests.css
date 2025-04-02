@@ -43,7 +43,8 @@
   left: 0;
   height: 100%;
   width: 5px;
-  background: linear-gradient(135deg, #007bff, #0056b3);
+background: linear-gradient(135deg, #007bff, #0056b3);
+  
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
 }

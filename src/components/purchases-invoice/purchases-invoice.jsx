@@ -231,22 +231,27 @@ const PurchasesInvoicePage = () => {
         </div>
 
         <div className="invoice-details">
-          <SupplierInput
-            supplierName={supplierName}
-            setSupplierName={setSupplierName}
-            //filteredSuppliers={filteredSuppliers}
-            showSupplierSuggestions={showSupplierSuggestions}
-            setShowSupplierSuggestions={setShowSupplierSuggestions}
-          />
-          <label>
-            Date
-            <input
-              type="date"
-              value={invoiceDate}
-              onChange={(e) => setInvoiceDate(e.target.value)}
-            />
-          </label>
-          <div className="dropdown-container">
+          {/* ----------- ROW 1 ----------- */}
+          <div className="invoice-row">
+            <label>
+              Supplier Name
+              <input
+                type="text"
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
+                placeholder="Enter supplier name"
+              />
+            </label>
+
+            <label>
+              Date
+              <input
+                type="date"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </label>
+
             <label>
               Invoice Number
               <input
@@ -256,19 +261,10 @@ const PurchasesInvoicePage = () => {
                 onChange={(e) => setInvoiceNumber(e.target.value)}
               />
             </label>
-            {currency === "EURO" && (
-              <label>
-                Exchange Rate
-                <select
-                  value={exchangeRate}
-                  onChange={(e) => setExchangeRate(Number(e.target.value))}
-                >
-                  <option value="1.5">1.5</option>
-                  <option value="1.6">1.6</option>
-                  <option value="1.7">1.7</option>
-                </select>
-              </label>
-            )}
+          </div>
+
+          {/* ----------- ROW 2 ----------- */}
+          <div className="invoice-row">
             <label>
               Currency
               <select value={currency} onChange={handleCurrencyChange}>
@@ -276,6 +272,7 @@ const PurchasesInvoicePage = () => {
                 <option value="EURO">EURO</option>
               </select>
             </label>
+
             <label>
               Status
               <select
@@ -285,23 +282,13 @@ const PurchasesInvoicePage = () => {
                   backgroundColor: status ? getStatusColor(status) : "white",
                 }}
               >
-                <option value="" style={{ backgroundColor: "white" }}>
-                  Select Status
-                </option>
-                <option value="Ordered" style={{ backgroundColor: "red" }}>
-                  Ordered
-                </option>
-                <option value="Shipped" style={{ backgroundColor: "yellow" }}>
-                  Shipped
-                </option>
-                <option
-                  value="Recieved"
-                  style={{ backgroundColor: "rgb(2, 235, 2)" }}
-                >
-                  Recieved
-                </option>
+                <option value="">Select Status</option>
+                <option value="Ordered">Ordered</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Recieved">Recieved</option>
               </select>
             </label>
+
             <label>
               Expected Arrival Date
               <input
@@ -323,7 +310,7 @@ const PurchasesInvoicePage = () => {
 
         {showItemModal && (
           <ItemModal
-           // filteredItems={filteredItems}
+            // filteredItems={filteredItems}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             selectedItems={selectedItems}
