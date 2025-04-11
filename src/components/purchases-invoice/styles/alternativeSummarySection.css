@@ -1,0 +1,56 @@
+/* alternative-summary.css */
+
+
+
+.summary-section h4 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+}
+
+/* Grid layout: 3 fields max per row, left-aligned */
+.alternative-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(250px, 1fr));
+  gap: 20px;
+  justify-content: start;
+  align-items: flex-start;
+}
+
+.alternative-fields label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  color: #444;
+  font-size: 15px;
+}
+
+.alternative-fields input {
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1.8px solid #ccc;
+  background-color: #fff;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.alternative-fields input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 6px rgba(0, 123, 255, 0.35);
+  outline: none;
+}
+
+@media (max-width: 992px) {
+  .alternative-fields {
+    grid-template-columns: repeat(2, minmax(250px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .alternative-fields {
+    grid-template-columns: 1fr;
+  }
+}

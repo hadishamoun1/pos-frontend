@@ -1,19 +1,31 @@
-// AlternativeSummarySection.js
 import React from "react";
+import "./styles/alternativeSummarySection.css";
 
 const AlternativeSummarySection = () => {
   return (
     <div className="summary-section">
-      <h4>Alternative Summary View</h4>
-      {/* Add your own fields below */}
-      <label>
-        Custom Field 1
-        <input type="text" placeholder="Something" />
-      </label>
-      <label>
-        Custom Field 2
-        <input type="number" placeholder="123" />
-      </label>
+      <h4>Shipping & BL Details</h4>
+      <div className="alternative-fields">
+        <label>
+          Shipping Line
+          <input type="text" placeholder="Enter shipping line" />
+        </label>
+
+        <label>
+          Expected Time Departure
+          <input type="date" />
+        </label>
+
+        <label>
+          Number of Containers
+          <input type="number" placeholder="e.g., 5" />
+        </label>
+
+        <label>
+          BL Number
+          <input type="text" placeholder="Enter BL number" />
+        </label>
+      </div>
     </div>
   );
 };
