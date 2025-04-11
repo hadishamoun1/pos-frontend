@@ -13,6 +13,7 @@ import "./styles/model.css";
 import "./styles/summary.css";
 import "./styles/invoiceModel.css";
 import axios from "axios";
+import AlternativeSummarySection from "./AlternativeSummarySection";
 
 const fetchSuppliers = async () => {
   const response = await fetch("http://localhost:3000/suppliers");
@@ -43,7 +44,7 @@ const PurchasesInvoicePage = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showTypePopup, setShowTypePopup] = useState(false);
   const [selectedType, setSelectedType] = useState("");
-
+  const [activeSummary, setActiveSummary] = useState("main");
   const [currency, setCurrency] = useState("USD");
   const [exchangeRate, setExchangeRate] = useState(1.5);
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -351,19 +352,38 @@ const PurchasesInvoicePage = () => {
             </div>
           </div>
         )}
-        <SummarySection
-          totalAmount={itemsTotalAmount}
-          totalOfferAmount={totalOfferAmount}
-          potentialCost={potentialCost}
-          setPotentialCost={setPotentialCost}
-          finalCost={finalCost}
-          setFinalCost={setFinalCost}
-          openItemModal={() => setShowUnitPriceModal(true)}
-          shippingCost={shippingCost}
-          setShippingCost={setShippingCost}
-          numberOfContainers={numberOfContainers}
-          setNumberOfContainers={setNumberOfContainers}
-        />
+        <div className="summary-toggle-navbar">
+          <button
+            className={activeSummary === "main" ? "active" : ""}
+            onClick={() => setActiveSummary("main")}
+          >
+            Summary View 1
+          </button>
+          <button
+            className={activeSummary === "alt" ? "active" : ""}
+            onClick={() => setActiveSummary("alt")}
+          >
+            Summary View 2
+          </button>
+        </div>
+        {activeSummary === "main" ? (
+          <SummarySection
+            totalAmount={itemsTotalAmount}
+            totalOfferAmount={totalOfferAmount}
+            potentialCost={potentialCost}
+            setPotentialCost={setPotentialCost}
+            finalCost={finalCost}
+            setFinalCost={setFinalCost}
+            openItemModal={() => setShowUnitPriceModal(true)}
+            shippingCost={shippingCost}
+            setShippingCost={setShippingCost}
+            numberOfContainers={numberOfContainers}
+            setNumberOfContainers={setNumberOfContainers}
+          />
+        ) : (
+          <AlternativeSummarySection />
+        )}
+
         {/* UnitPriceModal */}
         {showUnitPriceModal && (
           <UnitPriceModal

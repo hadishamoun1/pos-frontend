@@ -85,3 +85,24 @@
   color: #b30000;
   font-weight: 700;
 }
+.summary-toggle-navbar {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.summary-toggle-navbar button {
+  padding: 8px 16px;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #007bff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.summary-toggle-navbar button.active,
+.summary-toggle-navbar button:hover {
+  background-color: #007bff;
+  color: white;
+}
