@@ -20,7 +20,7 @@ const fetchSuppliers = async () => {
 };
 
 const fetchItems = async () => {
-  const response = await fetch("http://localhost:3000/items");
+  const response = await fetch("http://localhost:3000/items/v1/filtered-items");
   return response.json();
 };
 
@@ -92,18 +92,17 @@ const PurchasesInvoicePage = () => {
     (sum, item) => sum + (item.totalOFR || 0),
     0
   );
-  // const { data: allItems = [] } = useQuery({
-  //   queryKey: ["items"],
-  //   queryFn: fetchItems,
-  // });
+  const { data: allItems = [] } = useQuery({
+    queryKey: ["items"],
+    queryFn: fetchItems,
+  });
+  const filteredSuppliers = suppliers.filter((supplier) =>
+    (supplier?.name || "").toLowerCase().includes(supplierName.toLowerCase())
+  );
 
-  // const filteredSuppliers = suppliers.filter((supplier) =>
-  //   supplier.name.includes(supplierName.toLowerCase())
-  // );
-
-  // const filteredItems = allItems.filter((item) =>
-  //   item.itemName.includes(searchQuery.toLowerCase())
-  // );
+  const filteredItems = allItems.filter((item) =>
+    (item?.itemName || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleCheckboxChange = (item, dimension) => {
     const isSelected = selectedItems.some(
@@ -310,7 +309,7 @@ const PurchasesInvoicePage = () => {
 
         {showItemModal && (
           <ItemModal
-            // filteredItems={filteredItems}
+            filteredItems={filteredItems}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             selectedItems={selectedItems}

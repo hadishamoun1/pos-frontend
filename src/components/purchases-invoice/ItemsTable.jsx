@@ -62,7 +62,7 @@ const ItemsTable = ({
             <th>Price OFR</th>
             <th>Total</th>
             <th>Total OFR</th>
-            <th>Delete</th>
+            <th>Number of Containers</th>
           </tr>
         </thead>
         <tbody>
@@ -151,12 +151,17 @@ const ItemsTable = ({
               <td>{(item.total || 0).toFixed(2)}</td>
               <td>{(item.totalOFR || 0).toFixed(2)}</td>
               <td>
-                <button
-                  className="delete-button"
-                  onClick={() => setItems(items.filter((_, i) => i !== index))}
-                >
-                  <FaTrash />
-                </button>
+                <input
+                  type="number"
+                  value={item.numberOfContainers || 0}
+                  onChange={(e) =>
+                    handleItemChange(
+                      index,
+                      "numberOfContainers",
+                      Number(e.target.value)
+                    )
+                  }
+                />
               </td>
             </tr>
           ))}
