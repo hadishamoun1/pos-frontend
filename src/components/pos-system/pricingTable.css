@@ -4,6 +4,8 @@
   height: 96vh;
   width: 45%;
   background-color: #f4f7fc;
+  border: 1px solid rgb(10, 228, 3);
+  box-shadow: 0 4px 10px #12d300;
 }
 
 /* Inner Panel Style (like pos-page-center) */

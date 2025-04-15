@@ -21,7 +21,7 @@
   box-shadow: 0 4px 10px #c0392b;
 }
 
-.pos-page-left{
+.pos-page-left {
   border: 1px solid yellow;
   box-shadow: 0 4px 10px #d4ac0d;
 }
@@ -156,8 +156,8 @@
 /* Sidebar Headers */
 .pos-page-container-header {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center; /* Ensures all children align vertically center */
   padding: 0.5rem 0;
   font-size: 1.2rem;
   font-weight: bold;
@@ -165,6 +165,22 @@
   margin-bottom: 1rem;
 }
 
+.pos-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pos-page-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2px; /* Optional fine-tuning if still a bit off */
+}
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+}
 .pos-page-header-icon {
   font-size: 1.8rem;
   color: #555;

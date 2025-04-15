@@ -11,7 +11,7 @@ import Toolbar from "./Components/Toolbar";
 import CustomerDetails from "./Components/CustomerDetails";
 import InventoryTable from "./Components/InventoryTable";
 import PricingTable from "./pricingTable";
-
+import ToggleSwitch from "./Components/ToggleSwitch";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -648,8 +648,17 @@ const POSSystemPage = () => {
       {!showOnlyCenter && (
         <div className="pos-page-right">
           <div className="pos-page-container-header">
-            <FaFileInvoiceDollar className="pos-page-header-icon" />
-            <span className="pos-page-header-text">Invoices</span>
+            <div className="pos-page-header-left">
+              <FaFileInvoiceDollar className="pos-page-header-icon" />
+              <span className="pos-page-header-text">Invoices</span>
+            </div>
+
+            <div className="pos-page-header-right">
+              <ToggleSwitch
+                showOnlyCenter={showOnlyCenter}
+                setShowOnlyCenter={setShowOnlyCenter}
+              />
+            </div>
           </div>
 
           <input
