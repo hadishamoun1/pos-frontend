@@ -156,8 +156,8 @@
 /* Sidebar Headers */
 .pos-page-container-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center; /* Ensures all children align vertically center */
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0;
   font-size: 1.2rem;
   font-weight: bold;
@@ -165,31 +165,16 @@
   margin-bottom: 1rem;
 }
 
-.pos-page-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.pos-page-header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 2px; /* Optional fine-tuning if still a bit off */
-}
-.toggle-switch-container {
-  display: flex;
-  align-items: center;
-}
 .pos-page-header-icon {
   font-size: 1.8rem;
   color: #555;
 }
 
-.pos-page-header-text {
-  color: #333;
-  font-size: 1.2rem;
-  font-weight: bold;
+.pos-page-toggle-wrapper {
+  position: absolute;
+  top:3.5rem;
+  right: 2rem;
+  z-index: 999;
 }
 
 /* Search Input */

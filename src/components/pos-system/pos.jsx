@@ -12,7 +12,6 @@ import CustomerDetails from "./Components/CustomerDetails";
 import InventoryTable from "./Components/InventoryTable";
 import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
-
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -643,22 +642,18 @@ const POSSystemPage = () => {
       </div>
 
       {showOnlyCenter && <PricingTable />}
+      <div className="pos-page-toggle-wrapper">
+        <ToggleSwitch
+          showOnlyCenter={showOnlyCenter}
+          setShowOnlyCenter={setShowOnlyCenter}
+        />
+      </div>
 
-      {/* Right Sidebar */}
       {!showOnlyCenter && (
         <div className="pos-page-right">
           <div className="pos-page-container-header">
-            <div className="pos-page-header-left">
-              <FaFileInvoiceDollar className="pos-page-header-icon" />
-              <span className="pos-page-header-text">Invoices</span>
-            </div>
-
-            <div className="pos-page-header-right">
-              <ToggleSwitch
-                showOnlyCenter={showOnlyCenter}
-                setShowOnlyCenter={setShowOnlyCenter}
-              />
-            </div>
+            <FaFileInvoiceDollar className="pos-page-header-icon" />
+            <span className="pos-page-header-text">Invoices</span>
           </div>
 
           <input

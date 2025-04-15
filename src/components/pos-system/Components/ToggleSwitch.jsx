@@ -12,7 +12,7 @@ const ToggleSwitch = ({ showOnlyCenter, setShowOnlyCenter }) => {
         />
         <span className="slider round"></span>
       </label>
-      <span className="toggle-label">Focus Mode</span>
+    
     </div>
   );
 };
