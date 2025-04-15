@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import GeneralSettings from "./GeneralSettings";
 import InvoiceSettings from "./InvoiceSettings";
 import PermissionsSettings from "./PermissionsSettings";
+import PurchaseInvoiceSettings from "./PurchaseInvoiceSettings";
+
 import "./settings.css";
 
 const SettingsPage = () => {
@@ -15,6 +17,9 @@ const SettingsPage = () => {
         return <InvoiceSettings />;
       case "permissions":
         return <PermissionsSettings />;
+      case "purchase-invoice":
+        return <PurchaseInvoiceSettings />;
+
       default:
         return <GeneralSettings />;
     }
@@ -42,6 +47,12 @@ const SettingsPage = () => {
             onClick={() => setActiveTab("permissions")}
           >
             Permissions
+          </li>
+          <li
+            className={activeTab === "purchase-invoice" ? "active" : ""}
+            onClick={() => setActiveTab("purchase-invoice")}
+          >
+            Purchase Invoice
           </li>
         </ul>
       </aside>

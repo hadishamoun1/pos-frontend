@@ -1,0 +1,115 @@
+/* Purchase Invoice Settings Table Styling */
+.settings-table {
+  width: 100%;
+
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.settings-table thead {
+  background-color: #f1f5f9;
+}
+
+.settings-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.settings-table td {
+  padding: 10px 16px;
+  background-color: #f8fafc;
+  vertical-align: middle;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.settings-table input[type="text"],
+.settings-table input[type="number"],
+.settings-table select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #ffffff;
+  transition: border-color 0.3s;
+}
+
+.settings-table input[type="text"]:focus,
+.settings-table input[type="number"]:focus,
+.settings-table select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.settings-table input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+  accent-color: #0ea5e9;
+}
+
+/* Optional: hover effect for table row */
+.settings-table tbody tr:hover td {
+  background-color: #e0f2fe;
+  transition: background-color 0.3s ease;
+}
+
+/* Container spacing */
+.settings-content h2 {
+  margin-bottom: 20px;
+  color: #1f2937;
+  font-size: 22px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
+}
+
+.settings-table input[type="text"],
+.settings-table input[type="number"],
+.settings-table select {
+  padding: 14px 10px;
+}
+
+.settings-table input[type="text"],
+.settings-table input[type="number"] {
+  font-size: 17px;
+}
+
+.settings-table td:last-child input[type="number"] {
+  width: 100%;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+.settings-table input[type="text"] {
+  font-family: "Segoe UI", "Tahoma", "Arial", "sans-serif", "Cairo",
+    "Noto Naskh Arabic", "Amiri";
+}
+.charge-name-input {
+  direction: rtl; /* Input text flows right-to-left */
+  text-align: right; /* Input text aligned to the right */
+}
+
+.charge-name-input::placeholder {
+  direction: ltr; /* Placeholder flows left-to-right */
+  text-align: left; /* Placeholder aligned to the left */
+}
+
+@media (max-width: 768px) {
+  .settings-table th,
+  .settings-table td {
+    font-size: 13px;
+    padding: 8px;
+  }
+  .settings-table input,
+  .settings-table select {
+    font-size: 13px;
+    padding: 6px;
+  }
+}
