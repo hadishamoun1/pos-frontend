@@ -12,6 +12,9 @@ import CustomerDetails from "./Components/CustomerDetails";
 import InventoryTable from "./Components/InventoryTable";
 import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
+import InvoiceModal from "./invoicePreviewModal";
+import InvoicePreview from "./invoicePreview"
+
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -32,6 +35,7 @@ const POSSystemPage = () => {
   const [isEditable, setIsEditable] = useState(true);
   const [invoiceData, setInvoiceData] = useState(null);
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -393,6 +397,7 @@ const POSSystemPage = () => {
     console.log("Updated Table Data:", updatedTableData);
 
     setTableData(updatedTableData);
+    setInvoiceData(invoice);
   };
 
   useEffect(() => {
@@ -612,7 +617,14 @@ const POSSystemPage = () => {
             date={date}
             setDate={setDate}
             isEditable={isEditable}
+            setShowPreview={setShowPreview}
           />
+          {showPreview && (
+            <InvoiceModal
+              invoiceData={<InvoicePreview invoiceData={invoiceData} />}
+              onClose={() => setShowPreview(false)}
+            />
+          )}
 
           <CustomerDetails
             currencyRate={currencyRate}

@@ -1,0 +1,82 @@
+.invoice-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.invoice-modal-content {
+  position: relative;
+  background-color: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: visible;
+  width: 100%;
+  height: 100%;
+}
+
+.invoice-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  font-size: 1.2rem;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  z-index: 10;
+}
+
+/* A4 Container */
+.invoice-a4-wrapper {
+  width: 210mm;
+  height: 297mm;
+  background: white;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
+  padding: 20mm;
+  transform: scale(0.73);
+  transform-origin: top center;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Responsive scaling based on screen width */
+@media (max-width: 1600px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.95);
+  }
+}
+@media (max-width: 1440px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.85);
+  }
+}
+@media (max-width: 1280px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.75);
+  }
+}
+@media (max-width: 1024px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.65);
+  }
+}
+@media (max-width: 768px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.55);
+  }
+}
+@media (max-width: 500px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.45);
+  }
+}

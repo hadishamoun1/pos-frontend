@@ -15,6 +15,7 @@ const Toolbar = ({
   handleSaveRequest, // Function to save the request
   handleSaveInvoice, // Function to save the invoice
   isEditable, // This would indicate if the request or invoice is editable
+  setShowPreview,
 }) => {
   // Debugging: log the isEditable value
   console.log("isEditable in toolbar:", isEditable);
@@ -107,6 +108,14 @@ const Toolbar = ({
       )}
 
       <div className="pos-page-date-wrapper">
+        {selectedInvoiceId !== null && (
+          <button
+            className="pos-page-toolbar-button pos-page-blue-button"
+            onClick={() => setShowPreview(true)}
+          >
+            View Invoice
+          </button>
+        )}
         <input
           className="pos-page-date-picker"
           type="date"
