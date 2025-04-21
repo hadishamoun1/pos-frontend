@@ -58,7 +58,7 @@ const InvoiceModal = ({ onClose }) => {
         </div>
 
         {/* Inject InvoicePreview with ref to target download */}
-        <div ref={invoiceRef}>
+        <div className="invoice-scale-wrapper" ref={invoiceRef}>
           <InvoicePreview />
         </div>
       </div>

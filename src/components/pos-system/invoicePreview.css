@@ -2,21 +2,24 @@
 
 .invoice-a4-wrapper {
   width: 794px; /* A4 width */
-  min-height: 950px; /* A4 height */
+  min-height: 1120px; /* A4 height */
   margin: auto;
   padding: 0;
   background: white;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   box-sizing: border-box;
-  font-family: "Arial", sans-serif;
+  font-family: "Times New Roman", Times, serif;
+
   font-size: 12px;
   direction: rtl;
   display: flex;
   flex-direction: column;
   justify-content: space-between; /* This ensures top & footer are spaced */
-  border: 1px solid #000;
+
   padding: 0;
-  border: 1px solid #000;
+
+  transform-origin: top left;
+  transition: transform 0.2s ease;
 }
 .invoice-body {
   flex: 1;
@@ -29,42 +32,57 @@
   justify-content: space-between;
   padding: 5px;
   border: 1px solid #000;
-  margin: 15px;
-  height: 150px;
+  margin: 7px;
+  height: 145px;
 }
 
 .invoice-header .left-info {
   direction: ltr;
   text-align: left;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
 .invoice-header .right-info {
   text-align: right;
   direction: rtl;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
 .company-title {
-  font-size: 28px;
+  font-size: 26px;
+  font-weight: normal;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+.company-arabic-title {
+  font-size: 26px;
   font-weight: bold;
   margin: 0;
   font-family: Arial, sans-serif;
 }
 
 .company-subtitle {
-  font-size: 24px;
+  font-size: 26px;
+  font-weight: normal;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+.company-arabic-subtitle {
+  font-size: 26px;
   font-weight: bold;
   margin: 0;
   font-family: Arial, sans-serif;
 }
-.left-info,
-.right-info {
-  font-family: Arial, sans-serif;
+.small-subtitle {
+  font-weight: normal;
+}
+.left-info {
+  font-family: "Times New Roman", Times, serif;
   line-height: 1.4;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: normal;
 }
 .invoice-header .left-info h2,
 .invoice-header .left-info p {
@@ -77,11 +95,11 @@
   padding: 0;
 }
 .invoice-arabic-contact {
-  font-family: Arial, sans-serif;
-  font-size: 12px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 15px;
   display: flex;
   flex-direction: column;
-
+  font-weight: normal;
   direction: rtl;
 }
 
@@ -92,7 +110,7 @@
 }
 
 .invoice-arabic-label {
-  width: 60px;
+  width: 80px;
   text-align: right;
 }
 
@@ -111,11 +129,12 @@
   display: flex;
   justify-content: space-between;
   padding: 5px;
-  margin: 0 15px 15px 15px;
+  margin: 0 7px 7px 7px;
   border: 1px solid #000;
   font-family: Arial, sans-serif;
   font-size: 16px;
   box-sizing: border-box;
+  height: 135px;
 }
 .meta-right,
 .meta-left {
@@ -125,6 +144,11 @@
 
   text-align: right;
 }
+
+.meta-left {
+  margin-left: 25px;
+}
+
 .invoice-meta p {
   margin: 2px;
   line-height: 1.2; /* or use 1 for even tighter lines */
@@ -134,15 +158,15 @@
 .meta-line {
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.2;
   margin: 2px 0;
-  font-weight: bold;
 }
 
 .meta-label {
-  width: 70px;
+  width: 80px;
   text-align: right;
+  font-weight: bold;
 }
 
 .meta-colon {
@@ -155,17 +179,16 @@
   text-align: right;
 }
 .invoice-table {
-  width: calc(100% - 30px);
-  margin: 0 15px 15px 15px;
+  width: calc(100% - 15px);
+  margin: 0 7px 7px 7px;
   border-collapse: collapse;
   font-family: Arial, sans-serif;
-  font-size: 12px;
+  font-size: 15px;
   direction: rtl;
   box-sizing: border-box;
   border: 0.5px solid black;
 }
 .invoice-table td {
-  padding: 6px;
   text-align: center;
   border-left: 0.5px solid black;
   box-sizing: border-box;
@@ -188,16 +211,16 @@
   justify-content: space-between;
   margin: 0 15px 15px 15px;
   padding: 10px;
-  border: 0.5px solid #000;
+
   font-family: "Arial", sans-serif;
   font-size: 12px;
   box-sizing: border-box;
-  height: 150px;
+  height: 180px;
 }
 
 /* === LEFT SECTION === */
 .footer-left {
-  width: 49%;
+  width: 55%;
   font-family: Arial, sans-serif;
   font-size: 12px;
   border: 0.5px solid #000;
@@ -207,7 +230,9 @@
 
 .amount-in-words {
   margin-bottom: 5px;
-  font-size: 11px;
+  font-size: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .footer-left-box {
@@ -242,25 +267,34 @@
 }
 
 .footer-left-label {
-  font-size: 12px;
+  border-left: 0.5px solid black;
+  width: 50%;
+  font-size: 14px;
+  text-align: right;
+  padding: 5px;
+}
+.footer-left-label-note {
+  font-size: 14px;
   text-align: right;
   padding: 5px;
 }
 
-.footer-left-notes {
+.footer-left-note {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 5px;
+  font-size: 14px;
 }
 
 /* === RIGHT SECTION === */
 .footer-right {
-  width: 49%;
+  width: 43%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   box-sizing: border-box;
-  padding-right: 10px;
+  padding: 10px;
+  border: 0.5px solid #000;
 }
 
 .footer-line {
@@ -307,14 +341,88 @@
   font-weight: bold;
   font-size: 13px;
 }
-/* Disable any scaling during PDF generation */
+
 .pdf-mode {
   transform: none !important;
   zoom: 1 !important;
 }
-@media print {
-  .invoice-table th,
-  .invoice-table td {
-    border-width: 0.2pt !important;
+
+.invoice-table th,
+.invoice-table td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  padding-right: 6px;
+  text-align: center;
+  border-left: 0.5px solid black;
+  box-sizing: border-box;
+}
+
+/* Specific widths per column */
+.arabic-item-name {
+  font-size: 17px;
+}
+.col-small {
+  width: 50px;
+}
+
+.col-price {
+  width: 50px;
+}
+.col-amount {
+  width: 80px;
+}
+.col-area {
+  width: 75px;
+}
+.col-description {
+  width: 190px;
+}
+.col-item {
+  width: 90px;
+}
+/* Align "الشرح" and "الصنف" to the left */
+.col-description,
+.col-item {
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+/* Align the rest of the columns to the right */
+.invoice-table td:not(.col-description):not(.col-item),
+.invoice-table th:not(.col-description):not(.col-item) {
+  text-align: right;
+}
+
+/* Responsive scaling based on screen width */
+@media (max-width: 1600px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.95);
+  }
+}
+@media (max-width: 1440px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.85);
+  }
+}
+@media (max-width: 1280px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.75);
+  }
+}
+@media (max-width: 1024px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.65);
+  }
+}
+@media (max-width: 768px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.8);
+  }
+}
+@media (max-width: 500px) {
+  .invoice-a4-wrapper {
+    transform: scale(0.45);
   }
 }

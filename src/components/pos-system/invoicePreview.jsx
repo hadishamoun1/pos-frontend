@@ -3,16 +3,14 @@ import "./invoicePreview.css";
 import html2pdf from "html2pdf.js";
 
 const InvoicePreview = () => {
-
   return (
-    <div className="invoice-a4-wrapper" >
-    
+    <div className="invoice-a4-wrapper">
       <div className="invoice-body">
         <div className="invoice-header">
           <div className="right-info">
-            <h2 className="company-title">شركة شمعون</h2>
-            <h2 className="company-subtitle">للزجاج و المرايا</h2>
-            <p>الحدث/ شويفات</p>
+            <h2 className="company-arabic-title">شركة شمعون</h2>
+            <h2 className="company-arabic-subtitle">للزجاج و المرايا</h2>
+            <p className="small-subtitle">الحدث/ شويفات</p>
             <div className="invoice-arabic-contact">
               <div className="invoice-arabic-line">
                 <span className="invoice-arabic-label">تلفون</span>
@@ -93,38 +91,27 @@ const InvoicePreview = () => {
         <table className="invoice-table">
           <thead>
             <tr>
-              <th>المبلغ</th>
-              <th>السعر</th>
-              <th>مساحة</th>
-              <th>عرض</th>
-              <th>طول</th>
-              <th>لوح</th>
-              <th>صندوق</th>
-              <th>الشرح</th>
-              <th>الصنف</th>
+              <th className="col-amount">المبلغ</th>
+              <th className="col-price">السعر</th>
+              <th className="col-area">مساحة</th>
+              <th className="col-small">عرض</th>
+              <th className="col-small">طول</th>
+              <th className="col-small">لوح</th>
+              <th className="col-small">صندوق</th>
+              <th className="col-description">الشرح</th>
+              <th className="col-item">الصنف</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>154.05</td>
               <td>5.75</td>
-              <td>26.79</td>
+              <td>50000.79</td>
               <td>366</td>
               <td>244</td>
               <td>27</td>
               <td>1</td>
-              <td>ك.م.5.5 أبيض</td>
-              <td>00101-055-4</td>
-            </tr>
-            <tr>
-              <td>154.05</td>
-              <td>5.75</td>
-              <td>26.79</td>
-              <td>366</td>
-              <td>244</td>
-              <td>18</td>
-              <td>3</td>
-              <td>ك.م.5.5 أبيض</td>
+              <td className="arabic-item-name">5ملم محجر اسيد ابيض</td>
               <td>00101-055-4</td>
             </tr>
           </tbody>
@@ -132,25 +119,6 @@ const InvoicePreview = () => {
       </div>
 
       <div className="invoice-footer">
-        <div className="footer-left">
-          <p className="amount-in-words">
-            One Hundred Seventy Point Ninety Nine USD Only
-          </p>
-          <div className="footer-left-table">
-            <div className="footer-left-row">
-              <div className="footer-left-cell"></div>
-              <div className="footer-left-cell border-left"></div>
-            </div>
-            <div className="footer-left-label-row">
-              <span className="footer-left-label">المستلم:</span>
-              <span className="footer-left-label">الإمضاء:</span>
-            </div>
-          </div>
-          <div className="footer-left-note">
-            <span className="footer-left-label">ملاحظات:</span>
-          </div>
-        </div>
-
         <div className="footer-right">
           <div className="footer-line">
             <span className="footer-label">المجموع</span>
@@ -170,6 +138,24 @@ const InvoicePreview = () => {
           <div className="footer-total-line">
             <strong>المجموع الصافي</strong>
             <span className="footer-total-amount">171.00 USD</span>
+          </div>
+        </div>
+        <div className="footer-left">
+          <p className="amount-in-words">
+            One Hundred Seventy Point Ninety Nine USD Only
+          </p>
+          <div className="footer-left-table">
+            <div className="footer-left-row">
+              <div className="footer-left-cell"></div>
+              <div className="footer-left-cell border-left"></div>
+            </div>
+            <div className="footer-left-label-row">
+              <span className="footer-left-label">المستلم:</span>
+              <span className="footer-left-label">الإمضاء:</span>
+            </div>
+          </div>
+          <div className="footer-left-note">
+            <span className="footer-left-label-note">ملاحظات:</span>
           </div>
         </div>
       </div>
