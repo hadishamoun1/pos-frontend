@@ -1,6 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./styles/PurchaseinvoiceSettings.css";
+
 const PurchaseInvoiceSettings = () => {
+  const [accounts, setAccounts] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:3000/accounts/v1/acc-flat-arranged")
+      .then((res) => {
+        setAccounts(res.data);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch accounts", err);
+      });
+  }, []);
+
+  // ✅ Recursively render accounts with indentation
+  const renderAccountOptions = (accounts, level = 0) => {
+    return accounts.map((acc) => (
+      <React.Fragment key={acc.id}>
+        <option value={acc.id}>
+          {`${acc.accountNumber} - ${acc.accountName}`}
+        </option>
+        {acc.children &&
+          acc.children.length > 0 &&
+          renderAccountOptions(acc.children, level + 1)}
+      </React.Fragment>
+    ));
+  };
+
   return (
     <div>
       <h2>Purchase Invoice Charges</h2>
@@ -34,10 +63,9 @@ const PurchaseInvoiceSettings = () => {
               </select>
             </td>
             <td>
-              <select>
+              <select className="account-dropdown">
                 <option value="">Select Account</option>
-                <option value="1001">1001 - Inventory</option>
-                <option value="2001">2001 - Freight</option>
+                {renderAccountOptions(accounts)}
               </select>
             </td>
             <td>

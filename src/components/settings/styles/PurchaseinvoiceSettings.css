@@ -92,14 +92,27 @@
     "Noto Naskh Arabic", "Amiri";
 }
 .charge-name-input {
-  direction: rtl; /* Input text flows right-to-left */
-  text-align: right; /* Input text aligned to the right */
+  direction: rtl; 
+  text-align: right; 
 }
 
 .charge-name-input::placeholder {
-  direction: ltr; /* Placeholder flows left-to-right */
-  text-align: left; /* Placeholder aligned to the left */
+  direction: ltr; 
+  text-align: left; 
 }
+.settings-table td:nth-child(3) select {
+  width: 250px; 
+  min-width: 180px;
+  max-width: 100%;
+}
+.settings-table td:nth-child(2) select {
+    width: 130px; 
+  
+  }
+  .settings-table td:nth-child(8) select {
+    width: 80px; 
+  
+  }
 
 @media (max-width: 768px) {
   .settings-table th,
