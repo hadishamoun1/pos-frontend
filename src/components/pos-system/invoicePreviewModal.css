@@ -123,3 +123,7 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.invoice-scale-wrapper.pdf-mode {
+  transform: none !important;
+  width: 100% !important;
+}
