@@ -295,6 +295,7 @@
   box-sizing: border-box;
   padding: 10px;
   border: 0.5px solid #000;
+  padding-top: 40px;
 }
 
 .footer-line {
@@ -313,28 +314,15 @@
   margin: 0 5px;
 }
 
-.footer-input {
-  flex: 1;
-  height: 22px;
-  border: 1px solid #000;
-  text-align: center;
-  font-size: 12px;
-  font-family: Arial, sans-serif;
-}
-
 .footer-value {
-  font-size: 12px;
-}
-
-.footer-total-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-  margin-top: 8px;
-  border-top: 1px solid #000;
-  padding-top: 5px;
-  font-size: 13px;
+  font-size: 15px;
+  border: 0.5px solid black;
+  direction: ltr;
+  text-align: left;
+  display: inline-block;
+  width: 100%;
+  padding-left: 5px;
+  box-sizing: border-box;
 }
 
 .footer-total-amount {
@@ -342,12 +330,72 @@
   font-size: 13px;
 }
 
+.footer-row {
+  display: flex;
+  justify-content: space-between;
+  direction: ltr;
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+
+.footer-row span {
+  width: 32%;
+  text-align: right;
+}
+.footer-row span:nth-child(1) {
+  text-align: left; /* VAT LBP and its number */
+}
+.footer-row span:last-child {
+  text-align: left;
+}
+
+.footer-total-line {
+  width: 100%;
+  padding-top: 6px;
+  display: flex;
+  justify-content: space-around;
+  direction: ltr;
+  font-size: 15px;
+}
+
+.footer-total-label {
+  font-weight: bold;
+  font-size: 21px;
+}
+
+.footer-total-amount {
+  font-weight: bolder;
+  font-size: 18px;
+  text-align: left;
+  border: 0.5px solid black;
+  padding-left: 3px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  margin-right: 0px;
+  width: 60%;
+}
+
 .pdf-mode {
   transform: none !important;
   zoom: 1 !important;
 }
 
-.invoice-table th,
+.invoice-table th {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  padding-right: 6px;
+  text-align: center;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: 0.5px solid black;
+  box-sizing: border-box;
+}
+.invoice-table th:last-child{
+    border-right: 0.5px solid black;
+}
+.invoice-table th:first-child{
+    border-left: 0.5px solid black;
+}
 .invoice-table td {
   padding-top: 6px;
   padding-bottom: 6px;

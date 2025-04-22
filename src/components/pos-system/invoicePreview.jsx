@@ -120,26 +120,22 @@ const InvoicePreview = () => {
 
       <div className="invoice-footer">
         <div className="footer-right">
-          <div className="footer-line">
-            <span className="footer-label">المجموع</span>
-            <span className="footer-colon">:</span>
-            <input className="footer-input" value="154.050" readOnly />
-          </div>
-          <div className="footer-line">
-            <span className="footer-label">V.A.T 11 %</span>
-            <span className="footer-colon">:</span>
-            <input className="footer-input" value="16.946" readOnly />
-          </div>
-          <div className="footer-line">
+          <div className="footer-row">
             <span className="footer-label">VAT LBP</span>
-            <span className="footer-colon">:</span>
-            <span className="footer-value">1,516,622.25</span>
+            <span className="footer-label">المجموع</span>
+            <span className="footer-value">177,771.00</span>
+          </div>
+          <div className="footer-row">
+            <span className="footer-vat-value">1,516,622.25</span>
+            <span className="footer-label">V.A.T 11%</span>
+            <span className="footer-value">16.946</span>
           </div>
           <div className="footer-total-line">
-            <strong>المجموع الصافي</strong>
+            <strong className="footer-total-label">المجموع الصافي</strong>
             <span className="footer-total-amount">171.00 USD</span>
           </div>
         </div>
+
         <div className="footer-left">
           <p className="amount-in-words">
             One Hundred Seventy Point Ninety Nine USD Only

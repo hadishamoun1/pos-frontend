@@ -1,12 +1,25 @@
-// components/InvoiceModal.jsx
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import "./invoicePreviewModal.css";
 import html2pdf from "html2pdf.js";
-import InvoicePreview from "./invoicePreview"; // <- your actual preview
-import { FiDownload, FiX } from "react-icons/fi";
+import InvoicePreview from "./invoicePreview";
+import { FiDownload, FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
 
 const InvoiceModal = ({ onClose }) => {
   const invoiceRef = useRef();
+
+  // 👇 Replace scale with zoomStep to manage steps
+  const [zoomStep, setZoomStep] = useState(0);
+  const scaleMap = [0.85, 1.0, 1.05]; // 3 zoom levels only
+  const maxZoomStep = scaleMap.length - 1;
+  const minZoomStep = 0;
+
+  const handleZoomIn = () => {
+    setZoomStep((prev) => Math.min(prev + 1, maxZoomStep));
+  };
+
+  const handleZoomOut = () => {
+    setZoomStep((prev) => Math.max(prev - 1, minZoomStep));
+  };
 
   const handleDownloadPDF = () => {
     const element = invoiceRef.current;
@@ -39,27 +52,47 @@ const InvoiceModal = ({ onClose }) => {
 
   return (
     <div className="invoice-modal-overlay">
-      <div className="invoice-modal-content">
-        <div className="invoice-modal-header">
-          <button
-            className="invoice-modal-icon-btn"
-            onClick={handleDownloadPDF}
-            title="Download PDF"
-          >
-            <FiDownload size={18} />
-          </button>
-          <button
-            className="invoice-modal-x-btn"
-            onClick={onClose}
-            title="Close"
-          >
-            <FiX size={18} />
-          </button>
-        </div>
+      <div className="invoice-modal-header">
+        <button
+          onClick={handleZoomIn}
+          className="invoice-modal-icon-btn"
+          title="Zoom In"
+          disabled={zoomStep === maxZoomStep}
+        >
+          <FiZoomIn />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="invoice-modal-icon-btn"
+          title="Zoom Out"
+          disabled={zoomStep === minZoomStep}
+        >
+          <FiZoomOut />
+        </button>
+        <button
+          onClick={handleDownloadPDF}
+          className="invoice-modal-icon-btn"
+          title="Download PDF"
+        >
+          <FiDownload />
+        </button>
+        <button onClick={onClose} className="invoice-modal-x-btn" title="Close">
+          <FiX />
+        </button>
+      </div>
 
-        {/* Inject InvoicePreview with ref to target download */}
-        <div className="invoice-scale-wrapper" ref={invoiceRef}>
-          <InvoicePreview />
+      <div className="invoice-modal-content">
+        <div className="invoice-layout">
+          <div
+            className="invoice-scale-wrapper"
+            style={{
+              transform: `scale(${scaleMap[zoomStep]})`,
+              width: `${100 / scaleMap[zoomStep]}%`,
+            }}
+            ref={invoiceRef}
+          >
+            <InvoicePreview />
+          </div>
         </div>
       </div>
     </div>

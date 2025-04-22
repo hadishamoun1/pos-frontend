@@ -142,7 +142,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
               }`}
               onClick={() => handleInvoiceClick(invoice)}
             >
-              <div className="invoice-header">
+              <div className="invoice-list-header">
                 {/* Access customerName directly */}
                 <span className="invoice-customer">
                   {invoice.customerName?.length > 15
