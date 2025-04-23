@@ -67,7 +67,6 @@
   margin-bottom: 20px;
   color: #1f2937;
   font-size: 22px;
-  border-bottom: 2px solid #e2e8f0;
   padding-bottom: 10px;
 }
 
@@ -92,27 +91,71 @@
     "Noto Naskh Arabic", "Amiri";
 }
 .charge-name-input {
-  direction: rtl; 
-  text-align: right; 
+  direction: rtl;
+  text-align: right;
 }
 
 .charge-name-input::placeholder {
-  direction: ltr; 
-  text-align: left; 
+  direction: ltr;
+  text-align: left;
 }
 .settings-table td:nth-child(3) select {
-  width: 250px; 
+  width: 250px;
   min-width: 180px;
   max-width: 100%;
 }
 .settings-table td:nth-child(2) select {
-    width: 130px; 
-  
-  }
-  .settings-table td:nth-child(8) select {
-    width: 80px; 
-  
-  }
+  width: 130px;
+}
+.settings-table td:nth-child(8) select {
+  width: 80px;
+}
+
+.settings-header-wrapper {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.purchase-invoice-save-button {
+  padding: 10px 20px;
+  background-color: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.PI-add-row-button {
+  padding: 10px 20px;
+  margin-right: 10px;
+  background-color: green;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.purchase-invoice-save-button:hover {
+  background-color: #0284c7;
+}
 
 @media (max-width: 768px) {
   .settings-table th,
