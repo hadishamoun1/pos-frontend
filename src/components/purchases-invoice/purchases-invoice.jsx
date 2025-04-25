@@ -459,17 +459,18 @@ const PurchasesInvoicePage = () => {
             minimalInvoices.map((invoice) => (
               <div key={invoice.id} className="purchase-invoice-card">
                 <div className="purchase-invoice-card-header">
-                  <span className="invoice-number">
-                    {invoice.invoiceNumber}
-                  </span>
-                  <span className="invoice-date">
-                    {new Date(invoice.date).toLocaleDateString()}
-                  </span>
+                  <div className="supplier-name">
+                    {invoice.supplier?.supplierName || "Unknown Supplier"}
+                  </div>
+                  <div className="invoice-number">{invoice.invoiceNumber}</div>
                 </div>
+
                 <div className="purchase-invoice-card-footer">
-               
                   <span className="grand-total">
                     ${Number(invoice.grandAmount || 0).toFixed(2)}
+                  </span>
+                  <span className="purchase-invoice-card-date">
+                    {new Date(invoice.date).toLocaleDateString()}
                   </span>
                 </div>
               </div>

@@ -3,7 +3,6 @@
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-
   width: 100%;
   margin: 0 auto;
   padding: 0;
@@ -85,26 +84,41 @@
   align-items: center;
   margin-bottom: 8px;
 }
-
-.invoice-number {
+.supplier-name {
   font-weight: bold;
   font-size: 18px;
-  margin-bottom: 10px;
+  color: black;
+}
+.invoice-number {
+  font-size: 18px;
   color: #007bff;
+  font-weight: 600;
 }
 
-.invoice-date {
-  font-size: 14px;
-  color: #666;
+.purchase-invoice-card-body {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
 }
-
+.purchase-invoice-card-date {
+  margin-top: 12px;
+  font-size: 16px;
+  color: #888;
+  text-align: right;
+}
 /* Footer (Grand Total) */
 .purchase-invoice-card-footer {
-  margin-top: 8px;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-top: 12px;
+  padding-top: 8px;
+
 }
 
 .grand-total {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bolder;
   color: #333;
 }
