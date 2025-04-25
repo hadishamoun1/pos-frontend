@@ -2,24 +2,23 @@ import React from "react";
 
 const SupplierInput = ({
   supplierName,
-  setSupplierName,
+  onSupplierNameChange, // ✅ controlled input
   filteredSuppliers,
   showSupplierSuggestions,
   setShowSupplierSuggestions,
+  setSelectedSupplierId,
 }) => {
   return (
-    <label style={{ position: "relative" }}>
+    <label style={{ position: "relative", width: "100%" }}>
       Supplier Name
       <input
         type="text"
         value={supplierName}
-        onChange={(e) => {
-          setSupplierName(e.target.value);
-          setShowSupplierSuggestions(true);
-        }}
+        onChange={onSupplierNameChange} // ✅ dynamic suggestions
         onFocus={() => setShowSupplierSuggestions(true)}
-        onBlur={() => setTimeout(() => setShowSupplierSuggestions(false), 100)}
-        placeholder="Enter supplier name"
+        onBlur={() => setTimeout(() => setShowSupplierSuggestions(false), 100)} // short delay to allow click
+        placeholder="Search supplier"
+        className="supplier-input"
       />
       {showSupplierSuggestions && filteredSuppliers.length > 0 && (
         <div className="suggestions-box">
@@ -28,11 +27,14 @@ const SupplierInput = ({
               key={supplier.id}
               className="suggestion-item"
               onMouseDown={() => {
-                setSupplierName(supplier.name);
+                setSelectedSupplierId(supplier.id);
+                onSupplierNameChange({
+                  target: { value: supplier.supplierName },
+                });
                 setShowSupplierSuggestions(false);
               }}
             >
-              {supplier.name}
+              {supplier.supplierName}
             </div>
           ))}
         </div>

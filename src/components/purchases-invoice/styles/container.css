@@ -1,9 +1,9 @@
 /* Wrapper for the Two Containers */
 .main-container {
   display: flex;
-  justify-content: flex-start; 
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 20px;
+
   width: 100%;
   margin: 0 auto;
   padding: 0;
@@ -12,7 +12,7 @@
 /* Left Container (Purchase Invoice) */
 .purchase-invoice-container {
   flex: 3;
-  height: 93vh;
+  height: 91vh;
   background-color: #f9fafb;
   padding: 30px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
@@ -20,19 +20,91 @@
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 1400px;
+  min-width: 1400px;
+  border: 1px solid rgb(255, 196, 0);
+  box-shadow: 0 4px 20px rgb(255, 196, 0);
+  margin: 10px;
 }
 
 /* Right Container (Additional Section) */
 .additional-container {
   flex: 1;
-  height: 95vh;
+  height: 93vh;
   background-color: #ffffff;
   padding: 20px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgb(0, 140, 255);
   border-radius: 10px;
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 20px rgb(0, 140, 255);
+  margin: 10px;
+  overflow-y: auto; /* ✅ scroll if there are many cards */
+}
+
+.purchase-invoice-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Invoice Card */
+.purchase-invoice-card {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 16px 16px 16px 20px; /* extra padding left for line */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+.purchase-invoice-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 140, 255, 0.3);
+}
+
+/* Colored Side Line */
+.purchase-invoice-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 5px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+/* Header (Invoice Number + Date) */
+.purchase-invoice-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.invoice-number {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #007bff;
+}
+
+.invoice-date {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Footer (Grand Total) */
+.purchase-invoice-card-footer {
+  margin-top: 8px;
+}
+
+.grand-total {
+  font-size: 16px;
+  font-weight: bolder;
+  color: #333;
 }

@@ -1,43 +1,37 @@
-import React, { useState } from "react";
+// ✅ Updated UnitPriceModal to fetch and display data from the GET API
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./styles/unitPriceModel.css";
 
 const UnitPriceModal = ({ isVisible, onClose, onSave }) => {
-  const [rows, setRows] = useState([
-    {
-      chargeName: "",
-      chargeType: "amount", 
-      value: 0,
-      valueOFR: 0,
-      currency: "USD", 
-      valueExch: 0,
-      valueExchOFR: 0,
-      addToItemCost: false,
-      invoiceNbTax: "0",
-      supplierOfTax: "0",
-      accNbOfSupplier: "0",
-      shipping: false,
-    },
-  ]);
+  const [rows, setRows] = useState([]);
 
-  const addRow = () => {
-    setRows([
-      ...rows,
-      {
-        chargeName: "",
-        chargeType: "amount",
-        value: 0,
-        valueOFR: 0,
-        currency: "USD",
-        valueExch: 0,
-        valueExchOFR: 0,
-        addToItemCost: false,
-        invoiceNbTax: "0",
-        supplierOfTax: "0",
-        accNbOfSupplier: "0",
-        shipping: false,
-      },
-    ]);
-  };
+  useEffect(() => {
+    if (isVisible) {
+      axios
+        .get("http://localhost:3000/purchase-invoice-setting")
+        .then((res) => {
+          const mapped = res.data.map((row) => ({
+            chargeName: row.chargeName || "",
+            chargeType: row.type || "amount",
+            value: row.value || 0,
+            valueOFR: 0,
+            currency: (row.currency || "USD").toLowerCase(),
+            valueExch: row.valueEx || 0,
+            valueExchOFR: 0,
+            addToItemCost: row.atc || false,
+            invoiceNbTax: "",
+            supplierOfTax: "",
+            accNbOfSupplier: "",
+            shipping: row.shipping || false,
+          }));
+          setRows(mapped);
+        })
+        .catch((err) => {
+          console.error("Error loading charges", err);
+        });
+    }
+  }, [isVisible]);
 
   const handleInputChange = (index, field, value) => {
     const updatedRows = [...rows];
@@ -52,7 +46,7 @@ const UnitPriceModal = ({ isVisible, onClose, onSave }) => {
   };
 
   const handleSave = () => {
-    onSave(rows); // Pass rows data back to parent
+    onSave(rows);
     onClose();
   };
 
@@ -95,7 +89,6 @@ const UnitPriceModal = ({ isVisible, onClose, onSave }) => {
                       onChange={(e) =>
                         handleInputChange(index, "chargeName", e.target.value)
                       }
-                      placeholder="Enter charge name"
                     />
                   </td>
                   <td>
@@ -134,8 +127,8 @@ const UnitPriceModal = ({ isVisible, onClose, onSave }) => {
                         handleInputChange(index, "currency", e.target.value)
                       }
                     >
-                      <option value="euro">Euro</option>
                       <option value="usd">USD</option>
+                      <option value="euro">Euro</option>
                       <option value="ll">LL</option>
                     </select>
                   </td>
@@ -214,9 +207,6 @@ const UnitPriceModal = ({ isVisible, onClose, onSave }) => {
           </table>
         </div>
         <div className="table-actions">
-          <button className="add-row-button" onClick={addRow}>
-            Add Row
-          </button>
           <button className="save-button" onClick={handleSave}>
             Save
           </button>

@@ -14,9 +14,9 @@
 }
 
 .items-table table {
-  width: 100%; 
+  width: 100%;
   border-collapse: collapse;
-  table-layout: auto; 
+  table-layout: auto;
   margin-bottom: 20px;
 }
 
@@ -30,11 +30,11 @@
 }
 
 .items-table th {
-  background-color: #007bff;
+  background: linear-gradient(to right, #007bff, #0056b3);
   color: #fff;
   font-weight: 600;
   position: sticky;
-  top: 0; 
+  top: 0;
 }
 
 .items-table td input {
@@ -45,7 +45,6 @@
   font-size: 0.9rem;
   color: #333;
   height: 20px;
-  
 }
 
 .add-item-button {

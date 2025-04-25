@@ -56,7 +56,7 @@
 }
 
 .unit-price-table th {
-  background-color: #007bff;
+  background: linear-gradient(to right, #007bff, #0056b3);
   color: white;
   font-weight: bold;
   white-space: normal;

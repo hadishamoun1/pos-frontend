@@ -15,8 +15,10 @@ import "./styles/invoiceModel.css";
 import axios from "axios";
 import AlternativeSummarySection from "./AlternativeSummarySection";
 
-const fetchSuppliers = async () => {
-  const response = await fetch("http://localhost:3000/suppliers");
+const fetchSuppliersByQuery = async (query) => {
+  const response = await fetch(
+    `http://localhost:3000/suppliers/v1/search?query=${query}`
+  );
   return response.json();
 };
 
@@ -31,6 +33,7 @@ const PurchasesInvoicePage = () => {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
+
   const [items, setItems] = useState([]);
   const [potentialCost, setPotentialCost] = useState(0);
   const [shippingCost, setShippingCost] = useState(0);
@@ -48,6 +51,9 @@ const PurchasesInvoicePage = () => {
   const [currency, setCurrency] = useState("USD");
   const [exchangeRate, setExchangeRate] = useState(1.5);
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [unitPriceRows, setUnitPriceRows] = useState([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState(null);
+  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
 
   const resetFields = () => {
     setSupplierName("");
@@ -75,16 +81,7 @@ const PurchasesInvoicePage = () => {
       setExchangeRate(1.5);
     }
   };
-  const handleModalSave = (data) => {
-    // Save data from the modal
-    setFinalCost(data.finalCost);
-    setShowUnitPriceModal(false);
-  };
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: fetchSuppliers,
-  });
   const itemsTotalAmount = items.reduce(
     (sum, item) => sum + (item.total || 0),
     0
@@ -97,9 +94,6 @@ const PurchasesInvoicePage = () => {
     queryKey: ["items"],
     queryFn: fetchItems,
   });
-  const filteredSuppliers = suppliers.filter((supplier) =>
-    (supplier?.name || "").toLowerCase().includes(supplierName.toLowerCase())
-  );
 
   const filteredItems = allItems.filter((item) =>
     (item?.itemName || "").toLowerCase().includes(searchQuery.toLowerCase())
@@ -161,40 +155,75 @@ const PurchasesInvoicePage = () => {
     setShowTypePopup(true);
   };
 
+  const handleModalSave = (data) => {
+    setUnitPriceRows(data); // Save modal rows
+    const total = data.reduce(
+      (sum, row) => sum + (parseFloat(row.value) || 0),
+      0
+    );
+    setFinalCost(total); // optional
+    setShowUnitPriceModal(false);
+  };
+
   const saveInvoice = async (type) => {
     try {
+      const supplierId = selectedSupplierId;
+
       const invoiceData = {
-        supplierName,
+        invoiceNumber,
+        date: invoiceDate,
+        expectedArrivalDate: invoiceDate,
+        type,
+        supplierId,
         vatAmount,
         grandAmount: totalAmount + vatAmount,
         exchangeRate,
-        date: invoiceDate,
-        type,
+        status,
+        shippingLine: "",
+        etd: invoiceDate,
+        numberOfContainers,
+        blNumber: "",
+        potentialCost,
+        shippingCost,
+        finalCost,
         items: items.map((item) => ({
-          itemName: item.itemName,
-          dimensionId: item.dimensionId,
+          itemVariantId: item.dimensionId,
           sqm: item.sqm,
           unitPrice: item.unitPrice,
-          totalAmount: item.sqm * item.unitPrice,
+          totalAmount: item.total,
+          euroPrice: item.euroPrice,
+          euroOFRPrice: item.euroOfferPrice,
+          priceOFR: item.priceOFR,
+          totalOFR: item.totalOFR,
+          numberOfContainers: item.numberOfContainers,
+        })),
+        unitPriceRows: unitPriceRows.map((row) => ({
+          chargeName: row.chargeName,
+          chargeType: row.chargeType,
+          value: row.value,
+          valueOFR: row.valueOFR,
+          currency: row.currency.toUpperCase(),
+          valueExch: row.valueExch,
+          valueExchOFR: row.valueExchOFR,
+          addToItemCost: row.addToItemCost,
+          invoiceNbTax: row.invoiceNbTax,
+          supplierId: filteredSuppliers.find(
+            (s) => s.supplierName === row.supplierOfTax
+          )?.id,
+          shipping: row.shipping,
         })),
       };
 
-      const response = await axios.post(
+      const res = await axios.post(
         "http://localhost:3000/purchase-invoices",
         invoiceData
       );
-      alert(
-        `Invoice saved successfully! Invoice Number: ${response.data.invoiceNumber}`
-      );
-
-      // Reset form
-      setSupplierName("");
-      setInvoiceDate(new Date().toISOString().slice(0, 10));
-      setItems([]);
+      alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
+      resetFields();
       setShowTypePopup(false);
-    } catch (error) {
-      console.error("Failed to save invoice:", error);
-      alert("Failed to save the invoice. Please try again.");
+    } catch (err) {
+      console.error("Error saving invoice", err);
+      alert("Failed to save invoice");
     }
   };
 
@@ -215,6 +244,35 @@ const PurchasesInvoicePage = () => {
     }
   };
 
+  const handleSupplierNameChange = async (e) => {
+    const value = e.target.value;
+    setSupplierName(value);
+    setShowSupplierSuggestions(true);
+
+    if (value.length > 0) {
+      try {
+        const results = await fetchSuppliersByQuery(value);
+        setFilteredSuppliers(results);
+      } catch (error) {
+        console.error("Error fetching supplier suggestions:", error);
+      }
+    } else {
+      setFilteredSuppliers([]);
+    }
+  };
+
+  const fetchMinimalInvoices = async () => {
+    const response = await fetch(
+      "http://localhost:3000/purchase-invoices/v1/minimal"
+    );
+    return response.json();
+  };
+
+  const { data: minimalInvoices = [] } = useQuery({
+    queryKey: ["minimal-invoices"],
+    queryFn: fetchMinimalInvoices,
+  });
+
   return (
     <div className="main-container">
       <div className="purchase-invoice-container">
@@ -233,15 +291,14 @@ const PurchasesInvoicePage = () => {
         <div className="invoice-details">
           {/* ----------- ROW 1 ----------- */}
           <div className="invoice-row">
-            <label>
-              Supplier Name
-              <input
-                type="text"
-                value={supplierName}
-                onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="Enter supplier name"
-              />
-            </label>
+            <SupplierInput
+              supplierName={supplierName}
+              onSupplierNameChange={handleSupplierNameChange}
+              filteredSuppliers={filteredSuppliers}
+              showSupplierSuggestions={showSupplierSuggestions}
+              setShowSupplierSuggestions={setShowSupplierSuggestions}
+              setSelectedSupplierId={setSelectedSupplierId}
+            />
 
             <label>
               Date
@@ -394,9 +451,31 @@ const PurchasesInvoicePage = () => {
         )}
       </div>
       <div className="additional-container">
-        <h3>Additional Information</h3>
-        {/* Add your content here */}
-        <p>This is the right-side container. Add content here.</p>
+        <h3>Purchase Invoices</h3>
+        <div className="purchase-invoice-cards-wrapper">
+          {minimalInvoices.length === 0 ? (
+            <p>No invoices found.</p>
+          ) : (
+            minimalInvoices.map((invoice) => (
+              <div key={invoice.id} className="purchase-invoice-card">
+                <div className="purchase-invoice-card-header">
+                  <span className="invoice-number">
+                    {invoice.invoiceNumber}
+                  </span>
+                  <span className="invoice-date">
+                    {new Date(invoice.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="purchase-invoice-card-footer">
+               
+                  <span className="grand-total">
+                    ${Number(invoice.grandAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
