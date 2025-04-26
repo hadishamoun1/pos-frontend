@@ -33,12 +33,14 @@ const PurchasesInvoicePage = () => {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-
+  const [inputedDate, setinputedDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [items, setItems] = useState([]);
   const [potentialCost, setPotentialCost] = useState(0);
   const [shippingCost, setShippingCost] = useState(0);
   const [numberOfContainers, setNumberOfContainers] = useState(0);
-  const [vat, setVat] = useState(0);
+  const [vat, setVat] = useState(11);
   const [finalCost, setFinalCost] = useState(0);
   const [showUnitPriceModal, setShowUnitPriceModal] = useState(false);
   const [status, setStatus] = useState("Pending");
@@ -54,6 +56,10 @@ const PurchasesInvoicePage = () => {
   const [unitPriceRows, setUnitPriceRows] = useState([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+  const [shippingLine, setShippingLine] = useState("");
+  const [etd, setEtd] = useState(""); // expected time of departure
+  const [altContainers, setAltContainers] = useState(0);
+  const [blNumber, setBlNumber] = useState("");
 
   const resetFields = () => {
     setSupplierName("");
@@ -168,21 +174,24 @@ const PurchasesInvoicePage = () => {
   const saveInvoice = async (type) => {
     try {
       const supplierId = selectedSupplierId;
+      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
+      const calculatedVatAmount = totalAmount * (vat / 100);
+      const grandTotal = totalAmount + calculatedVatAmount;
 
       const invoiceData = {
         invoiceNumber,
-        date: invoiceDate,
+        date: inputedDate,
         expectedArrivalDate: invoiceDate,
         type,
         supplierId,
-        vatAmount,
-        grandAmount: totalAmount + vatAmount,
+        vatAmount: calculatedVatAmount,
+        grandAmount: grandTotal,
         exchangeRate,
         status,
-        shippingLine: "",
-        etd: invoiceDate,
-        numberOfContainers,
-        blNumber: "",
+        shippingLine: shippingLine,
+        etd: etd,
+        numberOfContainers: altContainers,
+        blNumber: blNumber,
         potentialCost,
         shippingCost,
         finalCost,
@@ -213,6 +222,7 @@ const PurchasesInvoicePage = () => {
           shipping: row.shipping,
         })),
       };
+      console.log(invoiceData);
 
       const res = await axios.post(
         "http://localhost:3000/purchase-invoices",
@@ -226,10 +236,6 @@ const PurchasesInvoicePage = () => {
       alert("Failed to save invoice");
     }
   };
-
-  const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-  const vatAmount = totalAmount * (vat / 100);
-  const grandTotal = totalAmount + vatAmount;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -304,8 +310,8 @@ const PurchasesInvoicePage = () => {
               Date
               <input
                 type="date"
-                value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
+                value={inputedDate}
+                onChange={(e) => setinputedDate(e.target.value)}
               />
             </label>
 
@@ -438,7 +444,16 @@ const PurchasesInvoicePage = () => {
             setNumberOfContainers={setNumberOfContainers}
           />
         ) : (
-          <AlternativeSummarySection />
+          <AlternativeSummarySection
+            shippingLine={shippingLine}
+            onShippingLineChange={setShippingLine}
+            etd={etd}
+            onEtdChange={setEtd}
+            numberOfContainers={altContainers}
+            onNumberOfContainersChange={setAltContainers}
+            blNumber={blNumber}
+            onBlNumberChange={setBlNumber}
+          />
         )}
 
         {/* UnitPriceModal */}

@@ -1,29 +1,57 @@
 import React from "react";
 import "./styles/alternativeSummarySection.css";
 
-const AlternativeSummarySection = () => {
+const AlternativeSummarySection = ({
+  shippingLine,
+  onShippingLineChange,
+  etd,
+  onEtdChange,
+  numberOfContainers,
+  onNumberOfContainersChange,
+  blNumber,
+  onBlNumberChange,
+}) => {
   return (
     <div className="summary-section">
-      <h4>Shipping & BL Details</h4>
+      <h4>Shipping &amp; BL Details</h4>
       <div className="alternative-fields">
         <label>
           Shipping Line
-          <input type="text" placeholder="Enter shipping line" />
+          <input
+            type="text"
+            value={shippingLine}
+            onChange={(e) => onShippingLineChange(e.target.value)}
+            placeholder="Enter shipping line"
+          />
         </label>
 
         <label>
           Expected Time Departure
-          <input type="date" />
+          <input
+            type="date"
+            value={etd}
+            onChange={(e) => onEtdChange(e.target.value)}
+          />
         </label>
 
         <label>
           Number of Containers
-          <input type="number" placeholder="e.g., 5" />
+          <input
+            type="number"
+            value={numberOfContainers}
+            onChange={(e) => onNumberOfContainersChange(Number(e.target.value))}
+            placeholder="e.g., 5"
+          />
         </label>
 
         <label>
           BL Number
-          <input type="text" placeholder="Enter BL number" />
+          <input
+            type="text"
+            value={blNumber}
+            onChange={(e) => onBlNumberChange(e.target.value)}
+            placeholder="Enter BL number"
+          />
         </label>
       </div>
     </div>
