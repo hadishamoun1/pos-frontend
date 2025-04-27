@@ -1,4 +1,6 @@
+// SummarySection.jsx
 import React from "react";
+import "./styles/summary.css";
 
 const SummarySection = ({
   totalAmount,
@@ -11,11 +13,12 @@ const SummarySection = ({
   setShippingCost,
   numberOfContainers,
   setNumberOfContainers,
+  isEditable,
 }) => {
   return (
     <div className="summary-section">
       <div className="fields">
-        {/* Row for Potential Cost and Final Cost */}
+        {/* Potential vs Final */}
         <div className="row">
           <label>
             Potential Cost
@@ -23,6 +26,7 @@ const SummarySection = ({
               type="number"
               value={potentialCost}
               onChange={(e) => setPotentialCost(Number(e.target.value))}
+              disabled={!isEditable}
             />
           </label>
           <label className="important-field">
@@ -30,13 +34,15 @@ const SummarySection = ({
             <input
               type="number"
               value={finalCost}
-              readOnly // Prevent direct editing
-              onClick={openItemModal} // Open the modal on click
-              placeholder="Click to calculate final cost"
+              readOnly
+              onClick={openItemModal}
+              className="final-cost-clickable"
+              placeholder="Click to calculate"
             />
           </label>
         </div>
-        {/* Column for Shipping Cost and Number of Containers */}
+
+        {/* Shipping & Containers */}
         <div className="column">
           <label>
             Shipping Cost
@@ -44,6 +50,7 @@ const SummarySection = ({
               type="number"
               value={shippingCost}
               onChange={(e) => setShippingCost(Number(e.target.value))}
+              disabled={!isEditable}
             />
           </label>
           <label>
@@ -52,10 +59,12 @@ const SummarySection = ({
               type="number"
               value={numberOfContainers}
               onChange={(e) => setNumberOfContainers(Number(e.target.value))}
+              disabled={!isEditable}
             />
           </label>
         </div>
       </div>
+
       <div className="totals">
         <p>Total Amount: ${totalAmount.toFixed(2)}</p>
         <p>Total Offer Amount: ${totalOfferAmount.toFixed(2)}</p>

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { FaTrash } from "react-icons/fa";
+import React from "react";
 import UnitPriceModal from "./unitPriceModel";
 
 const ItemsTable = ({
@@ -8,8 +7,10 @@ const ItemsTable = ({
   openItemModal,
   currency,
   exchangeRate,
+  isEditable,
 }) => {
   const handleItemChange = (index, field, value) => {
+    if (!isEditable) return;
     const newItems = [...items];
     newItems[index][field] = value;
 
@@ -20,10 +21,10 @@ const ItemsTable = ({
 
     // Calculate values based on the currency
     if (currency === "EURO") {
-      newItems[index].unitPrice = euroPrice ? euroPrice / exchangeRate : null;
+      newItems[index].unitPrice = euroPrice ? euroPrice / exchangeRate : 0;
       newItems[index].priceOFR = euroOfferPrice
         ? euroOfferPrice / exchangeRate
-        : null;
+        : 0;
     }
 
     const total = sqm * (newItems[index].unitPrice || 0);
@@ -40,7 +41,11 @@ const ItemsTable = ({
     <div className="items-table">
       <div className="separator">
         <h3>Items</h3>
-        <button className="select-item-button" onClick={openItemModal}>
+        <button
+          className="select-item-button"
+          onClick={openItemModal}
+          disabled={!isEditable}
+        >
           Select Item
         </button>
       </div>
@@ -80,6 +85,7 @@ const ItemsTable = ({
                   onChange={(e) =>
                     handleItemChange(index, "quantity", Number(e.target.value))
                   }
+                  disabled={!isEditable}
                 />
               </td>
               <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>
@@ -96,6 +102,7 @@ const ItemsTable = ({
                         Number(e.target.value)
                       )
                     }
+                    disabled={!isEditable}
                   />
                 </td>
               )}
@@ -113,6 +120,7 @@ const ItemsTable = ({
                         Number(e.target.value)
                       )
                     }
+                    disabled={!isEditable}
                   />
                 )}
               </td>
@@ -128,6 +136,7 @@ const ItemsTable = ({
                         Number(e.target.value)
                       )
                     }
+                    disabled={!isEditable}
                   />
                 </td>
               )}
@@ -145,6 +154,7 @@ const ItemsTable = ({
                         Number(e.target.value)
                       )
                     }
+                    disabled={!isEditable}
                   />
                 )}
               </td>
@@ -161,6 +171,7 @@ const ItemsTable = ({
                       Number(e.target.value)
                     )
                   }
+                  disabled={!isEditable}
                 />
               </td>
             </tr>

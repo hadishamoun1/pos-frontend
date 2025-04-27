@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import SupplierInput from "./SupplierInput";
 import ItemsTable from "./ItemsTable";
@@ -60,6 +60,10 @@ const PurchasesInvoicePage = () => {
   const [etd, setEtd] = useState(""); // expected time of departure
   const [altContainers, setAltContainers] = useState(0);
   const [blNumber, setBlNumber] = useState("");
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const isInvoiceSelected = selectedInvoiceId !== null;
+  const canEdit = !isInvoiceSelected || isEditMode;
 
   const resetFields = () => {
     setSupplierName("");
@@ -266,6 +270,11 @@ const PurchasesInvoicePage = () => {
       setFilteredSuppliers([]);
     }
   };
+  const fetchFullInvoice = async (id) => {
+    const res = await fetch(`http://localhost:3000/purchase-invoices/${id}`);
+    if (!res.ok) throw new Error("Error fetching invoice");
+    return res.json();
+  };
 
   const fetchMinimalInvoices = async () => {
     const response = await fetch(
@@ -279,16 +288,128 @@ const PurchasesInvoicePage = () => {
     queryFn: fetchMinimalInvoices,
   });
 
+  // ✅ object signature
+  const {
+    data: fullInvoice,
+    isLoading: isLoadingInvoice,
+    error: invoiceError,
+  } = useQuery({
+    queryKey: ["invoice", selectedInvoiceId],
+    queryFn: () => fetchFullInvoice(selectedInvoiceId),
+    enabled: Boolean(selectedInvoiceId),
+  });
+
+  useEffect(() => {
+    if (!fullInvoice) return;
+
+    // 1) supplier
+    setSupplierName(fullInvoice.supplier.supplierName);
+    setSelectedSupplierId(fullInvoice.supplier.id);
+    // 2) invoice & dates
+    setInvoiceNumber(fullInvoice.invoiceNumber);
+    setinputedDate(fullInvoice.date);
+    setInvoiceDate(fullInvoice.expectedArrivalDate?.slice(0, 10) || "");
+    // 3) status, currency, etc…
+    setStatus(fullInvoice.status);
+    setExchangeRate(Number(fullInvoice.exchangeRate));
+    setVat(Number(fullInvoice.vatAmount));
+    setShippingLine(fullInvoice.shippingLine);
+    setEtd(fullInvoice.etd);
+    setAltContainers(fullInvoice.numberOfContainers);
+    setBlNumber(fullInvoice.blNumber);
+    setPotentialCost(Number(fullInvoice.potentialCost));
+    setShippingCost(Number(fullInvoice.shippingCost));
+    setFinalCost(Number(fullInvoice.finalCost));
+    // 4) items
+    // AFTER
+    setItems(
+      fullInvoice.items.map((i) => {
+        const variant = i.itemVariant;
+        const thickness = variant.thickness;
+        const item = thickness.item;
+        return {
+          id: i.id,
+          dimensionId: i.itemVariantId,
+          // 👇 new fields from the nested relations:
+          itemName: item.itemName,
+          type: item.type,
+          origin: variant.origin,
+          length: Number(variant.length),
+          width: Number(variant.width),
+          sheetsPerBox: variant.sheetsPerBox,
+          quantity: i.numberOfContainers ?? 1,
+          // 👇 your existing numeric fields:
+          sqm: Number(i.sqm),
+          unitPrice: Number(i.unitPrice),
+          total: Number(i.totalAmount),
+          euroPrice: Number(i.euroPrice),
+          euroOfferPrice: Number(i.euroOFRPrice),
+          priceOFR: Number(i.priceOFR),
+          totalOFR: Number(i.totalOFR),
+          numberOfContainers: Number(i.numberOfContainers),
+        };
+      })
+    );
+
+    // 5) unit price rows
+    setUnitPriceRows(
+      fullInvoice.unitPriceRows.map((r) => ({
+        chargeName: r.chargeName,
+        chargeType: r.chargeType,
+        value: Number(r.value),
+        valueOFR: Number(r.valueOFR),
+        currency: r.currency,
+        valueExch: Number(r.valueExch),
+        valueExchOFR: Number(r.valueExchOFR),
+        addToItemCost: r.addToItemCost,
+        invoiceNbTax: r.invoiceNbTax,
+        shipping: r.shipping,
+      }))
+    );
+  }, [fullInvoice]);
+
   return (
     <div className="main-container">
       <div className="purchase-invoice-container">
         <div className="header">
-          <h2>Create Purchase Invoice</h2>
+          <h2>
+            {isInvoiceSelected
+              ? isEditMode
+                ? "Edit Purchase Invoice"
+                : "View Purchase Invoice"
+              : "Create Purchase Invoice"}
+          </h2>
           <div className="button-container">
-            <button className="save-button" onClick={handleSaveButtonClick}>
-              Save Invoice
-            </button>
-            <button className="new-button" onClick={resetFields}>
+            {isInvoiceSelected ? (
+              isEditMode ? (
+                // when in edit‐mode, show Save
+                <button className="save-button" onClick={handleSaveButtonClick}>
+                  Save Invoice
+                </button>
+              ) : (
+                // when an invoice is selected but not yet “in edit mode”
+                <button
+                  className="edit-button"
+                  onClick={() => setIsEditMode(true)}
+                >
+                  Edit Invoice
+                </button>
+              )
+            ) : (
+              // creating a brand new invoice
+              <button className="save-button" onClick={handleSaveButtonClick}>
+                Save Invoice
+              </button>
+            )}
+
+            <button
+              className="new-button"
+              onClick={() => {
+                resetFields();
+                setSelectedInvoiceId(null);
+                setIsEditMode(false);
+              }}
+            >
               New
             </button>
           </div>
@@ -304,6 +425,7 @@ const PurchasesInvoicePage = () => {
               showSupplierSuggestions={showSupplierSuggestions}
               setShowSupplierSuggestions={setShowSupplierSuggestions}
               setSelectedSupplierId={setSelectedSupplierId}
+              disabled={!canEdit}
             />
 
             <label>
@@ -312,6 +434,7 @@ const PurchasesInvoicePage = () => {
                 type="date"
                 value={inputedDate}
                 onChange={(e) => setinputedDate(e.target.value)}
+                disabled={!canEdit}
               />
             </label>
 
@@ -322,6 +445,7 @@ const PurchasesInvoicePage = () => {
                 placeholder="Enter invoice number"
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
+                disabled={!canEdit}
               />
             </label>
           </div>
@@ -330,7 +454,11 @@ const PurchasesInvoicePage = () => {
           <div className="invoice-row">
             <label>
               Currency
-              <select value={currency} onChange={handleCurrencyChange}>
+              <select
+                value={currency}
+                onChange={handleCurrencyChange}
+                disabled={!canEdit}
+              >
                 <option value="USD">USD</option>
                 <option value="EURO">EURO</option>
               </select>
@@ -341,6 +469,7 @@ const PurchasesInvoicePage = () => {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
+                disabled={!canEdit}
                 style={{
                   backgroundColor: status ? getStatusColor(status) : "white",
                 }}
@@ -356,6 +485,7 @@ const PurchasesInvoicePage = () => {
               Expected Arrival Date
               <input
                 type="date"
+                disabled={!canEdit}
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
               />
@@ -369,6 +499,7 @@ const PurchasesInvoicePage = () => {
           openItemModal={() => setShowItemModal(true)}
           currency={currency}
           exchangeRate={exchangeRate}
+          isEditable={canEdit}
         />
 
         {showItemModal && (
@@ -379,6 +510,7 @@ const PurchasesInvoicePage = () => {
             selectedItems={selectedItems}
             handleCheckboxChange={handleCheckboxChange}
             closeItemModal={closeItemModal}
+            isEditable={canEdit}
           />
         )}
 
@@ -442,6 +574,7 @@ const PurchasesInvoicePage = () => {
             setShippingCost={setShippingCost}
             numberOfContainers={numberOfContainers}
             setNumberOfContainers={setNumberOfContainers}
+            isEditable={canEdit}
           />
         ) : (
           <AlternativeSummarySection
@@ -453,6 +586,7 @@ const PurchasesInvoicePage = () => {
             onNumberOfContainersChange={setAltContainers}
             blNumber={blNumber}
             onBlNumberChange={setBlNumber}
+            isEditable={canEdit}
           />
         )}
 
@@ -462,17 +596,23 @@ const PurchasesInvoicePage = () => {
             isVisible={showUnitPriceModal}
             onClose={() => setShowUnitPriceModal(false)}
             onSave={handleModalSave}
+            isEditable={canEdit}
+            invoiceId={isInvoiceSelected ? selectedInvoiceId : null}
           />
         )}
       </div>
       <div className="additional-container">
-        <h3>Purchase Invoices</h3>
+        <h3 className="tittle-label">Purchase Invoices</h3>
         <div className="purchase-invoice-cards-wrapper">
           {minimalInvoices.length === 0 ? (
             <p>No invoices found.</p>
           ) : (
             minimalInvoices.map((invoice) => (
-              <div key={invoice.id} className="purchase-invoice-card">
+              <div
+                key={invoice.id}
+                className="purchase-invoice-card"
+                onClick={() => setSelectedInvoiceId(invoice.id)}
+              >
                 <div className="purchase-invoice-card-header">
                   <div className="supplier-name">
                     {invoice.supplier?.supplierName || "Unknown Supplier"}

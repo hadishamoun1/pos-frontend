@@ -109,16 +109,19 @@
 }
 /* Footer (Grand Total) */
 .purchase-invoice-card-footer {
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 12px;
   padding-top: 8px;
-
 }
 
 .grand-total {
   font-size: 18px;
   font-weight: bolder;
   color: #333;
+}
+.tittle-label {
+  border-bottom: 1px solid #333;
+  margin-bottom: 10px;
 }
