@@ -1,8 +1,8 @@
 /* Header Section */
 .header {
   display: flex;
-  justify-content: space-between; 
-  align-items: center; 
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 30px;
 }
 
@@ -18,9 +18,9 @@
 /* Buttons Wrapper */
 .button-container {
   display: flex;
-  gap: 10px; 
-  justify-content: flex-end; 
-  width: 100%; 
+  gap: 10px;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 /* Save Button */
@@ -44,11 +44,33 @@
   background-color: #01b94e;
   color: white;
   border: 1px solid #ddd;
-  padding: 12px 24px; 
+  padding: 12px 24px;
   border-radius: 5px;
   cursor: pointer;
 }
 
 .new-button:hover {
   background-color: #038f3d;
+}
+.cancel-button {
+  background-color: #e53e3e;
+  color: white; /* a strong red for “cancel” */
+  border: 1px solid #e53e3e;
+  padding: 0.5rem 1rem; /* adjust for button size */
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: #a10000;
+  border: 1px solid #a10000;
+  color: #fff;
+}
+
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
