@@ -368,6 +368,78 @@ const PurchasesInvoicePage = () => {
     );
   }, [fullInvoice]);
 
+  const populateFromInvoice = (inv) => {
+    setSupplierName(inv.supplier.supplierName);
+    setSelectedSupplierId(inv.supplier.id);
+    setInvoiceNumber(inv.invoiceNumber);
+    setinputedDate(inv.date);
+    setInvoiceDate(inv.expectedArrivalDate?.slice(0, 10) || "");
+    setStatus(inv.status);
+    setExchangeRate(Number(inv.exchangeRate));
+    setVat(Number(inv.vatAmount));
+    setShippingLine(inv.shippingLine);
+    setEtd(inv.etd);
+    setAltContainers(inv.numberOfContainers);
+    setBlNumber(inv.blNumber);
+    setPotentialCost(Number(inv.potentialCost));
+    setShippingCost(Number(inv.shippingCost));
+    setFinalCost(Number(inv.finalCost));
+    setItems(
+      inv.items.map((i) => {
+        const v = i.itemVariant,
+          t = v.thickness,
+          it = t.item;
+        return {
+          id: i.id,
+          dimensionId: i.itemVariantId,
+          itemName: it.itemName,
+          type: it.type,
+          origin: v.origin,
+          length: Number(v.length),
+          width: Number(v.width),
+          sheetsPerBox: v.sheetsPerBox,
+          quantity: i.numberOfContainers ?? 1,
+          sqm: Number(i.sqm),
+          unitPrice: Number(i.unitPrice),
+          total: Number(i.totalAmount),
+          euroPrice: Number(i.euroPrice),
+          euroOfferPrice: Number(i.euroOFRPrice),
+          priceOFR: Number(i.priceOFR),
+          totalOFR: Number(i.totalOFR),
+          numberOfContainers: Number(i.numberOfContainers),
+        };
+      })
+    );
+    setUnitPriceRows(
+      inv.unitPriceRows.map((r) => ({
+        chargeName: r.chargeName,
+        chargeType: r.chargeType,
+        value: Number(r.value),
+        valueOFR: Number(r.valueOFR),
+        currency: r.currency,
+        valueExch: Number(r.valueExch),
+        valueExchOFR: Number(r.valueExchOFR),
+        addToItemCost: r.addToItemCost,
+        invoiceNbTax: r.invoiceNbTax,
+        shipping: r.shipping,
+      }))
+    );
+  };
+  useEffect(() => {
+    if (fullInvoice) {
+      populateFromInvoice(fullInvoice);
+    }
+  }, [fullInvoice]);
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    if (fullInvoice) {
+      populateFromInvoice(fullInvoice);
+    } else {
+      resetFields();
+    }
+  };
+
   return (
     <div className="main-container">
       <div className="purchase-invoice-container">
@@ -382,12 +454,18 @@ const PurchasesInvoicePage = () => {
           <div className="button-container">
             {isInvoiceSelected ? (
               isEditMode ? (
-                // when in edit‐mode, show Save
-                <button className="save-button" onClick={handleSaveButtonClick}>
-                  Save Invoice
-                </button>
+                <>
+                  <button
+                    className="save-button"
+                    onClick={handleSaveButtonClick}
+                  >
+                    Save Invoice
+                  </button>
+                  <button className="cancel-button" onClick={handleCancelEdit}>
+                    Cancel
+                  </button>
+                </>
               ) : (
-                // when an invoice is selected but not yet “in edit mode”
                 <button
                   className="edit-button"
                   onClick={() => setIsEditMode(true)}
@@ -396,7 +474,6 @@ const PurchasesInvoicePage = () => {
                 </button>
               )
             ) : (
-              // creating a brand new invoice
               <button className="save-button" onClick={handleSaveButtonClick}>
                 Save Invoice
               </button>
