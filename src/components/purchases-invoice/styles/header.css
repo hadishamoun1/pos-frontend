@@ -33,6 +33,7 @@
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.3s;
+  font-size: 1rem;
 }
 
 .save-button:hover {
@@ -47,6 +48,7 @@
   padding: 12px 24px;
   border-radius: 5px;
   cursor: pointer;
+  font-size: 1rem;
 }
 
 .new-button:hover {

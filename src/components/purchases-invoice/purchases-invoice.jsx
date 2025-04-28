@@ -175,6 +175,10 @@ const PurchasesInvoicePage = () => {
     setShowUnitPriceModal(false);
   };
 
+  useEffect(() => {
+        setIsEditMode(false);
+      }, [selectedInvoiceId]);
+
   const saveInvoice = async (type) => {
     try {
       const supplierId = selectedSupplierId;
@@ -459,7 +463,7 @@ const PurchasesInvoicePage = () => {
                     className="save-button"
                     onClick={handleSaveButtonClick}
                   >
-                    Save Invoice
+                    Save 
                   </button>
                   <button className="cancel-button" onClick={handleCancelEdit}>
                     Cancel

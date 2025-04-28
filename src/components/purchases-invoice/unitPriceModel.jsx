@@ -11,9 +11,16 @@ export default function UnitPriceModal({
   invoiceId, // ← new prop
 }) {
   const [rows, setRows] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
 
   useEffect(() => {
     if (!isVisible) return;
+
+    // fetch all suppliers
+    axios
+      .get("http://localhost:3000/suppliers")
+      .then((res) => setSuppliers(res.data))
+      .catch(console.error);
 
     if (invoiceId) {
       // Editing an existing invoice: fetch its saved unitPriceRows
@@ -32,7 +39,7 @@ export default function UnitPriceModal({
               valueExchOFR: Number(r.valueExchOFR),
               addToItemCost: r.addToItemCost,
               invoiceNbTax: r.invoiceNbTax,
-              supplierOfTax: "", // you can map r.supplierId → name if you like
+              supplierId: r.supplierId,
               accNbOfSupplier: "",
               shipping: r.shipping,
             }))
@@ -64,6 +71,23 @@ export default function UnitPriceModal({
         .catch(console.error);
     }
   }, [isVisible, invoiceId]);
+  useEffect(() => {
+    if (!suppliers.length) return;
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.supplierId) {
+          const sup = suppliers.find((s) => s.id === r.supplierId);
+          return {
+            ...r,
+            // top-level supplierAccountNumber or nested account.accountNumber?
+            accNbOfSupplier:
+              sup?.account?.accountNumber || sup?.supplierAccountNumber || "",
+          };
+        }
+        return r;
+      })
+    );
+  }, [suppliers]);
 
   const handleInput = (i, field, val) => {
     const copy = [...rows];
@@ -74,6 +98,17 @@ export default function UnitPriceModal({
     const copy = [...rows];
     copy[i][field] = !copy[i][field];
     setRows(copy);
+  };
+  // replace your existing handleSupplierChange with this:
+
+  const handleSupplierChange = (i, supplierId) => {
+    setRows((rs) => {
+      const copy = [...rs];
+      copy[i].supplierId = +supplierId;
+      const sup = suppliers.find((s) => s.id === +supplierId);
+      copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
+      return copy;
+    });
   };
 
   const save = () => onSave(rows);
@@ -101,7 +136,7 @@ export default function UnitPriceModal({
                 <th>Exch. OFR</th>
                 <th>ATC</th>
                 <th>Nb Tax</th>
-                <th>Supplier Tax</th>
+                <th>Supplier of Tax</th>
                 <th>Acc. Nb</th>
                 <th>Shipping</th>
               </tr>
@@ -199,21 +234,24 @@ export default function UnitPriceModal({
                     />
                   </td>
                   <td>
-                    <input
+                    <select
                       disabled={!isEditable}
-                      value={r.supplierOfTax}
-                      onChange={(e) =>
-                        handleInput(i, "supplierOfTax", e.target.value)
-                      }
-                    />
+                      value={r.supplierId || ""}
+                      onChange={(e) => handleSupplierChange(i, e.target.value)}
+                    >
+                      <option value="">-- select supplier --</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.supplierName}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <input
-                      disabled={!isEditable}
+                      readOnly
                       value={r.accNbOfSupplier}
-                      onChange={(e) =>
-                        handleInput(i, "accNbOfSupplier", e.target.value)
-                      }
+                      placeholder="Acct #"
                     />
                   </td>
                   <td>

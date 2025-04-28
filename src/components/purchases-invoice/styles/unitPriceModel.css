@@ -15,7 +15,7 @@
   background: white;
   border-radius: 10px;
   padding: 20px;
-  width: 90%;
+  width: 100%;
   max-width: 1800px;
   height: 90vh;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -147,4 +147,50 @@
 .unit-price-table td input[type="checkbox"]:focus {
   outline: none;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+
+
+.unit-price-table th:nth-child(2),
+.unit-price-table td:nth-child(2) {
+  width: 100px; /* or whatever you prefer */
+  max-width: 100px;
+}
+
+/* tighten up the Currency column */
+.unit-price-table th:nth-child(5),
+.unit-price-table td:nth-child(5) {
+  width: 80px; /* or whatever you prefer */
+  max-width: 80px;
+}
+
+/* tighten up the Exch. OFR (if that’s 7th) */
+.unit-price-table th:nth-child(7),
+.unit-price-table td:nth-child(7) {
+  width: 140px;
+  max-width: 140px;
+}
+.unit-price-table th:nth-child(11),
+.unit-price-table td:nth-child(11) {
+  width: 100px;
+  max-width: 100px;
+}
+
+/* make the supplier‐of‐tax dropdown narrower (10th) */
+.unit-price-table th:nth-child(10),
+.unit-price-table td:nth-child(10) {
+  width: 200px;
+  max-width: 200px;
+}
+
+/* shrink the Shipping checkbox column (12th) */
+.unit-price-table th:nth-child(12),
+.unit-price-table td:nth-child(12) {
+  width: 70px;
+  max-width:70px;
+}
+.unit-price-table th:nth-child(8),
+.unit-price-table td:nth-child(8) {
+  width: 70px;
+  max-width:70px;
 }
