@@ -64,6 +64,7 @@ const PurchasesInvoicePage = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const isInvoiceSelected = selectedInvoiceId !== null;
   const canEdit = !isInvoiceSelected || isEditMode;
+  const [invoiceType, setInvoiceType] = useState("S");
 
   const resetFields = () => {
     setSupplierName("");
@@ -80,6 +81,7 @@ const PurchasesInvoicePage = () => {
     setExchangeRate(1.5);
     setInvoiceNumber("");
     setFinalCost(0);
+    setInvoiceType("S");
   };
 
   const handleCurrencyChange = (e) => {
@@ -161,10 +163,6 @@ const PurchasesInvoicePage = () => {
     setShowItemModal(false);
   };
 
-  const handleSaveButtonClick = () => {
-    setShowTypePopup(true);
-  };
-
   const handleModalSave = (data) => {
     setUnitPriceRows(data); // Save modal rows
     const total = data.reduce(
@@ -176,8 +174,8 @@ const PurchasesInvoicePage = () => {
   };
 
   useEffect(() => {
-        setIsEditMode(false);
-      }, [selectedInvoiceId]);
+    setIsEditMode(false);
+  }, [selectedInvoiceId]);
 
   const saveInvoice = async (type) => {
     try {
@@ -215,6 +213,7 @@ const PurchasesInvoicePage = () => {
           numberOfContainers: item.numberOfContainers,
         })),
         unitPriceRows: unitPriceRows.map((row) => ({
+          purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
           chargeName: row.chargeName,
           chargeType: row.chargeType,
           value: row.value,
@@ -224,9 +223,7 @@ const PurchasesInvoicePage = () => {
           valueExchOFR: row.valueExchOFR,
           addToItemCost: row.addToItemCost,
           invoiceNbTax: row.invoiceNbTax,
-          supplierId: filteredSuppliers.find(
-            (s) => s.supplierName === row.supplierOfTax
-          )?.id,
+          supplierId: row.supplierId,
           shipping: row.shipping,
         })),
       };
@@ -324,6 +321,7 @@ const PurchasesInvoicePage = () => {
     setPotentialCost(Number(fullInvoice.potentialCost));
     setShippingCost(Number(fullInvoice.shippingCost));
     setFinalCost(Number(fullInvoice.finalCost));
+    setInvoiceType(fullInvoice.type);
     // 4) items
     // AFTER
     setItems(
@@ -388,6 +386,7 @@ const PurchasesInvoicePage = () => {
     setPotentialCost(Number(inv.potentialCost));
     setShippingCost(Number(inv.shippingCost));
     setFinalCost(Number(inv.finalCost));
+    setInvoiceType(inv.type);
     setItems(
       inv.items.map((i) => {
         const v = i.itemVariant,
@@ -461,9 +460,9 @@ const PurchasesInvoicePage = () => {
                 <>
                   <button
                     className="save-button"
-                    onClick={handleSaveButtonClick}
+                    onClick={() => saveInvoice(invoiceType)}
                   >
-                    Save 
+                    Save
                   </button>
                   <button className="cancel-button" onClick={handleCancelEdit}>
                     Cancel
@@ -478,7 +477,10 @@ const PurchasesInvoicePage = () => {
                 </button>
               )
             ) : (
-              <button className="save-button" onClick={handleSaveButtonClick}>
+              <button
+                className="save-button"
+                onClick={() => saveInvoice(invoiceType)}
+              >
                 Save Invoice
               </button>
             )}
@@ -529,6 +531,13 @@ const PurchasesInvoicePage = () => {
                 disabled={!canEdit}
               />
             </label>
+            <label>
+              Exchange Rate
+              <select disabled={!canEdit}>
+                <option value="89,500">89,500</option>
+                <option value="1500">1500</option>
+              </select>
+            </label>
           </div>
 
           {/* ----------- ROW 2 ----------- */}
@@ -571,6 +580,18 @@ const PurchasesInvoicePage = () => {
                 onChange={(e) => setInvoiceDate(e.target.value)}
               />
             </label>
+            <label>
+              Type
+              <select
+                value={invoiceType}
+                onChange={(e) => setInvoiceType(e.target.value)}
+                disabled={!canEdit}
+              >
+                <option value="S">S</option>
+                <option value="G">G</option>
+                <option value="SR">SR</option>
+              </select>
+            </label>
           </div>
         </div>
 
@@ -581,6 +602,7 @@ const PurchasesInvoicePage = () => {
           currency={currency}
           exchangeRate={exchangeRate}
           isEditable={canEdit}
+          invoiceType={invoiceType}
         />
 
         {showItemModal && (

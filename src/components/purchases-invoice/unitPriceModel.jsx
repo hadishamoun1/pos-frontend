@@ -40,7 +40,8 @@ export default function UnitPriceModal({
               addToItemCost: r.addToItemCost,
               invoiceNbTax: r.invoiceNbTax,
               supplierId: r.supplierId,
-              accNbOfSupplier: "",
+              supplierOfTax: r.supplier?.supplierName || "",
+              accNbOfSupplier: r.supplier?.account?.accountNumber || "",
               shipping: r.shipping,
             }))
           );
@@ -53,6 +54,7 @@ export default function UnitPriceModal({
         .then((res) => {
           setRows(
             res.data.map((row) => ({
+              purchaseInvoiceSettingId: row.id,
               chargeName: row.chargeName || "",
               chargeType: row.type || "amount",
               value: row.value || 0,
@@ -79,7 +81,6 @@ export default function UnitPriceModal({
           const sup = suppliers.find((s) => s.id === r.supplierId);
           return {
             ...r,
-            // top-level supplierAccountNumber or nested account.accountNumber?
             accNbOfSupplier:
               sup?.account?.accountNumber || sup?.supplierAccountNumber || "",
           };
