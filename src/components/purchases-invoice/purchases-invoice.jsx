@@ -203,6 +203,7 @@ const PurchasesInvoicePage = () => {
         finalCost,
         items: items.map((item) => ({
           itemVariantId: item.dimensionId,
+          quantity:item.quantity,
           sqm: item.sqm,
           unitPrice: item.unitPrice,
           totalAmount: item.total,
@@ -213,6 +214,7 @@ const PurchasesInvoicePage = () => {
           numberOfContainers: item.numberOfContainers,
         })),
         unitPriceRows: unitPriceRows.map((row) => ({
+          id: row.id,
           purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
           chargeName: row.chargeName,
           chargeType: row.chargeType,
@@ -228,12 +230,27 @@ const PurchasesInvoicePage = () => {
         })),
       };
       console.log(invoiceData);
-
-      const res = await axios.post(
-        "http://localhost:3000/purchase-invoices",
-        invoiceData
-      );
-      alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
+      let res;
+      if (isInvoiceSelected) {
+        // editing existing invoice
+        console.log(
+          "PUT /purchase-invoices payload:",
+          JSON.stringify(invoiceData, null, 2)
+        );
+        res = await axios.put(
+          `http://localhost:3000/purchase-invoices/${selectedInvoiceId}`,
+          invoiceData
+        );
+        alert(`Invoice updated successfully: ${res.data.invoiceNumber}`);
+        setIsEditMode(false);
+      } else {
+        // creating new invoice
+        res = await axios.post(
+          "http://localhost:3000/purchase-invoices",
+          invoiceData
+        );
+        alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
+      }
       resetFields();
       setShowTypePopup(false);
     } catch (err) {
@@ -339,7 +356,7 @@ const PurchasesInvoicePage = () => {
           length: Number(variant.length),
           width: Number(variant.width),
           sheetsPerBox: variant.sheetsPerBox,
-          quantity: i.numberOfContainers ?? 1,
+          quantity: i.quantity ?? 1,
           // 👇 your existing numeric fields:
           sqm: Number(i.sqm),
           unitPrice: Number(i.unitPrice),
@@ -356,6 +373,9 @@ const PurchasesInvoicePage = () => {
     // 5) unit price rows
     setUnitPriceRows(
       fullInvoice.unitPriceRows.map((r) => ({
+        id: r.id,
+        purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
+        supplierId: r.supplierId,
         chargeName: r.chargeName,
         chargeType: r.chargeType,
         value: Number(r.value),
@@ -401,7 +421,7 @@ const PurchasesInvoicePage = () => {
           length: Number(v.length),
           width: Number(v.width),
           sheetsPerBox: v.sheetsPerBox,
-          quantity: i.numberOfContainers ?? 1,
+          quantity: i.quantity ?? 1,
           sqm: Number(i.sqm),
           unitPrice: Number(i.unitPrice),
           total: Number(i.totalAmount),
@@ -415,6 +435,8 @@ const PurchasesInvoicePage = () => {
     );
     setUnitPriceRows(
       inv.unitPriceRows.map((r) => ({
+        id: r.id,
+        purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
         chargeName: r.chargeName,
         chargeType: r.chargeType,
         value: Number(r.value),
@@ -424,6 +446,7 @@ const PurchasesInvoicePage = () => {
         valueExchOFR: Number(r.valueExchOFR),
         addToItemCost: r.addToItemCost,
         invoiceNbTax: r.invoiceNbTax,
+        supplierId: r.supplierId,
         shipping: r.shipping,
       }))
     );
@@ -533,10 +556,15 @@ const PurchasesInvoicePage = () => {
             </label>
             <label>
               Exchange Rate
-              <select disabled={!canEdit}>
-                <option value="89,500">89,500</option>
-                <option value="1500">1500</option>
-              </select>
+              <input
+                type="number"
+                step="0.0001"
+                value={exchangeRate}
+                onChange={(e) =>
+                  setExchangeRate(parseFloat(e.target.value) || 0)
+                }
+                disabled={!canEdit}
+              />
             </label>
           </div>
 

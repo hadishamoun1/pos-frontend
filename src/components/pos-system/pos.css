@@ -207,25 +207,6 @@
   transform: scale(1.05);
 }
 
-/* Delete Button */
-.pos-page-delete-cell {
-  width: 50px;
-  text-align: center;
-}
-
-.pos-page-delete-button {
-  background: none;
-  border: none;
-  color: red;
-  cursor: pointer;
-  font-size: 1.5rem;
-  transition: color 0.2s ease, transform 0.2s ease;
-}
-
-.pos-page-delete-button:hover {
-  color: darkred;
-  transform: scale(1.2);
-}
 
 .pos-page-customer-name-row {
   width: 100%;

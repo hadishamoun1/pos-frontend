@@ -8,7 +8,7 @@ export default function UnitPriceModal({
   onClose,
   onSave,
   isEditable,
-  invoiceId, // ← new prop
+  invoiceId, // ← optional for edit
 }) {
   const [rows, setRows] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -16,20 +16,21 @@ export default function UnitPriceModal({
   useEffect(() => {
     if (!isVisible) return;
 
-    // fetch all suppliers
+    // 1) fetch all suppliers for the dropdown
     axios
       .get("http://localhost:3000/suppliers")
       .then((res) => setSuppliers(res.data))
       .catch(console.error);
 
     if (invoiceId) {
-      // Editing an existing invoice: fetch its saved unitPriceRows
+      // 2a) Editing existing invoice → load its saved rows
       axios
         .get(`http://localhost:3000/purchase-invoices/${invoiceId}`)
         .then((res) => {
-          // assume res.data.unitPriceRows matches shape you need
           setRows(
             res.data.unitPriceRows.map((r) => ({
+              id: r.id,
+              purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
               chargeName: r.chargeName,
               chargeType: r.chargeType,
               value: Number(r.value),
@@ -39,7 +40,7 @@ export default function UnitPriceModal({
               valueExchOFR: Number(r.valueExchOFR),
               addToItemCost: r.addToItemCost,
               invoiceNbTax: r.invoiceNbTax,
-              supplierId: r.supplierId,
+              supplierId: r.supplierId, // ← carry through
               supplierOfTax: r.supplier?.supplierName || "",
               accNbOfSupplier: r.supplier?.account?.accountNumber || "",
               shipping: r.shipping,
@@ -48,13 +49,14 @@ export default function UnitPriceModal({
         })
         .catch(console.error);
     } else {
-      // New invoice: load default settings
+      // 2b) New invoice → load default settings
       axios
         .get("http://localhost:3000/purchase-invoice-setting")
         .then((res) => {
           setRows(
             res.data.map((row) => ({
-              purchaseInvoiceSettingId: row.id,
+              id: undefined, // new row
+              purchaseInvoiceSettingId: row.id, // required FK
               chargeName: row.chargeName || "",
               chargeType: row.type || "amount",
               value: row.value || 0,
@@ -64,6 +66,7 @@ export default function UnitPriceModal({
               valueExchOFR: 0,
               addToItemCost: row.atc || false,
               invoiceNbTax: "",
+              supplierId: null, // must include
               supplierOfTax: "",
               accNbOfSupplier: "",
               shipping: row.shipping || false,
@@ -73,6 +76,8 @@ export default function UnitPriceModal({
         .catch(console.error);
     }
   }, [isVisible, invoiceId]);
+
+  // fill in account-number once suppliers arrive
   useEffect(() => {
     if (!suppliers.length) return;
     setRows((rs) =>
@@ -92,7 +97,7 @@ export default function UnitPriceModal({
 
   const handleInput = (i, field, val) => {
     const copy = [...rows];
-    copy[i][field] = field === "chargeType" ? val : isNaN(+val) ? val : +val;
+    copy[i][field] = field === "chargeType" ? val : +val || val;
     setRows(copy);
   };
   const handleToggle = (i, field) => {
@@ -100,16 +105,13 @@ export default function UnitPriceModal({
     copy[i][field] = !copy[i][field];
     setRows(copy);
   };
-  // replace your existing handleSupplierChange with this:
 
-  const handleSupplierChange = (i, supplierId) => {
-    setRows((rs) => {
-      const copy = [...rs];
-      copy[i].supplierId = +supplierId;
-      const sup = suppliers.find((s) => s.id === +supplierId);
-      copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
-      return copy;
-    });
+  const handleSupplierChange = (i, supId) => {
+    const copy = [...rows];
+    copy[i].supplierId = +supId;
+    const sup = suppliers.find((s) => s.id === +supId);
+    copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
+    setRows(copy);
   };
 
   const save = () => onSave(rows);
@@ -237,10 +239,10 @@ export default function UnitPriceModal({
                   <td>
                     <select
                       disabled={!isEditable}
-                      value={r.supplierId || ""}
+                      value={r.supplierId ?? ""}
                       onChange={(e) => handleSupplierChange(i, e.target.value)}
                     >
-                      <option value="">-- select supplier --</option>
+                      <option value="">-- select --</option>
                       {suppliers.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.supplierName}

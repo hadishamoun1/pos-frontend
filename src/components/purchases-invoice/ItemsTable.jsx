@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function ItemsTable({
   items,
@@ -9,19 +9,17 @@ export default function ItemsTable({
   isEditable,
   invoiceType,
 }) {
+  // existing change handler…
   const handleItemChange = (index, field, value) => {
     if (!isEditable) return;
     const newItems = [...items];
     newItems[index][field] = value;
-
     const { length, width, quantity, sheetsPerBox, euroPrice, euroOfferPrice } =
       newItems[index];
 
-    // calculate sqm
     const sqm = (length * width * quantity * sheetsPerBox) / 10000;
     newItems[index].sqm = sqm;
 
-    // if viewing in EURO, convert euroPrice→unitPrice and euroOfferPrice→priceOFR
     if (currency === "EURO") {
       newItems[index].unitPrice = euroPrice ? euroPrice / exchangeRate : 0;
       newItems[index].priceOFR = euroOfferPrice
@@ -29,25 +27,52 @@ export default function ItemsTable({
         : 0;
     }
 
-    // enforce invoiceType rules
     if (invoiceType === "G") {
-      // Goods only: no unit price
       newItems[index].unitPrice = 0;
     } else if (invoiceType === "S") {
-      // Services only: mirror unitPrice into priceOFR
       newItems[index].priceOFR = newItems[index].unitPrice;
     }
-    // SR: both are user-editable, so no override
 
-    // recalc totals
     newItems[index].total = sqm * (newItems[index].unitPrice || 0);
     newItems[index].totalOFR = sqm * (newItems[index].priceOFR || 0);
 
     setItems(newItems);
   };
 
+  // ── new delete menu state ──
+  const [deleteMenu, setDeleteMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+  });
+
+  // close anywhere
+  const closeDeleteMenu = () =>
+    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+
+  // on right-click row
+  const handleRowContext = (e, index) => {
+    e.preventDefault();
+    if (!isEditable) return;
+    setDeleteMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      rowIndex: index,
+    });
+  };
+
+  // delete that single row
+  const handleDeleteSingle = () => {
+    const { rowIndex } = deleteMenu;
+    if (rowIndex == null) return;
+    setItems(items.filter((_, i) => i !== rowIndex));
+    closeDeleteMenu();
+  };
+
   return (
-    <div className="items-table">
+    <div className="items-table" onClick={closeDeleteMenu}>
       <div className="separator">
         <h3>Items</h3>
         <button
@@ -81,7 +106,10 @@ export default function ItemsTable({
         </thead>
         <tbody>
           {items.map((item, index) => (
-            <tr key={item.id || index}>
+            <tr
+              key={item.id || index}
+              onContextMenu={(e) => handleRowContext(e, index)}
+            >
               <td>{item.itemName}</td>
               <td>{item.type}</td>
               <td>{item.origin}</td>
@@ -99,7 +127,6 @@ export default function ItemsTable({
               </td>
               <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>
               <td>{(item.sqm || 0).toFixed(2)}</td>
-
               {currency === "EURO" && (
                 <td>
                   <input
@@ -116,7 +143,6 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-
               {invoiceType !== "G" && (
                 <td>
                   <input
@@ -133,7 +159,6 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-
               {currency === "EURO" && (
                 <td>
                   <input
@@ -150,7 +175,6 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-
               {invoiceType !== "S" && (
                 <td>
                   <input
@@ -167,7 +191,6 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-
               <td>{(item.total || 0).toFixed(2)}</td>
               <td>{(item.totalOFR || 0).toFixed(2)}</td>
               <td>
@@ -188,6 +211,20 @@ export default function ItemsTable({
           ))}
         </tbody>
       </table>
+      {deleteMenu.visible && (
+        <div
+          className="context-menu-purchases"
+          style={{
+            top: deleteMenu.y,
+            left: deleteMenu.x,
+            position: "absolute",
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button onClick={handleDeleteSingle}>Delete</button>
+        </div>
+      )}
     </div>
   );
 }
