@@ -149,8 +149,6 @@
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 
-
-
 .unit-price-table th:nth-child(2),
 .unit-price-table td:nth-child(2) {
   width: 100px; /* or whatever you prefer */
@@ -187,10 +185,51 @@
 .unit-price-table th:nth-child(12),
 .unit-price-table td:nth-child(12) {
   width: 70px;
-  max-width:70px;
+  max-width: 70px;
 }
 .unit-price-table th:nth-child(8),
 .unit-price-table td:nth-child(8) {
   width: 70px;
-  max-width:70px;
+  max-width: 70px;
+}
+
+/* Add Row button */
+.unit-price-add-row-button {
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  background-color: #029202;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.unit-price-add-row-button:hover {
+  background-color: #015801;
+}
+
+.unit-price-add-row-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.unit-price-save-button {
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  background-color: #004ea7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.unit-price-save-button:hover {
+  background-color: #002c52;
+}
+
+.unit-price-save-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }

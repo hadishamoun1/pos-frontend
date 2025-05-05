@@ -13,17 +13,72 @@ export default function UnitPriceModal({
   const [rows, setRows] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
 
+  // delete‐menu state
+  const [deleteMenu, setDeleteMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+  });
+
+  // Close delete menu
+  const closeDeleteMenu = () =>
+    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+
+  // Right-click handler
+  const handleRowContext = (e, index) => {
+    e.preventDefault();
+    if (!isEditable) return;
+    setDeleteMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      rowIndex: index,
+    });
+  };
+
+  // Delete one row
+  const handleDeleteRow = () => {
+    if (deleteMenu.rowIndex == null) return;
+    setRows(rows.filter((_, i) => i !== deleteMenu.rowIndex));
+    closeDeleteMenu();
+  };
+
+  // Add a blank row
+  const handleAddRow = () => {
+    setRows([
+      ...rows,
+      {
+        id: undefined,
+        purchaseInvoiceSettingId: null,
+        chargeName: "",
+        chargeType: "amount",
+        value: 0,
+        valueOFR: 0,
+        currency: "usd",
+        valueExch: 0,
+        valueExchOFR: 0,
+        addToItemCost: false,
+        invoiceNbTax: "",
+        supplierId: null,
+        supplierOfTax: "",
+        accNbOfSupplier: "",
+        shipping: false,
+      },
+    ]);
+  };
+
   useEffect(() => {
     if (!isVisible) return;
 
-    // 1) fetch all suppliers for the dropdown
+    // 1) load suppliers
     axios
       .get("http://localhost:3000/suppliers")
       .then((res) => setSuppliers(res.data))
       .catch(console.error);
 
     if (invoiceId) {
-      // 2a) Editing existing invoice → load its saved rows
+      // 2a) editing → load existing rows
       axios
         .get(`http://localhost:3000/purchase-invoices/${invoiceId}`)
         .then((res) => {
@@ -40,7 +95,7 @@ export default function UnitPriceModal({
               valueExchOFR: Number(r.valueExchOFR),
               addToItemCost: r.addToItemCost,
               invoiceNbTax: r.invoiceNbTax,
-              supplierId: r.supplierId, // ← carry through
+              supplierId: r.supplierId,
               supplierOfTax: r.supplier?.supplierName || "",
               accNbOfSupplier: r.supplier?.account?.accountNumber || "",
               shipping: r.shipping,
@@ -49,14 +104,14 @@ export default function UnitPriceModal({
         })
         .catch(console.error);
     } else {
-      // 2b) New invoice → load default settings
+      // 2b) new → load default settings
       axios
         .get("http://localhost:3000/purchase-invoice-setting")
         .then((res) => {
           setRows(
             res.data.map((row) => ({
-              id: undefined, // new row
-              purchaseInvoiceSettingId: row.id, // required FK
+              id: undefined,
+              purchaseInvoiceSettingId: row.id,
               chargeName: row.chargeName || "",
               chargeType: row.type || "amount",
               value: row.value || 0,
@@ -66,7 +121,7 @@ export default function UnitPriceModal({
               valueExchOFR: 0,
               addToItemCost: row.atc || false,
               invoiceNbTax: "",
-              supplierId: null, // must include
+              supplierId: null,
               supplierOfTax: "",
               accNbOfSupplier: "",
               shipping: row.shipping || false,
@@ -77,7 +132,7 @@ export default function UnitPriceModal({
     }
   }, [isVisible, invoiceId]);
 
-  // fill in account-number once suppliers arrive
+  // once suppliers loaded, fill in account numbers
   useEffect(() => {
     if (!suppliers.length) return;
     setRows((rs) =>
@@ -105,7 +160,6 @@ export default function UnitPriceModal({
     copy[i][field] = !copy[i][field];
     setRows(copy);
   };
-
   const handleSupplierChange = (i, supId) => {
     const copy = [...rows];
     copy[i].supplierId = +supId;
@@ -118,14 +172,18 @@ export default function UnitPriceModal({
 
   if (!isVisible) return null;
   return (
-    <div className="unit-price-modal-overlay">
-      <div className="unit-price-modal-content">
+    <div className="unit-price-modal-overlay" onClick={closeDeleteMenu}>
+      <div
+        className="unit-price-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <h3>Unit Price Details</h3>
           <button className="close-button" onClick={onClose}>
             ×
           </button>
         </div>
+
         <div className="unit-price-table-container">
           <table className="unit-price-table">
             <thead>
@@ -146,7 +204,7 @@ export default function UnitPriceModal({
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i}>
+                <tr key={i} onContextMenu={(e) => handleRowContext(e, i)}>
                   <td>
                     <input
                       disabled={!isEditable}
@@ -270,8 +328,30 @@ export default function UnitPriceModal({
             </tbody>
           </table>
         </div>
+
+        {deleteMenu.visible && (
+          <div
+            className="context-menu-purchases"
+            style={{
+              position: "absolute",
+              top: deleteMenu.y,
+              left: deleteMenu.x,
+              zIndex: 1000,
+            }}
+          >
+            <button onClick={handleDeleteRow}>Delete Row</button>
+          </div>
+        )}
+
         <div className="table-actions">
-          <button className="save-button" disabled={!isEditable} onClick={save}>
+          <button
+            className="unit-price-add-row-button"
+            disabled={!isEditable}
+            onClick={handleAddRow}
+          >
+            + Add Row
+          </button>
+          <button className="unit-price-save-button" disabled={!isEditable} onClick={save}>
             Save
           </button>
         </div>
