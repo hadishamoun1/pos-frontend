@@ -12,8 +12,9 @@ export default function UnitPriceModal({
 }) {
   const [rows, setRows] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [accounts, setAccounts] = useState([]);
 
-  // delete‐menu state
+  // delete-menu state
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
@@ -21,11 +22,9 @@ export default function UnitPriceModal({
     rowIndex: null,
   });
 
-  // Close delete menu
   const closeDeleteMenu = () =>
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
 
-  // Right-click handler
   const handleRowContext = (e, index) => {
     e.preventDefault();
     if (!isEditable) return;
@@ -37,14 +36,12 @@ export default function UnitPriceModal({
     });
   };
 
-  // Delete one row
   const handleDeleteRow = () => {
     if (deleteMenu.rowIndex == null) return;
     setRows(rows.filter((_, i) => i !== deleteMenu.rowIndex));
     closeDeleteMenu();
   };
 
-  // Add a blank row
   const handleAddRow = () => {
     setRows([
       ...rows,
@@ -52,6 +49,7 @@ export default function UnitPriceModal({
         id: undefined,
         purchaseInvoiceSettingId: null,
         chargeName: "",
+        accountId: null, // ← new field
         chargeType: "amount",
         value: 0,
         valueOFR: 0,
@@ -71,14 +69,20 @@ export default function UnitPriceModal({
   useEffect(() => {
     if (!isVisible) return;
 
-    // 1) load suppliers
+    // load suppliers
     axios
       .get("http://localhost:3000/suppliers")
       .then((res) => setSuppliers(res.data))
       .catch(console.error);
 
+    // load accounts for the new column
+    axios
+      .get("http://localhost:3000/accounts")
+      .then((res) => setAccounts(res.data))
+      .catch(console.error);
+
     if (invoiceId) {
-      // 2a) editing → load existing rows
+      // editing existing invoice → load its saved rows
       axios
         .get(`http://localhost:3000/purchase-invoices/${invoiceId}`)
         .then((res) => {
@@ -87,6 +91,7 @@ export default function UnitPriceModal({
               id: r.id,
               purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
               chargeName: r.chargeName,
+              accountId: r.account?.id || null, // ← pick up existing if any
               chargeType: r.chargeType,
               value: Number(r.value),
               valueOFR: Number(r.valueOFR),
@@ -104,7 +109,7 @@ export default function UnitPriceModal({
         })
         .catch(console.error);
     } else {
-      // 2b) new → load default settings
+      // new invoice → load default settings
       axios
         .get("http://localhost:3000/purchase-invoice-setting")
         .then((res) => {
@@ -113,6 +118,7 @@ export default function UnitPriceModal({
               id: undefined,
               purchaseInvoiceSettingId: row.id,
               chargeName: row.chargeName || "",
+              accountId: null, // ← default
               chargeType: row.type || "amount",
               value: row.value || 0,
               valueOFR: 0,
@@ -167,6 +173,11 @@ export default function UnitPriceModal({
     copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
     setRows(copy);
   };
+  const handleAccountChange = (i, accId) => {
+    const copy = [...rows];
+    copy[i].accountId = +accId;
+    setRows(copy);
+  };
 
   const save = () => onSave(rows);
 
@@ -189,6 +200,7 @@ export default function UnitPriceModal({
             <thead>
               <tr>
                 <th>Charge Name</th>
+                <th>Charge Account</th> {/* ← New Column */}
                 <th>Type</th>
                 <th>Value</th>
                 <th>Value OFR</th>
@@ -213,6 +225,20 @@ export default function UnitPriceModal({
                         handleInput(i, "chargeName", e.target.value)
                       }
                     />
+                  </td>
+                  <td>
+                    <select
+                      disabled={!isEditable}
+                      value={r.accountId ?? ""}
+                      onChange={(e) => handleAccountChange(i, e.target.value)}
+                    >
+                      <option value="">-- select account --</option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.accountNumber} – {a.accountName}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     <select
@@ -351,7 +377,11 @@ export default function UnitPriceModal({
           >
             + Add Row
           </button>
-          <button className="unit-price-save-button" disabled={!isEditable} onClick={save}>
+          <button
+            className="unit-price-save-button"
+            disabled={!isEditable}
+            onClick={save}
+          >
             Save
           </button>
         </div>

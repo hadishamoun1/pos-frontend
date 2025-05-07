@@ -149,18 +149,43 @@
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
 }
 
+
+.unit-price-table th:nth-child(1),
+.unit-price-table td:nth-child(1) {
+  width: 130px; 
+  max-width: 130px;
+}
 .unit-price-table th:nth-child(2),
 .unit-price-table td:nth-child(2) {
-  width: 100px; /* or whatever you prefer */
+  width: 150px; 
+  max-width: 150px;
+}
+.unit-price-table th:nth-child(3),
+.unit-price-table td:nth-child(3) {
+  width: 100px;
   max-width: 100px;
 }
+.unit-price-table th:nth-child(4),
+.unit-price-table td:nth-child(4) {
+  width: 130px;
+  max-width: 130px;
+}
+
+
 
 /* tighten up the Currency column */
 .unit-price-table th:nth-child(5),
 .unit-price-table td:nth-child(5) {
-  width: 80px; /* or whatever you prefer */
+  width: 130px; 
+  max-width: 1300px;
+}
+
+.unit-price-table th:nth-child(6),
+.unit-price-table td:nth-child(6) {
+  width: 80px;
   max-width: 80px;
 }
+
 
 /* tighten up the Exch. OFR (if that’s 7th) */
 .unit-price-table th:nth-child(7),
@@ -168,30 +193,47 @@
   width: 140px;
   max-width: 140px;
 }
+
+
+.unit-price-table th:nth-child(8),
+.unit-price-table td:nth-child(8) {
+  width: 130px; 
+  max-width: 1300px;
+}
+
 .unit-price-table th:nth-child(11),
 .unit-price-table td:nth-child(11) {
-  width: 100px;
-  max-width: 100px;
+  width: 150px;
+  max-width: 150px;
+}
+
+.unit-price-table th:nth-child(9),
+.unit-price-table td:nth-child(9) {
+  width: 50px;
+  max-width: 50px;
 }
 
 /* make the supplier‐of‐tax dropdown narrower (10th) */
 .unit-price-table th:nth-child(10),
 .unit-price-table td:nth-child(10) {
-  width: 200px;
-  max-width: 200px;
+  width: 130px;
+  max-width: 130px;
 }
 
 /* shrink the Shipping checkbox column (12th) */
 .unit-price-table th:nth-child(12),
 .unit-price-table td:nth-child(12) {
+  width: 100px;
+  max-width: 100px;
+}
+
+.unit-price-table th:nth-child(13),
+.unit-price-table td:nth-child(13) {
   width: 70px;
   max-width: 70px;
 }
-.unit-price-table th:nth-child(8),
-.unit-price-table td:nth-child(8) {
-  width: 70px;
-  max-width: 70px;
-}
+
+
 
 /* Add Row button */
 .unit-price-add-row-button {
