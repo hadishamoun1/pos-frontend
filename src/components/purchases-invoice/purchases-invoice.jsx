@@ -468,25 +468,29 @@ const PurchasesInvoicePage = () => {
   };
 
   // 1️⃣ Cost-and-Freight per item:
-  //    CFR = FOB + ( shippingCost / PO_amount ) × FOB
   const calculatePriceCFR = (item) => {
-    const poAmount = parseFloat(item.total || 0);
-    const fob = parseFloat(item.unitPrice || 0);
+    if (status !== "Recieved") {
+      const poAmount =
+        invoiceType === "G"
+          ? parseFloat(item.totalOFR || 0)
+          : parseFloat(item.total || 0);
+      const fob =
+        invoiceType === "G"
+          ? parseFloat(item.priceOFR || 0)
+          : parseFloat(item.unitPrice || 0);
 
-    const ccfr = (shippingCost / poAmount + 1) * fob;
-    return ccfr;
+      const ccfr = (shippingCost / poAmount + 1) * fob;
+      return ccfr;
+    }
   };
 
   // 2️⃣ Final cost per item:
-  //    Final = CFR × potentialCostRatio
-  //    where potentialCostRatio = totalCharges / ( PO_amount + shippingCost )
   const calculateFinalCost = (item) => {
-    const cfr = calculatePriceCFR(item);
+    if (status !== "Recieved") {
+      const cfr = calculatePriceCFR(item);
 
- 
-      
-
-    return cfr * ((potentialCost / 100)+1) ;
+      return cfr * (potentialCost / 100 + 1);
+    }
   };
 
   return (
@@ -732,6 +736,7 @@ const PurchasesInvoicePage = () => {
             calculatePriceCFR={calculatePriceCFR}
             calculateFinalCost={calculateFinalCost}
             selectedItems={items}
+            invoiceType={invoiceType}
           />
         ) : (
           <AlternativeSummarySection

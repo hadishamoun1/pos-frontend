@@ -13,6 +13,7 @@ const SummarySection = ({
   numberOfContainers,
   setNumberOfContainers,
   isEditable,
+  invoiceType,
 
   // ← new props:
   selectedItems,
@@ -73,7 +74,7 @@ const SummarySection = ({
           <thead>
             <tr>
               <th>Cost per Item</th>
-              <th>Price FOB</th>
+              <th>Price EXW</th>
               <th>Unit Price (FOB)</th>
               <th>Price CFR</th>
               <th>Final Cost</th>
@@ -84,17 +85,20 @@ const SummarySection = ({
               <tr key={idx}>
                 <td>{item.itemName || "-"}</td>
                 <td>
-                  {item.fobPrice != null
-                    ? parseFloat(item.fobPrice).toFixed(2)
-                    : "-"}
+                {"-"}
                 </td>
                 <td>
-                  {item.unitPrice != null
+                  {invoiceType === "G"
+                    ? item.priceOFR != null
+                      ? parseFloat(item.priceOFR).toFixed(2)
+                      : "-"
+                    : item.unitPrice != null
                     ? parseFloat(item.unitPrice).toFixed(2)
-                    : "-"}{" "}
+                    : "-"}
                 </td>
-                <td>{calculatePriceCFR(item).toFixed(2)}</td>
-                <td>{calculateFinalCost(item).toFixed(2)}</td>
+
+                 <td>{(calculatePriceCFR(item) || 0).toFixed(2)}</td>
+                 <td>{(calculateFinalCost(item) || 0).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
