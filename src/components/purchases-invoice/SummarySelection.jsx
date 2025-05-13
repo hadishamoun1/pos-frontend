@@ -1,4 +1,3 @@
-// SummarySection.jsx
 import React from "react";
 import "./styles/summary.css";
 
@@ -14,11 +13,16 @@ const SummarySection = ({
   numberOfContainers,
   setNumberOfContainers,
   isEditable,
+
+  // ← new props:
+  selectedItems,
+  calculatePriceCFR,
+  calculateFinalCost,
 }) => {
   return (
     <div className="summary-section">
+      {/* ─── INPUTS ─── */}
       <div className="fields">
-        {/* Potential vs Final */}
         <div className="row">
           <label>
             Potential Cost
@@ -41,8 +45,6 @@ const SummarySection = ({
             />
           </label>
         </div>
-
-        {/* Shipping & Containers */}
         <div className="column">
           <label>
             Shipping Cost
@@ -65,6 +67,41 @@ const SummarySection = ({
         </div>
       </div>
 
+      {/* ─── COST-PER-ITEM TABLE ─── */}
+      <div className="cost-table-container">
+        <table className="cost-table">
+          <thead>
+            <tr>
+              <th>Cost per Item</th>
+              <th>Price FOB</th>
+              <th>Unit Price (FOB)</th>
+              <th>Price CFR</th>
+              <th>Final Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedItems.map((item, idx) => (
+              <tr key={idx}>
+                <td>{item.itemName || "-"}</td>
+                <td>
+                  {item.fobPrice != null
+                    ? parseFloat(item.fobPrice).toFixed(2)
+                    : "-"}
+                </td>
+                <td>
+                  {item.unitPrice != null
+                    ? parseFloat(item.unitPrice).toFixed(2)
+                    : "-"}{" "}
+                </td>
+                <td>{calculatePriceCFR(item).toFixed(2)}</td>
+                <td>{calculateFinalCost(item).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ─── TOTALS ─── */}
       <div className="totals">
         <p>Total Amount: ${totalAmount.toFixed(2)}</p>
         <p>Total Offer Amount: ${totalOfferAmount.toFixed(2)}</p>

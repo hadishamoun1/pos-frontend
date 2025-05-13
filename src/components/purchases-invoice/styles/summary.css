@@ -106,3 +106,38 @@
   background-color: #007bff;
   color: white;
 }
+.cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.cost-table th,
+.cost-table td {
+  border: 1px solid #ddd;
+  text-align: center;
+  padding: 8px;
+}
+
+.cost-table tr:hover {
+  background-color: #e7e7e7;
+}
+
+
+.cost-table th {
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: rgb(255, 255, 255); /* White text for contrast */
+  font-size: 1rem;
+  padding: 10px;
+  text-align: left;
+  border-bottom: 2px solid #e9ecef; /* Subtle border for separation */
+}
+
+.cost-table td {
+  padding: 10px;
+  font-size: 1.3rem;
+  color: #2e2e2e; /* Neutral text color */
+  border-bottom: 1px solid #dee2e6; /* Divider between rows */
+}
+
+
