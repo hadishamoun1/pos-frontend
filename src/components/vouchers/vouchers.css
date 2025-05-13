@@ -133,7 +133,7 @@
 
 .general-vouchers-table {
   scroll-behavior: smooth;
-  width: 2320px;
+  width: 3500px;
   border-collapse: collapse;
   border-radius: 10px;
   overflow-x: auto;
@@ -158,37 +158,19 @@
   width: 7%;
 }
 
-.general-vouchers-table th.column-debit-usd,
-.general-vouchers-table td.column-debit-usd {
-  width: 8%;
-}
-
-.general-vouchers-table th.column-credit-usd,
-.general-vouchers-table td.column-credit-usd {
-  width: 8%;
-}
 .general-vouchers-table th.column-account-name,
 .general-vouchers-table td.column-account-name {
-  width: 13%;
+  width: 10%;
 }
 
 .general-vouchers-table th.column-currency,
 .general-vouchers-table td.column-currency {
-  width: 7%;
+  width: 5%;
 }
 
-.general-vouchers-table th.column-debit,
-.general-vouchers-table td.column-debit {
-  width: 8%;
-}
-
-.general-vouchers-table th.column-credit,
-.general-vouchers-table td.column-credit {
-  width: 8%;
-}
 .general-vouchers-table th.column-exchange-rate-eur-usd,
 .general-vouchers-table td.column-exchange-rate-eur-usd {
-  width: 10%;
+  width: 7%;
 }
 
 .general-vouchers-table th.column-exchange-rate,
@@ -196,15 +178,42 @@
   width: 7%;
 }
 
+/* make every debit/credit column 8% wide */
+/* make every debit/credit column 8% wide */
+.general-vouchers-table th.column-debit,
+.general-vouchers-table td.column-debit,
+.general-vouchers-table th.column-credit,
+.general-vouchers-table td.column-credit,
+.general-vouchers-table th.column-debit-usd,
+.general-vouchers-table td.column-debit-usd,
+.general-vouchers-table th.column-credit-usd,
+.general-vouchers-table td.column-credit-usd,
+.general-vouchers-table th.column-debit-ofr,
+.general-vouchers-table td.column-debit-ofr,
+.general-vouchers-table th.column-credit-ofr,
+.general-vouchers-table td.column-credit-ofr,
+.general-vouchers-table th.column-debit-usd-ofr,
+.general-vouchers-table td.column-debit-usd-ofr,
+.general-vouchers-table th.column-credit-usd-ofr,
+.general-vouchers-table td.column-credit-usd-ofr,    /* ← COMMA ADDED HERE */
 .general-vouchers-table th.column-debit-ex,
-.general-vouchers-table td.column-debit-ex {
-  width: 8%;
+.general-vouchers-table td.column-debit-ex,
+.general-vouchers-table th.column-debit-ex-ofr,
+.general-vouchers-table td.column-debit-ex-ofr
+{
+  width: 5% !important;
 }
 
+
+/* target any th or td whose class contains “debit” or “credit” */
 .general-vouchers-table th.column-credit-ex,
-.general-vouchers-table td.column-credit-ex {
-  width: 8%;
+.general-vouchers-table td.column-credit-ex,
+.general-vouchers-table th.column-credit-ex-ofr,
+.general-vouchers-table td.column-credit-ex-ofr {
+  width: 6% !important;
+   /* or adjust to taste */
 }
+
 
 .general-vouchers-table th.column-description,
 .general-vouchers-table td.column-description {

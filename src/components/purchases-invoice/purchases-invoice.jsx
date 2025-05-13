@@ -203,7 +203,7 @@ const PurchasesInvoicePage = () => {
         finalCost,
         items: items.map((item) => ({
           itemVariantId: item.dimensionId,
-          quantity:item.quantity,
+          quantity: item.quantity,
           sqm: item.sqm,
           unitPrice: item.unitPrice,
           totalAmount: item.total,
@@ -216,6 +216,7 @@ const PurchasesInvoicePage = () => {
         unitPriceRows: unitPriceRows.map((row) => ({
           id: row.id,
           purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
+          accountId: row.accountId,
           chargeName: row.chargeName,
           chargeType: row.chargeType,
           value: row.value,
