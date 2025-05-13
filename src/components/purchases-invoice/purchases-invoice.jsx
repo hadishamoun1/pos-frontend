@@ -470,14 +470,8 @@ const PurchasesInvoicePage = () => {
   // 1️⃣ Cost-and-Freight per item:
   const calculatePriceCFR = (item) => {
     if (status !== "Recieved") {
-      const poAmount =
-        invoiceType === "G"
-          ? parseFloat(item.totalOFR || 0)
-          : parseFloat(item.total || 0);
-      const fob =
-        invoiceType === "G"
-          ? parseFloat(item.priceOFR || 0)
-          : parseFloat(item.unitPrice || 0);
+      const poAmount = parseFloat(item.total || 0);
+      const fob = parseFloat(item.unitPrice || 0);
 
       const ccfr = (shippingCost / poAmount + 1) * fob;
       return ccfr;
@@ -491,6 +485,31 @@ const PurchasesInvoicePage = () => {
 
       return cfr * (potentialCost / 100 + 1);
     }
+  };
+
+  const calculatePriceCFROFR = (item) => {
+    if (
+      (status !== "Recieved" && invoiceType === "SR") ||
+      invoiceType === "G"
+    ) {
+      const totalOFR = parseFloat(item.totalOFR) || 0;
+      const fobOFR = parseFloat(item.priceOFR) || 0;
+      if (totalOFR === 0) return fobOFR;
+      return (1 + shippingCost / totalOFR) * fobOFR;
+    }
+    return 0;
+  };
+
+  // only returns the OFR-final cost when SR + Recieved
+  const calculateFinalCostOFR = (item) => {
+    if (
+      (status !== "Recieved" && invoiceType === "SR") ||
+      invoiceType === "G"
+    ) {
+      const cfrOFR = calculatePriceCFROFR(item);
+      return cfrOFR * (1 + potentialCost / 100);
+    }
+    return 0;
   };
 
   return (
@@ -735,8 +754,11 @@ const PurchasesInvoicePage = () => {
             isEditable={canEdit}
             calculatePriceCFR={calculatePriceCFR}
             calculateFinalCost={calculateFinalCost}
+            calculatePriceCFROFR={calculatePriceCFROFR}
+            calculateFinalCostOFR={calculateFinalCostOFR}
             selectedItems={items}
             invoiceType={invoiceType}
+            status={status}
           />
         ) : (
           <AlternativeSummarySection
