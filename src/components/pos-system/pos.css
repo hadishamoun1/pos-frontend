@@ -424,7 +424,7 @@ input:disabled {
 /* 🔹 Customer Search Container */
 .pos-page-customer-search-container {
   position: relative;
-  width: 100%;
+  width: 200%;
 }
 
 /* 🔹 Input Field */
