@@ -126,7 +126,7 @@ const SummarySection = ({
                 <tr key={idx}>
                   <td>{item.itemName || "-"}</td>
 
-                  {status !== "Recieved" && invoiceType === "S" && (
+                  {invoiceType === "S" && (
                     <>
                       <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
                       <td>{cfr.toFixed(2)}</td>
@@ -134,7 +134,7 @@ const SummarySection = ({
                     </>
                   )}
 
-                  {status !== "Recieved" && invoiceType === "G" && (
+                  { invoiceType === "G" && (
                     <>
                       <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
                       <td>{cfrOFR.toFixed(2)}</td>
@@ -143,7 +143,7 @@ const SummarySection = ({
                   )}
 
               
-                  {invoiceType === "SR" && status !== "Recieved" && (
+                  {invoiceType === "SR" &&  (
                     <>
                       <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
                       <td>{cfr.toFixed(2)}</td>
@@ -154,16 +154,7 @@ const SummarySection = ({
                     </>
                   )}
 
-                  {invoiceType === "SR" && status === "Recieved" && (
-                    <>
-                      <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
-                      <td>{cfr.toFixed(2)}</td>
-                      <td>{final.toFixed(2)}</td>
-                      <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
-                      <td>{cfrOFR.toFixed(2)}</td>
-                      <td>{finalOFR.toFixed(2)}</td>
-                    </>
-                  )}
+              
                 </tr>
               );
             })}

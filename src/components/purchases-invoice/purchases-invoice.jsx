@@ -38,7 +38,12 @@ const PurchasesInvoicePage = () => {
   );
   const [items, setItems] = useState([]);
   const [potentialCost, setPotentialCost] = useState(0);
-  const [shippingCost, setShippingCost] = useState(0);
+  const [totalCharges, setTotalCharges] = useState(0);
+  const [shippingCostComputed, setShippingCostComputed] = useState(0); // from your unit-price rows
+  const [shippingCostInput, setShippingCostInput] = useState(0); // user-typed in the Summary
+  const [shippingCostOFR, setShippingCostOFR] = useState(0);
+  const [totalChargesOFR, setTotalChargesOFR] = useState(0);
+
   const [numberOfContainers, setNumberOfContainers] = useState(0);
   const [vat, setVat] = useState(11);
   const [finalCost, setFinalCost] = useState(0);
@@ -71,7 +76,8 @@ const PurchasesInvoicePage = () => {
     setInvoiceDate(new Date().toISOString().slice(0, 10));
     setItems([]);
     setPotentialCost(0);
-    setShippingCost(0);
+
+    setShippingCostInput(0);
     setNumberOfContainers(0);
     setVat(0);
     setStatus("Pending");
@@ -184,6 +190,26 @@ const PurchasesInvoicePage = () => {
       const calculatedVatAmount = totalAmount * (vat / 100);
       const grandTotal = totalAmount + calculatedVatAmount;
 
+      // ⬇️ build enrichedItems with the four computed fields ⬇️
+      const enrichedItems = items.map((item) => ({
+        itemVariantId: item.dimensionId,
+        quantity: item.quantity,
+        sqm: item.sqm,
+        unitPrice: item.unitPrice,
+        totalAmount: item.total,
+        euroPrice: item.euroPrice,
+        euroOFRPrice: item.euroOfferPrice,
+        priceOFR: item.priceOFR,
+        totalOFR: item.totalOFR,
+        numberOfContainers: item.numberOfContainers,
+
+        // these four use the same functions your UI used:
+        cfr: parseFloat(normalCfrFn(item).toFixed(6)),
+        finalCost: parseFloat(normalFinalFn(item).toFixed(6)),
+        cfrOFR: parseFloat(ofrCfrFn(item).toFixed(6)),
+        finalOFR: parseFloat(ofrFinalFn(item).toFixed(6)),
+      }));
+
       const invoiceData = {
         invoiceNumber,
         date: inputedDate,
@@ -199,20 +225,9 @@ const PurchasesInvoicePage = () => {
         numberOfContainers: altContainers,
         blNumber: blNumber,
         potentialCost,
-        shippingCost,
+        shippingCostInput,
         finalCost,
-        items: items.map((item) => ({
-          itemVariantId: item.dimensionId,
-          quantity: item.quantity,
-          sqm: item.sqm,
-          unitPrice: item.unitPrice,
-          totalAmount: item.total,
-          euroPrice: item.euroPrice,
-          euroOFRPrice: item.euroOfferPrice,
-          priceOFR: item.priceOFR,
-          totalOFR: item.totalOFR,
-          numberOfContainers: item.numberOfContainers,
-        })),
+        items: enrichedItems,
         unitPriceRows: unitPriceRows.map((row) => ({
           id: row.id,
           purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
@@ -337,7 +352,7 @@ const PurchasesInvoicePage = () => {
     setAltContainers(fullInvoice.numberOfContainers);
     setBlNumber(fullInvoice.blNumber);
     setPotentialCost(Number(fullInvoice.potentialCost));
-    setShippingCost(Number(fullInvoice.shippingCost));
+    setShippingCostInput(Number(fullInvoice.shippingCost));
     setFinalCost(Number(fullInvoice.finalCost));
     setInvoiceType(fullInvoice.type);
     // 4) items
@@ -405,7 +420,7 @@ const PurchasesInvoicePage = () => {
     setAltContainers(inv.numberOfContainers);
     setBlNumber(inv.blNumber);
     setPotentialCost(Number(inv.potentialCost));
-    setShippingCost(Number(inv.shippingCost));
+    setShippingCostInput(Number(inv.shippingCost));
     setFinalCost(Number(inv.finalCost));
     setInvoiceType(inv.type);
     setItems(
@@ -470,10 +485,11 @@ const PurchasesInvoicePage = () => {
   // 1️⃣ Cost-and-Freight per item:
   const calculatePriceCFR = (item) => {
     if (status !== "Recieved") {
-      const poAmount = parseFloat(item.total || 0);
+      const poAmount = itemsTotalAmount || 0;
+      console.log(itemsTotalAmount);
       const fob = parseFloat(item.unitPrice || 0);
 
-      const ccfr = (shippingCost / poAmount + 1) * fob;
+      const ccfr = (shippingCostInput / poAmount + 1) * fob;
       return ccfr;
     }
   };
@@ -492,10 +508,10 @@ const PurchasesInvoicePage = () => {
       (status !== "Recieved" && invoiceType === "SR") ||
       invoiceType === "G"
     ) {
-      const totalOFR = parseFloat(item.totalOFR) || 0;
+      const totalOFR = totalOfferAmount || 0;
       const fobOFR = parseFloat(item.priceOFR) || 0;
       if (totalOFR === 0) return fobOFR;
-      return (1 + shippingCost / totalOFR) * fobOFR;
+      return (1 + shippingCostInput / totalOFR) * fobOFR;
     }
     return 0;
   };
@@ -511,6 +527,97 @@ const PurchasesInvoicePage = () => {
     }
     return 0;
   };
+
+  useEffect(() => {
+    if (status === "Recieved") {
+      // — normal (value) —
+      const normalShipping = unitPriceRows
+        .filter((r) => r.shipping)
+        .reduce((sum, r) => sum + Number(r.value), 0);
+      const normalCharges = unitPriceRows
+        .filter((r) => r.addToItemCost)
+        .reduce((sum, r) => sum + Number(r.value), 0);
+      setShippingCostComputed(normalShipping);
+      setTotalCharges(normalCharges);
+
+      // — OFR (valueOFR) —
+      const ofrShipping = unitPriceRows
+        .filter((r) => r.shipping)
+        .reduce((sum, r) => sum + Number(r.valueOFR), 0);
+      const ofrCharges = unitPriceRows
+        .filter((r) => r.addToItemCost)
+        .reduce((sum, r) => sum + Number(r.valueOFR), 0);
+      setShippingCostOFR(ofrShipping);
+      setTotalChargesOFR(ofrCharges);
+    }
+  }, [status, invoiceType, unitPriceRows]);
+
+  // 3️⃣ Calculate CFR using the up-to-date shippingCost & itemsTotalAmount:
+  const realCalculatePriceCFR = (item) => {
+    const poAmount = itemsTotalAmount || 0;
+    if (poAmount === 0) return 0;
+    const fob = parseFloat(item.unitPrice || 0);
+    return (shippingCostComputed / poAmount + 1) * fob;
+  };
+
+  // 4️⃣ Compute your cost percentage once per render:
+  const getCostPercentage = () => {
+    const poAmount = itemsTotalAmount || 0;
+    if (poAmount === 0) return 0;
+    return totalCharges / poAmount;
+  };
+
+  // 5️⃣ Finally, your “real” final cost:
+  const realFinalCost = (item) => {
+    const cfr = realCalculatePriceCFR(item);
+    const cp = getCostPercentage();
+    return cfr * (1 + cp);
+  };
+
+  const realCalculatePriceCFROFR = (item) => {
+    const poAmount = totalOfferAmount || 0;
+    if (poAmount === 0) return 0;
+    const fob = parseFloat(item.priceOFR || 0);
+    return (shippingCostOFR / poAmount + 1) * fob;
+  };
+
+  // 4️⃣ Compute your cost percentage once per render:
+  const getCostPercentageOFR = () => {
+    const poAmount = totalOfferAmount || 0;
+    if (poAmount === 0) return 0;
+    return totalChargesOFR / poAmount;
+  };
+
+  // 5️⃣ Finally, your “real” final cost:
+  const realFinalCostOFR = (item) => {
+    const cfr = realCalculatePriceCFROFR(item);
+    const cp = getCostPercentageOFR();
+    return cfr * (1 + cp);
+  };
+
+  // choose the right CFR / final‐cost functions for S, G, SR when Recieved
+  let normalCfrFn = calculatePriceCFR;
+  let normalFinalFn = calculateFinalCost;
+  let ofrCfrFn = calculatePriceCFROFR;
+  let ofrFinalFn = calculateFinalCostOFR;
+
+  if (status === "Recieved") {
+    if (invoiceType === "S") {
+      // Services only
+      normalCfrFn = realCalculatePriceCFR;
+      normalFinalFn = realFinalCost;
+    } else if (invoiceType === "G") {
+      // Goods only
+      ofrCfrFn = realCalculatePriceCFROFR;
+      ofrFinalFn = realFinalCostOFR;
+    } else if (invoiceType === "SR") {
+      // Both
+      normalCfrFn = realCalculatePriceCFR;
+      normalFinalFn = realFinalCost;
+      ofrCfrFn = realCalculatePriceCFROFR;
+      ofrFinalFn = realFinalCostOFR;
+    }
+  }
 
   return (
     <div className="main-container">
@@ -747,15 +854,15 @@ const PurchasesInvoicePage = () => {
             finalCost={finalCost}
             setFinalCost={setFinalCost}
             openItemModal={() => setShowUnitPriceModal(true)}
-            shippingCost={shippingCost}
-            setShippingCost={setShippingCost}
+            shippingCost={shippingCostInput}
+            setShippingCost={setShippingCostInput}
             numberOfContainers={numberOfContainers}
             setNumberOfContainers={setNumberOfContainers}
             isEditable={canEdit}
-            calculatePriceCFR={calculatePriceCFR}
-            calculateFinalCost={calculateFinalCost}
-            calculatePriceCFROFR={calculatePriceCFROFR}
-            calculateFinalCostOFR={calculateFinalCostOFR}
+            calculatePriceCFR={normalCfrFn}
+            calculateFinalCost={normalFinalFn}
+            calculatePriceCFROFR={ofrCfrFn}
+            calculateFinalCostOFR={ofrFinalFn}
             selectedItems={items}
             invoiceType={invoiceType}
             status={status}
