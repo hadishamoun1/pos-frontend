@@ -69,6 +69,7 @@
   text-align: left;
   vertical-align: middle;
   border: 1px solid #ddd;
+  text-align: center; 
 }
 
 .inventory-activity-table th {
@@ -78,6 +79,7 @@
   top: 0;
   z-index: 1;
   color: white;
+  text-align: center;
 }
 .inventory-activity-table tbody tr:nth-child(even) {
   background: #f9fafb;
