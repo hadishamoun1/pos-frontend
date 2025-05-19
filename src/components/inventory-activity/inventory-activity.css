@@ -1,0 +1,121 @@
+/* page wrapper so title can sit above */
+.inventory-activity-page {
+  position: relative;
+  padding-top: 4rem; /* room for the absolute title */
+}
+
+/* pulled-out page title */
+.inventory-activity-page-title {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 2rem;
+  color: #007bff;
+  z-index: 10;
+}
+
+/* Container */
+.inventory-activity-container {
+  margin: 2rem auto;
+  max-width: 1900px;
+  padding: 1rem;
+  background: #fafafa;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Header */
+.inventory-activity-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+.inventory-activity-btn-add {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(53, 122, 184, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+.inventory-activity-btn-add:hover {
+  background: linear-gradient(135deg, #007bff, #002c5a);
+  transform: translateY(-2px);
+}
+
+/* Table wrapper for horizontal scroll */
+.inventory-activity-table-wrapper {
+  overflow-x: auto;
+}
+
+/* Table */
+.inventory-activity-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid #ddd;
+}
+
+.inventory-activity-table th,
+.inventory-activity-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+  border: 1px solid #ddd;
+}
+
+.inventory-activity-table th {
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: white;
+}
+.inventory-activity-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+.inventory-activity-table tbody tr:hover {
+  background: #eef4ff;
+}
+
+/* Inputs & Selects */
+.inventory-activity-input,
+.inventory-activity-select,
+.inventory-activity-date {
+  width: 93%;
+  padding: 0.6rem;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.inventory-activity-input:focus,
+.inventory-activity-select:focus,
+.inventory-activity-date:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .inventory-activity-container {
+    padding: 1rem;
+  }
+  .inventory-activity-btn-add {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  .inventory-activity-table th,
+  .inventory-activity-table td {
+    padding: 0.5rem 0.75rem;
+  }
+}

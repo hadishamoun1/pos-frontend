@@ -16,6 +16,7 @@ import CreatePreviewCustomers from "./components/customers/customers";
 import AccountsPage from "./components/accounts/accounts";
 import PaymentVoucherTable from "./components/payments/payments";
 import JournalVoucherPage from "./components/vouchers/vouchers";
+import InventoryActivityPage from "./components/inventory-activity/inventory-activity";
 
 // Import the BlinkingRequestsProvider to manage the blinking state
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
@@ -50,6 +51,10 @@ function App() {
             <Route path="/payments" element={<PaymentVoucherTable />} />
             <Route path="/transactions" element={<JournalVoucherPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/inventory-activity"
+              element={<InventoryActivityPage />}
+            />
           </Routes>
         </Router>
       </BlinkingItemsProvider>
