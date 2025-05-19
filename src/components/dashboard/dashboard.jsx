@@ -15,6 +15,7 @@ const sections = [
   { name: "Accounts", image: "/assets/price.webp" },
   { name: "Payments", image: "/assets/payment-voucher.webp" },
   { name: "Transactions", image: "/assets/payment-voucher.webp" },
+  { name: "Inventory Activity", image: "/assets/payment-voucher.webp" },
 ];
 
 const DashboardPage = () => {
