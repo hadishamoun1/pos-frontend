@@ -1,8 +1,11 @@
+// src/InventoryActivityPage.jsx
 import React, { useState, useEffect } from "react";
+import CountModal from "./countModal";
 import "./inventory-activity.css";
 
 const InventoryActivityPage = () => {
   const [rows, setRows] = useState([]);
+  const [showCountModal, setShowCountModal] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost:3000/inventory-transactions/activity")
@@ -13,8 +16,17 @@ const InventoryActivityPage = () => {
 
   return (
     <div className="inventory-activity-page">
-      {/* — Page-level title, pinned above the container */}
-      <h1 className="inventory-activity-page-title">Inventory Activity</h1>
+      {/* header with title & count button */}
+      <div className="inventory-activity-header-bar">
+        <h1 className="inventory-activity-title">Inventory Activity</h1>
+        <button
+          className="inventory-activity-btn-count"
+          onClick={() => setShowCountModal(true)}
+        >
+          Count
+        </button>
+      </div>
+
       <div className="inventory-activity-container">
         <div className="inventory-activity-table-wrapper">
           <table className="inventory-activity-table">
@@ -28,7 +40,7 @@ const InventoryActivityPage = () => {
                 <th>SQM</th>
                 <th>SQM OFR</th>
                 <th>Final Cost</th>
-                <th>Final OFR</th>
+                <th>Final Cost OFR</th>
                 <th>Unit</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -37,38 +49,25 @@ const InventoryActivityPage = () => {
             </thead>
             <tbody>
               {rows.map((r, i) => {
-                // 1️⃣ Name: "<thickness> ملم <itemName>"
                 const name = `${r.thickness} ملم ${r.itemName}`;
-
-                // 2️⃣ Dimensions: "L×W[-sheetsPerBox]"
                 const dimension =
                   r.itemType === "box" && r.sheetsPerBox
                     ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
                     : `${r.length}×${r.width}`;
-
-                // 3️⃣ Unit label
                 const unit =
                   r.itemType === "box"
                     ? "Box"
                     : r.itemType === "sheet"
                     ? "Sheet"
                     : "SQM";
-
-                // 4️⃣ Status label
                 const status =
                   r.transactionType === "purchase"
                     ? "Purchase"
                     : r.transactionType === "sale"
                     ? "Sales"
                     : r.transactionType || "-";
-
-                // 5️⃣ Date formatting
                 const date = new Date(r.invoiceDate).toLocaleDateString();
-
-                // 6️⃣ Invoice #
                 const invoiceNo = r.invoiceNumber || "—";
-
-                // 7️⃣ Final costs (null → dash)
                 const finalCost =
                   r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—";
                 const finalCostOFR =
@@ -98,6 +97,11 @@ const InventoryActivityPage = () => {
           </table>
         </div>
       </div>
+
+      <CountModal
+        isOpen={showCountModal}
+        onClose={() => setShowCountModal(false)}
+      />
     </div>
   );
 };

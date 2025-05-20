@@ -1,21 +1,39 @@
-/* page wrapper so title can sit above */
 .inventory-activity-page {
-  position: relative;
-  padding-top: 4rem; /* room for the absolute title */
+  padding: 2rem;
+  font-family: "Segoe UI", sans-serif;
 }
 
-/* pulled-out page title */
-.inventory-activity-page-title {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
+/* header bar */
+.inventory-activity-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* title */
+.inventory-activity-title {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
   font-size: 2rem;
   color: #007bff;
-  z-index: 10;
 }
 
+/* count button */
+.inventory-activity-btn-count {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30, 126, 52, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+.inventory-activity-btn-count:hover {
+  background: linear-gradient(135deg, #28a745, #155724);
+  transform: translateY(-2px);
+}
 /* Container */
 .inventory-activity-container {
   margin: 2rem auto;
