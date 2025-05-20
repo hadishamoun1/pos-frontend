@@ -63,24 +63,25 @@
   border: 1px solid #ddd;
 }
 
-.inventory-activity-table th,
-.inventory-activity-table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  vertical-align: middle;
-  border: 1px solid #ddd;
-  text-align: center; 
-}
-
 .inventory-activity-table th {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
   font-size: 0.95rem;
   background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
   position: sticky;
   top: 0;
   z-index: 1;
-  color: white;
-  text-align: center;
+  text-align: center; /* only headers centered */
 }
+
+.inventory-activity-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+  text-align: center; /* data left-aligned */
+}
+
 .inventory-activity-table tbody tr:nth-child(even) {
   background: #f9fafb;
 }
@@ -105,6 +106,13 @@
   outline: none;
   border-color: #4a90e2;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Right-align and RTL for the “Item Name” column */
+.inventory-activity-table td:first-child {
+  text-align: right;
+  direction: rtl;
+  text-align: center;
 }
 
 /* Responsive tweaks */

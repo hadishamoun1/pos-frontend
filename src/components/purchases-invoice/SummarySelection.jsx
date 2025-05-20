@@ -79,9 +79,12 @@ const SummarySection = ({
               <th>Cost per Item</th>
               {invoiceType === "S" && (
                 <>
-                  <th>FOB Price</th>
+                 <th>FOB Price</th>
                   <th>Price CFR</th>
                   <th>Final Cost</th>
+                  <th>FOB OFR</th>
+                  <th>CFR OFR</th>
+                  <th>Final OFR</th>
                 </>
               )}
               {invoiceType === "G" && (
@@ -131,10 +134,13 @@ const SummarySection = ({
                       <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
                       <td>{cfr.toFixed(2)}</td>
                       <td>{final.toFixed(2)}</td>
+                      <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
+                      <td>{cfrOFR.toFixed(2)}</td>
+                      <td>{finalOFR.toFixed(2)}</td>
                     </>
                   )}
 
-                  { invoiceType === "G" && (
+                  {invoiceType === "G" && (
                     <>
                       <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
                       <td>{cfrOFR.toFixed(2)}</td>
@@ -142,8 +148,7 @@ const SummarySection = ({
                     </>
                   )}
 
-              
-                  {invoiceType === "SR" &&  (
+                  {invoiceType === "SR" && (
                     <>
                       <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
                       <td>{cfr.toFixed(2)}</td>
@@ -154,7 +159,7 @@ const SummarySection = ({
                     </>
                   )}
 
-              
+             
                 </tr>
               );
             })}

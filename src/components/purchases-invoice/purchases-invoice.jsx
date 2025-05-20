@@ -512,6 +512,11 @@ const PurchasesInvoicePage = () => {
       const fobOFR = parseFloat(item.priceOFR) || 0;
       if (totalOFR === 0) return fobOFR;
       return (1 + shippingCostInput / totalOFR) * fobOFR;
+    } else if (status !== "Recieved" && invoiceType === "S") {
+      const totalOFR = itemsTotalAmount || 0;
+      const fobOFR = parseFloat(item.unitPrice) || 0;
+      if (totalOFR === 0) return fobOFR;
+      return (1 + shippingCostInput / totalOFR) * fobOFR;
     }
     return 0;
   };
@@ -522,6 +527,9 @@ const PurchasesInvoicePage = () => {
       (status !== "Recieved" && invoiceType === "SR") ||
       invoiceType === "G"
     ) {
+      const cfrOFR = calculatePriceCFROFR(item);
+      return cfrOFR * (1 + potentialCost / 100);
+    } else if (status !== "Recieved" && invoiceType === "S") {
       const cfrOFR = calculatePriceCFROFR(item);
       return cfrOFR * (1 + potentialCost / 100);
     }
@@ -606,6 +614,8 @@ const PurchasesInvoicePage = () => {
       // Services only
       normalCfrFn = realCalculatePriceCFR;
       normalFinalFn = realFinalCost;
+      ofrCfrFn = realCalculatePriceCFR;
+      ofrFinalFn = realFinalCost;
     } else if (invoiceType === "G") {
       // Goods only
       ofrCfrFn = realCalculatePriceCFROFR;

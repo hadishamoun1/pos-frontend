@@ -1,7 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "./inventory-activity.css";
 
 const InventoryActivityPage = () => {
+  const [rows, setRows] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3000/inventory-transactions/activity")
+      .then((res) => res.json())
+      .then(setRows)
+      .catch(console.error);
+  }, []);
+
   return (
     <div className="inventory-activity-page">
       {/* — Page-level title, pinned above the container */}
@@ -20,7 +29,7 @@ const InventoryActivityPage = () => {
                 <th>Dimensions</th>
                 <th>Brand</th>
                 <th>Quantity</th>
-                <th>SQ M</th>
+                <th>SQM</th>
                 <th>Unit</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -28,70 +37,37 @@ const InventoryActivityPage = () => {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <input
-                    type="text"
-                    className="inventory-activity-input"
-                    placeholder="e.g. Widget A"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="inventory-activity-input"
-                    placeholder="e.g. 10×20×5"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    className="inventory-activity-input"
-                    placeholder="e.g. Acme"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    className="inventory-activity-input"
-                    placeholder="0"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    className="inventory-activity-input"
-                    placeholder="0.00"
-                    step="0.01"
-                  />
-                </td>
-                <td>
-                  <select className="inventory-activity-select">
-                    <option value="">Unit</option>
-                    <option value="pcs">Sheet</option>
-                    <option value="box">Box</option>
-                    <option value="kg">SQM</option>
-                  </select>
-                </td>
-                <td>
-                  <select className="inventory-activity-select">
-                    <option value="">Status</option>
-                    <option value="in-stock">Sales</option>
-                    <option value="out-stock">Purchase</option>
-                    <option value="reserved">Counted</option>
-                  </select>
-                </td>
-                <td>
-                  <input type="date" className="inventory-activity-date" />
-                </td>
-                <td>
-                  <select className="inventory-activity-select">
-                    <option value="">Select invoice</option>
-                    <option value="INV-001">INV-001</option>
-                    <option value="INV-002">INV-002</option>
-                  </select>
-                </td>
-              </tr>
+              {rows.map((r, i) => {
+                const name = `${r.thickness} ملم ${r.itemName}`;
+                const dimension =
+                  r.itemType === "box" && r.sheetsPerBox
+                    ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
+                    : `${r.length}×${r.width}`;
+                const unit =
+                  r.itemType === "box"
+                    ? "Box"
+                    : r.itemType === "sheet"
+                    ? "Sheet"
+                    : "SQM";
+                const status =
+                  r.transactionType === "purchase" ? "Purchase" : "-";
+                const date = new Date(r.invoiceDate).toLocaleDateString();
+                const invoiceNo = r.invoiceNumber || "—";
+
+                return (
+                  <tr key={i}>
+                    <td>{name}</td>
+                    <td>{dimension}</td>
+                    <td>{r.origin}</td>
+                    <td>{r.quantity}</td>
+                    <td>{r.sqm.toFixed(2)}</td>
+                    <td>{unit}</td>
+                    <td>{status}</td>
+                    <td>{date}</td>
+                    <td>{invoiceNo}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
