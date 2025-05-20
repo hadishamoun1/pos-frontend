@@ -15,12 +15,7 @@ const InventoryActivityPage = () => {
     <div className="inventory-activity-page">
       {/* — Page-level title, pinned above the container */}
       <h1 className="inventory-activity-page-title">Inventory Activity</h1>
-
       <div className="inventory-activity-container">
-        <div className="inventory-activity-header">
-          <button className="inventory-activity-btn-add">Add Row</button>
-        </div>
-
         <div className="inventory-activity-table-wrapper">
           <table className="inventory-activity-table">
             <thead>
@@ -29,7 +24,11 @@ const InventoryActivityPage = () => {
                 <th>Dimensions</th>
                 <th>Brand</th>
                 <th>Quantity</th>
+                <th>Qty OFR</th>
                 <th>SQM</th>
+                <th>SQM OFR</th>
+                <th>Final Cost</th>
+                <th>Final OFR</th>
                 <th>Unit</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -38,21 +37,44 @@ const InventoryActivityPage = () => {
             </thead>
             <tbody>
               {rows.map((r, i) => {
+                // 1️⃣ Name: "<thickness> ملم <itemName>"
                 const name = `${r.thickness} ملم ${r.itemName}`;
+
+                // 2️⃣ Dimensions: "L×W[-sheetsPerBox]"
                 const dimension =
                   r.itemType === "box" && r.sheetsPerBox
                     ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
                     : `${r.length}×${r.width}`;
+
+                // 3️⃣ Unit label
                 const unit =
                   r.itemType === "box"
                     ? "Box"
                     : r.itemType === "sheet"
                     ? "Sheet"
                     : "SQM";
+
+                // 4️⃣ Status label
                 const status =
-                  r.transactionType === "purchase" ? "Purchase" : "-";
+                  r.transactionType === "purchase"
+                    ? "Purchase"
+                    : r.transactionType === "sale"
+                    ? "Sales"
+                    : r.transactionType || "-";
+
+                // 5️⃣ Date formatting
                 const date = new Date(r.invoiceDate).toLocaleDateString();
+
+                // 6️⃣ Invoice #
                 const invoiceNo = r.invoiceNumber || "—";
+
+                // 7️⃣ Final costs (null → dash)
+                const finalCost =
+                  r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—";
+                const finalCostOFR =
+                  r.finalcostofr != null
+                    ? Number(r.finalcostofr).toFixed(2)
+                    : "—";
 
                 return (
                   <tr key={i}>
@@ -60,7 +82,11 @@ const InventoryActivityPage = () => {
                     <td>{dimension}</td>
                     <td>{r.origin}</td>
                     <td>{r.quantity}</td>
+                    <td>{r.quantityofr}</td>
                     <td>{r.sqm.toFixed(2)}</td>
+                    <td>{r.sqmofr.toFixed(2)}</td>
+                    <td>{finalCost}</td>
+                    <td>{finalCostOFR}</td>
                     <td>{unit}</td>
                     <td>{status}</td>
                     <td>{date}</td>

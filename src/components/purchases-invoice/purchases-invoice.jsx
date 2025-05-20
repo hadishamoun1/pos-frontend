@@ -617,6 +617,8 @@ const PurchasesInvoicePage = () => {
       ofrCfrFn = realCalculatePriceCFR;
       ofrFinalFn = realFinalCost;
     } else if (invoiceType === "G") {
+      normalCfrFn = () => 0;
+      normalFinalFn = () => 0;
       // Goods only
       ofrCfrFn = realCalculatePriceCFROFR;
       ofrFinalFn = realFinalCostOFR;
@@ -626,6 +628,12 @@ const PurchasesInvoicePage = () => {
       normalFinalFn = realFinalCost;
       ofrCfrFn = realCalculatePriceCFROFR;
       ofrFinalFn = realFinalCostOFR;
+    } else if (invoiceType === "RVR") {
+      // Both
+      normalCfrFn = realCalculatePriceCFR;
+      normalFinalFn = realFinalCost;
+      ofrCfrFn = () => 0;
+      ofrFinalFn = () => 0;
     }
   }
 
@@ -781,6 +789,7 @@ const PurchasesInvoicePage = () => {
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="SR">SR</option>
+                <option value="RVR">RVR</option>
               </select>
             </label>
           </div>

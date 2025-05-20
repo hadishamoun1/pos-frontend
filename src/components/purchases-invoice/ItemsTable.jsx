@@ -98,7 +98,7 @@ export default function ItemsTable({
             {currency === "EURO" && <th>Euro Price</th>}
             {invoiceType !== "G" && <th>Unit Price</th>}
             {currency === "EURO" && <th>Euro Offer Price</th>}
-            {invoiceType !== "S" && <th>Price OFR</th>}
+            {invoiceType !== "S" || invoiceType !== "RVR" && <th>Price OFR</th>}
             <th>Total</th>
             <th>Total OFR</th>
             <th>Number of Containers</th>
@@ -175,7 +175,7 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-              {invoiceType !== "S" && (
+              {invoiceType !== "S" || invoiceType !== "RVR"  && (
                 <td>
                   <input
                     type="number"
