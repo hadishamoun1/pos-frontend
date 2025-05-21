@@ -13,7 +13,7 @@
   background: #fff;
   width: 90%;
   max-width: 1000px;
-  max-height: 90vh;
+  height: 90vh;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -21,6 +21,7 @@
   flex-direction: column;
 }
 
+/* Close button */
 .count-modal-close {
   position: absolute;
   top: 0.75rem;
@@ -31,70 +32,101 @@
   width: 2rem;
   height: 2rem;
   font-size: 1.25rem;
-  line-height: 1;
   cursor: pointer;
   transition: background 0.2s;
+  z-index: 10;
 }
 .count-modal-close:hover {
   background: #ddd;
 }
 
-.count-modal-content > h2 {
-  margin: 1.5rem 1.5rem 0;
+/* Header with title & Reset/Save */
+.count-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4rem 2rem 0 1.5rem;
+}
+.count-modal-header h2 {
+  margin: 0;
   font-size: 1.5rem;
   color: #007bff;
-  flex-shrink: 0;
+}
+/* group header buttons */
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
 }
 
+/* Reset / Save buttons */
+.count-modal-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(53, 122, 184, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+.count-modal-btn:hover {
+  background: linear-gradient(135deg, #0056b3, #003f7f);
+  transform: translateY(-1px);
+}
+/* Reset in red */
+.reset-btn {
+  background: linear-gradient(135deg, #dc3545, #a71d2a);
+}
+.reset-btn:hover {
+  background: linear-gradient(135deg, #a71d2a, #79151e);
+}
+
+/* Table wrapper */
 .count-modal-table-wrapper {
   flex: 1;
   overflow-y: auto;
-  margin: 1rem 1.5rem 1.5rem;
+  margin: 1rem 1.5rem;
 }
 
+/* Table */
 .count-modal-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 500px;
-  table-layout: auto; /* ensure cells size to content */
 }
 
-.count-modal-table th{
-    padding: 0.75rem 0.5rem;
-    border: 1px solid #e0e0e0;
-    text-align: center;
+.count-modal-table th {
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
 }
 .count-modal-table td {
   padding: 0.45rem 0.4rem;
   border: 1px solid #e0e0e0;
   text-align: center;
-
 }
 
 .count-modal-table thead th {
   position: sticky;
   top: 0;
   background: linear-gradient(135deg, #007bff, #0056b3);
-  font-weight: 600;
-  color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: #fff;
 }
 
-.count-modal-table tbody tr:nth-child(even) {
-  background: #fafbfd;
+/* Narrow count column */
+.count-modal-table th.count-col,
+.count-modal-table td.count-col {
+  width: 7rem;
+  max-width: 7rem;
 }
 
-.count-modal-table tbody tr:hover {
-  background: #eef4ff;
-}
-
-/* make all form controls fill their cell */
+/* Form controls fill cell */
 .count-modal-table td input,
 .count-modal-table td select {
   width: 100%;
   box-sizing: border-box;
   padding: 0.8rem;
-
   font-size: 1rem;
   border: 1px solid #bbb;
   border-radius: 6px;
@@ -106,13 +138,34 @@
   border-color: #4a90e2;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
 }
-.count-modal-table th.count-col,
-.count-modal-table td.count-col {
-  width: 7rem;
-  max-width: 7rem;
+
+.count-modal-table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+.count-modal-table tbody tr:hover {
+  background: #eef4ff;
 }
 
-/* Responsive tweaks */
+/* Add Row */
+.count-modal-add-row {
+  width: 20%;
+  margin: 0 auto 1.5rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30, 126, 52, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+.count-modal-add-row:hover {
+  background: linear-gradient(135deg, #1e7e34, #155d27);
+  transform: translateY(-1px);
+}
+
+/* Responsive */
 @media (max-width: 480px) {
   .count-modal-content {
     max-width: 95%;
@@ -120,6 +173,12 @@
   .count-modal-table {
     font-size: 0.85rem;
     min-width: unset;
+  }
+  .count-modal-header,
+  .count-modal-table-wrapper,
+  .count-modal-add-row {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   .count-modal-table th,
   .count-modal-table td {
