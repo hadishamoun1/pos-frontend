@@ -1,25 +1,15 @@
 import React, { useState } from "react";
-import CountSearchModal from "./countSearchModal"; 
+import CountSearchModal from "./countSearchModal";
 import "./countModal.css";
 
 const CountModal = ({ isOpen, onClose }) => {
-  const [rows, setRows] = useState([
-    { name: "", dimension: "", unit: "", date: "", count: "" },
-  ]);
+  // rows now carry the unique key for each variant
+  const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [focusedRow, setFocusedRow] = useState(null);
 
   if (!isOpen) return null;
 
-  const addRow = () =>
-    setRows([
-      ...rows,
-      { name: "", dimension: "", unit: "", date: "", count: "" },
-    ]);
-
-  const resetAll = () =>
-    setRows([{ name: "", dimension: "", unit: "", date: "", count: "" }]);
-
+  const resetAll = () => setRows([]);
   const handleSave = () => {
     console.log("Saving rows:", rows);
     onClose();
@@ -31,24 +21,27 @@ const CountModal = ({ isOpen, onClose }) => {
     setRows(updated);
   };
 
-  const openSearch = (idx) => {
-    setFocusedRow(idx);
-    setSearchOpen(true);
-  };
-
+  // receive one or many selected items and append them as rows
   const handleSelectItems = (items) => {
-    if (focusedRow !== null && items.length > 0) {
-      const sel = items[0];
-      updateCell(focusedRow, "name", sel.item);
-      updateCell(
-        focusedRow,
-        "dimension",
-        `${sel.length}×${sel.width}-0${sel.sheetsPerBox}`
-      );
-      updateCell(focusedRow, "unit", sel.type);
+    if (items.length) {
+      const today = new Date().toISOString().slice(0, 10);
+      const newRows = items.map((sel) => ({
+        key: sel.key,
+        name: sel.item,
+        dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
+          sel.sheetsPerBox
+        }`,
+        unit: sel.type,
+        date: today,
+        count: "",
+      }));
+      setRows((prev) => [...prev, ...newRows]);
     }
     setSearchOpen(false);
   };
+
+  // build a Set of already‐added keys
+  const existingKeys = new Set(rows.map((r) => r.key));
 
   return (
     <>
@@ -86,14 +79,12 @@ const CountModal = ({ isOpen, onClose }) => {
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={i}>
+                  <tr key={r.key}>
                     <td>
                       <input
                         type="text"
                         className="count-input-name"
                         value={r.name}
-                        placeholder="Enter item name"
-                        onFocus={() => openSearch(i)}
                         readOnly
                       />
                     </td>
@@ -102,7 +93,6 @@ const CountModal = ({ isOpen, onClose }) => {
                         type="text"
                         className="count-input"
                         value={r.dimension}
-                        placeholder="e.g. 225×321-10"
                         onChange={(e) =>
                           updateCell(i, "dimension", e.target.value)
                         }
@@ -114,7 +104,7 @@ const CountModal = ({ isOpen, onClose }) => {
                         value={r.unit}
                         onChange={(e) => updateCell(i, "unit", e.target.value)}
                       >
-                        <option value="">Select unit</option>
+                        <option value="">Unit</option>
                         <option value="box">Box</option>
                         <option value="sheet">Sheet</option>
                         <option value="sqm">SQM</option>
@@ -143,8 +133,12 @@ const CountModal = ({ isOpen, onClose }) => {
             </table>
           </div>
 
-          <button className="count-modal-add-row" onClick={addRow}>
-            + Add Row
+          {/* now triggers search instead of adding a blank row */}
+          <button
+            className="count-modal-add-row"
+            onClick={() => setSearchOpen(true)}
+          >
+            Search Items
           </button>
         </div>
       </div>
@@ -152,7 +146,8 @@ const CountModal = ({ isOpen, onClose }) => {
       <CountSearchModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
-        onSelectItems={handleSelectItems}
+        onSelect={handleSelectItems}
+        existingKeys={existingKeys}
       />
     </>
   );

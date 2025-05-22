@@ -1,4 +1,3 @@
-// src/InventoryActivityPage.jsx
 import React, { useState, useEffect } from "react";
 import CountModal from "./countModal";
 import "./inventory-activity.css";
@@ -16,7 +15,6 @@ const InventoryActivityPage = () => {
 
   return (
     <div className="inventory-activity-page">
-      {/* header with title & count button */}
       <div className="inventory-activity-header-bar">
         <h1 className="inventory-activity-title">Inventory Activity</h1>
         <button

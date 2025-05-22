@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./countSearchModal.css";
 
-const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
+const CountSearchModal = ({ isOpen, onClose, onSelect, existingKeys }) => {
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSet, setSelectedSet] = useState(new Set());
@@ -18,6 +18,7 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
   }, [isOpen]);
 
   const toggleSelect = (variantKey) => {
+    if (existingKeys.has(variantKey)) return; // cannot toggle existing
     const s = new Set(selectedSet);
     s.has(variantKey) ? s.delete(variantKey) : s.add(variantKey);
     setSelectedSet(s);
@@ -35,6 +36,7 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
           const key = `${item.id}-${thick.thickness}-${variant.id}`;
           if (selectedSet.has(key)) {
             selected.push({
+              key,
               itemVariantId: variant.id,
               item: `${parseFloat(thick.thickness)} ملم ${item.itemName}`,
               type: item.type,
@@ -58,15 +60,10 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
         className="count-search-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          className="count-search-modal-close"
-          onClick={onClose}
-          aria-label="Close"
-        >
+        <button className="count-search-modal-close" onClick={onClose}>
           &times;
         </button>
 
-        {/* Search */}
         <div className="count-search-modal-searchbar">
           <input
             type="text"
@@ -78,7 +75,6 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
           />
         </div>
 
-        {/* Table */}
         <div className="count-search-modal-table-wrapper">
           <table className="count-search-modal-table">
             <thead>
@@ -96,12 +92,14 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
                 item.thicknesses.flatMap((thick) =>
                   thick.variants.map((variant) => {
                     const key = `${item.id}-${thick.thickness}-${variant.id}`;
+                    const already = existingKeys.has(key);
                     return (
                       <tr key={key}>
                         <td>
                           <input
                             type="checkbox"
-                            checked={selectedSet.has(key)}
+                            checked={already || selectedSet.has(key)}
+                            disabled={already}
                             onChange={() => toggleSelect(key)}
                           />
                         </td>
@@ -123,7 +121,6 @@ const CountSearchModal = ({ isOpen, onClose, onSelect }) => {
           </table>
         </div>
 
-        {/* OK button */}
         <div className="count-search-modal-footer">
           <button
             className="count-search-modal-ok"
