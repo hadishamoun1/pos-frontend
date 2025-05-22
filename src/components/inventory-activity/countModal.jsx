@@ -1,11 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CountSearchModal from "./countSearchModal";
 import "./countModal.css";
 
 const CountModal = ({ isOpen, onClose }) => {
-  // rows now carry the unique key for each variant
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const [deleteMenu, setDeleteMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+  });
+
+  const tableWrapperRef = useRef();
+  const wrapperRef = useRef();
+
+  const closeDeleteMenu = () => {
+    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+  };
+
+  const handleDeleteSingle = () => {
+    const { rowIndex } = deleteMenu;
+    if (rowIndex == null) return;
+    setRows((prevRows) => prevRows.filter((_, i) => i !== rowIndex));
+    closeDeleteMenu();
+  };
+
+  useEffect(() => {
+    const handleClick = () => closeDeleteMenu();
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -21,7 +47,6 @@ const CountModal = ({ isOpen, onClose }) => {
     setRows(updated);
   };
 
-  // receive one or many selected items and append them as rows
   const handleSelectItems = (items) => {
     if (items.length) {
       const today = new Date().toISOString().slice(0, 10);
@@ -40,12 +65,22 @@ const CountModal = ({ isOpen, onClose }) => {
     setSearchOpen(false);
   };
 
-  // build a Set of already‐added keys
   const existingKeys = new Set(rows.map((r) => r.key));
+
+  const onRowContextMenu = (e, index) => {
+    e.preventDefault();
+    const rect = tableWrapperRef.current.getBoundingClientRect();
+    setDeleteMenu({
+      visible: true,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      rowIndex: index,
+    });
+  };
 
   return (
     <>
-      <div className="count-modal-overlay" onClick={onClose}>
+      <div className="count-modal-overlay" onClick={onClose} ref={wrapperRef}>
         <div
           className="count-modal-content"
           onClick={(e) => e.stopPropagation()}
@@ -66,7 +101,7 @@ const CountModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          <div className="count-modal-table-wrapper">
+          <div className="count-modal-table-wrapper" ref={tableWrapperRef}>
             <table className="count-modal-table">
               <thead>
                 <tr>
@@ -79,7 +114,7 @@ const CountModal = ({ isOpen, onClose }) => {
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r.key}>
+                  <tr key={r.key} onContextMenu={(e) => onRowContextMenu(e, i)}>
                     <td>
                       <input
                         type="text"
@@ -131,9 +166,24 @@ const CountModal = ({ isOpen, onClose }) => {
                 ))}
               </tbody>
             </table>
+
+            {deleteMenu.visible && (
+              <div
+                className="context-menu-purchases"
+                style={{
+                  position: "absolute",
+                  top: deleteMenu.y,
+                  left: deleteMenu.x,
+                  zIndex: 1000,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button onClick={handleDeleteSingle}>Delete</button>
+                <button onClick={closeDeleteMenu}>Cancel</button>
+              </div>
+            )}
           </div>
 
-          {/* now triggers search instead of adding a blank row */}
           <button
             className="count-modal-add-row"
             onClick={() => setSearchOpen(true)}

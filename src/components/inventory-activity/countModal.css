@@ -87,6 +87,7 @@
   flex: 1;
   overflow-y: auto;
   margin: 1rem 1.5rem;
+  position: relative; /* <-- make absolutely-positioned children align to this */
 }
 
 /* Table */
@@ -120,8 +121,8 @@
   width: 7rem;
   max-width: 7rem;
 }
-.count-input-name{
-    direction: rtl;
+.count-input-name {
+  direction: rtl;
 }
 /* Form controls fill cell */
 .count-modal-table td input,
@@ -134,7 +135,6 @@
   border-radius: 6px;
   transition: border-color 0.2s, box-shadow 0.2s;
   text-align: center;
-
 }
 .count-modal-table td input:focus,
 .count-modal-table td select:focus {
@@ -167,6 +167,33 @@
 .count-modal-add-row:hover {
   background: linear-gradient(135deg, #1e7e34, #155d27);
   transform: translateY(-1px);
+}
+
+/* existing styles... */
+
+.row-context-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  z-index: 1100;
+  padding: 0.5rem;
+}
+
+.context-delete-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.context-delete-btn:hover {
+  background: #a71d2a;
 }
 
 /* Responsive */
