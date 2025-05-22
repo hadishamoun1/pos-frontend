@@ -120,7 +120,9 @@
   width: 7rem;
   max-width: 7rem;
 }
-
+.count-input-name{
+    direction: rtl;
+}
 /* Form controls fill cell */
 .count-modal-table td input,
 .count-modal-table td select {
@@ -131,6 +133,8 @@
   border: 1px solid #bbb;
   border-radius: 6px;
   transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: center;
+
 }
 .count-modal-table td input:focus,
 .count-modal-table td select:focus {
