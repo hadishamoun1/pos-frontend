@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import CountSearchModal from "./countSearchModal";
 import "./countModal.css";
+
+const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 
 const CountModal = ({ isOpen, onClose }) => {
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
@@ -16,65 +20,85 @@ const CountModal = ({ isOpen, onClose }) => {
   const tableWrapperRef = useRef();
   const wrapperRef = useRef();
 
-  const closeDeleteMenu = () => {
+  const closeDeleteMenu = () =>
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
-  };
 
   const handleDeleteSingle = () => {
     const { rowIndex } = deleteMenu;
     if (rowIndex == null) return;
-    setRows((prevRows) => prevRows.filter((_, i) => i !== rowIndex));
+    setRows((prev) => prev.filter((_, i) => i !== rowIndex));
     closeDeleteMenu();
   };
 
   useEffect(() => {
-    const handleClick = () => closeDeleteMenu();
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
+    const onClick = () => closeDeleteMenu();
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
   }, []);
 
   if (!isOpen) return null;
 
   const resetAll = () => setRows([]);
-  const handleSave = () => {
-    console.log("Saving rows:", rows);
-    onClose();
+
+  const handleSave = async () => {
+    if (!rows.length) {
+      onClose();
+      return;
+    }
+    setSaving(true);
+    try {
+      await axios.post("http://localhost:3000/inventory-count", rows);
+      onClose();
+    } catch (err) {
+      console.error("Error saving inventory counts", err);
+      alert("Failed to save counts. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateCell = (idx, field, value) => {
-    const updated = [...rows];
-    updated[idx][field] = value;
-    setRows(updated);
+    setRows((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: value };
+      return copy;
+    });
   };
 
   const handleSelectItems = (items) => {
-    if (items.length) {
-      const today = new Date().toISOString().slice(0, 10);
-      const newRows = items.map((sel) => ({
-        key: sel.key,
-        name: sel.item,
-        dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
-          sel.sheetsPerBox
-        }`,
-        unit: sel.type,
-        date: today,
-        count: "",
-      }));
-      setRows((prev) => [...prev, ...newRows]);
+    if (!items.length) {
+      setSearchOpen(false);
+      return;
     }
+    const today = new Date().toISOString().slice(0, 10);
+    const newRows = items.map((sel) => ({
+      key: sel.key,
+      itemVariantId: sel.key,
+      name: sel.item,
+      dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
+        sel.sheetsPerBox
+      }`,
+      unit: sel.type,
+      date: today,
+      count: "",
+      type: "S", // default
+      countOFR: "", // for SR only
+    }));
+    setRows((prev) => [...prev, ...newRows]);
     setSearchOpen(false);
   };
 
   const existingKeys = new Set(rows.map((r) => r.key));
+  const showCountOFR = rows.some((r) => r.type === "SR");
 
-  const onRowContextMenu = (e, index) => {
+  const onRowContextMenu = (e, i) => {
     e.preventDefault();
     const rect = tableWrapperRef.current.getBoundingClientRect();
     setDeleteMenu({
       visible: true,
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
-      rowIndex: index,
+      rowIndex: i,
     });
   };
 
@@ -92,11 +116,19 @@ const CountModal = ({ isOpen, onClose }) => {
           <div className="count-modal-header">
             <h2>Count Inventory</h2>
             <div className="header-buttons">
-              <button className="count-modal-btn reset-btn" onClick={resetAll}>
+              <button
+                className="count-modal-btn reset-btn"
+                onClick={resetAll}
+                disabled={saving}
+              >
                 Reset
               </button>
-              <button className="count-modal-btn save-btn" onClick={handleSave}>
-                Save
+              <button
+                className="count-modal-btn save-btn"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
@@ -110,6 +142,8 @@ const CountModal = ({ isOpen, onClose }) => {
                   <th>Unit</th>
                   <th>Date</th>
                   <th className="count-col">Count</th>
+                  <th>Type</th>
+                  {showCountOFR && <th className="count-ofr-th">Count OFR</th>}
                 </tr>
               </thead>
               <tbody>
@@ -128,17 +162,11 @@ const CountModal = ({ isOpen, onClose }) => {
                         type="text"
                         className="count-input"
                         value={r.dimension}
-                        onChange={(e) =>
-                          updateCell(i, "dimension", e.target.value)
-                        }
+                        readOnly
                       />
                     </td>
                     <td>
-                      <select
-                        className="count-input"
-                        value={r.unit}
-                        onChange={(e) => updateCell(i, "unit", e.target.value)}
-                      >
+                      <select className="count-input" value={r.unit} disabled>
                         <option value="">Unit</option>
                         <option value="box">Box</option>
                         <option value="sheet">Sheet</option>
@@ -150,7 +178,7 @@ const CountModal = ({ isOpen, onClose }) => {
                         type="date"
                         className="count-input"
                         value={r.date}
-                        onChange={(e) => updateCell(i, "date", e.target.value)}
+                        readOnly
                       />
                     </td>
                     <td className="count-col">
@@ -160,8 +188,41 @@ const CountModal = ({ isOpen, onClose }) => {
                         value={r.count}
                         onChange={(e) => updateCell(i, "count", e.target.value)}
                         placeholder="0"
+                        disabled={saving}
                       />
                     </td>
+                    <td>
+                      <select
+                        className="count-input"
+                        value={r.type}
+                        onChange={(e) => updateCell(i, "type", e.target.value)}
+                        disabled={saving}
+                      >
+                        {TYPE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    {showCountOFR && (
+                      <td>
+                        {r.type === "SR" ? (
+                          <input
+                            type="number"
+                            className="count-input"
+                            value={r.countOFR}
+                            onChange={(e) =>
+                              updateCell(i, "countOFR", e.target.value)
+                            }
+                            placeholder="0"
+                            disabled={saving}
+                          />
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -178,8 +239,12 @@ const CountModal = ({ isOpen, onClose }) => {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <button onClick={handleDeleteSingle}>Delete</button>
-                <button onClick={closeDeleteMenu}>Cancel</button>
+                <button onClick={handleDeleteSingle} disabled={saving}>
+                  Delete
+                </button>
+                <button onClick={closeDeleteMenu} disabled={saving}>
+                  Cancel
+                </button>
               </div>
             )}
           </div>
@@ -187,6 +252,7 @@ const CountModal = ({ isOpen, onClose }) => {
           <button
             className="count-modal-add-row"
             onClick={() => setSearchOpen(true)}
+            disabled={saving}
           >
             Search Items
           </button>
