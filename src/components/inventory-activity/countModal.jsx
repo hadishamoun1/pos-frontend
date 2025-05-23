@@ -46,8 +46,17 @@ const CountModal = ({ isOpen, onClose }) => {
       return;
     }
     setSaving(true);
+
+    const payload = rows.map((r) => ({
+      ...r,
+      count: r.count === "" ? 0 : Number(r.count),
+      countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
+      finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
+      finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
+    }));
+
     try {
-      await axios.post("http://localhost:3000/inventory-count", rows);
+      await axios.post("http://localhost:3000/inventory-count", payload);
       onClose();
     } catch (err) {
       console.error("Error saving inventory counts", err);
@@ -61,6 +70,13 @@ const CountModal = ({ isOpen, onClose }) => {
     setRows((prev) => {
       const copy = [...prev];
       copy[idx] = { ...copy[idx], [field]: value };
+      // reset related fields when type changes
+      if (field === "type") {
+        copy[idx].count = "";
+        copy[idx].countOFR = "";
+        copy[idx].finalCost = "";
+        copy[idx].finalCostOfr = "";
+      }
       return copy;
     });
   };
@@ -81,15 +97,21 @@ const CountModal = ({ isOpen, onClose }) => {
       unit: sel.type,
       date: today,
       count: "",
-      type: "S", // default
-      countOFR: "", // for SR only
+      type: "S",
+      countOFR: "",
+      finalCost: "",
+      finalCostOfr: "",
     }));
     setRows((prev) => [...prev, ...newRows]);
     setSearchOpen(false);
   };
 
   const existingKeys = new Set(rows.map((r) => r.key));
-  const showCountOFR = rows.some((r) => r.type === "SR");
+
+  // determine which cost columns to show
+  const showCountOfr = rows.some((r) => r.type === "SR");
+  const showFinalCost = rows.some((r) => ["S", "SR", "RVR"].includes(r.type));
+  const showFinalCostOfr = rows.some((r) => ["G", "SR"].includes(r.type));
 
   const onRowContextMenu = (e, i) => {
     e.preventDefault();
@@ -143,7 +165,9 @@ const CountModal = ({ isOpen, onClose }) => {
                   <th>Date</th>
                   <th className="count-col">Count</th>
                   <th>Type</th>
-                  {showCountOFR && <th className="count-ofr-th">Count OFR</th>}
+                  {showCountOfr && <th className="count-col">Count OFR</th>}
+                  {showFinalCost && <th className="final-cost-th">Final Cost</th>}
+                  {showFinalCostOfr && <th className="final-ofr-th">Final OFR</th>}
                 </tr>
               </thead>
               <tbody>
@@ -205,7 +229,7 @@ const CountModal = ({ isOpen, onClose }) => {
                         ))}
                       </select>
                     </td>
-                    {showCountOFR && (
+                    {showCountOfr && (
                       <td>
                         {r.type === "SR" ? (
                           <input
@@ -216,6 +240,42 @@ const CountModal = ({ isOpen, onClose }) => {
                               updateCell(i, "countOFR", e.target.value)
                             }
                             placeholder="0"
+                            disabled={saving}
+                          />
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </td>
+                    )}
+                    {showFinalCost && (
+                      <td>
+                        {["S", "SR", "RVR"].includes(r.type) ? (
+                          <input
+                            type="number"
+                            className="count-input"
+                            value={r.finalCost}
+                            onChange={(e) =>
+                              updateCell(i, "finalCost", e.target.value)
+                            }
+                            placeholder="0.00"
+                            disabled={saving}
+                          />
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </td>
+                    )}
+                    {showFinalCostOfr && (
+                      <td>
+                        {["G", "SR"].includes(r.type) ? (
+                          <input
+                            type="number"
+                            className="count-input"
+                            value={r.finalCostOfr}
+                            onChange={(e) =>
+                              updateCell(i, "finalCostOfr", e.target.value)
+                            }
+                            placeholder="0.00"
                             disabled={saving}
                           />
                         ) : (

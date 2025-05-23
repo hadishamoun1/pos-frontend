@@ -11,8 +11,8 @@
 .count-modal-content {
   position: relative;
   background: #fff;
-  width: 90%;
-  max-width: 1100px;
+  width: 100%;
+  max-width: 1500px;
   height: 90vh;
   border-radius: 12px;
   overflow: hidden;
@@ -115,14 +115,24 @@
   color: #fff;
 }
 
-/* Narrow count column */
-.count-modal-table th.count-col,
-.count-modal-table td.count-col {
-  width: 7rem;
-  max-width: 7rem;
+.count-ofr-th {
+  width: 15%;
 }
+.final-cost-th {
+  width: 7%;
+}
+.final-ofr-th {
+  width: 7%;
+}
+
+/* Narrow count column */
+
 .count-input-name {
   direction: rtl;
+}
+
+.count-col{
+    width: 7%;
 }
 /* Form controls fill cell */
 .count-modal-table td input,
@@ -130,7 +140,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.8rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   border: 1px solid #bbb;
   border-radius: 6px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -150,8 +160,8 @@
   background: #eef4ff;
 }
 
-.count-ofr-th{
-    width: 13%;
+.count-ofr-th {
+  width: 13%;
 }
 
 /* Add Row */
