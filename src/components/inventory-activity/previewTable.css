@@ -1,0 +1,135 @@
+/* previewTable.css */
+
+/* Container around the preview */
+.preview-container {
+padding-left: 1rem;
+padding-right: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  max-height: 80vh;
+  overflow: auto;
+}
+
+/* Header with back button */
+.preview-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.preview-close-btn {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 1rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.preview-close-btn:hover {
+  color: #0056b3;
+}
+
+/* Table styling */
+.preview-count-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Header row */
+.preview-count-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid #ddd;
+  text-align: left;
+  z-index: 1;
+  text-align: center;
+}
+.count-preview-itemname {
+  direction: rtl;
+}
+
+/* Body rows */
+.preview-count-table tbody tr {
+  transition: background 0.2s;
+}
+
+.preview-count-table tbody tr:nth-child(odd) {
+  background: #fff;
+}
+
+.preview-count-table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.preview-count-table tbody tr:hover {
+  background: #e8f4ff;
+}
+
+/* Cells */
+.preview-count-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+/* Make the last row’s bottom border lighter */
+.preview-count-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Scrollbar styling for WebKit */
+.preview-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.preview-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.preview-container::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.preview-container::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+/* Push the Edit button to the far right */
+.preview-edit-btn {
+  margin-left: auto;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+/* Hover / active states */
+.preview-edit-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+.preview-edit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Disable state styling */
+.preview-edit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
