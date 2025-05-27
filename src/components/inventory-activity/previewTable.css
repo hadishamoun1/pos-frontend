@@ -2,8 +2,8 @@
 
 /* Container around the preview */
 .preview-container {
-padding-left: 1rem;
-padding-right: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   background: #fff;
   border-radius: 8px;
   max-height: 80vh;
@@ -35,7 +35,7 @@ padding-right: 1rem;
 /* Table styling */
 .preview-count-table {
   width: 100%;
-  border-collapse: separate;
+  border-collapse: collapse;
   border-spacing: 0;
   font-size: 0.95rem;
   color: #333;
@@ -49,8 +49,6 @@ padding-right: 1rem;
   color: #ffffff;
   font-weight: 600;
   padding: 0.75rem 1rem;
-  border-bottom: 2px solid #ddd;
-  text-align: left;
   z-index: 1;
   text-align: center;
 }

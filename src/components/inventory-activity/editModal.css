@@ -1,0 +1,194 @@
+/* Overlay for edit modal */
+.edit-count-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  /* Content container */
+  .edit-count-modal-content {
+    position: relative;
+    background: #fff;
+    width: 100%;
+    max-width: 1500px;
+    height: 90vh;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Close button */
+  .edit-count-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: #eee;
+    border: none;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    z-index: 10;
+  }
+  .edit-count-modal-close:hover {
+    background: #ddd;
+  }
+  
+  /* Header */
+  .edit-count-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+  }
+  .edit-count-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #007bff;
+  }
+  
+  /* Header buttons group */
+  .edit-header-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  /* Buttons in edit modal */
+  .edit-count-modal-btn {
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(53, 122, 184, 0.3);
+    transition: background 0.3s, transform 0.2s;
+  }
+  .edit-count-modal-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #003f7f);
+    transform: translateY(-1px);
+  }
+  .edit-reset-btn {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+  }
+  .edit-reset-btn:hover {
+    background: linear-gradient(135deg, #a71d2a, #79151e);
+  }
+  
+  /* Table wrapper */
+  .edit-count-modal-table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    margin: 1rem 1.5rem;
+    position: relative;
+  }
+  
+  /* Table */
+  .edit-count-modal-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 500px;
+  }
+  .edit-count-modal-table th,
+  .edit-count-modal-table td {
+    padding: 0.75rem 0.5rem;
+    border: 1px solid #e0e0e0;
+    text-align: center;
+  }
+  .edit-count-modal-table thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: #fff;
+  }
+  
+  /* Form controls */
+  .edit-count-modal-table td input,
+  .edit-count-modal-table td select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.8rem;
+    font-size: 1.1rem;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .edit-count-modal-table td input:focus,
+  .edit-count-modal-table td select:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+  }
+  
+  /* Row hover and stripes */
+  .edit-count-modal-table tbody tr:nth-child(even) {
+    background: #fafbfd;
+  }
+  .edit-count-modal-table tbody tr:hover {
+    background: #eef4ff;
+  }
+  
+  /* Context menu */
+  .edit-context-menu-purchases {
+    position: absolute;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    z-index: 1100;
+    padding: 0.5rem;
+  }
+  .edit-count-input-name{
+    direction: rtl;
+  }
+  
+  /* Add Row button */
+  .edit-count-modal-add-row {
+    width: 20%;
+    margin: 0 auto 1.5rem;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(30, 126, 52, 0.3);
+    transition: background 0.3s, transform 0.2s;
+  }
+  .edit-count-modal-add-row:hover {
+    background: linear-gradient(135deg, #1e7e34, #155d27);
+    transform: translateY(-1px);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    .edit-count-modal-content {
+      max-width: 95%;
+    }
+    .edit-count-modal-table {
+      font-size: 0.85rem;
+      min-width: unset;
+    }
+    .edit-count-modal-header,
+    .edit-count-modal-table-wrapper,
+    .edit-count-modal-add-row {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .edit-count-modal-table th,
+    .edit-count-modal-table td {
+      padding: 0.5rem;
+    }
+  }
+  

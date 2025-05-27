@@ -236,7 +236,7 @@ const CountModal = ({ isOpen, onClose }) => {
                             type="date"
                             className="count-input"
                             value={r.date}
-                            readOnly
+                            
                           />
                         </td>
                         <td className="count-col">

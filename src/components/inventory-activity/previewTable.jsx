@@ -1,19 +1,20 @@
 // PreviewTable.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import EditCountModal from "./editModal";
 import "./previewTable.css";
 
-const PreviewTable = ({ onEdit }) => {
+const PreviewTable = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     axios
       .get("http://localhost:3000/inventory-count/v1/filtered")
-      .then((res) => {
-        setRows(res.data);
-      })
+      .then((res) => setRows(res.data))
       .catch((err) => {
         console.error("Failed to fetch count transactions", err);
         setError("Failed to load data");
@@ -21,61 +22,90 @@ const PreviewTable = ({ onEdit }) => {
       .finally(() => setLoading(false));
   }, []);
 
+  const toggleSelect = (id) => {
+    setSelected((prev) => {
+      const copy = new Set(prev);
+      if (copy.has(id)) copy.delete(id);
+      else copy.add(id);
+      return copy;
+    });
+  };
+
   if (loading) return <div className="preview-loading">Loading…</div>;
   if (error) return <div className="preview-error">{error}</div>;
 
+  const selectedRows = rows.filter((r) => selected.has(r.id));
+
   return (
-    <div className="preview-container">
-      <div className="preview-header">
-        <button className="preview-edit-btn" onClick={onEdit}>
-          Edit
-        </button>
+    <>
+      <div className="preview-container">
+        <div className="preview-header">
+          <button
+            className="preview-edit-btn"
+            onClick={() => setEditOpen(true)}
+            disabled={selected.size === 0}
+          >
+            Edit
+          </button>
+        </div>
+
+        <table className="preview-count-table">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th className="count-preview-itemname">Item Name</th>
+              <th>Dimensions</th>
+              <th>Origin</th>
+              <th>Unit</th>
+              <th>Date</th>
+              <th>Count</th>
+              <th>SQM</th>
+              <th>Type</th>
+              <th>Final Cost</th>
+              <th>Final OFR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const itemName = `${r.thickness} ملم ${r.itemVariantName}`;
+              let dimension = `${r.length}×${r.width}`;
+              if (r.itemVariantType === "box") {
+                dimension += `-0${r.sheetsPerBox}`;
+              }
+              return (
+                <tr key={r.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleSelect(r.id)}
+                    />
+                  </td>
+                  <td className="count-preview-itemname">{itemName}</td>
+                  <td>{dimension}</td>
+                  <td>{r.origin}</td>
+                  <td>{r.itemVariantType}</td>
+                  <td>{r.date}</td>
+                  <td>{r.count}</td>
+                  <td>{r.sqm}</td>
+                  <td>{r.type}</td>
+                  <td>{r.finalCost != null ? r.finalCost : "-"}</td>
+                  <td>{r.finalCostOfr != null ? r.finalCostOfr : "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      <table className="preview-count-table">
-        <thead>
-          <tr>
-            <th className="count-preview-itemname">Item Name</th>
-            <th>Dimensions</th>
-            <th>Origin</th>
-            <th>Unit</th>
-            <th>Date</th>
-            <th>Count</th>
-            <th>SQM</th>
-            <th>Type</th>
-            <th>Final Cost</th>
-            <th>Final OFR</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            // Build Item Name as "thickness itemVariantName"
-            const itemName = `${r.thickness} ${r.itemVariantName}`;
-
-            // Build dimensions
-            let dimension = `${r.length}×${r.width}`;
-            if (r.itemVariantType === "box") {
-              dimension += `-0${r.sheetsPerBox}`;
-            }
-
-            return (
-              <tr key={r.id}>
-                <td className="count-preview-itemname">{itemName}</td>
-                <td>{dimension}</td>
-                <td>{r.origin}</td>
-                <td>{r.itemVariantType}</td>
-                <td>{r.date}</td>
-                <td>{r.count}</td>
-                <td>{r.sqm}</td>
-                <td>{r.type}</td>
-                <td>{r.finalCost != null ? r.finalCost : "-"}</td>
-                <td>{r.finalCostOfr != null ? r.finalCostOfr : "-"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+      {editOpen && (
+        <EditCountModal
+          isOpen={editOpen}
+          onClose={() => setEditOpen(false)}
+          initialRows={selectedRows}
+        />
+      )}
+    </>
   );
 };
 
