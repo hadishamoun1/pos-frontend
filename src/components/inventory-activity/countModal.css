@@ -44,7 +44,6 @@
 .count-modal-header {
   display: flex;
   flex-direction: column;
-
 }
 .count-modal-header h2 {
   margin: 0;
@@ -216,10 +215,10 @@
 /* Container for the two action buttons */
 /* ─── Action Buttons Container ────────────────────────── */
 .action-buttons {
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  width: 100%; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   gap: 0.5rem;
   margin: 0.75rem 0;
   align-self: center;
