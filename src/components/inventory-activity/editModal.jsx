@@ -9,7 +9,7 @@ const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchKey, setSearchKey] = useState(0); // ← force fresh mount
+  const [searchKey, setSearchKey] = useState(0); // force CountSearchModal remount
   const [activeRow, setActiveRow] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteMenu, setDeleteMenu] = useState({
@@ -22,15 +22,13 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const tableWrapperRef = useRef();
   const wrapperRef = useRef();
 
-  // normalize initialRows into shape with name/dimension/unit
+  // Build name/dimension/unit on mount
   useEffect(() => {
     setRows(
       initialRows.map((r) => {
         const itemName = `${r.thickness} ملم ${r.itemVariantName}`;
         let dimension = `${r.length}×${r.width}`;
-        if (r.itemVariantType === "box") {
-          dimension += `-0${r.sheetsPerBox}`;
-        }
+        if (r.itemVariantType === "box") dimension += `-0${r.sheetsPerBox}`;
         return { ...r, name: itemName, dimension, unit: r.itemVariantType };
       })
     );
@@ -60,15 +58,27 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       return;
     }
     setSaving(true);
-    const payload = rows.map((r) => ({
-      ...r,
-      count: r.count === "" ? 0 : Number(r.count),
-      countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
-      finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
-      finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
-    }));
+
     try {
-      await axios.patch("http://localhost:3000/inventory-count", payload);
+      // send one PATCH per row
+      await Promise.all(
+        rows.map((r) => {
+          const body = {
+            date: r.date,
+            count: r.count === "" ? 0 : Number(r.count),
+            type: r.type,
+            unit: r.unit,
+            countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
+            finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
+            finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
+            itemVariantId: r.itemVariantId,
+          };
+          return axios.patch(
+            `http://localhost:3000/inventory-count/${r.id}`,
+            body
+          );
+        })
+      );
       onClose();
     } catch (err) {
       console.error("Error updating counts", err);
@@ -82,6 +92,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
     setRows((prev) => {
       const copy = [...prev];
       copy[idx] = { ...copy[idx], [field]: value };
+      // reset related fields when type changes
       if (field === "type") {
         copy[idx].count = "";
         copy[idx].countOFR = "";
@@ -93,7 +104,6 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   };
 
   const handleSelectItems = (items) => {
-    // only ever take the first item
     if (!items.length || activeRow == null) {
       setSearchOpen(false);
       return;
@@ -101,9 +111,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
     const sel = items[0];
     const itemName = sel.item;
     let dimension = `${Math.floor(sel.length)}×${Math.floor(sel.width)}`;
-    if (sel.type === "box") {
-      dimension += `-0${sel.sheetsPerBox}`;
-    }
+    if (sel.type === "box") dimension += `-0${sel.sheetsPerBox}`;
     setRows((prev) => {
       const copy = [...prev];
       copy[activeRow] = {
@@ -169,11 +177,11 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                 <th>Dimension</th>
                 <th>Unit</th>
                 <th>Date</th>
-                <th className="count-col">Count</th>
+                <th className="edit-count">Count</th>
                 <th>Type</th>
-                {showCountOfr && <th>Count OFR</th>}
-                {showFinalCost && <th>Final Cost</th>}
-                {showFinalCostOfr && <th>Final Cost OFR</th>}
+                {showCountOfr && <th className="edit-count-ofr">Count OFR</th>}
+                {showFinalCost && <th className="edit-final-cost">Final Cost</th>}
+                {showFinalCostOfr && <th className="edit-final-cost-ofr">Final Cost OFR</th>}
               </tr>
             </thead>
             <tbody>
@@ -187,7 +195,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                       readOnly
                       onClick={() => {
                         setActiveRow(i);
-                        setSearchKey((k) => k + 1); // ← clear modal
+                        setSearchKey((k) => k + 1);
                         setSearchOpen(true);
                       }}
                     />
@@ -326,7 +334,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
         </div>
 
         <CountSearchModal
-          key={searchKey} // ← fresh mount each open
+          key={searchKey}
           isOpen={searchOpen}
           onClose={() => setSearchOpen(false)}
           onSelect={handleSelectItems}
