@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import CountModal from "./countModal";
 import "./inventory-activity.css";
+import TransferModal from "./transferModal";
 
 const InventoryActivityPage = () => {
   const [rows, setRows] = useState([]);
   const [showCountModal, setShowCountModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost:3000/inventory-transactions/activity")
@@ -32,7 +34,7 @@ const InventoryActivityPage = () => {
 
           <button
             className="inventory-activity-btn-transfers"
-            onClick={handleTransfers}
+            onClick={() => setShowTransferModal(true)}
           >
             Transfers
           </button>
@@ -113,6 +115,12 @@ const InventoryActivityPage = () => {
       <CountModal
         isOpen={showCountModal}
         onClose={() => setShowCountModal(false)}
+      />
+
+      {/* NEW Transfer modal */}
+      <TransferModal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
       />
     </div>
   );
