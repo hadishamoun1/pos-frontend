@@ -1,5 +1,6 @@
 // TransferModal.jsx
 import React, { useState, useRef } from "react";
+import SearchModal from "../pos-system/searchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import "./transferModal.css";
 
@@ -11,10 +12,11 @@ const TransferModal = ({ isOpen, onClose }) => {
   const [details, setDetails] = useState({
     transferNumber: "",
     date: new Date().toISOString().slice(0, 10),
-    type: "",
-    location: "",
+    type: TYPE_OPTIONS[0],
+    location: LOCATION_OPTIONS[0],
   });
   const [rows, setRows] = useState([]);
+  const [searchOpen, setSearchOpen] = useState(false);
   const wrapperRef = useRef();
 
   if (!isOpen) return null;
@@ -23,10 +25,28 @@ const TransferModal = ({ isOpen, onClose }) => {
     setDetails({ ...details, [e.target.name]: e.target.value });
   };
 
-  const handleSearch = () => {
-    // TODO: wire up your search logic here
-    console.log("Search clicked with details:", details);
+  const handleSelectItems = (items) => {
+    const mapped = items.map((i) => ({
+      name: i.item,
+      origin: i.origin,
+      boxCount: i.box,
+      sheetCount: i.sheet,
+      length: i.length,
+      width: i.width,
+      sqm: i.sqm,
+      price: "",
+    }));
+    // append new items
+    setRows((prev) => [...prev, ...mapped]);
+    setSearchOpen(false);
   };
+
+  const updateRowField = (idx, field, value) =>
+    setRows((rs) => {
+      const copy = [...rs];
+      copy[idx] = { ...copy[idx], [field]: value };
+      return copy;
+    });
 
   return (
     <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
@@ -60,7 +80,6 @@ const TransferModal = ({ isOpen, onClose }) => {
           <PreviewTransferTable rows={rows} />
         ) : (
           <div className="transfer-modal-body">
-            {/* transfer details */}
             <div className="transfer-details">
               <label>
                 Transfer #<br />
@@ -89,7 +108,6 @@ const TransferModal = ({ isOpen, onClose }) => {
                   value={details.type}
                   onChange={handleDetailChange}
                 >
-                  <option value="">Select Type</option>
                   {TYPE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
                       {opt}
@@ -105,7 +123,6 @@ const TransferModal = ({ isOpen, onClose }) => {
                   value={details.location}
                   onChange={handleDetailChange}
                 >
-                  <option value="">Select Location</option>
                   {LOCATION_OPTIONS.map((loc) => (
                     <option key={loc} value={loc}>
                       {loc}
@@ -115,14 +132,15 @@ const TransferModal = ({ isOpen, onClose }) => {
               </label>
             </div>
 
-            {/* Search button, right-aligned */}
             <div className="transfer-search-wrapper">
-              <button className="transfer-search-btn" onClick={handleSearch}>
+              <button
+                className="transfer-search-btn"
+                onClick={() => setSearchOpen(true)}
+              >
                 Search
               </button>
             </div>
 
-            {/* table */}
             <div className="transfer-table-wrapper">
               <table className="transfer-table">
                 <thead>
@@ -150,14 +168,80 @@ const TransferModal = ({ isOpen, onClose }) => {
                   )}
                   {rows.map((r, i) => (
                     <tr key={i}>
-                      <td>{r.name}</td>
-                      <td>{r.origin}</td>
-                      <td>{r.boxCount}</td>
-                      <td>{r.sheetCount}</td>
-                      <td>{r.length}</td>
-                      <td>{r.width}</td>
-                      <td>{r.sqm}</td>
-                      <td>{r.price}</td>
+                      <td>
+                        <input
+                          className="transfer-input"
+                          value={r.name}
+                          readOnly
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="transfer-input"
+                          value={r.origin}
+                          readOnly
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.boxCount}
+                          onChange={(e) =>
+                            updateRowField(i, "boxCount", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.sheetCount}
+                          onChange={(e) =>
+                            updateRowField(i, "sheetCount", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.length}
+                          onChange={(e) =>
+                            updateRowField(i, "length", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.width}
+                          onChange={(e) =>
+                            updateRowField(i, "width", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.sqm}
+                          onChange={(e) =>
+                            updateRowField(i, "sqm", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="transfer-input"
+                          value={r.price}
+                          onChange={(e) =>
+                            updateRowField(i, "price", e.target.value)
+                          }
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -165,6 +249,12 @@ const TransferModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         )}
+
+        <SearchModal
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          onSelectItems={handleSelectItems}
+        />
       </div>
     </div>
   );

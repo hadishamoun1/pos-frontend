@@ -9,6 +9,9 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   useEffect(() => {
     if (isOpen) {
+      // reset search + selections each time it opens
+      setSearchTerm("");
+      setSelectedItems(new Set());
       fetchItems();
     }
   }, [isOpen]);
@@ -52,8 +55,8 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       .flatMap((item) =>
         item.thicknesses.flatMap((thickness) =>
           thickness.variants.map((variant) => {
-            const box = item.type === "box" ? 1 : ""; 
-            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox; 
+            const box = item.type === "box" ? 1 : "";
+            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox;
 
             return {
               itemVariantId: variant.id,
@@ -79,7 +82,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       )
       .filter((row) => selectedItems.has(row.uniqueId));
 
-    onSelectItems(selectedData); 
+    onSelectItems(selectedData);
     onClose();
   };
 

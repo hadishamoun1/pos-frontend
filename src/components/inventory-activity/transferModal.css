@@ -15,7 +15,7 @@
   background: #fff;
   width: 90%;
   max-width: 1200px;
-  max-height: 90vh;
+  height: 90vh;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   display: flex;
@@ -205,3 +205,19 @@
     background: linear-gradient(135deg, #1e7e34, #155d27);
     transform: translateY(-2px);
 }
+/* Inputs inside the transfer table */
+.transfer-table-wrapper .transfer-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem;
+    font-size: 0.95rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .transfer-table-wrapper .transfer-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
