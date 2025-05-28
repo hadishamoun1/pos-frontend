@@ -13,16 +13,30 @@ const InventoryActivityPage = () => {
       .catch(console.error);
   }, []);
 
+  const handleTransfers = () => {
+    // TODO: implement your transfers logic here
+    alert("Transfers clicked");
+  };
+
   return (
     <div className="inventory-activity-page">
       <div className="inventory-activity-header-bar">
         <h1 className="inventory-activity-title">Inventory Activity</h1>
-        <button
-          className="inventory-activity-btn-count"
-          onClick={() => setShowCountModal(true)}
-        >
-          Count
-        </button>
+        <div className="inventory-activity-btn-group">
+          <button
+            className="inventory-activity-btn-count"
+            onClick={() => setShowCountModal(true)}
+          >
+            Count
+          </button>
+
+          <button
+            className="inventory-activity-btn-transfers"
+            onClick={handleTransfers}
+          >
+            Transfers
+          </button>
+        </div>
       </div>
 
       <div className="inventory-activity-container">

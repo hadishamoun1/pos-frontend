@@ -133,6 +133,24 @@
   text-align: center;
 }
 
+.inventory-activity-btn-transfers {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30, 126, 52, 0.3);
+  transition: background 0.3s, transform 0.2s;
+  margin-left: 1rem;
+}
+
+.inventory-activity-btn-transfers:hover {
+  background: linear-gradient(135deg, #007bff, #002c5a);
+  transform: translateY(-2px);
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .inventory-activity-container {

@@ -117,16 +117,16 @@
 }
 
 .edit-count-ofr {
- width: 8%;
+  width: 8%;
 }
-.edit-count{
-    width: 8%;
+.edit-count {
+  width: 8%;
 }
 .edit-final-cost {
   width: 10%;
 }
 .edit-final-cost-ofr {
- width: 10%;
+  width: 10%;
 }
 /* Form controls */
 .edit-count-modal-table td input,
@@ -169,6 +169,43 @@
 /* RTL for names */
 .edit-count-input-name {
   direction: rtl;
+}
+
+.edit-context-menu-count {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  padding: 0.5rem;
+  min-width: 150px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.edit-context-menu-count button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #333;
+  cursor: pointer;
+  font-family: "Roboto", sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+/* Last Button Styling */
+.edit-context-menu-count button:last-child {
+  border-bottom: none;
+}
+
+/* Hover Effects */
+.edit-context-menu-count button:hover {
+  background-color: #e9ecef;
+  color: #007bff;
 }
 
 /* Responsive adjustments */
