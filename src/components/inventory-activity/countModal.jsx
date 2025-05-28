@@ -1,7 +1,9 @@
+// CountModal.jsx
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import CountSearchModal from "./countSearchModal";
 import PreviewTable from "./previewTable";
+import NotificationModal from "../recievables/NotificationModal"; 
 import "./countModal.css";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
@@ -11,6 +13,11 @@ const CountModal = ({ isOpen, onClose }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [notif, setNotif] = useState({
+    open: false,
+    type: "", // "success" | "error"
+    message: "",
+  });
 
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
@@ -62,10 +69,18 @@ const CountModal = ({ isOpen, onClose }) => {
 
     try {
       await axios.post("http://localhost:3000/inventory-count", payload);
-      onClose();
+      setNotif({
+        open: true,
+        type: "success",
+        message: "Inventory counts saved successfully!",
+      });
     } catch (err) {
       console.error("Error saving inventory counts", err);
-      alert("Failed to save counts. Please try again.");
+      setNotif({
+        open: true,
+        type: "error",
+        message: "Failed to save counts. Please try again.",
+      });
     } finally {
       setSaving(false);
     }
@@ -111,7 +126,6 @@ const CountModal = ({ isOpen, onClose }) => {
   };
 
   const existingKeys = new Set(rows.map((r) => r.key));
-
   const showCountOfr = rows.some((r) => r.type === "SR");
   const showFinalCost = rows.some((r) => ["S", "SR", "RVR"].includes(r.type));
   const showFinalCostOfr = rows.some((r) => ["G", "SR"].includes(r.type));
@@ -236,7 +250,6 @@ const CountModal = ({ isOpen, onClose }) => {
                             type="date"
                             className="count-input"
                             value={r.date}
-                            
                           />
                         </td>
                         <td className="count-col">
@@ -337,10 +350,18 @@ const CountModal = ({ isOpen, onClose }) => {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button onClick={handleDeleteSingle} disabled={saving}>
+                    <button
+                      className="context-delete-btn"
+                      onClick={handleDeleteSingle}
+                      disabled={saving}
+                    >
                       Delete
                     </button>
-                    <button onClick={closeDeleteMenu} disabled={saving}>
+                    <button
+                      className="context-cancel-btn"
+                      onClick={closeDeleteMenu}
+                      disabled={saving}
+                    >
                       Cancel
                     </button>
                   </div>
@@ -365,6 +386,17 @@ const CountModal = ({ isOpen, onClose }) => {
         onSelect={handleSelectItems}
         existingKeys={existingKeys}
       />
+
+      {notif.open && (
+        <NotificationModal
+          type={notif.type}
+          message={notif.message}
+          onClose={() => {
+            setNotif((n) => ({ ...n, open: false }));
+            if (notif.type === "success") onClose();
+          }}
+        />
+      )}
     </>
   );
 };
