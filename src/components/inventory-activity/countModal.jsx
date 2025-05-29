@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import CountSearchModal from "./countSearchModal";
 import PreviewTable from "./previewTable";
-import NotificationModal from "../recievables/NotificationModal"; 
+import NotificationModal from "../recievables/NotificationModal";
 import "./countModal.css";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
@@ -212,130 +212,150 @@ const CountModal = ({ isOpen, onClose }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r, i) => (
-                      <tr
-                        key={r.key}
-                        onContextMenu={(e) => onRowContextMenu(e, i)}
-                      >
-                        <td>
-                          <input
-                            type="text"
-                            className="count-input-name"
-                            value={r.name}
-                            readOnly
-                          />
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={
+                            // you have up to 7 or 8 columns depending on which OFR/cost columns are shown.
+                            // to be safe, span all possible (here: 11 total columns including dynamic ones)
+                            11
+                          }
+                          style={{ textAlign: "center", color: "#666" }}
+                        >
+                          No items added
                         </td>
-                        <td>
-                          <input
-                            type="text"
-                            className="count-input"
-                            value={r.dimension}
-                            readOnly
-                          />
-                        </td>
-                        <td>
-                          <select
-                            className="count-input"
-                            value={r.unit}
-                            disabled
-                          >
-                            <option value="">Unit</option>
-                            <option value="box">Box</option>
-                            <option value="sheet">Sheet</option>
-                            <option value="sqm">SQM</option>
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            type="date"
-                            className="count-input"
-                            value={r.date}
-                          />
-                        </td>
-                        <td className="count-col">
-                          <input
-                            type="number"
-                            className="count-input"
-                            value={r.count}
-                            onChange={(e) =>
-                              updateCell(i, "count", e.target.value)
-                            }
-                            placeholder="0"
-                            disabled={saving}
-                          />
-                        </td>
-                        <td>
-                          <select
-                            className="count-input"
-                            value={r.type}
-                            onChange={(e) =>
-                              updateCell(i, "type", e.target.value)
-                            }
-                            disabled={saving}
-                          >
-                            {TYPE_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        {showCountOfr && (
-                          <td>
-                            {r.type === "SR" ? (
-                              <input
-                                type="number"
-                                className="count-input"
-                                value={r.countOFR}
-                                onChange={(e) =>
-                                  updateCell(i, "countOFR", e.target.value)
-                                }
-                                placeholder="0"
-                                disabled={saving}
-                              />
-                            ) : (
-                              <span>—</span>
-                            )}
-                          </td>
-                        )}
-                        {showFinalCost && (
-                          <td>
-                            {["S", "SR", "RVR"].includes(r.type) ? (
-                              <input
-                                type="number"
-                                className="count-input"
-                                value={r.finalCost}
-                                onChange={(e) =>
-                                  updateCell(i, "finalCost", e.target.value)
-                                }
-                                placeholder="0.00"
-                                disabled={saving}
-                              />
-                            ) : (
-                              <span>—</span>
-                            )}
-                          </td>
-                        )}
-                        {showFinalCostOfr && (
-                          <td>
-                            {["G", "SR"].includes(r.type) ? (
-                              <input
-                                type="number"
-                                className="count-input"
-                                value={r.finalCostOfr}
-                                onChange={(e) =>
-                                  updateCell(i, "finalCostOfr", e.target.value)
-                                }
-                                placeholder="0.00"
-                                disabled={saving}
-                              />
-                            ) : (
-                              <span>—</span>
-                            )}
-                          </td>
-                        )}
                       </tr>
-                    ))}
+                    ) : (
+                      rows.map((r, i) => (
+                        <tr
+                          key={r.key}
+                          onContextMenu={(e) => onRowContextMenu(e, i)}
+                        >
+                          <td>
+                            <input
+                              type="text"
+                              className="count-input-name"
+                              value={r.name}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              className="count-input"
+                              value={r.dimension}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="count-input"
+                              value={r.unit}
+                              disabled
+                            >
+                              <option value="">Unit</option>
+                              <option value="box">Box</option>
+                              <option value="sheet">Sheet</option>
+                              <option value="sqm">SQM</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="date"
+                              className="count-input"
+                              value={r.date}
+                              readOnly
+                            />
+                          </td>
+                          <td className="count-col">
+                            <input
+                              type="number"
+                              className="count-input"
+                              value={r.count}
+                              onChange={(e) =>
+                                updateCell(i, "count", e.target.value)
+                              }
+                              placeholder="0"
+                              disabled={saving}
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="count-input"
+                              value={r.type}
+                              onChange={(e) =>
+                                updateCell(i, "type", e.target.value)
+                              }
+                              disabled={saving}
+                            >
+                              {TYPE_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          {showCountOfr && (
+                            <td>
+                              {r.type === "SR" ? (
+                                <input
+                                  type="number"
+                                  className="count-input"
+                                  value={r.countOFR}
+                                  onChange={(e) =>
+                                    updateCell(i, "countOFR", e.target.value)
+                                  }
+                                  placeholder="0"
+                                  disabled={saving}
+                                />
+                              ) : (
+                                <span>—</span>
+                              )}
+                            </td>
+                          )}
+                          {showFinalCost && (
+                            <td>
+                              {["S", "SR", "RVR"].includes(r.type) ? (
+                                <input
+                                  type="number"
+                                  className="count-input"
+                                  value={r.finalCost}
+                                  onChange={(e) =>
+                                    updateCell(i, "finalCost", e.target.value)
+                                  }
+                                  placeholder="0.00"
+                                  disabled={saving}
+                                />
+                              ) : (
+                                <span>—</span>
+                              )}
+                            </td>
+                          )}
+                          {showFinalCostOfr && (
+                            <td>
+                              {["G", "SR"].includes(r.type) ? (
+                                <input
+                                  type="number"
+                                  className="count-input"
+                                  value={r.finalCostOfr}
+                                  onChange={(e) =>
+                                    updateCell(
+                                      i,
+                                      "finalCostOfr",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="0.00"
+                                  disabled={saving}
+                                />
+                              ) : (
+                                <span>—</span>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
 

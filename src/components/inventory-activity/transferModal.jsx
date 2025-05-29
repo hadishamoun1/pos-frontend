@@ -152,18 +152,18 @@ export default function TransferModal({ isOpen, onClose }) {
             &times;
           </button>
 
+          <h2 className="transfer-txt">Transfer Inventory</h2>
           <div className="transfer-modal-header">
-            <h2>Transfer Inventory</h2>
-            <div className="action-buttons">
+            <div className="transfer-action-buttons">
               <button
-                className={`btn action-btn ${!previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
                 Create Transfer
               </button>
               <button
-                className={`btn action-btn ${previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(true)}
                 disabled={saving}
               >
@@ -196,7 +196,6 @@ export default function TransferModal({ isOpen, onClose }) {
           ) : (
             <div className="transfer-modal-body">
               <div className="transfer-details">
-            
                 <label>
                   Date
                   <br />

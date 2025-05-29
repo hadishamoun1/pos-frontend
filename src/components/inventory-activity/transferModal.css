@@ -48,19 +48,22 @@
   padding: 1rem;
   border-bottom: 1px solid #e0e0e0;
 }
-.transfer-modal-header h2 {
-  margin: 0;
+.transfer-txt {
+  margin: 0.5rem;
+  margin-bottom: 0rem;
+  margin-top: 1.5rem;
   font-size: 1.5rem;
   color: #007bff;
 }
 
 /* Reuse your action-buttons */
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
+.transfer-action-buttons {
+  width: 100%;
+  text-align: center;
 }
-.btn.action-btn {
+.btn.transfer-action-btn {
   padding: 0.6rem 1.2rem;
+  margin: 0.5rem;
   font-size: 0.95rem;
   border: 2px solid #ccc;
   background: #fff;
@@ -68,7 +71,7 @@
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
-.btn.action-btn.active {
+.btn.transfer-action-btn.active {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: #fff;
   border-color: #004080;
