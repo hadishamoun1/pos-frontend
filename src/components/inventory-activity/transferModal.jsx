@@ -1,5 +1,6 @@
 // TransferModal.jsx
 import React, { useState, useRef } from "react";
+import axios from "axios";
 import SearchModal from "../pos-system/searchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import "./transferModal.css";
@@ -18,8 +19,9 @@ const LOCATION_OPTIONS = [
   "Defects",
 ];
 
-const TransferModal = ({ isOpen, onClose }) => {
+export default function TransferModal({ isOpen, onClose }) {
   const [previewing, setPreviewing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [details, setDetails] = useState({
     transferNumber: "",
     date: new Date().toISOString().slice(0, 10),
@@ -32,12 +34,24 @@ const TransferModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  const resetAll = () => {
+    setDetails({
+      transferNumber: "",
+      date: new Date().toISOString().slice(0, 10),
+      type: TYPE_OPTIONS[0],
+      location: LOCATION_OPTIONS[0],
+    });
+    setRows([]);
+    setPreviewing(false);
+  };
+
   const handleDetailChange = (e) => {
-    setDetails({ ...details, [e.target.name]: e.target.value });
+    setDetails((d) => ({ ...d, [e.target.name]: e.target.value }));
   };
 
   const handleSelectItems = (items) => {
     const mapped = items.map((i) => ({
+      itemVariantId: i.itemVariantId,
       name: i.item,
       origin: i.origin,
       type: i.type,
@@ -55,25 +69,50 @@ const TransferModal = ({ isOpen, onClose }) => {
   const updateRowField = (idx, field, value) =>
     setRows((rs) => {
       const copy = [...rs];
-      // coerce to number or keep blank
       const row = { ...copy[idx], [field]: value };
-      // parse floats
+      // re-calc SQM
       const len = parseFloat(row.length) || 0;
       const wid = parseFloat(row.width) || 0;
       const box = parseFloat(row.boxCount) || 0;
       const sheet = parseFloat(row.sheetCount) || 0;
-      let newSqm = "";
-      // convert cm→m, then calculate
       const m2 = (len / 100) * (wid / 100);
-      if (row.type === "box") {
-        newSqm = (m2 * box * sheet).toFixed(2);
-      } else if (row.type === "sheet") {
-        newSqm = (m2 * sheet).toFixed(2);
-      }
-      row.sqm = newSqm;
+      if (row.type === "box") row.sqm = (m2 * box * sheet).toFixed(2);
+      else if (row.type === "sheet") row.sqm = (m2 * sheet).toFixed(2);
       copy[idx] = row;
       return copy;
     });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payloadItems = rows.map((r) => ({
+        itemVariantId: r.itemVariantId,
+        quantity:
+          r.type === "box"
+            ? Number(r.boxCount)
+            : r.type === "sheet"
+            ? Number(r.sheetCount)
+            : Number(r.sqm),
+        sqm: Number(r.sqm),
+        price: Number(r.price) || 0,
+      }));
+
+      await axios.post("http://localhost:3000/transfers", {
+        date: details.date,
+        type: details.type,
+        location: details.location,
+        items: payloadItems,
+      });
+
+      onClose();
+      resetAll();
+    } catch (err) {
+      console.error("Failed to save transfer", err);
+      alert("Failed to save transfer. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
@@ -81,7 +120,11 @@ const TransferModal = ({ isOpen, onClose }) => {
         className="transfer-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="transfer-modal-close" onClick={onClose}>
+        <button
+          className="transfer-modal-close"
+          onClick={onClose}
+          disabled={saving}
+        >
           &times;
         </button>
 
@@ -91,17 +134,38 @@ const TransferModal = ({ isOpen, onClose }) => {
             <button
               className={`btn action-btn ${!previewing ? "active" : ""}`}
               onClick={() => setPreviewing(false)}
+              disabled={saving}
             >
               Create Transfer
             </button>
             <button
               className={`btn action-btn ${previewing ? "active" : ""}`}
               onClick={() => setPreviewing(true)}
+              disabled={saving}
             >
               Preview
             </button>
           </div>
         </div>
+
+        {!previewing && (
+          <div className="detail-actions">
+            <button
+              className="btn transfer-reset-btn"
+              onClick={resetAll}
+              disabled={saving}
+            >
+              Reset
+            </button>
+            <button
+              className="btn transfer-save-btn"
+              onClick={handleSave}
+              disabled={saving || rows.length === 0}
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        )}
 
         {previewing ? (
           <PreviewTransferTable rows={rows} />
@@ -114,7 +178,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   type="text"
                   name="transferNumber"
                   value={details.transferNumber}
-                  onChange={handleDetailChange}
+                  disabled
                 />
               </label>
               <label>
@@ -125,6 +189,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   name="date"
                   value={details.date}
                   onChange={handleDetailChange}
+                  disabled={saving}
                 />
               </label>
               <label>
@@ -134,6 +199,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   name="type"
                   value={details.type}
                   onChange={handleDetailChange}
+                  disabled={saving}
                 >
                   {TYPE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -149,6 +215,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   name="location"
                   value={details.location}
                   onChange={handleDetailChange}
+                  disabled={saving}
                 >
                   {LOCATION_OPTIONS.map((loc) => (
                     <option key={loc} value={loc}>
@@ -163,6 +230,7 @@ const TransferModal = ({ isOpen, onClose }) => {
               <button
                 className="transfer-search-btn"
                 onClick={() => setSearchOpen(true)}
+                disabled={saving}
               >
                 Search
               </button>
@@ -184,99 +252,105 @@ const TransferModal = ({ isOpen, onClose }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.length === 0 && (
+                  {rows.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="9"
+                        colSpan={9}
                         style={{ textAlign: "center", color: "#666" }}
                       >
                         No items added
                       </td>
                     </tr>
+                  ) : (
+                    rows.map((r, i) => (
+                      <tr key={i}>
+                        <td>
+                          <input
+                            className="transfer-input"
+                            value={r.name}
+                            readOnly
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="transfer-input"
+                            value={r.origin}
+                            readOnly
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className="transfer-input"
+                            value={r.type}
+                            readOnly
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="transfer-input transfer-col-small"
+                            value={r.boxCount}
+                            onChange={(e) =>
+                              updateRowField(i, "boxCount", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="transfer-input transfer-col-small"
+                            value={r.sheetCount}
+                            onChange={(e) =>
+                              updateRowField(i, "sheetCount", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="transfer-input"
+                            value={r.length}
+                            onChange={(e) =>
+                              updateRowField(i, "length", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="transfer-input"
+                            value={r.width}
+                            onChange={(e) =>
+                              updateRowField(i, "width", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="transfer-input"
+                            value={r.sqm}
+                            readOnly
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            className="transfer-input"
+                            value={r.price}
+                            onChange={(e) =>
+                              updateRowField(i, "price", e.target.value)
+                            }
+                            disabled={saving}
+                          />
+                        </td>
+                      </tr>
+                    ))
                   )}
-                  {rows.map((r, i) => (
-                    <tr key={i}>
-                      <td>
-                        <input
-                          className="transfer-input"
-                          value={r.name}
-                          readOnly
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="transfer-input"
-                          value={r.origin}
-                          readOnly
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="transfer-input"
-                          value={r.type}
-                          readOnly
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="transfer-input"
-                          value={r.boxCount}
-                          onChange={(e) =>
-                            updateRowField(i, "boxCount", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="transfer-input"
-                          value={r.sheetCount}
-                          onChange={(e) =>
-                            updateRowField(i, "sheetCount", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="transfer-input"
-                          value={r.length}
-                          onChange={(e) =>
-                            updateRowField(i, "length", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="transfer-input"
-                          value={r.width}
-                          onChange={(e) =>
-                            updateRowField(i, "width", e.target.value)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="transfer-input"
-                          value={r.sqm}
-                          readOnly
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="transfer-input"
-                          value={r.price}
-                          onChange={(e) =>
-                            updateRowField(i, "price", e.target.value)
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ))}
                 </tbody>
               </table>
             </div>
@@ -291,6 +365,4 @@ const TransferModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
-};
-
-export default TransferModal;
+}

@@ -227,7 +227,7 @@
 .transfer-table td:nth-child(4),
 .transfer-table th:nth-child(5),
 .transfer-table td:nth-child(5) {
-  width: 4rem; 
+  width: 4rem;
   max-width: 4rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -237,7 +237,7 @@
 .transfer-table td:nth-child(6),
 .transfer-table th:nth-child(7),
 .transfer-table td:nth-child(7) {
-  width: 4rem; 
+  width: 4rem;
   max-width: 4rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -270,4 +270,49 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* transferModal.css */
+.transfer-col-small {
+  width: 4rem;
+}
+.transfer-save-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.transfer-save-btn:hover {
+  background: linear-gradient(135deg, #0056b3, #003f7f);
+  transform: translateY(-1px);
+}
+.transfer-reset-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #dc3545, #a71d2a);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.transfer-reset-btn:hover {
+  background: linear-gradient(135deg, #a71d2a, #79151e);
+  transform: translateY(-1px);
+}
+
+/* New: Reset/Save row */
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
 }
