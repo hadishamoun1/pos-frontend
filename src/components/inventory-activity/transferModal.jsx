@@ -4,8 +4,19 @@ import SearchModal from "../pos-system/searchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import "./transferModal.css";
 
-const TYPE_OPTIONS = ["Internal", "External", "Return"];
-const LOCATION_OPTIONS = ["Warehouse A", "Warehouse B", "Store Front"];
+const TYPE_OPTIONS = ["G"];
+const LOCATION_OPTIONS = [
+  "JF",
+  "FJ",
+  "JL",
+  "LJ",
+  "FL",
+  "LF",
+  "Breakage",
+  "Adjustment +",
+  "Adjustment -",
+  "Defects",
+];
 
 const TransferModal = ({ isOpen, onClose }) => {
   const [previewing, setPreviewing] = useState(false);
