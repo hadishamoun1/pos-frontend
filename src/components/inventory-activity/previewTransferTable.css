@@ -1,0 +1,82 @@
+/* previewTransferTable.css */
+
+/* wrapper for horizontal scroll */
+.preview-transfer-table-wrapper {
+  overflow-x: auto;
+  padding: 0 1rem 1rem;
+}
+
+/* table */
+.preview-transfer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.preview-transfer-table th {
+  padding: 0.6rem 1rem;
+  border: 1px solid #ddd;
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: center;
+}
+
+.preview-transfer-table td {
+  border: 1px solid #ddd;
+  padding: 0.8rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* narrow “Box/Sheet” column (7th) */
+.preview-transfer-table th:nth-child(7),
+.preview-transfer-table td:nth-child(7) {
+  width: 2rem;
+  max-width: 2rem;
+  white-space: nowrap;
+}
+
+.preview-transfer-table td:nth-child(5) {
+  direction: rtl;
+}
+
+/* narrow “Length” (8th) and “Width” (9th) columns */
+.preview-transfer-table th:nth-child(8),
+.preview-transfer-table td:nth-child(8),
+.preview-transfer-table th:nth-child(9),
+.preview-transfer-table td:nth-child(9) {
+  width: 2rem;
+  max-width: 2rem;
+  white-space: nowrap;
+}
+
+/* narrow “Sheets/Box” (10th) column */
+.preview-transfer-table th:nth-child(10),
+.preview-transfer-table td:nth-child(10) {
+  width: 3.5rem;
+  max-width: 3.5rem;
+  white-space: nowrap;
+}
+
+/* narrow “SQM” (11th) and “Price” (12th) columns */
+.preview-transfer-table th:nth-child(11),
+.preview-transfer-table
+  td:nth-child(11)
+  .preview-transfer-table
+  th:nth-child(12),
+.preview-transfer-table td:nth-child(12) {
+  width: 3rem;
+  max-width: 3rem;
+  white-space: nowrap;
+}
+
+/* empty-state row */
+.preview-empty {
+  color: #666;
+  text-align: center;
+  padding: 1rem;
+}

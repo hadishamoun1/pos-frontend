@@ -9,7 +9,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 /* Modal content */
@@ -23,6 +23,7 @@
   text-align: center;
   font-family: "Roboto", sans-serif;
   animation: notification-fadeInModal 0.3s ease-in-out;
+  z-index: 2001;
 }
 
 /* Success and error text */

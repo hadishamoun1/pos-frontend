@@ -3,6 +3,7 @@ import React, { useState, useRef } from "react";
 import axios from "axios";
 import SearchModal from "../pos-system/searchModal";
 import PreviewTransferTable from "./previewTransferTable";
+import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
 
 const TYPE_OPTIONS = ["G"];
@@ -30,6 +31,11 @@ export default function TransferModal({ isOpen, onClose }) {
   });
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notif, setNotif] = useState({
+    open: false,
+    type: "",
+    message: "",
+  });
   const wrapperRef = useRef();
 
   if (!isOpen) return null;
@@ -70,7 +76,7 @@ export default function TransferModal({ isOpen, onClose }) {
     setRows((rs) => {
       const copy = [...rs];
       const row = { ...copy[idx], [field]: value };
-      // re-calc SQM
+      // re‐calc SQM
       const len = parseFloat(row.length) || 0;
       const wid = parseFloat(row.width) || 0;
       const box = parseFloat(row.boxCount) || 0;
@@ -81,6 +87,11 @@ export default function TransferModal({ isOpen, onClose }) {
       copy[idx] = row;
       return copy;
     });
+
+  const closeNotif = () => {
+    setNotif((n) => ({ ...n, open: false }));
+    if (notif.type === "success") onClose();
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -104,265 +115,278 @@ export default function TransferModal({ isOpen, onClose }) {
         items: payloadItems,
       });
 
-      onClose();
+      setNotif({
+        open: true,
+        type: "success",
+        message: "Transfer saved successfully!",
+      });
       resetAll();
     } catch (err) {
       console.error("Failed to save transfer", err);
-      alert("Failed to save transfer. Please try again.");
+      setNotif({
+        open: true,
+        type: "error",
+        message: "Save failed — please try again.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
+    <>
       <div
-        className="transfer-modal-content"
-        onClick={(e) => e.stopPropagation()}
+        className="transfer-modal-overlay"
+        onClick={onClose}
+        ref={wrapperRef}
       >
-        <button
-          className="transfer-modal-close"
-          onClick={onClose}
-          disabled={saving}
+        <div
+          className="transfer-modal-content"
+          onClick={(e) => e.stopPropagation()}
         >
-          &times;
-        </button>
+          <button
+            className="transfer-modal-close"
+            onClick={onClose}
+            disabled={saving}
+          >
+            &times;
+          </button>
 
-        <div className="transfer-modal-header">
-          <h2>Transfer Inventory</h2>
-          <div className="action-buttons">
-            <button
-              className={`btn action-btn ${!previewing ? "active" : ""}`}
-              onClick={() => setPreviewing(false)}
-              disabled={saving}
-            >
-              Create Transfer
-            </button>
-            <button
-              className={`btn action-btn ${previewing ? "active" : ""}`}
-              onClick={() => setPreviewing(true)}
-              disabled={saving}
-            >
-              Preview
-            </button>
-          </div>
-        </div>
-
-        {!previewing && (
-          <div className="detail-actions">
-            <button
-              className="btn transfer-reset-btn"
-              onClick={resetAll}
-              disabled={saving}
-            >
-              Reset
-            </button>
-            <button
-              className="btn transfer-save-btn"
-              onClick={handleSave}
-              disabled={saving || rows.length === 0}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
-        )}
-
-        {previewing ? (
-          <PreviewTransferTable rows={rows} />
-        ) : (
-          <div className="transfer-modal-body">
-            <div className="transfer-details">
-              <label>
-                Transfer #<br />
-                <input
-                  type="text"
-                  name="transferNumber"
-                  value={details.transferNumber}
-                  disabled
-                />
-              </label>
-              <label>
-                Date
-                <br />
-                <input
-                  type="date"
-                  name="date"
-                  value={details.date}
-                  onChange={handleDetailChange}
-                  disabled={saving}
-                />
-              </label>
-              <label>
-                Type
-                <br />
-                <select
-                  name="type"
-                  value={details.type}
-                  onChange={handleDetailChange}
-                  disabled={saving}
-                >
-                  {TYPE_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Location
-                <br />
-                <select
-                  name="location"
-                  value={details.location}
-                  onChange={handleDetailChange}
-                  disabled={saving}
-                >
-                  {LOCATION_OPTIONS.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="transfer-search-wrapper">
+          <div className="transfer-modal-header">
+            <h2>Transfer Inventory</h2>
+            <div className="action-buttons">
               <button
-                className="transfer-search-btn"
-                onClick={() => setSearchOpen(true)}
+                className={`btn action-btn ${!previewing ? "active" : ""}`}
+                onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
-                Search
+                Create Transfer
+              </button>
+              <button
+                className={`btn action-btn ${previewing ? "active" : ""}`}
+                onClick={() => setPreviewing(true)}
+                disabled={saving}
+              >
+                Preview
               </button>
             </div>
+          </div>
 
-            <div className="transfer-table-wrapper">
-              <table className="transfer-table">
-                <thead>
-                  <tr>
-                    <th>Item Name</th>
-                    <th>Origin</th>
-                    <th>Type</th>
-                    <th>Box</th>
-                    <th>Sheet</th>
-                    <th>Length</th>
-                    <th>Width</th>
-                    <th>SQM</th>
-                    <th>Item Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 ? (
+          {!previewing && (
+            <div className="detail-actions">
+              <button
+                className="btn transfer-reset-btn"
+                onClick={resetAll}
+                disabled={saving}
+              >
+                Reset
+              </button>
+              <button
+                className="btn transfer-save-btn"
+                onClick={handleSave}
+                disabled={saving || rows.length === 0}
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          )}
+
+          {previewing ? (
+            <PreviewTransferTable rows={rows} />
+          ) : (
+            <div className="transfer-modal-body">
+              <div className="transfer-details">
+            
+                <label>
+                  Date
+                  <br />
+                  <input
+                    type="date"
+                    name="date"
+                    value={details.date}
+                    onChange={handleDetailChange}
+                    disabled={saving}
+                  />
+                </label>
+                <label>
+                  Type
+                  <br />
+                  <select
+                    name="type"
+                    value={details.type}
+                    onChange={handleDetailChange}
+                    disabled={saving}
+                  >
+                    {TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Location
+                  <br />
+                  <select
+                    name="location"
+                    value={details.location}
+                    onChange={handleDetailChange}
+                    disabled={saving}
+                  >
+                    {LOCATION_OPTIONS.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="transfer-search-wrapper">
+                <button
+                  className="transfer-search-btn"
+                  onClick={() => setSearchOpen(true)}
+                  disabled={saving}
+                >
+                  Search
+                </button>
+              </div>
+
+              <div className="transfer-table-wrapper">
+                <table className="transfer-table">
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={9}
-                        style={{ textAlign: "center", color: "#666" }}
-                      >
-                        No items added
-                      </td>
+                      <th>Item Name</th>
+                      <th>Origin</th>
+                      <th>Type</th>
+                      <th>Box</th>
+                      <th>Sheet</th>
+                      <th>Length</th>
+                      <th>Width</th>
+                      <th>SQM</th>
+                      <th>Item Price</th>
                     </tr>
-                  ) : (
-                    rows.map((r, i) => (
-                      <tr key={i}>
-                        <td>
-                          <input
-                            className="transfer-input"
-                            value={r.name}
-                            readOnly
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="transfer-input"
-                            value={r.origin}
-                            readOnly
-                          />
-                        </td>
-                        <td>
-                          <input
-                            className="transfer-input"
-                            value={r.type}
-                            readOnly
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="transfer-input transfer-col-small"
-                            value={r.boxCount}
-                            onChange={(e) =>
-                              updateRowField(i, "boxCount", e.target.value)
-                            }
-                            disabled={saving}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="transfer-input transfer-col-small"
-                            value={r.sheetCount}
-                            onChange={(e) =>
-                              updateRowField(i, "sheetCount", e.target.value)
-                            }
-                            disabled={saving}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="transfer-input"
-                            value={r.length}
-                            onChange={(e) =>
-                              updateRowField(i, "length", e.target.value)
-                            }
-                            disabled={saving}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="transfer-input"
-                            value={r.width}
-                            onChange={(e) =>
-                              updateRowField(i, "width", e.target.value)
-                            }
-                            disabled={saving}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            className="transfer-input"
-                            value={r.sqm}
-                            readOnly
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="transfer-input"
-                            value={r.price}
-                            onChange={(e) =>
-                              updateRowField(i, "price", e.target.value)
-                            }
-                            disabled={saving}
-                          />
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={9}
+                          style={{ textAlign: "center", color: "#666" }}
+                        >
+                          No items added
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      rows.map((r, i) => (
+                        <tr key={i}>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.name}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.origin}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.type}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="transfer-input transfer-col-small"
+                              value={r.boxCount}
+                              onChange={(e) =>
+                                updateRowField(i, "boxCount", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              className="transfer-input transfer-col-small"
+                              value={r.sheetCount}
+                              onChange={(e) =>
+                                updateRowField(i, "sheetCount", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              type="number"
+                              value={r.length}
+                              onChange={(e) =>
+                                updateRowField(i, "length", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              type="number"
+                              value={r.width}
+                              onChange={(e) =>
+                                updateRowField(i, "width", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.sqm}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              type="number"
+                              value={r.price}
+                              onChange={(e) =>
+                                updateRowField(i, "price", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <SearchModal
-          isOpen={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          onSelectItems={handleSelectItems}
-        />
+          <SearchModal
+            isOpen={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            onSelectItems={handleSelectItems}
+          />
+        </div>
       </div>
-    </div>
+
+      {notif.open && (
+        <NotificationModal
+          type={notif.type}
+          message={notif.message}
+          onClose={closeNotif}
+        />
+      )}
+    </>
   );
 }
