@@ -29,6 +29,7 @@ const TransferModal = ({ isOpen, onClose }) => {
     const mapped = items.map((i) => ({
       name: i.item,
       origin: i.origin,
+      type: i.type,
       boxCount: i.box,
       sheetCount: i.sheet,
       length: i.length,
@@ -36,7 +37,6 @@ const TransferModal = ({ isOpen, onClose }) => {
       sqm: i.sqm,
       price: "",
     }));
-    // append new items
     setRows((prev) => [...prev, ...mapped]);
     setSearchOpen(false);
   };
@@ -44,7 +44,23 @@ const TransferModal = ({ isOpen, onClose }) => {
   const updateRowField = (idx, field, value) =>
     setRows((rs) => {
       const copy = [...rs];
-      copy[idx] = { ...copy[idx], [field]: value };
+      // coerce to number or keep blank
+      const row = { ...copy[idx], [field]: value };
+      // parse floats
+      const len = parseFloat(row.length) || 0;
+      const wid = parseFloat(row.width) || 0;
+      const box = parseFloat(row.boxCount) || 0;
+      const sheet = parseFloat(row.sheetCount) || 0;
+      let newSqm = "";
+      // convert cm→m, then calculate
+      const m2 = (len / 100) * (wid / 100);
+      if (row.type === "box") {
+        newSqm = (m2 * box * sheet).toFixed(2);
+      } else if (row.type === "sheet") {
+        newSqm = (m2 * sheet).toFixed(2);
+      }
+      row.sqm = newSqm;
+      copy[idx] = row;
       return copy;
     });
 
@@ -147,6 +163,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   <tr>
                     <th>Item Name</th>
                     <th>Origin</th>
+                    <th>Type</th>
                     <th>Box</th>
                     <th>Sheet</th>
                     <th>Length</th>
@@ -159,7 +176,7 @@ const TransferModal = ({ isOpen, onClose }) => {
                   {rows.length === 0 && (
                     <tr>
                       <td
-                        colSpan="8"
+                        colSpan="9"
                         style={{ textAlign: "center", color: "#666" }}
                       >
                         No items added
@@ -179,6 +196,13 @@ const TransferModal = ({ isOpen, onClose }) => {
                         <input
                           className="transfer-input"
                           value={r.origin}
+                          readOnly
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="transfer-input"
+                          value={r.type}
                           readOnly
                         />
                       </td>
@@ -224,12 +248,10 @@ const TransferModal = ({ isOpen, onClose }) => {
                       </td>
                       <td>
                         <input
-                          type="number"
+                          type="text"
                           className="transfer-input"
                           value={r.sqm}
-                          onChange={(e) =>
-                            updateRowField(i, "sqm", e.target.value)
-                          }
+                          readOnly
                         />
                       </td>
                       <td>

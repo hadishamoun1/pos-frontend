@@ -138,16 +138,16 @@
   width: 100%;
   border-collapse: collapse;
 }
-.transfer-table th{
-    padding: 0.6rem 1rem;
-    border: 1px solid #ddd;
-    font-size: 0.95rem;
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    text-align: center;
+.transfer-table th {
+  padding: 0.6rem 1rem;
+  border: 1px solid #ddd;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: center;
 }
 .transfer-table td {
   border: 1px solid #ddd;
@@ -202,22 +202,72 @@
   transition: background 0.2s, transform 0.1s;
 }
 .transfer-search-btn:hover {
-    background: linear-gradient(135deg, #1e7e34, #155d27);
-    transform: translateY(-2px);
+  background: linear-gradient(135deg, #1e7e34, #155d27);
+  transform: translateY(-2px);
 }
 /* Inputs inside the transfer table */
 .transfer-table-wrapper .transfer-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 0.5rem;
-    font-size: 0.95rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  
-  .transfer-table-wrapper .transfer-input:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-  }
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.transfer-table-wrapper .transfer-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Make the Box (4th) and Sheet (5th) columns narrower */
+.transfer-table th:nth-child(4),
+.transfer-table td:nth-child(4),
+.transfer-table th:nth-child(5),
+.transfer-table td:nth-child(5) {
+  width: 4rem; 
+  max-width: 4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-table th:nth-child(6),
+.transfer-table td:nth-child(6),
+.transfer-table th:nth-child(7),
+.transfer-table td:nth-child(7) {
+  width: 4rem; 
+  max-width: 4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-table th:nth-child(9),
+.transfer-table td:nth-child(9) {
+  width: 5rem;
+  max-width: 5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-table td:nth-child(1) {
+  direction: rtl;
+}
+
+.transfer-table th:nth-child(3),
+.transfer-table td:nth-child(3) {
+  max-width: 5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-table th:nth-child(8),
+.transfer-table td:nth-child(8) {
+  width: 5rem;
+  max-width: 5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
