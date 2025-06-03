@@ -14,9 +14,10 @@
 }
 
 .preview-transfer-table th {
-  padding: 0.6rem 1rem;
+  padding-top: 0.5rem ;
+  padding-bottom: 0.5rem ;
   border: 1px solid #ddd;
-  font-size: 0.8rem;
+  font-size: 1rem;
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   position: sticky;
@@ -29,14 +30,14 @@
   border: 1px solid #ddd;
   padding: 0.8rem;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 1rem;
 }
 
 /* narrow “Box/Sheet” column (7th) */
 .preview-transfer-table th:nth-child(7),
 .preview-transfer-table td:nth-child(7) {
-  width: 2rem;
-  max-width: 2rem;
+  width: 2.5rem;
+  max-width: 2.5rem;
   white-space: nowrap;
 }
 
@@ -49,18 +50,25 @@
 .preview-transfer-table td:nth-child(8),
 .preview-transfer-table th:nth-child(9),
 .preview-transfer-table td:nth-child(9) {
-  width: 2rem;
-  max-width: 2rem;
+  width: 3rem;
+  max-width: 3rem;
   white-space: nowrap;
 }
 
 /* narrow “Sheets/Box” (10th) column */
 .preview-transfer-table th:nth-child(10),
 .preview-transfer-table td:nth-child(10) {
-  width: 4rem;
-  max-width: 4rem;
+  width: 4.5rem;
+  max-width: 4.5rem;
   white-space: nowrap;
 }
+.preview-transfer-table th:nth-child(4),
+.preview-transfer-table td:nth-child(4) {
+  width: 5.5rem;
+  max-width: 5.5rem;
+  white-space: nowrap;
+}
+
 
 /* narrow “SQM” (11th) and “Price” (12th) columns */
 .preview-transfer-table th:nth-child(11),

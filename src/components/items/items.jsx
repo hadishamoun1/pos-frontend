@@ -1,3 +1,4 @@
+// UniqueItemsPage.jsx
 import React, { useState, useEffect } from "react";
 import "./items.css";
 
@@ -9,7 +10,7 @@ const UniqueItemsPage = () => {
   const [modalType, setModalType] = useState("");
   const [newItemData, setNewItemData] = useState({
     itemName: "",
-    type: "box",
+    type: "box", // default
     thicknesses: [
       {
         thickness: "",
@@ -28,76 +29,109 @@ const UniqueItemsPage = () => {
     ],
   });
 
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(
-          `${baseUrl}/items/v1/filtered-items`
-        );
+        const response = await fetch(`${baseUrl}/items/v1/filtered-items`);
         const data = await response.json();
         setItems(data);
       } catch (error) {
         console.error("Error fetching items:", error);
       }
     };
-
     fetchData();
-  }, []);
+  }, [baseUrl]);
 
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
   };
 
   const handleModalToggle = () => {
-    setShowModal(!showModal);
+    setShowModal((v) => !v);
+    // reset form on open
+    setNewItemData({
+      itemName: "",
+      type: "box",
+      thicknesses: [
+        {
+          thickness: "",
+          variants: [
+            {
+              length: "",
+              width: "",
+              sheetsPerBox: "",
+              origin: "",
+              fixBox: true,
+              fixLength: true,
+              fixWidth: true,
+            },
+          ],
+        },
+      ],
+    });
   };
 
-  const handleInputChange = (e, index = 0) => {
+  const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
-
-    setNewItemData((prevState) => {
-      const updated = { ...prevState };
-
-      if (type === "checkbox") {
-        updated.thicknesses[0].variants[0][name] = checked;
-      } else if (name === "thickness") {
+    setNewItemData((prev) => {
+      const updated = { ...prev };
+      // If they changed the global "type"
+      if (name === "type") {
+        updated.type = value;
+        // adjust sheetsPerBox depending on new type
+        const variant = updated.thicknesses[0].variants[0];
+        if (value === "box") {
+          variant.sheetsPerBox = "";
+        } else if (value === "sheet") {
+          variant.sheetsPerBox = 0;
+        } else if (value === "sqm") {
+          variant.sheetsPerBox = 0;
+          variant.length = "";
+          variant.width = "";
+        }
+      }
+      // thickness level
+      else if (name === "thickness") {
         updated.thicknesses[0].thickness = value;
-      } else if (name in newItemData) {
-        updated[name] = value;
-      } else {
+      }
+      // variant fields
+      else if (["length", "width", "sheetsPerBox", "origin"].includes(name)) {
         updated.thicknesses[0].variants[0][name] = value;
       }
-
+      // checkboxes
+      else if (type === "checkbox") {
+        updated.thicknesses[0].variants[0][name] = checked;
+      }
+      // itemName
+      else if (name === "itemName") {
+        updated.itemName = value;
+      }
       return updated;
     });
   };
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(
-        `${baseUrl}/items/v1/create-complete-item`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newItemData),
-        }
-      );
-
+      const response = await fetch(`${baseUrl}/items/v1/create-complete-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newItemData),
+      });
       if (response.ok) {
         const newItem = await response.json();
-        setItems((prevState) => [...prevState, newItem]);
+        setItems((prev) => [...prev, newItem]);
         setModalType("success");
       } else {
         setModalType("error");
       }
-    } catch (error) {
+    } catch {
       setModalType("error");
     } finally {
       setModalContent(true);
-      handleModalToggle();
+      setShowModal(false);
     }
   };
 
@@ -124,42 +158,57 @@ const UniqueItemsPage = () => {
           New Item
         </button>
       </div>
+
       <table className="unique-items-table">
         <thead>
           <tr>
             <th>Item Name</th>
             <th>Type</th>
-            <th>Length</th>
-            <th>Width</th>
-            <th>Sheets per Box</th>
+            <th>Thickness (mm)</th>
+            <th>Length (cm)</th>
+            <th>Width (cm)</th>
+            <th>Sheets/Box</th>
             <th>Origin</th>
           </tr>
         </thead>
         <tbody>
-          {filteredItems.map((item) => (
-            <React.Fragment key={item.id}>
-              {item.thicknesses.map((thickness) => (
-                <React.Fragment key={thickness.thickness}>
-                  {thickness.variants.map((variant) => (
-                    <tr
-                      key={`${thickness.thickness}-${variant.length}-${variant.width}`}
-                    >
-                      <td>{`${parseFloat(thickness.thickness)}mm ${
-                        item.itemName
-                      }`}</td>
-                      <td>{item.type}</td>
-                      <td>{variant.length}</td>
-                      <td>{variant.width}</td>
-                      <td>{variant.sheetsPerBox}</td>
-                      <td>{variant.origin}</td>
-                    </tr>
-                  ))}
-                </React.Fragment>
-              ))}
-            </React.Fragment>
-          ))}
+          {filteredItems.map((item) =>
+            item.thicknesses.map((thick) =>
+              thick.variants.map((v) => (
+                <tr
+                  key={`${item.id}-${thick.thickness}-${v.length}-${v.width}`}
+                >
+                  <td>{`${parseFloat(thick.thickness)}mm ${item.itemName}`}</td>
+                  <td>{item.type}</td>
+                  <td>{thick.thickness}</td>
+                  {/* hide length/width for sqm */}
+                  {newItemData.type === "sqm" ? (
+                    <>
+                      <td>—</td>
+                      <td>—</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{v.length}</td>
+                      <td>{v.width}</td>
+                    </>
+                  )}
+                  {/* sheets per box only for box */}
+                  <td>
+                    {item.type === "box"
+                      ? v.sheetsPerBox
+                      : item.type === "sheet"
+                      ?"—"
+                      : "—"}
+                  </td>
+                  <td>{v.origin}</td>
+                </tr>
+              ))
+            )
+          )}
         </tbody>
       </table>
+
       {showModal && (
         <div className="modal">
           <div className="modal-content">
@@ -175,6 +224,7 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
+
               <label>
                 Type:
                 <select
@@ -184,58 +234,73 @@ const UniqueItemsPage = () => {
                 >
                   <option value="box">Box</option>
                   <option value="sheet">Sheet</option>
+                  <option value="sqm">SQM</option>
                 </select>
               </label>
+
               <label>
-                Thickness:
+                Thickness (mm):
                 <input
                   type="number"
                   name="thickness"
                   value={newItemData.thicknesses[0].thickness}
-                  onChange={(e) => handleInputChange(e)}
+                  onChange={handleInputChange}
                   required
                 />
               </label>
-              <label>
-                Length:
-                <input
-                  type="number"
-                  name="length"
-                  value={newItemData.thicknesses[0].variants[0].length}
-                  onChange={(e) => handleInputChange(e)}
-                  required
-                />
-              </label>
-              <label>
-                Width:
-                <input
-                  type="number"
-                  name="width"
-                  value={newItemData.thicknesses[0].variants[0].width}
-                  onChange={(e) => handleInputChange(e)}
-                  required
-                />
-              </label>
-              <label>
-                Sheets Per Box:
-                <input
-                  type="number"
-                  name="sheetsPerBox"
-                  value={newItemData.thicknesses[0].variants[0].sheetsPerBox}
-                  onChange={(e) => handleInputChange(e)}
-                  required
-                />
-              </label>
+
+              {/* only show for box or sheet */}
+              {newItemData.type !== "sqm" && (
+                <>
+                  <label>
+                    Length (cm):
+                    <input
+                      type="number"
+                      name="length"
+                      value={newItemData.thicknesses[0].variants[0].length}
+                      onChange={handleInputChange}
+                      required={newItemData.type !== "sqm"}
+                    />
+                  </label>
+
+                  <label>
+                    Width (cm):
+                    <input
+                      type="number"
+                      name="width"
+                      value={newItemData.thicknesses[0].variants[0].width}
+                      onChange={handleInputChange}
+                      required={newItemData.type !== "sqm"}
+                    />
+                  </label>
+                </>
+              )}
+
+              {/* only for box */}
+              {newItemData.type === "box" && (
+                <label>
+                  Sheets Per Box:
+                  <input
+                    type="number"
+                    name="sheetsPerBox"
+                    value={newItemData.thicknesses[0].variants[0].sheetsPerBox}
+                    onChange={handleInputChange}
+                    required={newItemData.type === "box"}
+                  />
+                </label>
+              )}
+
               <label>
                 Origin:
                 <input
                   type="text"
                   name="origin"
                   value={newItemData.thicknesses[0].variants[0].origin}
-                  onChange={(e) => handleInputChange(e)}
+                  onChange={handleInputChange}
                   required
                 />
               </label>
+
               <div className="checkboxes">
                 <label>
                   Fix Box:
@@ -243,7 +308,7 @@ const UniqueItemsPage = () => {
                     type="checkbox"
                     name="fixBox"
                     checked={newItemData.thicknesses[0].variants[0].fixBox}
-                    onChange={(e) => handleInputChange(e)}
+                    onChange={handleInputChange}
                   />
                 </label>
                 <label>
@@ -252,7 +317,7 @@ const UniqueItemsPage = () => {
                     type="checkbox"
                     name="fixLength"
                     checked={newItemData.thicknesses[0].variants[0].fixLength}
-                    onChange={(e) => handleInputChange(e)}
+                    onChange={handleInputChange}
                   />
                 </label>
                 <label>
@@ -261,10 +326,11 @@ const UniqueItemsPage = () => {
                     type="checkbox"
                     name="fixWidth"
                     checked={newItemData.thicknesses[0].variants[0].fixWidth}
-                    onChange={(e) => handleInputChange(e)}
+                    onChange={handleInputChange}
                   />
                 </label>
               </div>
+
               <button type="submit">Create Item</button>
               <button type="button" onClick={handleModalToggle}>
                 Cancel
@@ -273,6 +339,7 @@ const UniqueItemsPage = () => {
           </div>
         </div>
       )}
+
       {modalContent && (
         <div className="modal">
           <div

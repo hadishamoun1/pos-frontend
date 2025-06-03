@@ -10,10 +10,8 @@ const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
   "JF",
   "FJ",
-  "JL",
-  "LJ",
-  "FL",
-  "LF",
+  "SL",
+  "LS",
   "Breakage",
   "Adjustment +",
   "Adjustment -",
@@ -123,10 +121,15 @@ export default function TransferModal({ isOpen, onClose }) {
       resetAll();
     } catch (err) {
       console.error("Failed to save transfer", err);
+      const serverMsg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Save failed — please try again.";
       setNotif({
         open: true,
         type: "error",
-        message: "Save failed — please try again.",
+        message: serverMsg,
       });
     } finally {
       setSaving(false);
@@ -156,14 +159,18 @@ export default function TransferModal({ isOpen, onClose }) {
           <div className="transfer-modal-header">
             <div className="transfer-action-buttons">
               <button
-                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${
+                  !previewing ? "active" : ""
+                }`}
                 onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
                 Create Transfer
               </button>
               <button
-                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${
+                  previewing ? "active" : ""
+                }`}
                 onClick={() => setPreviewing(true)}
                 disabled={saving}
               >
