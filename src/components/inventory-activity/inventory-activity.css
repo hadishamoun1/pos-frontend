@@ -151,6 +151,17 @@
   transform: translateY(-2px);
 }
 
+.draggable-header {
+  transition: background-color 0.2s ease, transform 0.25s ease;
+}
+
+.draggable-header:active {
+  cursor: grabbing;
+}
+
+
+
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
   .inventory-activity-container {

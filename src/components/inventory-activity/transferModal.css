@@ -144,7 +144,7 @@
 .transfer-table th {
   padding: 0.6rem 1rem;
   border: 1px solid #ddd;
-  font-size: 0.95rem;
+  font-size: 1rem;
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   position: sticky;
@@ -213,7 +213,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.5rem;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   transition: border-color 0.2s, box-shadow 0.2s;

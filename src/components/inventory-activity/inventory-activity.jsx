@@ -1,23 +1,165 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useTable, useColumnOrder } from "react-table";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import CountModal from "./countModal";
-import "./inventory-activity.css";
 import TransferModal from "./transferModal";
+import "./inventory-activity.css";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:3000");
+
+const DraggableColumnHeader = ({ column }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition ?? "transform 0ms ease",
+    cursor: "grab",
+    zIndex: isDragging ? 10 : undefined,
+    backgroundColor: isDragging ? "#f0f8ff" : undefined,
+    willChange: "transform",
+  };
+
+  return (
+    <th
+      ref={setNodeRef}
+      className={`draggable-header ${column.id}-column`}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
+      {column.render("Header")}
+    </th>
+  );
+};
 
 const InventoryActivityPage = () => {
   const [rows, setRows] = useState([]);
   const [showCountModal, setShowCountModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [columnOrder, setColumnOrder] = useState([]);
+
+  const defaultColumns = useMemo(
+    () => [
+      { Header: "Item Name", accessor: "name" },
+      { Header: "Condition", accessor: "condition" },
+      { Header: "Batch Date", accessor: "batchDate" },
+      { Header: "Dimensions", accessor: "dimension" },
+      { Header: "Brand", accessor: "origin" },
+      { Header: "Quantity", accessor: "quantity" },
+      { Header: "Qty OFR", accessor: "quantityofr" },
+      { Header: "SQM", accessor: "sqm" },
+      { Header: "SQM OFR", accessor: "sqmofr" },
+      { Header: "Final Cost", accessor: "finalcost" },
+      { Header: "Final Cost OFR", accessor: "finalcostofr" },
+      { Header: "Unit", accessor: "unit" },
+      { Header: "Status", accessor: "status" },
+      { Header: "Date", accessor: "date" },
+      { Header: "Invoice #", accessor: "invoiceNo" },
+    ],
+    []
+  );
 
   useEffect(() => {
     fetch("http://localhost:3000/inventory-transactions/activity")
       .then((res) => res.json())
-      .then(setRows)
+      .then((data) => {
+        setRows(data);
+        setColumnOrder(defaultColumns.map((col) => col.accessor));
+      })
       .catch(console.error);
-  }, []);
 
-  const handleTransfers = () => {
-    // TODO: implement your transfers logic here
-    alert("Transfers clicked");
+    socket.on("inventoryActivityUpdate", (data) => {
+      setRows(data);
+    });
+
+    return () => {
+      socket.off("inventoryActivityUpdate");
+    };
+  }, [defaultColumns]);
+
+  const data = useMemo(() => {
+    return rows.map((r) => {
+      return {
+        name: `${r.thickness} ملم ${r.itemName}`,
+        condition: r.itemBatch?.condition || "—",
+        batchDate: r.itemBatch?.dateReceived || "—",
+        dimension:
+          r.itemType === "box" && r.sheetsPerBox
+            ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
+            : `${r.length}×${r.width}`,
+        origin: r.origin,
+        quantity: r.quantity,
+        quantityofr: r.quantityofr,
+        sqm: r.sqm.toFixed(2),
+        sqmofr: r.sqmofr.toFixed(2),
+        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
+        finalcostofr:
+          r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
+        unit:
+          r.itemType === "box"
+            ? "Box"
+            : r.itemType === "sheet"
+            ? "Sheet"
+            : "SQM",
+        status:
+          r.transactionType === "purchase"
+            ? "Purchase"
+            : r.transactionType === "sale"
+            ? "Sales"
+            : r.transactionType || "-",
+        date: new Date(r.invoiceDate).toLocaleDateString(),
+        invoiceNo: r.invoiceNumber || "—",
+      };
+    });
+  }, [rows]);
+
+  const {
+    getTableProps,
+    getTableBodyProps,
+    headerGroups,
+    rows: tableRows,
+    prepareRow,
+    setColumnOrder: updateColumnOrder,
+  } = useTable(
+    {
+      columns: defaultColumns,
+      data,
+    },
+    useColumnOrder
+  );
+
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const oldIndex = columnOrder.indexOf(active.id);
+      const newIndex = columnOrder.indexOf(over.id);
+      const newOrder = arrayMove(columnOrder, oldIndex, newIndex);
+      setColumnOrder(newOrder);
+      updateColumnOrder(newOrder);
+    }
   };
 
   return (
@@ -31,7 +173,6 @@ const InventoryActivityPage = () => {
           >
             Count
           </button>
-
           <button
             className="inventory-activity-btn-transfers"
             onClick={() => setShowTransferModal(true)}
@@ -43,72 +184,45 @@ const InventoryActivityPage = () => {
 
       <div className="inventory-activity-container">
         <div className="inventory-activity-table-wrapper">
-          <table className="inventory-activity-table">
-            <thead>
-              <tr>
-                <th>Item Name</th>
-                <th>Dimensions</th>
-                <th>Brand</th>
-                <th>Quantity</th>
-                <th>Qty OFR</th>
-                <th>SQM</th>
-                <th>SQM OFR</th>
-                <th>Final Cost</th>
-                <th>Final Cost OFR</th>
-                <th>Unit</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Invoice #</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => {
-                const name = `${r.thickness} ملم ${r.itemName}`;
-                const dimension =
-                  r.itemType === "box" && r.sheetsPerBox
-                    ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
-                    : `${r.length}×${r.width}`;
-                const unit =
-                  r.itemType === "box"
-                    ? "Box"
-                    : r.itemType === "sheet"
-                    ? "Sheet"
-                    : "SQM";
-                const status =
-                  r.transactionType === "purchase"
-                    ? "Purchase"
-                    : r.transactionType === "sale"
-                    ? "Sales"
-                    : r.transactionType || "-";
-                const date = new Date(r.invoiceDate).toLocaleDateString();
-                const invoiceNo = r.invoiceNumber || "—";
-                const finalCost =
-                  r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—";
-                const finalCostOFR =
-                  r.finalcostofr != null
-                    ? Number(r.finalcostofr).toFixed(2)
-                    : "—";
-
-                return (
-                  <tr key={i}>
-                    <td>{name}</td>
-                    <td>{dimension}</td>
-                    <td>{r.origin}</td>
-                    <td>{r.quantity}</td>
-                    <td>{r.quantityofr}</td>
-                    <td>{r.sqm.toFixed(2)}</td>
-                    <td>{r.sqmofr.toFixed(2)}</td>
-                    <td>{finalCost}</td>
-                    <td>{finalCostOFR}</td>
-                    <td>{unit}</td>
-                    <td>{status}</td>
-                    <td>{date}</td>
-                    <td>{invoiceNo}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={columnOrder}
+              strategy={horizontalListSortingStrategy}
+            >
+              <table className="inventory-activity-table" {...getTableProps()}>
+                <thead>
+                  {headerGroups.map((headerGroup) => (
+                    <tr {...headerGroup.getHeaderGroupProps()}>
+                      {headerGroup.headers.map((column) => (
+                        <DraggableColumnHeader
+                          key={column.id}
+                          column={column}
+                        />
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody {...getTableBodyProps()}>
+                  {tableRows.map((row) => {
+                    prepareRow(row);
+                    return (
+                      <tr {...row.getRowProps()}>
+                        {row.cells.map((cell) => (
+                          <td {...cell.getCellProps()}>
+                            {cell.render("Cell")}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
@@ -116,8 +230,6 @@ const InventoryActivityPage = () => {
         isOpen={showCountModal}
         onClose={() => setShowCountModal(false)}
       />
-
-      {/* NEW Transfer modal */}
       <TransferModal
         isOpen={showTransferModal}
         onClose={() => setShowTransferModal(false)}
