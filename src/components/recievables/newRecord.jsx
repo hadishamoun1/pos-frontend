@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import axios from "axios";
 import CustomerSelectionModal from "./CustomerSelectionModal";
 import "./newRecord.css";
-
 import NotificationModal from "./NotificationModal";
 
 const NewRecordModal = ({ onClose, onSave }) => {
@@ -18,220 +17,117 @@ const NewRecordModal = ({ onClose, onSave }) => {
   };
 
   const handleAddRow = () => {
-    const newRow = {
-      customerId: "",
-      customerName: "",
-      currency: "",
-      exchangeRate: "",
-      amountExchanged: "",
-      cashNumber: "",
-      date: "",
-      invoiceNumber: "",
-      comments: "",
-    };
-    setRows((prevRows) => [...prevRows, newRow]);
+    setRows((prev) => [
+      ...prev,
+      {
+        customerId: "",
+        customerName: "",
+        type: "S", // ← default Type
+        currency: "",
+        exchangeRate: "",
+        cashNumber: "",
+        amountExchanged: "",
+        date: "",
+        invoiceNumber: "",
+        comments: "",
+      },
+    ]);
   };
 
   const handleInputChange = (index, field, value) => {
-    setRows((prevRows) =>
-      prevRows.map((row, i) => {
+    setRows((prev) =>
+      prev.map((row, i) => {
         if (i !== index) return row;
+        const updated = { ...row, [field]: value };
 
-        const numericValue = isNaN(parseFloat(value.replace(/,/g, "")))
-          ? 0
-          : parseFloat(value.replace(/,/g, ""));
-        const updatedRow = { ...row, [field]: value };
-
-        if (field === "currency") {
-          if (value === "USD") {
-            updatedRow.exchangeRate = "";
-            updatedRow.amountExchanged = formatNumberWithCommas(
-              updatedRow.cashNumber || ""
+        // recalc amountExchanged whenever cashNumber / exchangeRate / currency changes
+        if (["cashNumber", "exchangeRate", "currency"].includes(field)) {
+          const cash = parseFloat(updated.cashNumber.replace(/,/g, "")) || 0;
+          const rate = parseFloat(updated.exchangeRate.replace(/,/g, "")) || 0;
+          if (updated.currency === "LL" && rate) {
+            // LL → USD
+            updated.amountExchanged = formatNumberWithCommas(
+              (cash / rate).toFixed(2)
             );
-          } else if (value === "LL") {
-            if (row.cashNumber && row.exchangeRate) {
-              updatedRow.amountExchanged = formatNumberWithCommas(
-                (
-                  parseFloat(row.cashNumber.replace(/,/g, "")) /
-                  parseFloat(row.exchangeRate.replace(/,/g, ""))
-                ).toFixed(2)
-              );
-            }
-          }
-        }
-
-        if (field === "cashNumber") {
-          updatedRow.cashNumber = formatNumberWithCommas(
-            value.replace(/,/g, "")
-          );
-          if (row.currency === "LL" && row.exchangeRate) {
-            updatedRow.amountExchanged = formatNumberWithCommas(
-              (
-                numericValue / parseFloat(row.exchangeRate.replace(/,/g, ""))
-              ).toFixed(2)
-            );
-          } else if (row.currency === "USD") {
-            updatedRow.amountExchanged = formatNumberWithCommas(
-              numericValue.toFixed(2)
-            );
-          }
-        }
-        if (field === "exchangeRate" && row.currency === "LL") {
-          updatedRow.exchangeRate = value.replace(/,/g, ""); // Remove commas
-          if (row.cashNumber) {
-            updatedRow.amountExchanged = formatNumberWithCommas(
-              (
-                parseFloat(row.cashNumber.replace(/,/g, "")) /
-                parseFloat(updatedRow.exchangeRate)
-              ).toFixed(2)
+          } else if (updated.currency === "USD" && rate) {
+            // USD → LL
+            updated.amountExchanged = formatNumberWithCommas(
+              (cash * rate).toFixed(2)
             );
           }
         }
 
-        if (field === "amountExchanged" && row.currency === "LL") {
-          updatedRow.amountExchanged = formatNumberWithCommas(
-            value.replace(/,/g, "")
-          );
-          if (row.cashNumber) {
-            updatedRow.exchangeRate = formatNumberWithCommas(
-              (
-                parseFloat(row.cashNumber.replace(/,/g, "")) / numericValue
-              ).toFixed(2)
-            );
-          }
-        }
-
-        return updatedRow;
+        return updated;
       })
     );
   };
 
+  const handleCustomerSelect = (customer) => {
+    setRows((prev) =>
+      prev.map((row, i) =>
+        i === currentRowIndex
+          ? {
+              ...row,
+              customerId: customer.id,
+              customerName: customer.customerName,
+            }
+          : row
+      )
+    );
+    setCustomerModalOpen(false);
+  };
+
   const handleSave = async () => {
     try {
-      if (rows.length === 0) {
-        setNotification({
-          type: "error",
-          message: "Please add at least one row before saving.",
-        });
-        return;
-      }
+      if (!rows.length) throw new Error("Add at least one row.");
 
-      // Validate all rows
-      for (const [index, row] of rows.entries()) {
-        if (!row.customerId) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Customer is required.`,
-          });
-          return;
-        }
-        if (!row.currency) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Currency is required.`,
-          });
-          return;
-        }
-        if (!row.cashNumber) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Cash Number is required.`,
-          });
-          return;
-        }
-        if (row.currency === "LL" && !row.exchangeRate) {
-          setNotification({
-            type: "error",
-            message: `Row ${
-              index + 1
-            }: Exchange Rate is required for LL currency.`,
-          });
-          return;
-        }
-        if (!row.amountExchanged) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Amount Exchanged is required.`,
-          });
-          return;
-        }
-        if (!row.date) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Date is required.`,
-          });
-          return;
-        }
-        if (!row.invoiceNumber) {
-          setNotification({
-            type: "error",
-            message: `Row ${index + 1}: Invoice Number is required.`,
-          });
-          return;
-        }
-      }
-
-      // Format rows for API
-      const formattedTransactions = rows.map((row) => ({
-        customerAccountId: row.customerId,
-        date: row.date,
-        invoiceId: row.invoiceNumber,
-        details: [
-          {
-            cashNumber: row.cashNumber.replace(/,/g, ""), // Remove commas
-            currency: row.currency,
-            exchangeRate:
-              row.currency === "LL"
-                ? row.exchangeRate.replace(/,/g, "") || "1"
-                : "1",
-            amountExchanged: row.amountExchanged.replace(/,/g, ""), // Remove commas
-            comments: row.comments,
-          },
-        ],
-      }));
-
-      // API Call to save the data
       const baseUrl = process.env.REACT_APP_API_BASE_URL;
-      await axios.post(
-        `${baseUrl}/receipt-vouchers/v1/bulk`,
-        formattedTransactions
-      );
+      const created = [];
 
-      setNotification({
-        type: "success",
-        message: "Receipt vouchers saved successfully!",
-      });
+      for (const r of rows) {
+        // validations
+        if (!r.customerId) throw new Error("Customer is required.");
+        if (!r.type) throw new Error("Type is required.");
+        if (!r.currency) throw new Error("Currency is required.");
+        if (!r.cashNumber) throw new Error("Cash number is required.");
+        if (r.currency === "LL" && !r.exchangeRate)
+          throw new Error("Exchange rate is required for LL.");
+        if (!r.amountExchanged) throw new Error("Amount exchanged required.");
+        if (!r.date) throw new Error("Date is required.");
+        if (!r.invoiceNumber) throw new Error("Invoice # is required.");
+
+        const payload = {
+          customerId: r.customerId,
+          date: r.date,
+          invoiceId: r.invoiceNumber,
+          cashNumber: parseFloat(r.cashNumber.replace(/,/g, "")),
+          currency: r.currency,
+          exchangeRate: parseFloat(r.exchangeRate.replace(/,/g, "")),
+          amountExchanged: parseFloat(r.amountExchanged.replace(/,/g, "")),
+          comments: r.comments,
+          type: r.type,
+        };
+
+        const resp = await axios.post(`${baseUrl}/recievables`, payload);
+        created.push(resp.data);
+      }
+
+      setNotification({ type: "success", message: "Saved successfully!" });
       setCloseAfterNotification(true);
-    } catch (error) {
+
+      // inform parent of new entries
+      onSave(created);
+    } catch (e) {
       setNotification({
         type: "error",
-        message:
-          error.response?.data?.message ||
-          "Failed to save data. Please check your input and try again.",
+        message: e.response?.data?.message || e.message,
       });
     }
   };
 
   const handleNotificationClose = () => {
     setNotification(null);
-    if (closeAfterNotification) {
-      onClose();
-    }
-  };
-
-  const handleCustomerSelect = (customer) => {
-    setRows((prevRows) =>
-      prevRows.map((row, i) =>
-        i === currentRowIndex
-          ? {
-              ...row,
-              customerName: customer.customerName,
-              customerId: customer.id,
-            }
-          : row
-      )
-    );
-    setCustomerModalOpen(false);
+    if (closeAfterNotification) onClose();
   };
 
   return (
@@ -241,14 +137,12 @@ const NewRecordModal = ({ onClose, onSave }) => {
           <h2>New Record</h2>
           <div className="payments-modal-header-buttons">
             <button
-              type="button"
               className="payments-modal-action-button payments-modal-cancel-button"
               onClick={onClose}
             >
               Cancel
             </button>
             <button
-              type="button"
               className="payments-modal-action-button payments-modal-save-button"
               onClick={handleSave}
             >
@@ -256,11 +150,12 @@ const NewRecordModal = ({ onClose, onSave }) => {
             </button>
           </div>
         </div>
-        {/* Main Content */}
+
         <table className="payments-modal-table">
           <thead>
             <tr>
               <th>Customer Name</th>
+              <th>Type</th>
               <th>Currency</th>
               <th>Cash Number</th>
               <th>Exchange Rate</th>
@@ -271,29 +166,37 @@ const NewRecordModal = ({ onClose, onSave }) => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr key={index}>
-                {/* Row Inputs */}
+            {rows.map((row, idx) => (
+              <tr key={idx}>
                 <td>
                   <input
                     type="text"
                     value={row.customerName}
-                    onClick={() => {
-                      setCustomerModalOpen(true);
-                      setCurrentRowIndex(index);
-                    }}
-                    placeholder="Select Customer"
                     readOnly
-                    required
+                    onClick={() => {
+                      setCurrentRowIndex(idx);
+                      setCustomerModalOpen(true);
+                    }}
                   />
+                </td>
+                <td>
+                  <select
+                    value={row.type}
+                    onChange={(e) =>
+                      handleInputChange(idx, "type", e.target.value)
+                    }
+                  >
+                    <option value="G">G</option>
+                    <option value="S">S</option>
+                    <option value="RVR">RVR</option>
+                  </select>
                 </td>
                 <td>
                   <select
                     value={row.currency}
                     onChange={(e) =>
-                      handleInputChange(index, "currency", e.target.value)
+                      handleInputChange(idx, "currency", e.target.value)
                     }
-                    required
                   >
                     <option value="">Select</option>
                     <option value="USD">USD</option>
@@ -305,10 +208,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     type="text"
                     value={row.cashNumber}
                     onChange={(e) =>
-                      handleInputChange(index, "cashNumber", e.target.value)
+                      handleInputChange(idx, "cashNumber", e.target.value)
                     }
-                    placeholder="Cash Number"
-                    required
                   />
                 </td>
                 <td>
@@ -316,36 +217,20 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     type="text"
                     value={row.exchangeRate}
                     onChange={(e) =>
-                      handleInputChange(index, "exchangeRate", e.target.value)
+                      handleInputChange(idx, "exchangeRate", e.target.value)
                     }
-                    placeholder="Ex Rate"
-                    disabled={row.currency === "USD"}
-                    required={row.currency === "LL"}
                   />
                 </td>
                 <td>
-                  <input
-                    type="text"
-                    value={row.amountExchanged}
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "amountExchanged",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Amount Exchanged"
-                    required
-                  />
+                  <input type="text" value={row.amountExchanged} readOnly />
                 </td>
                 <td>
                   <input
                     type="date"
                     value={row.date}
                     onChange={(e) =>
-                      handleInputChange(index, "date", e.target.value)
+                      handleInputChange(idx, "date", e.target.value)
                     }
-                    required
                   />
                 </td>
                 <td>
@@ -353,10 +238,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     type="text"
                     value={row.invoiceNumber}
                     onChange={(e) =>
-                      handleInputChange(index, "invoiceNumber", e.target.value)
+                      handleInputChange(idx, "invoiceNumber", e.target.value)
                     }
-                    placeholder="Invoice Number"
-                    required
                   />
                 </td>
                 <td>
@@ -364,18 +247,17 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     type="text"
                     value={row.comments}
                     onChange={(e) =>
-                      handleInputChange(index, "comments", e.target.value)
+                      handleInputChange(idx, "comments", e.target.value)
                     }
-                    placeholder="Comments"
                   />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+
         <div className="payments-modal-footer">
           <button
-            type="button"
             className="payments-modal-action-button"
             onClick={handleAddRow}
           >
@@ -383,6 +265,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
           </button>
         </div>
       </div>
+
       {isCustomerModalOpen && (
         <CustomerSelectionModal
           onClose={() => setCustomerModalOpen(false)}

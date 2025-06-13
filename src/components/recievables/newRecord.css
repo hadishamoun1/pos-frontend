@@ -78,43 +78,49 @@
 /* Column Width Control */
 .payments-modal-table th:nth-child(1),
 .payments-modal-table td:nth-child(1) {
-  width: 28%; /* Customer Name */
+  width: 22%; /* Customer Name */
 }
 
 .payments-modal-table th:nth-child(2),
 .payments-modal-table td:nth-child(2) {
-  width: 7%; /* Currency */
+  width: 6%; /* type */
 }
 
 .payments-modal-table th:nth-child(3),
 .payments-modal-table td:nth-child(3) {
-  width: 10%; /* cash number */
+  width: 6%; /* currency */
 }
 
 .payments-modal-table th:nth-child(4),
 .payments-modal-table td:nth-child(4) {
-  width: 10%; /* Exhnage rate */
+  width: 10%; /* cash number */
 }
 
 .payments-modal-table th:nth-child(5),
 .payments-modal-table td:nth-child(5) {
-  width: 14%; /* Amount Exchanged */
+  width: 14%; /*  Exchange rate*/
 }
 
 .payments-modal-table th:nth-child(6),
 .payments-modal-table td:nth-child(6) {
-  width: 10%; /* Date */
+  width: 12%; /* amount exchnged */
 }
 
 .payments-modal-table th:nth-child(7),
 .payments-modal-table td:nth-child(7) {
-  width: 10%; /* Invoice Number */
+  width: 10%; /* date */
 }
 
 .payments-modal-table th:nth-child(8),
 .payments-modal-table td:nth-child(8) {
-  width: 10%; /* Comments */
+  width: 10%; /* invoice number */
 }
+
+.payments-modal-table th:nth-child(9),
+.payments-modal-table td:nth-child(9) {
+  width: 10%; /* invoice number */
+}
+
 
 /* Table Cell Styling */
 .payments-modal-table th,
