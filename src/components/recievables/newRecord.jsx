@@ -1,3 +1,4 @@
+// src/receipt-voucher/NewRecordModal.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import CustomerSelectionModal from "./CustomerSelectionModal";
@@ -22,7 +23,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
       {
         customerId: "",
         customerName: "",
-        type: "S", // ← default Type
+        type: "S", // default JV Type
+        pmtType: "", // new Payment Type
         currency: "",
         exchangeRate: "",
         cashNumber: "",
@@ -40,7 +42,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
         if (i !== index) return row;
         const updated = { ...row, [field]: value };
 
-        // recalc amountExchanged whenever cashNumber / exchangeRate / currency changes
+        // whenever cashNumber / exchangeRate / currency changes, recalc amountExchanged:
         if (["cashNumber", "exchangeRate", "currency"].includes(field)) {
           const cash = parseFloat(updated.cashNumber.replace(/,/g, "")) || 0;
           const rate = parseFloat(updated.exchangeRate.replace(/,/g, "")) || 0;
@@ -85,16 +87,18 @@ const NewRecordModal = ({ onClose, onSave }) => {
       const created = [];
 
       for (const r of rows) {
-        // validations
+        // basic validations
         if (!r.customerId) throw new Error("Customer is required.");
-        if (!r.type) throw new Error("Type is required.");
+        if (!r.type) throw new Error("JV Type is required.");
+        if (!r.pmtType) throw new Error("Payment Type is required.");
         if (!r.currency) throw new Error("Currency is required.");
         if (!r.cashNumber) throw new Error("Cash number is required.");
         if (r.currency === "LL" && !r.exchangeRate)
           throw new Error("Exchange rate is required for LL.");
-        if (!r.amountExchanged) throw new Error("Amount exchanged required.");
+        if (!r.amountExchanged)
+          throw new Error("Amount exchanged is required.");
         if (!r.date) throw new Error("Date is required.");
-        if (!r.invoiceNumber) throw new Error("Invoice # is required.");
+        if (!r.invoiceNumber) throw new Error("Invoice Number is required.");
 
         const payload = {
           customerId: r.customerId,
@@ -106,6 +110,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
           amountExchanged: parseFloat(r.amountExchanged.replace(/,/g, "")),
           comments: r.comments,
           type: r.type,
+          pmtType: r.pmtType, // include the new Payment Type
         };
 
         const resp = await axios.post(`${baseUrl}/recievables`, payload);
@@ -115,7 +120,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
       setNotification({ type: "success", message: "Saved successfully!" });
       setCloseAfterNotification(true);
 
-      // inform parent of new entries
+      // pass newly created entries back to parent
       onSave(created);
     } catch (e) {
       setNotification({
@@ -156,12 +161,13 @@ const NewRecordModal = ({ onClose, onSave }) => {
             <tr>
               <th>Customer Name</th>
               <th>Type</th>
+              <th>Pmt Type</th>
               <th>Currency</th>
               <th>Cash Number</th>
               <th>Exchange Rate</th>
-              <th>Amount Exchanged</th>
+              <th>Amount Ex</th>
               <th>Date</th>
-              <th>Invoice Number</th>
+              <th>Invoice #</th>
               <th>Comments</th>
             </tr>
           </thead>
@@ -189,6 +195,18 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <option value="G">G</option>
                     <option value="S">S</option>
                     <option value="RVR">RVR</option>
+                  </select>
+                </td>
+                <td>
+                  <select
+                    value={row.pmtType}
+                    onChange={(e) =>
+                      handleInputChange(idx, "pmtType", e.target.value)
+                    }
+                  >
+                    <option value="">Select</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Check">Check</option>
                   </select>
                 </td>
                 <td>

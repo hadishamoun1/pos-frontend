@@ -1,3 +1,4 @@
+// src/recievables/AccountingPage.jsx
 import React, { useState, useEffect } from "react";
 import "./recievables.css";
 import NewRecordModal from "./newRecord";
@@ -19,8 +20,11 @@ const AccountingPage = () => {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
 
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   const openNewModal = () => setIsNewModalOpen(true);
   const closeNewModal = () => setIsNewModalOpen(false);
+
   const openEditModal = () => {
     if (selectedRowIndex === null) {
       setNotification({
@@ -29,38 +33,30 @@ const AccountingPage = () => {
       });
       return;
     }
-
-    const selected = data[selectedRowIndex];
-    const formattedRow = {
-      id: selected.id,
-      customer: {
-        id: selected.customerAccountId || "",
-        name: selected.customerName || "",
-      },
-      date: selected.date || "",
-      invoiceId: selected.invoiceNumber || "",
+    const sel = filteredData[selectedRowIndex];
+    setSelectedRow({
+      id: sel.id,
+      customer: { id: sel.customerAccountId, name: sel.customerName },
+      date: sel.date,
+      invoiceId: sel.invoiceNumber,
       details: [
         {
-          cashNumber: selected.cashNumber || "0",
-          currency: selected.currency || "",
-          exchangeRate: selected.exchangeRate
-            ? selected.exchangeRate[0] // Assuming it's an array
-            : "0",
-          amountExchanged: selected.amountExchanged || "0",
-          comments: selected.comments || "",
+          cashNumber: sel.cashNumber,
+          currency: sel.currency,
+          exchangeRate: sel.exchangeRate,
+          amountExchanged: sel.amountExchanged,
+          comments: sel.comments,
         },
       ],
-    };
-
-    setSelectedRow(formattedRow);
+    });
     setIsEditModalOpen(true);
   };
-
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedRow(null);
     setSelectedRowIndex(null);
   };
+
   const openDeleteModal = () => {
     if (selectedRowIndex === null) {
       setNotification({
@@ -71,172 +67,127 @@ const AccountingPage = () => {
     }
     setIsDeleteModalOpen(true);
   };
-
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-  };
+  const closeDeleteModal = () => setIsDeleteModalOpen(false);
 
   const handleDelete = async () => {
-    if (selectedRowIndex === null) return;
-
-    const selectedId = data[selectedRowIndex].id;
-
+    const id = filteredData[selectedRowIndex].id;
     try {
-      const baseUrl = process.env.REACT_APP_API_BASE_URL;
-      await axios.delete(`${baseUrl}/receipt-vouchers/${selectedId}`);
-      setNotification({
-        type: "success",
-        message: "Receipt voucher deleted successfully!",
-      });
-
-      const newData = data.filter((row) => row.id !== selectedId);
-      setData(newData);
-      setFilteredData(newData);
+      await axios.delete(`${baseUrl}/recievables/${id}`);
+      setNotification({ type: "success", message: "Deleted successfully." });
+      const next = data.filter((r) => r.id !== id);
+      setData(next);
+      setFilteredData(next);
       setSelectedRowIndex(null);
       closeDeleteModal();
-    } catch (err) {
-      setNotification({
-        type: "error",
-        message: "Failed to delete receipt voucher. Please try again.",
-      });
+    } catch {
+      setNotification({ type: "error", message: "Delete failed." });
     }
   };
 
   useEffect(() => {
+    let socket;
+
     const fetchData = async () => {
       try {
-        const baseUrl = process.env.REACT_APP_API_BASE_URL;
-        const response = await axios.get(
-          `${baseUrl}/receipt-vouchers/v1/specific-fields`
-        );
-        const formattedData = response.data.map((voucher) => ({
-          id: voucher.id,
-          date: voucher.date,
-          customerName: voucher.customer.name,
-          customerAccountId: voucher.customer.id,
-          currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
-          exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
-          cashNumber:
-            voucher.totalCrLL === "0.00"
-              ? formatNumberWithCommas(voucher.totalCr)
-              : formatNumberWithCommas(voucher.totalCrLL), // Use totalCrLL for LL currency
-          amountExchanged: formatNumberWithCommas(voucher.totalCr),
-
-          invoiceNumber: voucher.invoiceId,
-          comments: voucher.comments.join(", "),
-          rct: "", // Leave RCT empty for now
+        const res = await axios.get(`${baseUrl}/recievables/v1/summary`);
+        const formatted = res.data.map((v) => ({
+          id: v.id,
+          date: v.date.slice(0, 10), // "YYYY-MM-DD"
+          customerName: v.customerName, // flat field
+          currency: v.currency, // "LL" or "USD"
+          exchangeRate: v.exchangeRate, // e.g. "1500.0000"
+          cashNumber: v.cashNumber, // e.g. "1500000.00"
+          amountExchanged: v.amountExchanged, // e.g. "1000.00"
+          invoiceNumber: v.jvNumber, // flat field
+          comments: v.comments, // flat field
+          rct: v.jvNumber, // your auto-gen JV#
         }));
-        setData(formattedData);
-        setFilteredData(formattedData);
+        setData(formatted);
+        setFilteredData(formatted);
       } catch (err) {
-        setError("Failed to fetch data. Please try again.");
+        console.error("🚨 fetchData error:", err);
+        setError(err.message || "Failed to load data");
         setNotification({
           type: "error",
-          message: "Failed to fetch data from the server.",
+          message: err.response?.data?.message || err.message,
         });
       } finally {
+        // **guarantee we turn loading off**
         setLoading(false);
       }
     };
 
     fetchData();
-    const baseUrl = process.env.REACT_APP_API_BASE_URL;
-    const socket = io(`${baseUrl}`);
 
-    socket.on("connect", () => {
-      console.log("WebSocket connected:", socket.id);
-    });
+    // only attempt socket if your backend socket is up
+    try {
+      socket = io(baseUrl);
+      socket.on("recievables", (updated) => {
+        const fmt = updated.map((v) => ({
+          id: v.id,
+          date: v.date.slice(0, 10),
+          customerName: v.customerName,
+          currency: v.currency,
+          exchangeRate: v.exchangeRate,
+          cashNumber: v.cashNumber,
+          amountExchanged: v.amountExchanged,
+          invoiceNumber: v.jvNumber,
+          comments: v.comments,
+          rct: v.jvNumber,
+        }));
+        setData(fmt);
+        setFilteredData(fmt);
+      });
+    } catch {
+      console.warn("Socket.io not available at", baseUrl);
+    }
 
-    socket.on("receipt-vouchers", (updatedData) => {
-      const formattedData = updatedData.map((voucher) => ({
-        id: voucher.id,
-        date: voucher.date,
-        customerName: voucher.customer.name,
-        customerAccountId: voucher.customer.id,
-        currency: voucher.totalCrLL === "0.00" ? "USD" : "LL",
-        exchangeRate: voucher.exchangeRate.map(formatNumberWithCommas),
-        cashNumber:
-          voucher.totalCrLL === "0.00"
-            ? formatNumberWithCommas(voucher.totalCr)
-            : formatNumberWithCommas(voucher.totalCrLL), // Use totalCrLL for LL currency
-        amountExchanged: formatNumberWithCommas(voucher.totalCr),
+    return () => socket && socket.disconnect();
+  }, [baseUrl]);
 
-        invoiceNumber: voucher.invoiceId,
-        comments: voucher.comments.join(", "),
-        rct: "", // Leave RCT empty
-      }));
-      setData(formattedData);
-      setFilteredData(formattedData);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
-  const formatNumberWithCommas = (number) => {
-    if (number === null || number === undefined) return "";
-    return Number(number).toLocaleString("en-US");
-  };
+  const formatNumberWithCommas = (n) =>
+    n != null ? Number(n).toLocaleString("en-US") : "";
 
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
     setFilteredData(
       data.filter(
-        (row) =>
-          row.customerName.toLowerCase().includes(term) ||
-          row.comments.toLowerCase().includes(term) ||
-          row.invoiceNumber.toLowerCase().includes(term)
+        (r) =>
+          r.customerName.toLowerCase().includes(term) ||
+          r.comments.toLowerCase().includes(term) ||
+          r.invoiceNumber.toLowerCase().includes(term)
       )
     );
   };
-  const handleUpdateSave = async (updatedData) => {
-    try {
-      const baseUrl = process.env.REACT_APP_API_BASE_URL;
-      const response = await axios.put(
-        `${baseUrl}/receipt-vouchers/v1/bulk`,
-        [updatedData]
-      );
 
-      if (response.status === 200 || response.status === 201) {
-        setNotification({
-          type: "success",
-          message: "Receipt voucher updated successfully!",
-        });
+  const handleNewSave = (newEntry) => {
+    setData((d) => [...d, newEntry]);
+    setFilteredData((d) => [...d, newEntry]);
+    closeNewModal();
+  };
 
-        const updatedIndex = data.findIndex(
-          (item) => item.id === updatedData.receiptVoucherId
-        );
-
-        if (updatedIndex !== -1) {
-          const newData = [...data];
-          newData[updatedIndex] = {
-            ...newData[updatedIndex],
-            customerName: updatedData.customerName, // Update customerName in the table
-            customerAccountId: updatedData.customerAccountId, // Update customerAccountId
-            invoiceNumber: updatedData.invoiceId, // Update invoiceNumber
-            ...updatedData.details[0], // Update other details like cashNumber, comments, etc.
-          };
-          setData(newData); // Update the main data state
-          setFilteredData(newData); // Update the filtered data state
-        }
-
-        closeEditModal(); // Close the edit modal
-      } else {
-        setNotification({
-          type: "error",
-          message: "Failed to update receipt voucher. Please try again.",
-        });
-      }
-    } catch (err) {
-      console.error("Update API error:", err);
-      setNotification({
-        type: "error",
-        message:
-          err.response?.data?.message || "Failed to update receipt voucher.",
-      });
+  const handleUpdateSave = (updated) => {
+    const idx = data.findIndex((r) => r.id === updated.id);
+    if (idx > -1) {
+      const copy = [...data];
+      copy[idx] = {
+        id: updated.id,
+        date: updated.date.slice(0, 10),
+        customerName: updated.customer.name,
+        customerAccountId: updated.customer.id,
+        currency: updated.currency,
+        exchangeRate: updated.exchangeRate,
+        cashNumber: updated.cashNumber,
+        amountExchanged: updated.amountExchanged,
+        invoiceNumber: updated.invoiceId,
+        comments: updated.comments,
+        rct: updated.jvNumber,
+      };
+      setData(copy);
+      setFilteredData(copy);
     }
+    closeEditModal();
   };
 
   return (
@@ -257,7 +208,7 @@ const AccountingPage = () => {
             <button className="action-button" onClick={openEditModal}>
               Edit
             </button>
-            <button className=" delete-button" onClick={openDeleteModal}>
+            <button className="delete-button" onClick={openDeleteModal}>
               Delete
             </button>
           </div>
@@ -284,21 +235,21 @@ const AccountingPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((row, index) => (
-                <tr key={index}>
+              {filteredData.map((row, idx) => (
+                <tr key={row.id}>
                   <td>
                     <input
                       type="radio"
                       name="selectedRow"
-                      onChange={() => setSelectedRowIndex(index)}
-                      checked={selectedRowIndex === index}
+                      checked={selectedRowIndex === idx}
+                      onChange={() => setSelectedRowIndex(idx)}
                     />
                   </td>
                   <td>{row.customerName}</td>
                   <td>{row.currency}</td>
                   <td>{row.exchangeRate}</td>
-                  <td>{row.amountExchanged}</td>
-                  <td>{row.cashNumber}</td>
+                  <td>{formatNumberWithCommas(row.amountExchanged)}</td>
+                  <td>{formatNumberWithCommas(row.cashNumber)}</td>
                   <td>{row.date}</td>
                   <td>{row.invoiceNumber}</td>
                   <td>{row.comments}</td>
@@ -309,15 +260,9 @@ const AccountingPage = () => {
           </table>
         )}
       </div>
+
       {isNewModalOpen && (
-        <NewRecordModal
-          onClose={closeNewModal}
-          onSave={(newData) => {
-            setData((prevData) => [...prevData, newData]);
-            setFilteredData((prevData) => [...prevData, newData]);
-            closeNewModal();
-          }}
-        />
+        <NewRecordModal onClose={closeNewModal} onSave={handleNewSave} />
       )}
       {isEditModalOpen && selectedRow && (
         <EditRecordModal
@@ -329,7 +274,7 @@ const AccountingPage = () => {
       {isDeleteModalOpen && (
         <NotificationModal
           type="warning"
-          message="Are you sure you want to delete this receipt voucher?"
+          message="Are you sure you want to delete this entry?"
           onClose={closeDeleteModal}
           onConfirm={handleDelete}
           confirmLabel="Yes"
