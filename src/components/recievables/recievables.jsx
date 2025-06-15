@@ -27,15 +27,22 @@ const AccountingPage = () => {
 
   const openEditModal = () => {
     if (selectedRowIndex === null) {
-      setNotification({ type: "error", message: "Please select a row to edit." });
+      setNotification({
+        type: "error",
+        message: "Please select a row to edit.",
+      });
       return;
     }
     const sel = filteredData[selectedRowIndex];
     setSelectedRow({
       id: sel.id,
-      customer: { id: sel.customerAccountId, name: sel.customerName },
+      customer: {
+        id: sel.customerAccountId,
+        name: sel.customerName,
+      },
       date: sel.date,
-      invoiceId: sel.invoiceNumber,
+      invoiceId: sel.refInvoice,
+      type: sel.type,
       details: [
         {
           cashNumber: sel.cashNumber,
@@ -43,7 +50,7 @@ const AccountingPage = () => {
           exchangeRate: sel.exchangeRate,
           amountExchanged: sel.amountExchanged,
           comments: sel.comments,
-          pmtType: sel.pmtType,            // include PMT type
+          pmtType: sel.pmtType,
         },
       ],
     });
@@ -57,7 +64,10 @@ const AccountingPage = () => {
 
   const openDeleteModal = () => {
     if (selectedRowIndex === null) {
-      setNotification({ type: "error", message: "Please select a row to delete." });
+      setNotification({
+        type: "error",
+        message: "Please select a row to delete.",
+      });
       return;
     }
     setIsDeleteModalOpen(true);
@@ -87,16 +97,19 @@ const AccountingPage = () => {
         const res = await axios.get(`${baseUrl}/recievables/v1/summary`);
         const formatted = res.data.map((v) => ({
           id: v.id,
-          date: v.date.slice(0, 10),      // "YYYY-MM-DD"
-          customerName: v.customerName,   // flat field
-          currency: v.currency,           // "LL" or "USD"
+          date: v.date.slice(0, 10),
+          customerName: v.customerName,
+          customerAccountId: v.customerid,
+          currency: v.currency,
           exchangeRate: v.exchangeRate,
           cashNumber: v.cashNumber,
           amountExchanged: v.amountExchanged,
-          invoiceNumber: v.jvNumber ?? "",
-          pmtType: v.pmtType,             // ← PMT Type from API
+          refInvoice: v.invoiceId,
+          invoiceNumber: v.jvNumber,
+          pmtType: v.pmtType,
           comments: v.comments,
           rct: v.jvNumber,
+          type: v.type,
         }));
         setData(formatted);
         setFilteredData(formatted);
@@ -118,14 +131,17 @@ const AccountingPage = () => {
           id: v.id,
           date: v.date.slice(0, 10),
           customerName: v.customerName,
+          customerAccountId: v.customerid,
           currency: v.currency,
           exchangeRate: v.exchangeRate,
           cashNumber: v.cashNumber,
           amountExchanged: v.amountExchanged,
-          invoiceNumber: v.jvNumber ?? "",
+          refInvoice: v.invoiceId,
+          invoiceNumber: v.jvNumber,
           pmtType: v.pmtType,
           comments: v.comments,
           rct: v.jvNumber,
+          type: v.type,
         }));
         setData(fmt);
         setFilteredData(fmt);
@@ -147,9 +163,10 @@ const AccountingPage = () => {
       data.filter(
         (r) =>
           r.customerName.toLowerCase().includes(term) ||
-          r.comments.toLowerCase().includes(term) ||
+          r.refInvoice.toLowerCase().includes(term) ||
           r.invoiceNumber.toLowerCase().includes(term) ||
-          r.pmtType.toLowerCase().includes(term) // include PMT in search
+          r.comments.toLowerCase().includes(term) ||
+          r.pmtType.toLowerCase().includes(term)
       )
     );
   };
@@ -160,15 +177,21 @@ const AccountingPage = () => {
         <div className="top-toolbar">
           <input
             type="text"
-            placeholder="Search by Customer, Comments, Invoice or PMT"
+            placeholder="Search by Customer, Ref Invoice, JV#, Comments or PMT"
             className="search-input"
             value={searchTerm}
             onChange={handleSearch}
           />
           <div className="button-group">
-            <button className="action-button" onClick={openNewModal}>New</button>
-            <button className="action-button" onClick={openEditModal}>Edit</button>
-            <button className="delete-button" onClick={openDeleteModal}>Delete</button>
+            <button className="action-button" onClick={openNewModal}>
+              New
+            </button>
+            <button className="action-button" onClick={openEditModal}>
+              Edit
+            </button>
+            <button className="delete-button" onClick={openDeleteModal}>
+              Delete
+            </button>
           </div>
         </div>
 
@@ -182,13 +205,14 @@ const AccountingPage = () => {
               <tr>
                 <th>Select</th>
                 <th>Customer Name</th>
-                <th>Currency</th>
+                <th>Cur</th>
                 <th>Ex Rate</th>
                 <th>Amount Ex</th>
                 <th>Cash Number</th>
                 <th>Date</th>
-                <th>Invoice #</th>
-                <th>PMT Type</th>     {/* added */}
+                <th>Ref Invoice</th>
+                <th>JV Number</th>
+                <th>PMT Type</th>
                 <th>Comments</th>
                 <th>RCT</th>
               </tr>
@@ -210,8 +234,9 @@ const AccountingPage = () => {
                   <td>{formatNumberWithCommas(row.amountExchanged)}</td>
                   <td>{formatNumberWithCommas(row.cashNumber)}</td>
                   <td>{row.date}</td>
+                  <td>{row.refInvoice}</td>
                   <td>{row.invoiceNumber}</td>
-                  <td>{row.pmtType}</td>  {/* render it */}
+                  <td>{row.pmtType}</td>
                   <td>{row.comments}</td>
                   <td>{row.rct}</td>
                 </tr>
@@ -240,18 +265,20 @@ const AccountingPage = () => {
             if (idx > -1) {
               const copy = [...data];
               copy[idx] = {
-                id: updated.id,
+                ...copy[idx],
                 date: updated.date.slice(0, 10),
-                customerName: updated.customer.name,
-                customerAccountId: updated.customer.id,
+                customerName: updated.customerName,
+                customerAccountId: updated.customerid,
                 currency: updated.currency,
                 exchangeRate: updated.exchangeRate,
                 cashNumber: updated.cashNumber,
                 amountExchanged: updated.amountExchanged,
+                refInvoice: updated.invoiceId,
                 invoiceNumber: updated.jvNumber,
                 pmtType: updated.pmtType,
                 comments: updated.comments,
                 rct: updated.jvNumber,
+                type: updated.type,
               };
               setData(copy);
               setFilteredData(copy);

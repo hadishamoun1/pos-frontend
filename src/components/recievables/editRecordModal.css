@@ -220,6 +220,74 @@
   border: 1px solid #ddd;
 }
 
+/* ensure fixed layout so widths stick */
+.edit-modal-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* column 1: Customer Name  (e.g. 20% of total) */
+.edit-modal-table th:nth-child(1),
+.edit-modal-table td:nth-child(1) {
+  width: 20%;
+}
+
+/* column 2: Ref Invoice */
+.edit-modal-table th:nth-child(2),
+.edit-modal-table td:nth-child(2) {
+  width: 10%;
+}
+
+/* column 3: Type */
+.edit-modal-table th:nth-child(3),
+.edit-modal-table td:nth-child(3) {
+  width: 8%;
+}
+
+/* column 4: PMT Type */
+.edit-modal-table th:nth-child(4),
+.edit-modal-table td:nth-child(4) {
+  width: 8%;
+}
+
+/* column 5: Currency */
+.edit-modal-table th:nth-child(5),
+.edit-modal-table td:nth-child(5) {
+  width: 8%;
+}
+
+/* column 6: Cash Number */
+.edit-modal-table th:nth-child(6),
+.edit-modal-table td:nth-child(6) {
+  width: 10%;
+}
+
+/* column 7: Exchange Rate */
+.edit-modal-table th:nth-child(7),
+.edit-modal-table td:nth-child(7) {
+  width: 10%;
+}
+
+/* column 8: Amount Exchanged */
+.edit-modal-table th:nth-child(8),
+.edit-modal-table td:nth-child(8) {
+  width: 10%;
+}
+
+/* column 9: Date */
+.edit-modal-table th:nth-child(9),
+.edit-modal-table td:nth-child(9) {
+  width: 8%;
+}
+
+/* column 10: Comments */
+.edit-modal-table th:nth-child(10),
+.edit-modal-table td:nth-child(10) {
+  width: 8%;
+}
+
+/* column 11: (you have 10 columns in this modal—adjust if needed) */
+
 /* Animations */
 @keyframes fadeIn {
   from {

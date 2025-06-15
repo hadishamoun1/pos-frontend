@@ -120,8 +120,6 @@
 
 .accounting-table tbody tr:hover td {
   background-color: #d6ebfa;
-
-
 }
 
 .accounting-table tbody tr {
@@ -193,6 +191,78 @@
   background-color: #bd0417; /* Darker red on hover */
   transform: scale(1.05);
   color: white;
+}
+
+/* 1st col: “Select” */
+.accounting-table th:nth-child(1),
+.accounting-table td:nth-child(1) {
+  width: 5%;
+}
+
+/* 2nd col: “Customer Name” */
+.accounting-table th:nth-child(2),
+.accounting-table td:nth-child(2) {
+  width: 20%;
+}
+
+/* 3rd col: “Currency” */
+.accounting-table th:nth-child(3),
+.accounting-table td:nth-child(3) {
+  width: 4%;
+}
+
+/* 4th col: “Ex Rate” */
+.accounting-table th:nth-child(4),
+.accounting-table td:nth-child(4) {
+  width: 10%;
+}
+
+/* 5th col: “Amount Ex” */
+.accounting-table th:nth-child(5),
+.accounting-table td:nth-child(5) {
+  width: 10%;
+}
+
+/* 6th col: “Cash Number” */
+.accounting-table th:nth-child(6),
+.accounting-table td:nth-child(6) {
+  width: 10%;
+}
+
+/* 7th col: “Date” */
+.accounting-table th:nth-child(7),
+.accounting-table td:nth-child(7) {
+  width: 7%;
+}
+
+/* 8th col: “Ref Invoice” */
+.accounting-table th:nth-child(8),
+.accounting-table td:nth-child(8) {
+  width: 10%;
+}
+
+/* 9th col: “JV Number” */
+.accounting-table th:nth-child(9),
+.accounting-table td:nth-child(9) {
+  width: 10%;
+}
+
+/* 10th col: “PMT Type” */
+.accounting-table th:nth-child(10),
+.accounting-table td:nth-child(10) {
+  width: 7%;
+}
+
+/* 11th col: “Comments” */
+.accounting-table th:nth-child(11),
+.accounting-table td:nth-child(11) {
+  width: 10%;
+}
+
+/* 12th col: “RCT” */
+.accounting-table th:nth-child(12),
+.accounting-table td:nth-child(12) {
+  width: 10%;
 }
 
 /* Responsive Design */
