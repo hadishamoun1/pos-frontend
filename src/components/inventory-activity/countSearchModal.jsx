@@ -8,7 +8,7 @@ const CountSearchModal = ({
   onClose,
   onSelect,
   existingKeys,
-  singleSelect = false, 
+  singleSelect = false,
 }) => {
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -18,65 +18,76 @@ const CountSearchModal = ({
     if (!isOpen) return;
     axios
       .get("http://localhost:3000/items/v1/filtered-items")
-      .then((res) => setItems(res.data))
+      .then((res) => setItems(res.data || []))
       .catch(console.error);
 
-    // reset search + selection each time it opens:
     setSearchTerm("");
     setSelectedSet(new Set());
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const toggleSelect = (variantKey, info) => {
-    if (existingKeys.has(variantKey)) return;
+  // Safely flatten, defaulting to [] whenever a level is missing
+  const rows = items.flatMap((item) => {
+    const thicknesses = item.thicknesses || [];
+    return thicknesses.flatMap((thick) => {
+      const variants = thick.variants || [];
+      return variants.flatMap((variant) => {
+        const batches = variant.batches || [];
+        return batches.map((batch) => {
+          const key = `${item.id}-${thick.thickness}-${variant.id}-${batch.id}`;
+          return {
+            key,
+            batchId: batch.id,
+            itemVariantId: variant.id,
+            itemName: item.itemName,
+            thickness: thick.thickness,
+            type: item.type,
+            length: variant.length,
+            width: variant.width,
+            sheetsPerBox: variant.sheetsPerBox,
+            condition: batch.condition,
+            dateReceived: batch.dateReceived,
+          };
+        });
+      });
+    });
+  });
 
+  const filtered = rows.filter(
+    (r) =>
+      r.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.condition.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const toggleSelect = (row) => {
+    if (existingKeys.has(row.key)) return;
     if (singleSelect) {
-      // immediately hand back the one choice:
-      onSelect([info]);
+      onSelect([row]);
       onClose();
     } else {
       const s = new Set(selectedSet);
-      s.has(variantKey) ? s.delete(variantKey) : s.add(variantKey);
+      s.has(row.key) ? s.delete(row.key) : s.add(row.key);
       setSelectedSet(s);
     }
   };
 
-  // build a flat list of rows & allow lookup by key
-  const rows = items.flatMap((item) =>
-    item.thicknesses.flatMap((thick) =>
-      thick.variants.map((variant) => {
-        const key = `${item.id}-${thick.thickness}-${variant.id}`;
-        return {
-          key,
-          itemVariantId: variant.id,
-          itemName: item.itemName,
-          thickness: thick.thickness,
-          type: item.type,
-          length: variant.length,
-          width: variant.width,
-          sheetsPerBox: variant.sheetsPerBox,
-        };
-      })
-    )
-  );
-
-  const filtered = rows.filter((r) =>
-    r.itemName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const handleOk = () => {
     const chosen = filtered.filter((r) => selectedSet.has(r.key));
-    const mapped = chosen.map((r) => ({
-      key: r.key,
-      itemVariantId: r.itemVariantId,
-      item: `${parseFloat(r.thickness)} ملم ${r.itemName}`,
-      type: r.type,
-      length: r.length,
-      width: r.width,
-      sheetsPerBox: r.sheetsPerBox,
-    }));
-    onSelect(mapped);
+    onSelect(
+      chosen.map((r) => ({
+        key: r.key,
+        batchId: r.batchId,
+        itemVariantId: r.itemVariantId,
+        item: `${parseFloat(r.thickness)} ملم ${r.itemName}`,
+        type: r.type,
+        length: r.length,
+        width: r.width,
+        sheetsPerBox: r.sheetsPerBox,
+        condition: r.condition,
+        dateReceived: r.dateReceived,
+      }))
+    );
     onClose();
   };
 
@@ -94,7 +105,7 @@ const CountSearchModal = ({
           <input
             type="text"
             className="count-search-modal-input"
-            placeholder="Search by item name…"
+            placeholder="Search by item or condition…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
@@ -111,6 +122,8 @@ const CountSearchModal = ({
                 <th>Length</th>
                 <th>Width</th>
                 <th>Sheets/Box</th>
+                <th>Condition</th>
+                <th>Date Received</th>
               </tr>
             </thead>
             <tbody>
@@ -125,21 +138,9 @@ const CountSearchModal = ({
                     <td>
                       <input
                         type="checkbox"
-                        checked={singleSelect ? false : checked}
+                        checked={checked}
                         disabled={already}
-                        onChange={() =>
-                          toggleSelect(r.key, {
-                            key: r.key,
-                            itemVariantId: r.itemVariantId,
-                            item: `${parseFloat(r.thickness)} ملم ${
-                              r.itemName
-                            }`,
-                            type: r.type,
-                            length: r.length,
-                            width: r.width,
-                            sheetsPerBox: r.sheetsPerBox,
-                          })
-                        }
+                        onChange={() => toggleSelect(r)}
                       />
                     </td>
                     <td className="rtl">
@@ -149,6 +150,8 @@ const CountSearchModal = ({
                     <td>{Math.floor(r.length)}</td>
                     <td>{Math.floor(r.width)}</td>
                     <td>{r.sheetsPerBox}</td>
+                    <td>{r.condition}</td>
+                    <td>{r.dateReceived}</td>
                   </tr>
                 );
               })}
@@ -156,7 +159,6 @@ const CountSearchModal = ({
           </table>
         </div>
 
-        {/* hide the OK footer when in singleSelect mode */}
         {!singleSelect && (
           <div className="count-search-modal-footer">
             <button
