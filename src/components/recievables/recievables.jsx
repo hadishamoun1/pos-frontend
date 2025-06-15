@@ -27,10 +27,7 @@ const AccountingPage = () => {
 
   const openEditModal = () => {
     if (selectedRowIndex === null) {
-      setNotification({
-        type: "error",
-        message: "Please select a row to edit.",
-      });
+      setNotification({ type: "error", message: "Please select a row to edit." });
       return;
     }
     const sel = filteredData[selectedRowIndex];
@@ -46,6 +43,7 @@ const AccountingPage = () => {
           exchangeRate: sel.exchangeRate,
           amountExchanged: sel.amountExchanged,
           comments: sel.comments,
+          pmtType: sel.pmtType,            // include PMT type
         },
       ],
     });
@@ -59,10 +57,7 @@ const AccountingPage = () => {
 
   const openDeleteModal = () => {
     if (selectedRowIndex === null) {
-      setNotification({
-        type: "error",
-        message: "Please select a row to delete.",
-      });
+      setNotification({ type: "error", message: "Please select a row to delete." });
       return;
     }
     setIsDeleteModalOpen(true);
@@ -92,34 +87,30 @@ const AccountingPage = () => {
         const res = await axios.get(`${baseUrl}/recievables/v1/summary`);
         const formatted = res.data.map((v) => ({
           id: v.id,
-          date: v.date.slice(0, 10), // "YYYY-MM-DD"
-          customerName: v.customerName, // flat field
-          currency: v.currency, // "LL" or "USD"
-          exchangeRate: v.exchangeRate, // e.g. "1500.0000"
-          cashNumber: v.cashNumber, // e.g. "1500000.00"
-          amountExchanged: v.amountExchanged, // e.g. "1000.00"
-          invoiceNumber: v.jvNumber, // flat field
-          comments: v.comments, // flat field
-          rct: v.jvNumber, // your auto-gen JV#
+          date: v.date.slice(0, 10),      // "YYYY-MM-DD"
+          customerName: v.customerName,   // flat field
+          currency: v.currency,           // "LL" or "USD"
+          exchangeRate: v.exchangeRate,
+          cashNumber: v.cashNumber,
+          amountExchanged: v.amountExchanged,
+          invoiceNumber: v.jvNumber ?? "",
+          pmtType: v.pmtType,             // ← PMT Type from API
+          comments: v.comments,
+          rct: v.jvNumber,
         }));
         setData(formatted);
         setFilteredData(formatted);
       } catch (err) {
         console.error("🚨 fetchData error:", err);
         setError(err.message || "Failed to load data");
-        setNotification({
-          type: "error",
-          message: err.response?.data?.message || err.message,
-        });
+        setNotification({ type: "error", message: err.message });
       } finally {
-        // **guarantee we turn loading off**
         setLoading(false);
       }
     };
 
     fetchData();
 
-    // only attempt socket if your backend socket is up
     try {
       socket = io(baseUrl);
       socket.on("recievables", (updated) => {
@@ -131,7 +122,8 @@ const AccountingPage = () => {
           exchangeRate: v.exchangeRate,
           cashNumber: v.cashNumber,
           amountExchanged: v.amountExchanged,
-          invoiceNumber: v.jvNumber,
+          invoiceNumber: v.jvNumber ?? "",
+          pmtType: v.pmtType,
           comments: v.comments,
           rct: v.jvNumber,
         }));
@@ -156,38 +148,10 @@ const AccountingPage = () => {
         (r) =>
           r.customerName.toLowerCase().includes(term) ||
           r.comments.toLowerCase().includes(term) ||
-          r.invoiceNumber.toLowerCase().includes(term)
+          r.invoiceNumber.toLowerCase().includes(term) ||
+          r.pmtType.toLowerCase().includes(term) // include PMT in search
       )
     );
-  };
-
-  const handleNewSave = (newEntry) => {
-    setData((d) => [...d, newEntry]);
-    setFilteredData((d) => [...d, newEntry]);
-    closeNewModal();
-  };
-
-  const handleUpdateSave = (updated) => {
-    const idx = data.findIndex((r) => r.id === updated.id);
-    if (idx > -1) {
-      const copy = [...data];
-      copy[idx] = {
-        id: updated.id,
-        date: updated.date.slice(0, 10),
-        customerName: updated.customer.name,
-        customerAccountId: updated.customer.id,
-        currency: updated.currency,
-        exchangeRate: updated.exchangeRate,
-        cashNumber: updated.cashNumber,
-        amountExchanged: updated.amountExchanged,
-        invoiceNumber: updated.invoiceId,
-        comments: updated.comments,
-        rct: updated.jvNumber,
-      };
-      setData(copy);
-      setFilteredData(copy);
-    }
-    closeEditModal();
   };
 
   return (
@@ -196,21 +160,15 @@ const AccountingPage = () => {
         <div className="top-toolbar">
           <input
             type="text"
-            placeholder="Search by Customer, Comments, or Invoice"
+            placeholder="Search by Customer, Comments, Invoice or PMT"
             className="search-input"
             value={searchTerm}
             onChange={handleSearch}
           />
           <div className="button-group">
-            <button className="action-button" onClick={openNewModal}>
-              New
-            </button>
-            <button className="action-button" onClick={openEditModal}>
-              Edit
-            </button>
-            <button className="delete-button" onClick={openDeleteModal}>
-              Delete
-            </button>
+            <button className="action-button" onClick={openNewModal}>New</button>
+            <button className="action-button" onClick={openEditModal}>Edit</button>
+            <button className="delete-button" onClick={openDeleteModal}>Delete</button>
           </div>
         </div>
 
@@ -225,11 +183,12 @@ const AccountingPage = () => {
                 <th>Select</th>
                 <th>Customer Name</th>
                 <th>Currency</th>
-                <th>Exchange Rate</th>
+                <th>Ex Rate</th>
                 <th>Amount Ex</th>
                 <th>Cash Number</th>
                 <th>Date</th>
-                <th>Invoice Number</th>
+                <th>Invoice #</th>
+                <th>PMT Type</th>     {/* added */}
                 <th>Comments</th>
                 <th>RCT</th>
               </tr>
@@ -252,6 +211,7 @@ const AccountingPage = () => {
                   <td>{formatNumberWithCommas(row.cashNumber)}</td>
                   <td>{row.date}</td>
                   <td>{row.invoiceNumber}</td>
+                  <td>{row.pmtType}</td>  {/* render it */}
                   <td>{row.comments}</td>
                   <td>{row.rct}</td>
                 </tr>
@@ -262,13 +222,42 @@ const AccountingPage = () => {
       </div>
 
       {isNewModalOpen && (
-        <NewRecordModal onClose={closeNewModal} onSave={handleNewSave} />
+        <NewRecordModal
+          onClose={closeNewModal}
+          onSave={(created) => {
+            setData((d) => [...d, ...created]);
+            setFilteredData((d) => [...d, ...created]);
+            closeNewModal();
+          }}
+        />
       )}
       {isEditModalOpen && selectedRow && (
         <EditRecordModal
           selectedRow={selectedRow}
           onClose={closeEditModal}
-          onSave={handleUpdateSave}
+          onSave={(updated) => {
+            const idx = data.findIndex((r) => r.id === updated.id);
+            if (idx > -1) {
+              const copy = [...data];
+              copy[idx] = {
+                id: updated.id,
+                date: updated.date.slice(0, 10),
+                customerName: updated.customer.name,
+                customerAccountId: updated.customer.id,
+                currency: updated.currency,
+                exchangeRate: updated.exchangeRate,
+                cashNumber: updated.cashNumber,
+                amountExchanged: updated.amountExchanged,
+                invoiceNumber: updated.jvNumber,
+                pmtType: updated.pmtType,
+                comments: updated.comments,
+                rct: updated.jvNumber,
+              };
+              setData(copy);
+              setFilteredData(copy);
+            }
+            closeEditModal();
+          }}
         />
       )}
       {isDeleteModalOpen && (
