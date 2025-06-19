@@ -1,8 +1,17 @@
 .opening-count-inner {
-  flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   margin: 0 1rem;
   padding: 1rem 0;
+  overflow: auto;
+}
+
+.opening-count-body-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: auto;
 }
 
 .opening-count-modal-close {
@@ -159,6 +168,26 @@
 }
 .context-cancel-btn:hover {
   background: #495057;
+}
+
+.opening-count-modal-btn.search-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+.opening-count-modal-btn.search-btn:hover {
+  background-color: #0056b3;
+}
+.search-items-div {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #fff;
+  border-top: 1px solid #eee;
 }
 
 /* Responsive */
