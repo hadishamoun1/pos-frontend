@@ -1,3 +1,4 @@
+// OpeningCountModal.jsx (Updated to mirror CountModal logic)
 import React, { useState, useEffect, useRef } from "react";
 import NotificationModal from "../recievables/NotificationModal";
 import "./openingCountModal.css";
@@ -6,7 +7,6 @@ import CountOpeningSearchModal from "./countOpeningSearchModal";
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 
 const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
-  // remove local useState for rows
   const [saving, setSaving] = useState(false);
   const [notif, setNotif] = useState({ open: false, type: "", message: "" });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -22,15 +22,14 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
 
   const closeDeleteMenu = () =>
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+
   useEffect(() => {
     const onClick = () => closeDeleteMenu();
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
   }, []);
 
-  const resetAll = () => {
-    setRows([]);
-  };
+  const resetAll = () => setRows([]);
 
   const updateCell = (idx, field, value) => {
     setRows((prev) => {
@@ -63,22 +62,29 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
     setRows((prev) => prev.filter((_, i) => i !== rowIndex));
     closeDeleteMenu();
   };
+
   const handleSelectItems = (selected) => {
     const enriched = selected.map((item, index) => ({
-      key: `${item.batchId}-${index}`, // unique key
+      key: `${item.batchId}-${index}`,
       batchId: item.batchId,
       itemVariantId: item.itemVariantId,
       name: item.item,
       dimension: `${item.length}x${item.width}`,
-      unit:
-        item.type === "box" ? "box" : item.type === "sheet" ? "sheet" : "sqm",
+      unit: item.type,
       date: item.dateReceived ?? "",
       count: "",
       type: "S",
+      countOFR: "",
+      finalCost: "",
+      finalCostOfr: "",
     }));
     setRows((prev) => [...prev, ...enriched]);
     setSearchOpen(false);
   };
+
+  const showCountOfr = rows.some((r) => r.type === "SR");
+  const showFinalCost = rows.some((r) => ["S", "SR", "RVR"].includes(r.type));
+  const showFinalCostOfr = rows.some((r) => ["G", "SR"].includes(r.type));
 
   return (
     <>
@@ -108,6 +114,9 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                   <th>Date</th>
                   <th className="count-col">Count</th>
                   <th>Type</th>
+                  {showCountOfr && <th>Count OFR</th>}
+                  {showFinalCost && <th>Final Cost</th>}
+                  {showFinalCostOfr && <th>Final Cost OFR</th>}
                 </tr>
               </thead>
               <tbody>
@@ -187,12 +196,65 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                           ))}
                         </select>
                       </td>
+                      {showCountOfr && (
+                        <td>
+                          {r.type === "SR" ? (
+                            <input
+                              type="number"
+                              className="opening-count-input"
+                              value={r.countOFR}
+                              onChange={(e) =>
+                                updateCell(i, "countOFR", e.target.value)
+                              }
+                              placeholder="0"
+                              disabled={saving}
+                            />
+                          ) : (
+                            <span>—</span>
+                          )}
+                        </td>
+                      )}
+                      {showFinalCost && (
+                        <td>
+                          {["S", "SR", "RVR"].includes(r.type) ? (
+                            <input
+                              type="number"
+                              className="opening-count-input"
+                              value={r.finalCost}
+                              onChange={(e) =>
+                                updateCell(i, "finalCost", e.target.value)
+                              }
+                              placeholder="0.00"
+                              disabled={saving}
+                            />
+                          ) : (
+                            <span>—</span>
+                          )}
+                        </td>
+                      )}
+                      {showFinalCostOfr && (
+                        <td>
+                          {["G", "SR"].includes(r.type) ? (
+                            <input
+                              type="number"
+                              className="opening-count-input"
+                              value={r.finalCostOfr}
+                              onChange={(e) =>
+                                updateCell(i, "finalCostOfr", e.target.value)
+                              }
+                              placeholder="0.00"
+                              disabled={saving}
+                            />
+                          ) : (
+                            <span>—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-
             {deleteMenu.visible && (
               <div
                 className="context-menu-opening"
@@ -221,7 +283,6 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
               </div>
             )}
           </div>
-          <div className="search-items-div">
             <button
               className="opening-count-modal-btn search-btn"
               onClick={() => setSearchOpen(true)}
@@ -229,7 +290,6 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
             >
               Search Items
             </button>
-          </div>
         </div>
       </div>
 
