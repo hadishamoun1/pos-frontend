@@ -5,6 +5,7 @@ import CountSearchModal from "./countSearchModal";
 import PreviewTable from "./previewTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./countModal.css";
+import OpeningCountModal from "./openingCountModal";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 
@@ -12,8 +13,9 @@ const CountModal = ({ isOpen, onClose }) => {
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
   const [notif, setNotif] = useState({ open: false, type: "", message: "" });
+  const [view, setView] = useState("create"); // create | preview | opening
+
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
@@ -34,7 +36,7 @@ const CountModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const resetAll = () => {
-    setPreviewing(false);
+    setView("create");
     setRows([]);
   };
 
@@ -153,21 +155,34 @@ const CountModal = ({ isOpen, onClose }) => {
             <h2>Count Inventory</h2>
             <div className="action-buttons">
               <button
-                className={`btn action-btn ${!previewing ? "active" : ""}`}
-                onClick={() => setPreviewing(false)}
+                className={`btn action-btn ${
+                  view === "create" ? "active" : ""
+                }`}
+                onClick={() => setView("create")}
                 disabled={saving}
               >
                 Create Count
               </button>
               <button
-                className={`btn action-btn ${previewing ? "active" : ""}`}
-                onClick={() => setPreviewing(true)}
+                className={`btn action-btn ${
+                  view === "preview" ? "active" : ""
+                }`}
+                onClick={() => setView("preview")}
                 disabled={saving}
               >
                 Preview
               </button>
+              <button
+                className={`btn action-btn opening-btn ${
+                  view === "opening" ? "active" : ""
+                }`}
+                onClick={() => setView("opening")}
+                disabled={saving}
+              >
+                Opening Count
+              </button>
             </div>
-            {!previewing && (
+            {view === "create" && (
               <div className="header-buttons">
                 <button
                   className="count-modal-btn reset-btn"
@@ -187,8 +202,14 @@ const CountModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          {previewing ? (
-            <PreviewTable rows={rows} onClose={() => setPreviewing(false)} />
+          {view === "preview" ? (
+            <PreviewTable rows={rows} onClose={() => setView("create")} />
+          ) : view === "opening" ? (
+            <OpeningCountModal
+              rows={rows}
+              setRows={setRows}
+              onClose={() => setView("create")}
+            />
           ) : (
             <>
               <div className="count-modal-table-wrapper" ref={tableWrapperRef}>

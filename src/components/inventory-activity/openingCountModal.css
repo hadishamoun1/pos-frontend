@@ -1,0 +1,182 @@
+.opening-count-inner {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 1rem;
+  padding: 1rem 0;
+}
+
+.opening-count-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #eee;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 10;
+}
+.opening-count-modal-close:hover {
+  background: #ddd;
+}
+
+.opening-count-modal-header {
+  display: flex;
+  flex-direction: column;
+}
+.opening-count-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #007bff;
+  align-self: flex-start;
+  padding: 0.8rem;
+}
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-self: flex-end;
+  padding: 0.5rem;
+}
+
+.opening-count-modal-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(53, 122, 184, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+.opening-count-modal-btn:hover {
+  background: linear-gradient(135deg, #0056b3, #003f7f);
+  transform: translateY(-1px);
+}
+.reset-btn {
+  background: linear-gradient(135deg, #dc3545, #a71d2a);
+}
+.reset-btn:hover {
+  background: linear-gradient(135deg, #a71d2a, #79151e);
+}
+
+.opening-count-modal-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  margin: 1rem 1.5rem;
+  position: relative;
+}
+
+.opening-count-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+.opening-count-modal-table th {
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+.opening-count-modal-table td {
+  padding: 0.45rem 0.4rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+.opening-count-modal-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+}
+.opening-count-modal-table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+.opening-count-modal-table tbody tr:hover {
+  background: #eef4ff;
+}
+
+.opening-count-input-name {
+  direction: rtl;
+}
+.count-col {
+  width: 7%;
+}
+
+.opening-count-modal-table td input,
+.opening-count-modal-table td select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.8rem;
+  font-size: 1.1rem;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+.opening-count-modal-table td input:focus,
+.opening-count-modal-table td select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+.context-menu-opening {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  z-index: 1100;
+  padding: 0.5rem;
+}
+
+.context-delete-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.context-delete-btn:hover {
+  background: #a71d2a;
+}
+
+.context-cancel-btn {
+  margin-left: 0.5rem;
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.context-cancel-btn:hover {
+  background: #495057;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .opening-count-modal-content {
+    max-width: 95%;
+  }
+  .opening-count-modal-table {
+    font-size: 0.85rem;
+    min-width: unset;
+  }
+  .opening-count-modal-header,
+  .opening-count-modal-table-wrapper {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .opening-count-modal-table th,
+  .opening-count-modal-table td {
+    padding: 0.5rem;
+  }
+}
