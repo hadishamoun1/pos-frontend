@@ -1,0 +1,125 @@
+/* Modal Overlay */
+.count-opening-search-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Content */
+.count-opening-search-modal-content {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 80%;
+  max-width: 1100px;
+  height: 92vh;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  overflow: auto;
+}
+
+/* Modal Header */
+.count-opening-search-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.count-opening-search-modal-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* OK Button */
+.count-opening-search-modal-ok-button {
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.count-opening-search-modal-ok-button:hover {
+  background-color: #218838;
+}
+
+/* Close Button */
+.count-opening-search-modal-close-button {
+  padding: 0.5rem 1rem;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.count-opening-search-modal-close-button:hover {
+  background-color: #c0392b;
+}
+
+/* Search Input */
+.count-opening-search-modal-input {
+  width: 96%;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Results Table */
+.count-opening-search-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.count-opening-search-modal-table th,
+.count-opening-search-modal-table td {
+  text-align: center;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.count-opening-search-modal-table th {
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  text-transform: uppercase;
+}
+
+/* Center the checkbox inside its column */
+.count-opening-search-modal-table td:first-child {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.count-opening-search-modal-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Checkbox */
+.count-opening-search-modal-select-checkbox {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+  display: block;
+  margin: auto;
+}
+
+.count-opening-search-modal-table th:last-child,
+.count-opening-search-modal-table td:last-child {
+  width: 10%;
+}

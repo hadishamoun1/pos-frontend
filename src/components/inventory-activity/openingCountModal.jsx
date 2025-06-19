@@ -65,10 +65,6 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   return (
     <>
       <div className="opening-count-inner">
-        <button className="opening-count-modal-close" onClick={onClose}>
-          &times;
-        </button>
-
         <div className="opening-count-modal-header">
           <div className="header-buttons">
             <button
