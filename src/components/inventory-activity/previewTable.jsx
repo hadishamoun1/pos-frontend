@@ -34,7 +34,12 @@ const PreviewTable = () => {
   if (loading) return <div className="preview-loading">Loading…</div>;
   if (error) return <div className="preview-error">{error}</div>;
 
-  const selectedRows = rows.filter((r) => selected.has(r.id));
+  const selectedRows = rows
+  .filter((r) => selected.has(r.id))
+  .map((r) => ({
+    ...r,
+    itemBatchId: r.itemBatches?.[0]?.id || null, 
+  }));
 
   return (
     <>
@@ -63,6 +68,8 @@ const PreviewTable = () => {
               <th>Type</th>
               <th>Final Cost</th>
               <th>Final OFR</th>
+              <th>Condition</th> {/* ✅ New column */}
+              <th>Date Received</th> {/* ✅ New column */}
             </tr>
           </thead>
           <tbody>
@@ -72,6 +79,9 @@ const PreviewTable = () => {
               if (r.itemVariantType === "box") {
                 dimension += `-0${r.sheetsPerBox}`;
               }
+
+              const firstBatch = r.itemBatches?.[0] || {};
+
               return (
                 <tr key={r.id}>
                   <td>
@@ -91,6 +101,8 @@ const PreviewTable = () => {
                   <td>{r.type}</td>
                   <td>{r.finalCost != null ? r.finalCost : "-"}</td>
                   <td>{r.finalCostOfr != null ? r.finalCostOfr : "-"}</td>
+                  <td>{firstBatch.condition || "-"}</td> {/* ✅ New value */}
+                  <td>{firstBatch.dateReceived || "-"}</td> {/* ✅ New value */}
                 </tr>
               );
             })}

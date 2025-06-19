@@ -48,7 +48,15 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
         const itemName = `${r.thickness} ملم ${r.itemVariantName}`;
         let dimension = `${r.length}×${r.width}`;
         if (r.itemVariantType === "box") dimension += `-0${r.sheetsPerBox}`;
-        return { ...r, name: itemName, dimension, unit: r.itemVariantType };
+        const key = `${r.itemVariantGroupId}-${r.thickness}-${r.itemVariantId}-${r.itemBatchId}`;
+        return {
+          ...r,
+          name: itemName,
+          dimension,
+          unit: r.itemVariantType,
+          itemBatchId: r.itemBatchId || null,
+          key,
+        };
       })
     );
   }, [initialRows]);
@@ -72,14 +80,14 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       await Promise.all(
         rows.map((r) => {
           const body = {
+            itemBatchId: r.itemBatchId, // ✅ now included
             date: r.date,
             count: r.count === "" ? 0 : Number(r.count),
-            type: r.type,
             unit: r.unit,
             countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
+            type: r.type,
             finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
             finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
-            itemVariantId: r.itemVariantId,
           };
           return axios.patch(
             `http://localhost:3000/inventory-count/${r.id}`,
@@ -131,24 +139,29 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       return;
     }
     const sel = items[0];
-    const itemName = sel.item;
+    const itemName = `${parseFloat(sel.thickness)} ملم ${sel.itemName}`;
     let dimension = `${Math.floor(sel.length)}×${Math.floor(sel.width)}`;
     if (sel.type === "box") dimension += `-0${sel.sheetsPerBox}`;
     setRows((prev) => {
       const copy = [...prev];
+      const key = `${sel.itemVariantGroupId}-${sel.thickness}-${sel.itemVariantId}-${sel.batchId}`;
       copy[activeRow] = {
         ...copy[activeRow],
         name: itemName,
         dimension,
         unit: sel.type,
-        itemVariantId: sel.key,
+        itemBatchId: sel.batchId,
+        itemVariantId: sel.itemVariantId,
+        thickness: sel.thickness,
+        itemVariantGroupId: sel.itemVariantGroupId,
+        key,
       };
       return copy;
     });
     setSearchOpen(false);
   };
 
-  const existingKeys = new Set(rows.map((r) => r.itemVariantId));
+  const existingKeys = new Set(rows.map((r) => r.key));
   const showCountOfr = rows.some((r) => r.type === "SR");
   const showFinalCost = rows.some((r) => ["S", "SR", "RVR"].includes(r.type));
   const showFinalCostOfr = rows.some((r) => ["G", "SR"].includes(r.type));

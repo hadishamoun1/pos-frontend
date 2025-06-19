@@ -1,4 +1,4 @@
-// CountModal.jsx
+// src/recievables/CountModal.jsx
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import CountSearchModal from "./countSearchModal";
@@ -13,12 +13,7 @@ const CountModal = ({ isOpen, onClose }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const [notif, setNotif] = useState({
-    open: false,
-    type: "", // "success" | "error"
-    message: "",
-  });
-
+  const [notif, setNotif] = useState({ open: false, type: "", message: "" });
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
@@ -27,18 +22,9 @@ const CountModal = ({ isOpen, onClose }) => {
   });
 
   const tableWrapperRef = useRef();
-  const wrapperRef = useRef();
 
   const closeDeleteMenu = () =>
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
-
-  const handleDeleteSingle = () => {
-    const { rowIndex } = deleteMenu;
-    if (rowIndex == null) return;
-    setRows((prev) => prev.filter((_, i) => i !== rowIndex));
-    closeDeleteMenu();
-  };
-
   useEffect(() => {
     const onClick = () => closeDeleteMenu();
     window.addEventListener("click", onClick);
@@ -60,8 +46,12 @@ const CountModal = ({ isOpen, onClose }) => {
     setSaving(true);
 
     const payload = rows.map((r) => ({
-      ...r,
+      itemBatchId: r.itemBatchId,
+      itemVariantId: r.itemVariantId,
+      date: r.date,
+      unit: r.unit,
       count: r.count === "" ? 0 : Number(r.count),
+      type: r.type,
       countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
       finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
       finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
@@ -108,7 +98,8 @@ const CountModal = ({ isOpen, onClose }) => {
     const today = new Date().toISOString().slice(0, 10);
     const newRows = items.map((sel) => ({
       key: sel.key,
-      itemVariantId: sel.key,
+      itemBatchId: sel.batchId, // ← batchId now included
+      itemVariantId: sel.itemVariantId,
       name: sel.item,
       dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
         sel.sheetsPerBox
@@ -140,10 +131,16 @@ const CountModal = ({ isOpen, onClose }) => {
       rowIndex: i,
     });
   };
+  const handleDeleteSingle = () => {
+    const { rowIndex } = deleteMenu;
+    if (rowIndex == null) return;
+    setRows((prev) => prev.filter((_, i) => i !== rowIndex));
+    closeDeleteMenu();
+  };
 
   return (
     <>
-      <div className="count-modal-overlay" onClick={onClose} ref={wrapperRef}>
+      <div className="count-modal-overlay" onClick={onClose}>
         <div
           className="count-modal-content"
           onClick={(e) => e.stopPropagation()}
@@ -154,7 +151,6 @@ const CountModal = ({ isOpen, onClose }) => {
 
           <div className="count-modal-header">
             <h2>Count Inventory</h2>
-
             <div className="action-buttons">
               <button
                 className={`btn action-btn ${!previewing ? "active" : ""}`}
@@ -171,7 +167,6 @@ const CountModal = ({ isOpen, onClose }) => {
                 Preview
               </button>
             </div>
-
             {!previewing && (
               <div className="header-buttons">
                 <button
@@ -214,14 +209,7 @@ const CountModal = ({ isOpen, onClose }) => {
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={
-                            // you have up to 7 or 8 columns depending on which OFR/cost columns are shown.
-                            // to be safe, span all possible (here: 11 total columns including dynamic ones)
-                            11
-                          }
-                          style={{ textAlign: "center", color: "#666" }}
-                        >
+                        <td colSpan={11} style={{ textAlign: "center" }}>
                           No items added
                         </td>
                       </tr>
