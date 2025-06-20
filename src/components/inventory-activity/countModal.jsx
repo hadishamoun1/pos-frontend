@@ -161,7 +161,7 @@ const CountModal = ({ isOpen, onClose }) => {
                 onClick={() => setView("create")}
                 disabled={saving}
               >
-                Create Count
+                Inventory Check
               </button>
               <button
                 className={`btn action-btn ${

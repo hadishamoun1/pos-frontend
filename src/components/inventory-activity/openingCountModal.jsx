@@ -1,4 +1,3 @@
-// OpeningCountModal.jsx (Updated to mirror CountModal logic)
 import React, { useState, useEffect, useRef } from "react";
 import NotificationModal from "../recievables/NotificationModal";
 import "./openingCountModal.css";
@@ -65,8 +64,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
 
   const handleSelectItems = (selected) => {
     const enriched = selected.map((item, index) => ({
-      key: `${item.batchId}-${index}`,
-      batchId: item.batchId,
+      key: `${item.itemVariantId}-${index}`,
       itemVariantId: item.itemVariantId,
       name: item.item,
       dimension: `${item.length}x${item.width}`,
@@ -77,9 +75,58 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
       countOFR: "",
       finalCost: "",
       finalCostOfr: "",
+      dateReceived: "",
+      condition: "Clean",
+      sheetsPerBox: item.sheetsPerBox ?? "",
     }));
     setRows((prev) => [...prev, ...enriched]);
     setSearchOpen(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      for (const row of rows) {
+        const payload = {
+          itemVariantId: row.itemVariantId,
+          date: row.date,
+          count: parseFloat(row.count || 0),
+          countOFR: parseFloat(row.countOFR || 0),
+          type: row.type,
+          unit: row.unit,
+          finalCost: parseFloat(row.finalCost || 0),
+          finalCostOfr: parseFloat(row.finalCostOfr || 0),
+          dateReceived: row.dateReceived,
+          condition: row.condition,
+        };
+
+        console.log("Sending payload:", payload);
+
+        await fetch("http://localhost:3000/inventory-count/v1/opening", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      setNotif({
+        open: true,
+        type: "success",
+        message: "Opening counts saved successfully",
+      });
+      setRows([]);
+    } catch (error) {
+      console.error("Error saving opening counts:", error);
+      setNotif({
+        open: true,
+        type: "error",
+        message: "Failed to save opening counts",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const showCountOfr = rows.some((r) => r.type === "SR");
@@ -97,6 +144,13 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
               disabled={saving}
             >
               Reset
+            </button>
+            <button
+              className="opening-count-modal-btn save-btn"
+              onClick={handleSave}
+              disabled={saving || rows.length === 0}
+            >
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
@@ -117,6 +171,8 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                   {showCountOfr && <th>Count OFR</th>}
                   {showFinalCost && <th>Final Cost</th>}
                   {showFinalCostOfr && <th>Final Cost OFR</th>}
+                  <th>Date Received</th>
+                  <th>Condition</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,10 +200,17 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                         <input
                           type="text"
                           className="opening-count-input"
-                          value={r.dimension}
+                          value={
+                            r.unit === "box"
+                              ? `${r.dimension}${
+                                  r.sheetsPerBox ? `-0${r.sheetsPerBox}` : ""
+                                }`
+                              : r.dimension
+                          }
                           readOnly
                         />
                       </td>
+
                       <td>
                         <select
                           className="opening-count-input"
@@ -164,8 +227,11 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                         <input
                           type="date"
                           className="opening-count-input"
-                          value={r.date}
-                          readOnly
+                          value={r.date || ""}
+                          onChange={(e) =>
+                            updateCell(i, "date", e.target.value)
+                          }
+                          disabled={saving}
                         />
                       </td>
                       <td className="count-col">
@@ -250,6 +316,31 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                           )}
                         </td>
                       )}
+                      <td>
+                        <input
+                          type="month"
+                          className="opening-count-input"
+                          value={r.dateReceived || ""}
+                          onChange={(e) =>
+                            updateCell(i, "dateReceived", e.target.value)
+                          }
+                          disabled={saving}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          className="opening-count-input"
+                          value={r.condition}
+                          onChange={(e) =>
+                            updateCell(i, "condition", e.target.value)
+                          }
+                          disabled={saving}
+                        >
+                          <option value="Clean">Clean</option>
+                          <option value="Damaged">Damaged</option>
+                          <option value="Used">Used</option>
+                        </select>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -283,13 +374,13 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
               </div>
             )}
           </div>
-            <button
-              className="opening-count-modal-btn search-btn"
-              onClick={() => setSearchOpen(true)}
-              disabled={saving}
-            >
-              Search Items
-            </button>
+          <button
+            className="opening-count-modal-btn search-btn"
+            onClick={() => setSearchOpen(true)}
+            disabled={saving}
+          >
+            Search Items
+          </button>
         </div>
       </div>
 
