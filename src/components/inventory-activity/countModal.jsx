@@ -1,11 +1,12 @@
-// src/recievables/CountModal.jsx
+// CountModal.jsx (final with DateCountInput integrated)
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import CountSearchModal from "./countSearchModal";
 import PreviewTable from "./previewTable";
 import NotificationModal from "../recievables/NotificationModal";
-import "./countModal.css";
+import DateCountInput from "./inventoryDataEntry";
 import OpeningCountModal from "./openingCountModal";
+import "./countModal.css";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 
@@ -14,21 +15,20 @@ const CountModal = ({ isOpen, onClose }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notif, setNotif] = useState({ open: false, type: "", message: "" });
-  const [view, setView] = useState("create"); // create | preview | opening
-
+  const [view, setView] = useState("create");
+  const [dateCountOpen, setDateCountOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
     y: 0,
     rowIndex: null,
   });
-
   const tableWrapperRef = useRef();
 
-  const closeDeleteMenu = () =>
-    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   useEffect(() => {
-    const onClick = () => closeDeleteMenu();
+    const onClick = () =>
+      setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
   }, []);
@@ -41,10 +41,7 @@ const CountModal = ({ isOpen, onClose }) => {
   };
 
   const handleSave = async () => {
-    if (!rows.length) {
-      onClose();
-      return;
-    }
+    if (!rows.length) return onClose();
     setSaving(true);
 
     const payload = rows.map((r) => ({
@@ -93,29 +90,38 @@ const CountModal = ({ isOpen, onClose }) => {
   };
 
   const handleSelectItems = (items) => {
-    if (!items.length) {
-      setSearchOpen(false);
-      return;
-    }
-    const today = new Date().toISOString().slice(0, 10);
-    const newRows = items.map((sel) => ({
-      key: sel.key,
-      itemBatchId: sel.batchId, // ← batchId now included
-      itemVariantId: sel.itemVariantId,
-      name: sel.item,
-      dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
-        sel.sheetsPerBox
-      }`,
-      unit: sel.type,
-      date: today,
-      count: "",
-      type: "S",
-      countOFR: "",
-      finalCost: "",
-      finalCostOfr: "",
-    }));
-    setRows((prev) => [...prev, ...newRows]);
+    console.log("Selected items:", items); // ✅
+    setSelectedItems(items);
+    setDateCountOpen(true);
     setSearchOpen(false);
+  };
+
+  const handleDateCountConfirm = (splits) => {
+    const newRows = [];
+    selectedItems.forEach((sel) => {
+      splits.forEach((split, index) => {
+        newRows.push({
+          key: `${sel.key}-${index}`,
+          itemBatchId: sel.batchId,
+          itemVariantId: sel.itemVariantId,
+          name: sel.name,
+          dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
+            sel.sheetsPerBox
+          }`,
+          unit: sel.type,
+          date: "",
+          dateReceived: split.receivedDate || "",
+          count: split.count || 0,
+          type: "S",
+          countOFR: "",
+          finalCost: "",
+          finalCostOfr: "",
+        });
+      });
+    });
+    setRows((prev) => [...prev, ...newRows]);
+    setDateCountOpen(false);
+    setSelectedItems([]);
   };
 
   const existingKeys = new Set(rows.map((r) => r.key));
@@ -133,11 +139,12 @@ const CountModal = ({ isOpen, onClose }) => {
       rowIndex: i,
     });
   };
+
   const handleDeleteSingle = () => {
     const { rowIndex } = deleteMenu;
     if (rowIndex == null) return;
     setRows((prev) => prev.filter((_, i) => i !== rowIndex));
-    closeDeleteMenu();
+    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   };
 
   return (
@@ -150,37 +157,24 @@ const CountModal = ({ isOpen, onClose }) => {
           <button className="count-modal-close" onClick={onClose}>
             &times;
           </button>
-
+          {/* Header Buttons */}
           <div className="count-modal-header">
             <h2>Count Inventory</h2>
             <div className="action-buttons">
-              <button
-                className={`btn action-btn ${
-                  view === "create" ? "active" : ""
-                }`}
-                onClick={() => setView("create")}
-                disabled={saving}
-              >
-                Inventory Check
-              </button>
-              <button
-                className={`btn action-btn ${
-                  view === "preview" ? "active" : ""
-                }`}
-                onClick={() => setView("preview")}
-                disabled={saving}
-              >
-                Preview
-              </button>
-              <button
-                className={`btn action-btn opening-btn ${
-                  view === "opening" ? "active" : ""
-                }`}
-                onClick={() => setView("opening")}
-                disabled={saving}
-              >
-                Opening Count
-              </button>
+              {["create", "preview", "opening"].map((v) => (
+                <button
+                  key={v}
+                  className={`btn action-btn ${view === v ? "active" : ""}`}
+                  onClick={() => setView(v)}
+                  disabled={saving}
+                >
+                  {v === "create"
+                    ? "Inventory Check"
+                    : v === "preview"
+                    ? "Preview"
+                    : "Opening Count"}
+                </button>
+              ))}
             </div>
             {view === "create" && (
               <div className="header-buttons">
@@ -202,6 +196,7 @@ const CountModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
+          {/* Body Content */}
           {view === "preview" ? (
             <PreviewTable rows={rows} onClose={() => setView("create")} />
           ) : view === "opening" ? (
@@ -213,6 +208,7 @@ const CountModal = ({ isOpen, onClose }) => {
           ) : (
             <>
               <div className="count-modal-table-wrapper" ref={tableWrapperRef}>
+                {/* Table rendering */}
                 <table className="count-modal-table">
                   <thead>
                     <tr>
@@ -220,6 +216,7 @@ const CountModal = ({ isOpen, onClose }) => {
                       <th>Dimension</th>
                       <th>Unit</th>
                       <th>Date</th>
+                      <th>Date Received</th>
                       <th className="count-col">Count</th>
                       <th>Type</th>
                       {showCountOfr && <th>Count OFR</th>}
@@ -242,7 +239,6 @@ const CountModal = ({ isOpen, onClose }) => {
                         >
                           <td>
                             <input
-                              type="text"
                               className="count-input-name"
                               value={r.name}
                               readOnly
@@ -250,7 +246,6 @@ const CountModal = ({ isOpen, onClose }) => {
                           </td>
                           <td>
                             <input
-                              type="text"
                               className="count-input"
                               value={r.dimension}
                               readOnly
@@ -262,10 +257,9 @@ const CountModal = ({ isOpen, onClose }) => {
                               value={r.unit}
                               disabled
                             >
-                              <option value="">Unit</option>
-                              <option value="box">Box</option>
-                              <option value="sheet">Sheet</option>
-                              <option value="sqm">SQM</option>
+                              <option>Box</option>
+                              <option>Sheet</option>
+                              <option>SQM</option>
                             </select>
                           </td>
                           <td>
@@ -273,10 +267,21 @@ const CountModal = ({ isOpen, onClose }) => {
                               type="date"
                               className="count-input"
                               value={r.date}
+                              onChange={(e) =>
+                                updateCell(i, "date", e.target.value)
+                              }
+                              disabled={saving}
+                            />
+                          </td>
+
+                          <td>
+                            <input
+                              className="count-input"
+                              value={r.dateReceived || ""}
                               readOnly
                             />
                           </td>
-                          <td className="count-col">
+                          <td>
                             <input
                               type="number"
                               className="count-input"
@@ -284,7 +289,6 @@ const CountModal = ({ isOpen, onClose }) => {
                               onChange={(e) =>
                                 updateCell(i, "count", e.target.value)
                               }
-                              placeholder="0"
                               disabled={saving}
                             />
                           </td>
@@ -298,9 +302,7 @@ const CountModal = ({ isOpen, onClose }) => {
                               disabled={saving}
                             >
                               {TYPE_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
+                                <option key={opt}>{opt}</option>
                               ))}
                             </select>
                           </td>
@@ -308,13 +310,12 @@ const CountModal = ({ isOpen, onClose }) => {
                             <td>
                               {r.type === "SR" ? (
                                 <input
-                                  type="number"
                                   className="count-input"
+                                  type="number"
                                   value={r.countOFR}
                                   onChange={(e) =>
                                     updateCell(i, "countOFR", e.target.value)
                                   }
-                                  placeholder="0"
                                   disabled={saving}
                                 />
                               ) : (
@@ -326,13 +327,12 @@ const CountModal = ({ isOpen, onClose }) => {
                             <td>
                               {["S", "SR", "RVR"].includes(r.type) ? (
                                 <input
-                                  type="number"
                                   className="count-input"
+                                  type="number"
                                   value={r.finalCost}
                                   onChange={(e) =>
                                     updateCell(i, "finalCost", e.target.value)
                                   }
-                                  placeholder="0.00"
                                   disabled={saving}
                                 />
                               ) : (
@@ -344,8 +344,8 @@ const CountModal = ({ isOpen, onClose }) => {
                             <td>
                               {["G", "SR"].includes(r.type) ? (
                                 <input
-                                  type="number"
                                   className="count-input"
+                                  type="number"
                                   value={r.finalCostOfr}
                                   onChange={(e) =>
                                     updateCell(
@@ -354,7 +354,6 @@ const CountModal = ({ isOpen, onClose }) => {
                                       e.target.value
                                     )
                                   }
-                                  placeholder="0.00"
                                   disabled={saving}
                                 />
                               ) : (
@@ -377,7 +376,6 @@ const CountModal = ({ isOpen, onClose }) => {
                       left: deleteMenu.x,
                       zIndex: 1000,
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       className="context-delete-btn"
@@ -388,7 +386,14 @@ const CountModal = ({ isOpen, onClose }) => {
                     </button>
                     <button
                       className="context-cancel-btn"
-                      onClick={closeDeleteMenu}
+                      onClick={() =>
+                        setDeleteMenu({
+                          visible: false,
+                          x: 0,
+                          y: 0,
+                          rowIndex: null,
+                        })
+                      }
                       disabled={saving}
                     >
                       Cancel
@@ -396,7 +401,6 @@ const CountModal = ({ isOpen, onClose }) => {
                   </div>
                 )}
               </div>
-
               <button
                 className="count-modal-add-row"
                 onClick={() => setSearchOpen(true)}
@@ -415,6 +419,26 @@ const CountModal = ({ isOpen, onClose }) => {
         onSelect={handleSelectItems}
         existingKeys={existingKeys}
       />
+      {dateCountOpen && selectedItems.length > 0 && (
+        <div
+          className="date-count-overlay"
+          onClick={() => {
+            setDateCountOpen(false);
+            setSelectedItems([]);
+          }}
+        >
+          {/* Let the component handle its internal layout */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <DateCountInput
+              onSave={handleDateCountConfirm}
+              onCancel={() => {
+                setDateCountOpen(false);
+                setSelectedItems([]);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {notif.open && (
         <NotificationModal

@@ -320,10 +320,13 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                         <input
                           type="month"
                           className="opening-count-input"
-                          value={r.dateReceived || ""}
-                          onChange={(e) =>
-                            updateCell(i, "dateReceived", e.target.value)
-                          }
+                          value={r.dateReceivedInput || ""}
+                          onChange={(e) => {
+                            const [year, month] = e.target.value.split("-");
+                            const formatted = `${parseInt(month, 10)}/${year}`; // e.g., "6/2025"
+                            updateCell(i, "dateReceivedInput", e.target.value); // input shows YYYY-MM
+                            updateCell(i, "dateReceived", formatted); // API gets M/YYYY
+                          }}
                           disabled={saving}
                         />
                       </td>

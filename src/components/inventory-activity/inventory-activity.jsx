@@ -128,7 +128,7 @@ const InventoryActivityPage = () => {
             : r.transactionType === "sale"
             ? "Sales"
             : r.transactionType || "-",
-        date: new Date(r.invoiceDate).toLocaleDateString(),
+        date: r.invoiceDate || "—",
         invoiceNo: r.invoiceNumber || "—",
       };
     });

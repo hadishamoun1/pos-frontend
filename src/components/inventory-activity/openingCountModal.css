@@ -190,6 +190,18 @@
   border-top: 1px solid #eee;
 }
 
+input[type="month"].opening-count-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0.8rem;
+  border-radius: 4px;
+  background-color: white;
+  color: #333;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .opening-count-modal-content {

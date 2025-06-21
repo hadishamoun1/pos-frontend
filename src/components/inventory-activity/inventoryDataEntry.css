@@ -1,0 +1,163 @@
+.inventory-date-table-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 30px 40px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  font-family: "Segoe UI", sans-serif;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.inventory-date-table-container h3 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 24px;
+  text-align: center;
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.inventory-table th {
+  background-color: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+}
+
+.inventory-table td input[type="number"],
+.inventory-table td input[type="month"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background-color: #f9fafb;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inventory-table td input:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+  outline: none;
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #ef4444;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 6px 10px;
+}
+
+.remove-btn:hover {
+  color: #b91c1c;
+}
+
+.inventory-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.inventory-actions .action-group {
+  display: flex;
+  gap: 12px;
+}
+
+.inventory-actions button {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.add-row-btn {
+  background-color: #10b981;
+  color: white;
+}
+
+.add-row-btn:hover {
+  background-color: #059669;
+}
+
+.save-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: #2563eb;
+}
+
+.cancel-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #dc2626;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .inventory-date-table-container {
+    padding: 20px;
+  }
+
+  .inventory-table th,
+  .inventory-table td {
+    padding: 8px;
+  }
+
+  .inventory-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inventory-actions button {
+    width: 100%;
+  }
+
+  .inventory-actions .action-group {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

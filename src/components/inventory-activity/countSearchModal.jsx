@@ -17,7 +17,7 @@ const CountSearchModal = ({
   useEffect(() => {
     if (!isOpen) return;
     axios
-      .get("http://localhost:3000/items/v1/filtered-items")
+      .get("http://localhost:3000/inventory-count/filtered-with-balance")
       .then((res) => setItems(res.data || []))
       .catch(console.error);
 
@@ -27,37 +27,39 @@ const CountSearchModal = ({
 
   if (!isOpen) return null;
 
-  // Safely flatten, defaulting to [] whenever a level is missing
   const rows = items.flatMap((item) => {
-    const thicknesses = item.thicknesses || [];
-    return thicknesses.flatMap((thick) => {
-      const variants = thick.variants || [];
-      return variants.flatMap((variant) => {
-        const batches = variant.batches || [];
-        return batches.map((batch) => {
-          const key = `${item.id}-${thick.thickness}-${variant.id}-${batch.id}`;
-          return {
-            key,
-            batchId: batch.id,
-            itemVariantId: variant.id,
-            itemName: item.itemName,
-            thickness: thick.thickness,
-            type: item.type,
-            length: variant.length,
-            width: variant.width,
-            sheetsPerBox: variant.sheetsPerBox,
-            condition: batch.condition,
-            dateReceived: batch.dateReceived,
-          };
-        });
-      });
+    return item.itemBatches.map((batch) => {
+      const key = `${item.id}-${batch.id}`;
+      return {
+        key,
+        id: item.id,
+        name: `${item.itemVariantName} ملم ${item.thickness}`,
+        thickness: item.thickness,
+        length: item.length,
+        width: item.width,
+        sheetsPerBox: item.sheetsPerBox,
+        origin: item.origin,
+        itemVariantType: item.itemVariantType,
+        date: item.date,
+        count: item.count,
+        sqm: item.sqm,
+        type: item.type,
+
+        batchId: batch.id,
+        condition: batch.condition,
+        dateReceived: batch.dateReceived,
+        start: batch.start,
+        startOFR: batch.startOFR,
+        balance: batch.balance,
+        balanceOFR: batch.balanceOFR,
+      };
     });
   });
 
   const filtered = rows.filter(
     (r) =>
-      r.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.condition.toLowerCase().includes(searchTerm.toLowerCase())
+      r.itemVariantName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.condition?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const toggleSelect = (row) => {
@@ -74,20 +76,7 @@ const CountSearchModal = ({
 
   const handleOk = () => {
     const chosen = filtered.filter((r) => selectedSet.has(r.key));
-    onSelect(
-      chosen.map((r) => ({
-        key: r.key,
-        batchId: r.batchId,
-        itemVariantId: r.itemVariantId,
-        item: `${parseFloat(r.thickness)} ملم ${r.itemName}`,
-        type: r.type,
-        length: r.length,
-        width: r.width,
-        sheetsPerBox: r.sheetsPerBox,
-        condition: r.condition,
-        dateReceived: r.dateReceived,
-      }))
-    );
+    onSelect(chosen);
     onClose();
   };
 
@@ -118,12 +107,19 @@ const CountSearchModal = ({
               <tr>
                 <th></th>
                 <th>Item Name</th>
-                <th>Type</th>
+
                 <th>Length</th>
                 <th>Width</th>
                 <th>Sheets/Box</th>
+                <th>Origin</th>
+                <th>Type</th>
+                <th>Date</th>
+
                 <th>Condition</th>
                 <th>Date Received</th>
+
+                <th>Balance</th>
+                <th>Balance OFR</th>
               </tr>
             </thead>
             <tbody>
@@ -143,15 +139,21 @@ const CountSearchModal = ({
                         onChange={() => toggleSelect(r)}
                       />
                     </td>
-                    <td className="rtl">
-                      {`${parseFloat(r.thickness)} ملم ${r.itemName}`}
+                    <td>
+                      {r.name}
                     </td>
-                    <td>{r.type}</td>
-                    <td>{Math.floor(r.length)}</td>
-                    <td>{Math.floor(r.width)}</td>
+                    <td>{r.length}</td>
+                    <td>{r.width}</td>
                     <td>{r.sheetsPerBox}</td>
+                    <td>{r.origin}</td>
+                    <td>{r.itemVariantType}</td>
+                    <td>{r.date}</td>
+
                     <td>{r.condition}</td>
                     <td>{r.dateReceived}</td>
+
+                    <td>{r.balance}</td>
+                    <td>{r.balanceOFR}</td>
                   </tr>
                 );
               })}
