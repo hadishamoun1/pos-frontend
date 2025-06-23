@@ -10,7 +10,21 @@ const UniqueItemsPage = () => {
   const [modalType, setModalType] = useState("");
   const [newItemData, setNewItemData] = useState({
     itemName: "",
-    type: "box", // default
+    type: "box",
+    descriptions: [
+      {
+        categoryName: "",
+        subCategory: "",
+        colorName: "",
+        designName: "",
+      },
+      {
+        categoryName: "",
+        subCategory: "",
+        colorName: "",
+        designName: "",
+      },
+    ],
     thicknesses: [
       {
         thickness: "",
@@ -20,9 +34,18 @@ const UniqueItemsPage = () => {
             width: "",
             sheetsPerBox: "",
             origin: "",
-            fixBox: true,
-            fixLength: true,
-            fixWidth: true,
+            fixBox: false,
+            fixLength: false,
+            fixWidth: false,
+          },
+          {
+            length: "",
+            width: "",
+            sheetsPerBox: "",
+            origin: "",
+            fixBox: false,
+            fixLength: false,
+            fixWidth: false,
           },
         ],
       },
@@ -44,16 +67,21 @@ const UniqueItemsPage = () => {
     fetchData();
   }, [baseUrl]);
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
   const handleModalToggle = () => {
     setShowModal((v) => !v);
-    // reset form on open
     setNewItemData({
       itemName: "",
       type: "box",
+      descriptions: [
+        {
+          categoryName: "",
+          subCategory: "",
+          colorName: "",
+          designName: "",
+        },
+      ],
       thicknesses: [
         {
           thickness: "",
@@ -63,9 +91,18 @@ const UniqueItemsPage = () => {
               width: "",
               sheetsPerBox: "",
               origin: "",
-              fixBox: true,
-              fixLength: true,
-              fixWidth: true,
+              fixBox: false,
+              fixLength: false,
+              fixWidth: false,
+            },
+            {
+              length: "",
+              width: "",
+              sheetsPerBox: "",
+              origin: "",
+              fixBox: false,
+              fixLength: false,
+              fixWidth: false,
             },
           ],
         },
@@ -73,40 +110,26 @@ const UniqueItemsPage = () => {
     });
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e, index = 0, variantIndex = 0) => {
     const { name, value, checked, type } = e.target;
     setNewItemData((prev) => {
       const updated = { ...prev };
-      // If they changed the global "type"
       if (name === "type") {
         updated.type = value;
-        // adjust sheetsPerBox depending on new type
-        const variant = updated.thicknesses[0].variants[0];
-        if (value === "box") {
-          variant.sheetsPerBox = "";
-        } else if (value === "sheet") {
-          variant.sheetsPerBox = 0;
-        } else if (value === "sqm") {
-          variant.sheetsPerBox = 0;
-          variant.length = "";
-          variant.width = "";
-        }
-      }
-      // thickness level
-      else if (name === "thickness") {
+      } else if (name === "thickness") {
         updated.thicknesses[0].thickness = value;
-      }
-      // variant fields
-      else if (["length", "width", "sheetsPerBox", "origin"].includes(name)) {
-        updated.thicknesses[0].variants[0][name] = value;
-      }
-      // checkboxes
-      else if (type === "checkbox") {
-        updated.thicknesses[0].variants[0][name] = checked;
-      }
-      // itemName
-      else if (name === "itemName") {
+      } else if (["length", "width", "sheetsPerBox", "origin"].includes(name)) {
+        updated.thicknesses[0].variants[variantIndex][name] = value;
+      } else if (type === "checkbox") {
+        updated.thicknesses[0].variants[variantIndex][name] = checked;
+      } else if (name === "itemName") {
         updated.itemName = value;
+      } else if (
+        ["categoryName", "subCategory", "colorName", "designName"].includes(
+          name
+        )
+      ) {
+        updated.descriptions[index][name] = value;
       }
       return updated;
     });
@@ -115,7 +138,7 @@ const UniqueItemsPage = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${baseUrl}/items/v1/create-complete-item`, {
+      const response = await fetch(`${baseUrl}/items/v1/full`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newItemData),
@@ -162,49 +185,60 @@ const UniqueItemsPage = () => {
       <table className="unique-items-table">
         <thead>
           <tr>
-            <th>Item Name</th>
+            <th>Category</th>
+            <th>Subcategory</th>
+            <th>Color</th>
+            <th>Design</th>
+            <th >Item Name</th>
             <th>Type</th>
-            <th>Thickness (mm)</th>
-            <th>Length (cm)</th>
-            <th>Width (cm)</th>
+            <th>Thickness(mm)</th>
+            <th>Length(cm)</th>
+            <th>Width(cm)</th>
             <th>Sheets/Box</th>
             <th>Origin</th>
           </tr>
         </thead>
+
         <tbody>
           {filteredItems.map((item) =>
-            item.thicknesses.map((thick) =>
-              thick.variants.map((v) => (
-                <tr
-                  key={`${item.id}-${thick.thickness}-${v.length}-${v.width}`}
-                >
-                  <td>{`${parseFloat(thick.thickness)}mm ${item.itemName}`}</td>
-                  <td>{item.type}</td>
-                  <td>{thick.thickness}</td>
-                  {/* hide length/width for sqm */}
-                  {newItemData.type === "sqm" ? (
-                    <>
-                      <td>—</td>
-                      <td>—</td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{v.length}</td>
-                      <td>{v.width}</td>
-                    </>
-                  )}
-                  {/* sheets per box only for box */}
-                  <td>
-                    {item.type === "box"
-                      ? v.sheetsPerBox
-                      : item.type === "sheet"
-                      ?"—"
-                      : "—"}
-                  </td>
-                  <td>{v.origin}</td>
-                </tr>
-              ))
-            )
+            item.descriptions.length > 0
+              ? item.descriptions.map((desc, descIndex) =>
+                  item.thicknesses.map((thick) =>
+                    thick.variants.map((v, vIndex) => (
+                      <tr key={`${item.id}-${thick.id}-${v.id}-${desc.id}`}>
+                        <td>{desc.categoryName}</td>
+                        <td>{desc.subCategory}</td>
+                        <td>{desc.colorName}</td>
+                        <td>{desc.designName}</td>
+                        <td style={{ direction: "rtl", textAlign: "right" }}>
+                          {`${thick.thickness} ملم ${item.itemName}`}
+                        </td>
+                        <td>{item.type}</td>
+                        <td>{thick.thickness}</td>
+                        {item.type === "sqm" ? (
+                          <>
+                            <td>—</td>
+                            <td>—</td>
+                          </>
+                        ) : (
+                          <>
+                            <td>{v.length}</td>
+                            <td>{v.width}</td>
+                          </>
+                        )}
+                        <td>
+                          {item.type === "box"
+                            ? v.sheetsPerBox
+                            : item.type === "sheet"
+                            ? "—"
+                            : "—"}
+                        </td>
+                        <td>{v.origin}</td>
+                      </tr>
+                    ))
+                  )
+                )
+              : null
           )}
         </tbody>
       </table>
@@ -213,7 +247,7 @@ const UniqueItemsPage = () => {
         <div className="modal">
           <div className="modal-content">
             <h2>Create New Item</h2>
-            <form onSubmit={handleFormSubmit}>
+            <form onSubmit={handleFormSubmit} className="form-grid">
               <label>
                 Item Name:
                 <input
@@ -224,7 +258,6 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
-
               <label>
                 Type:
                 <select
@@ -237,7 +270,42 @@ const UniqueItemsPage = () => {
                   <option value="sqm">SQM</option>
                 </select>
               </label>
-
+              <label>
+                Category:
+                <input
+                  type="text"
+                  name="categoryName"
+                  value={newItemData.descriptions[0].categoryName}
+                  onChange={handleInputChange}
+                />
+              </label>
+              <label>
+                Subcategory:
+                <input
+                  type="text"
+                  name="subCategory"
+                  value={newItemData.descriptions[0].subCategory}
+                  onChange={handleInputChange}
+                />
+              </label>
+              <label>
+                Color:
+                <input
+                  type="text"
+                  name="colorName"
+                  value={newItemData.descriptions[0].colorName}
+                  onChange={handleInputChange}
+                />
+              </label>
+              <label>
+                Design:
+                <input
+                  type="text"
+                  name="designName"
+                  value={newItemData.descriptions[0].designName}
+                  onChange={handleInputChange}
+                />
+              </label>
               <label>
                 Thickness (mm):
                 <input
@@ -248,8 +316,6 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
-
-              {/* only show for box or sheet */}
               {newItemData.type !== "sqm" && (
                 <>
                   <label>
@@ -259,10 +325,8 @@ const UniqueItemsPage = () => {
                       name="length"
                       value={newItemData.thicknesses[0].variants[0].length}
                       onChange={handleInputChange}
-                      required={newItemData.type !== "sqm"}
                     />
                   </label>
-
                   <label>
                     Width (cm):
                     <input
@@ -270,13 +334,10 @@ const UniqueItemsPage = () => {
                       name="width"
                       value={newItemData.thicknesses[0].variants[0].width}
                       onChange={handleInputChange}
-                      required={newItemData.type !== "sqm"}
                     />
                   </label>
                 </>
               )}
-
-              {/* only for box */}
               {newItemData.type === "box" && (
                 <label>
                   Sheets Per Box:
@@ -285,11 +346,10 @@ const UniqueItemsPage = () => {
                     name="sheetsPerBox"
                     value={newItemData.thicknesses[0].variants[0].sheetsPerBox}
                     onChange={handleInputChange}
-                    required={newItemData.type === "box"}
+                    required
                   />
                 </label>
               )}
-
               <label>
                 Origin:
                 <input
@@ -300,41 +360,12 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
-
-              <div className="checkboxes">
-                <label>
-                  Fix Box:
-                  <input
-                    type="checkbox"
-                    name="fixBox"
-                    checked={newItemData.thicknesses[0].variants[0].fixBox}
-                    onChange={handleInputChange}
-                  />
-                </label>
-                <label>
-                  Fix Length:
-                  <input
-                    type="checkbox"
-                    name="fixLength"
-                    checked={newItemData.thicknesses[0].variants[0].fixLength}
-                    onChange={handleInputChange}
-                  />
-                </label>
-                <label>
-                  Fix Width:
-                  <input
-                    type="checkbox"
-                    name="fixWidth"
-                    checked={newItemData.thicknesses[0].variants[0].fixWidth}
-                    onChange={handleInputChange}
-                  />
-                </label>
+              <div className="button-row">
+                <button type="submit">Create Item</button>
+                <button type="button" onClick={handleModalToggle}>
+                  Cancel
+                </button>
               </div>
-
-              <button type="submit">Create Item</button>
-              <button type="button" onClick={handleModalToggle}>
-                Cancel
-              </button>
             </form>
           </div>
         </div>

@@ -107,105 +107,132 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(10, 10, 10, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .modal-content {
-  background: #fff;
+  background: #ffffff;
   padding: 2rem;
-  border-radius: 15px;
-  width: 400px;
+  border-radius: 16px;
+  width: 600px;
   max-width: 90%;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-  animation: fadeIn 0.3s ease;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  animation: slideIn 0.4s ease-out;
+  overflow-y: auto;
+  max-height: 90vh;
 }
 
+/* Modal Header */
 .modal-content h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   text-align: center;
-  font-size: 1.8rem;
-  color: #333;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #222;
 }
 
+/* Form Structure */
+.modal-content form {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 columns */
+  gap: 1rem 1rem;
+}
+
+/* Form Fields */
 .modal-content form label {
-  display: block;
-  margin: 0.5rem 0;
-  font-weight: bold;
-  color: #555;
+  font-weight: 600;
+  color: #444;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.95rem;
 }
 
 .modal-content form input,
 .modal-content form select {
-  width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   font-size: 1rem;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s, background-color 0.3s;
 }
 
-.modal-content form button {
-  padding: 0.5rem 1.5rem;
+.modal-content form input:focus,
+.modal-content form select:focus {
+  border-color: #007bff;
+  background-color: #fff;
+  outline: none;
+}
+
+/* Modal Buttons */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem 1rem;
+}
+
+.button-row {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.button-row button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  border-radius: 8px;
   border: none;
-  border-radius: 5px;
   cursor: pointer;
-  font-size: 1rem;
   font-weight: bold;
-  margin-right: 0.5rem;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-.modal-content form button[type="submit"] {
+.button-row button[type="submit"] {
   background-color: #007bff;
-  color: #fff;
+  color: white;
 }
 
-.modal-content form button[type="submit"]:hover {
+.button-row button[type="submit"]:hover {
   background-color: #0056b3;
   transform: scale(1.05);
 }
 
-.modal-content form button[type="button"] {
+.button-row button[type="button"] {
   background-color: #6c757d;
-  color: #fff;
+  color: white;
 }
 
-.modal-content form button[type="button"]:hover {
+.button-row button[type="button"]:hover {
   background-color: #5a6268;
   transform: scale(1.05);
 }
 
-.modal-content form .checkboxes label {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
-  font-size: 1rem;
-  gap: 0.5rem;
-}
-
-.modal-content form .checkboxes input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  margin-right: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-/* Fade In Animation */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -277,4 +304,5 @@
     color: #333;
     margin-right: 1rem;
   }
+
 }
