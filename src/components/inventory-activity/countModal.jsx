@@ -429,13 +429,22 @@ const CountModal = ({ isOpen, onClose }) => {
         >
           {/* Let the component handle its internal layout */}
           <div onClick={(e) => e.stopPropagation()}>
-            <DateCountInput
-              onSave={handleDateCountConfirm}
-              onCancel={() => {
-                setDateCountOpen(false);
-                setSelectedItems([]);
-              }}
-            />
+            {selectedItems.length > 0 && (
+              <DateCountInput
+                onSave={handleDateCountConfirm}
+                onCancel={() => {
+                  setDateCountOpen(false);
+                  setSelectedItems([]);
+                }}
+                unit={selectedItems[0].itemVariantType} // 'Box', 'Sheet', or 'SQM'
+                length={selectedItems[0].length}
+                width={selectedItems[0].width}
+                sheetsPerBox={selectedItems[0].sheetsPerBox}
+                originalBalance={selectedItems[0].balanceOFR} // in sqm
+                thickness={selectedItems[0].thickness} // in mm
+                itemName={selectedItems[0].name}
+              />
+            )}
           </div>
         </div>
       )}

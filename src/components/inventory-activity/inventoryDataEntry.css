@@ -1,6 +1,10 @@
 .inventory-date-table-container {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 900px;
+  width: 600px;
+  min-height: 540px;
+  max-height: 900px;
   margin: 50px auto;
   padding: 30px 40px;
   background: #ffffff;
@@ -8,6 +12,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   font-family: "Segoe UI", sans-serif;
   animation: fadeIn 0.3s ease-in-out;
+  overflow: auto;
 }
 
 .inventory-date-table-container h3 {
@@ -121,6 +126,45 @@
 
 .cancel-btn:hover {
   background-color: #dc2626;
+}
+
+.dual-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.summary-column {
+  flex: 1;
+  padding: 0 15px;
+}
+
+.summary-column:first-child {
+  border-left: none;
+}
+
+/* New: Warning Message Styling */
+.inventory-actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: auto;
+  gap: 12px;
+}
+
+.inventory-warning-msg {
+  color: red;
+  font-weight: bold;
+  background: #ffeaea;
+  padding: 10px 16px;
+  border-left: 4px solid red;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.inventory-date-table-title {
+  color: #0056b3;
 }
 
 /* Mobile responsiveness */

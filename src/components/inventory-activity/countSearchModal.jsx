@@ -33,7 +33,7 @@ const CountSearchModal = ({
       return {
         key,
         id: item.id,
-        name: `${item.itemVariantName} ملم ${item.thickness}`,
+        name: `${item.itemVariantName} `,
         thickness: item.thickness,
         length: item.length,
         width: item.width,
@@ -118,8 +118,7 @@ const CountSearchModal = ({
                 <th>Condition</th>
                 <th>Date Received</th>
 
-                <th>Balance</th>
-                <th>Balance OFR</th>
+                <th>Balance </th>
               </tr>
             </thead>
             <tbody>
@@ -139,9 +138,10 @@ const CountSearchModal = ({
                         onChange={() => toggleSelect(r)}
                       />
                     </td>
-                    <td>
-                      {r.name}
+                    <td style={{ direction: "rtl", textAlign: "right" }}>
+                      {`${r.thickness} ملم ${r.name}`}
                     </td>
+
                     <td>{r.length}</td>
                     <td>{r.width}</td>
                     <td>{r.sheetsPerBox}</td>
@@ -152,7 +152,6 @@ const CountSearchModal = ({
                     <td>{r.condition}</td>
                     <td>{r.dateReceived}</td>
 
-                    <td>{r.balance}</td>
                     <td>{r.balanceOFR}</td>
                   </tr>
                 );
