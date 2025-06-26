@@ -12,7 +12,9 @@ const DateCountInput = ({
   itemName,
   thickness,
 }) => {
-  const [entries, setEntries] = useState([{ count: "", receivedDate: "" }]);
+  const [entries, setEntries] = useState([
+    { count: "", receivedDate: "", status: "adj+" },
+  ]);
   const [calculatedCountSQM, setCalculatedCountSQM] = useState(0);
   const [disableSave, setDisableSave] = useState(false);
   const itemLabel = `${length}*${width}-${sheetsPerBox
@@ -59,9 +61,7 @@ const DateCountInput = ({
 
   useEffect(() => {
     setCalculatedCountSQM(Math.round(totalSQM * 100) / 100);
-    setDisableSave(
-      calculatedQty > originalQty || remainingQty !== 0 
-    );
+    setDisableSave(calculatedQty > originalQty || remainingQty !== 0);
   }, [entries]);
 
   const handleChange = (index, field, value) => {
@@ -71,7 +71,7 @@ const DateCountInput = ({
   };
 
   const addRow = () => {
-    setEntries([...entries, { count: "", receivedDate: "" }]);
+    setEntries([...entries, { count: "", receivedDate: "", status: "adj+" }]);
   };
 
   const removeRow = (index) => {
@@ -84,9 +84,10 @@ const DateCountInput = ({
   const handleSave = () => {
     if (disableSave) return;
 
-    const payload = entries.map(({ count, receivedDate }) => ({
+    const payload = entries.map(({ count, receivedDate, status }) => ({
       count: Number(count),
       receivedDate: receivedDate === "" ? null : receivedDate,
+      status,
     }));
     onSave(payload);
   };
@@ -136,11 +137,13 @@ const DateCountInput = ({
           </div>
         </div>
       </h3>
+
       <table className="inventory-table">
         <thead>
           <tr>
             <th>Count</th>
             <th>Date Received (Optional)</th>
+            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -164,6 +167,18 @@ const DateCountInput = ({
                     handleChange(index, "receivedDate", e.target.value)
                   }
                 />
+              </td>
+              <td className="status-col">
+                <select
+                  value={entry.status}
+                  onChange={(e) =>
+                    handleChange(index, "status", e.target.value)
+                  }
+                >
+                  <option value="adj+">adj+</option>
+                  <option value="adj-">adj-</option>
+                  <option value="breakage">breakage</option>
+                </select>
               </td>
               <td>
                 <button

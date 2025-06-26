@@ -43,6 +43,7 @@
   background-color: #f9fafb;
   color: #374151;
   font-weight: 600;
+  width: 40%;
 }
 
 .inventory-table td input[type="number"],
@@ -165,6 +166,37 @@
 
 .inventory-date-table-title {
   color: #0056b3;
+}
+
+/* Status dropdown style inside the table */
+.inventory-table select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.inventory-table select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
+}
+
+/* Make status column narrower */
+.inventory-table .status-col {
+  width: 120px; 
+  min-width: 100px;
+  max-width: 150px;
+}
+
+.inventory-table .status-col select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
 }
 
 /* Mobile responsiveness */

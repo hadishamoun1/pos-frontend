@@ -118,7 +118,8 @@ const CountSearchModal = ({
                 <th>Condition</th>
                 <th>Date Received</th>
 
-                <th>Balance </th>
+            
+                <th>Balance OFR</th>
               </tr>
             </thead>
             <tbody>
@@ -152,6 +153,7 @@ const CountSearchModal = ({
                     <td>{r.condition}</td>
                     <td>{r.dateReceived}</td>
 
+                
                     <td>{r.balanceOFR}</td>
                   </tr>
                 );

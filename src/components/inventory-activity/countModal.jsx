@@ -39,36 +39,47 @@ const CountModal = ({ isOpen, onClose }) => {
     setView("create");
     setRows([]);
   };
-
   const handleSave = async () => {
     if (!rows.length) return onClose();
     setSaving(true);
 
-    const payload = rows.map((r) => ({
-      itemBatchId: r.itemBatchId,
-      itemVariantId: r.itemVariantId,
-      date: r.date,
-      unit: r.unit,
-      count: r.count === "" ? 0 : Number(r.count),
-      type: r.type,
-      countOFR: r.countOFR === "" ? 0 : Number(r.countOFR),
-      finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
-      finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
-    }));
-
     try {
-      await axios.post("http://localhost:3000/inventory-count", payload);
+      const firstRow = rows[0];
+
+      const payload = {
+        itemBatchId: firstRow.itemBatchId,
+        itemType: firstRow.unit?.toLowerCase(), // 'box', 'sheet', 'sqm'
+        length: Number(firstRow.length),
+        width: Number(firstRow.width),
+        sheetsPerBox: Number(firstRow.sheetsPerBox),
+        records: rows.map((r) => ({
+          count: Number(r.count),
+          receivedDate: r.dateReceived,
+          status: r.status,
+        })),
+      };
+
+      console.log("✅ Payload being sent:", payload);
+
+      await axios.post(
+        "http://localhost:3000/inventory-count/v1/inventory-check",
+        payload
+      );
+
       setNotif({
         open: true,
         type: "success",
-        message: "Inventory counts saved successfully!",
+        message: "✅ Inventory check saved successfully!",
       });
+
+      // Optional: Clear form after success
+      resetAll();
     } catch (err) {
-      console.error("Error saving inventory counts", err);
+      console.error("❌ Error saving inventory check", err);
       setNotif({
         open: true,
         type: "error",
-        message: "Failed to save counts. Please try again.",
+        message: "❌ Failed to save inventory check. Please try again.",
       });
     } finally {
       setSaving(false);
@@ -98,6 +109,7 @@ const CountModal = ({ isOpen, onClose }) => {
 
   const handleDateCountConfirm = (splits) => {
     const newRows = [];
+
     selectedItems.forEach((sel) => {
       splits.forEach((split, index) => {
         newRows.push({
@@ -108,17 +120,20 @@ const CountModal = ({ isOpen, onClose }) => {
           dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
             sel.sheetsPerBox
           }`,
-          unit: sel.type,
+          unit: sel.itemVariantType,
+          length: sel.length,
+          width: sel.width,
+          sheetsPerBox: sel.sheetsPerBox,
           date: "",
           dateReceived: split.receivedDate || "",
           count: split.count || 0,
-          type: "S",
-          countOFR: "",
-          finalCost: "",
-          finalCostOfr: "",
+          status: split.status,
+          type: split.status,
+          condition: sel.condition,
         });
       });
     });
+
     setRows((prev) => [...prev, ...newRows]);
     setDateCountOpen(false);
     setSelectedItems([]);
@@ -218,7 +233,8 @@ const CountModal = ({ isOpen, onClose }) => {
                       <th>Date</th>
                       <th>Date Received</th>
                       <th className="count-col">Count</th>
-                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Condition</th>
                       {showCountOfr && <th>Count OFR</th>}
                       {showFinalCost && <th>Final Cost</th>}
                       {showFinalCostOfr && <th>Final Cost OFR</th>}
@@ -295,72 +311,25 @@ const CountModal = ({ isOpen, onClose }) => {
                           <td>
                             <select
                               className="count-input"
-                              value={r.type}
+                              value={r.status}
                               onChange={(e) =>
-                                updateCell(i, "type", e.target.value)
+                                updateCell(i, "status", e.target.value)
                               }
                               disabled={saving}
                             >
-                              {TYPE_OPTIONS.map((opt) => (
-                                <option key={opt}>{opt}</option>
-                              ))}
+                              <option value="adj+">adj+</option>
+                              <option value="adj-">adj-</option>
+                              <option value="breakage">breakage</option>
                             </select>
                           </td>
-                          {showCountOfr && (
-                            <td>
-                              {r.type === "SR" ? (
-                                <input
-                                  className="count-input"
-                                  type="number"
-                                  value={r.countOFR}
-                                  onChange={(e) =>
-                                    updateCell(i, "countOFR", e.target.value)
-                                  }
-                                  disabled={saving}
-                                />
-                              ) : (
-                                <span>—</span>
-                              )}
-                            </td>
-                          )}
-                          {showFinalCost && (
-                            <td>
-                              {["S", "SR", "RVR"].includes(r.type) ? (
-                                <input
-                                  className="count-input"
-                                  type="number"
-                                  value={r.finalCost}
-                                  onChange={(e) =>
-                                    updateCell(i, "finalCost", e.target.value)
-                                  }
-                                  disabled={saving}
-                                />
-                              ) : (
-                                <span>—</span>
-                              )}
-                            </td>
-                          )}
-                          {showFinalCostOfr && (
-                            <td>
-                              {["G", "SR"].includes(r.type) ? (
-                                <input
-                                  className="count-input"
-                                  type="number"
-                                  value={r.finalCostOfr}
-                                  onChange={(e) =>
-                                    updateCell(
-                                      i,
-                                      "finalCostOfr",
-                                      e.target.value
-                                    )
-                                  }
-                                  disabled={saving}
-                                />
-                              ) : (
-                                <span>—</span>
-                              )}
-                            </td>
-                          )}
+
+                          <td>
+                            <input
+                              className="count-input"
+                              value={r.condition || ""}
+                              readOnly
+                            />
+                          </td>
                         </tr>
                       ))
                     )}
