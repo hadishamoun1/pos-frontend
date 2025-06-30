@@ -226,54 +226,74 @@
 }
 
 /* Make the Box (4th) and Sheet (5th) columns narrower */
-.transfer-table th:nth-child(4),
-.transfer-table td:nth-child(4),
-.transfer-table th:nth-child(5),
-.transfer-table td:nth-child(5) {
-  width: 4rem;
-  max-width: 4rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.transfer-table th:nth-child(6),
-.transfer-table td:nth-child(6),
-.transfer-table th:nth-child(7),
-.transfer-table td:nth-child(7) {
-  width: 4rem;
-  max-width: 4rem;
+
+.transfer-table th:nth-child(1),
+.transfer-table td:nth-child(1) {
+  width: 15rem;
+  max-width: 15rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.transfer-table th:nth-child(9),
-.transfer-table td:nth-child(9) {
-  width: 5rem;
-  max-width: 5rem;
+.transfer-table th:nth-child(2),
+.transfer-table td:nth-child(2) {
+  width: 12rem;
+  max-width:10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+
+.transfer-table th:nth-child(3),
+.transfer-table td:nth-child(3) {
+  width: 10rem;
+  max-width:10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-table th:nth-child(4),
+.transfer-table td:nth-child(4) {
+  width: 5rem;
+  max-width:5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-table th:nth-child(5),
+.transfer-table td:nth-child(5) {
+  width: 5rem;
+  max-width:5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transfer-table th:nth-child(6),
+.transfer-table td:nth-child(6) {
+  width: 5rem;
+  max-width:5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transfer-table th:nth-child(7),
+.transfer-table td:nth-child(7) {
+  width: 5rem;
+  max-width:5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .transfer-table td:nth-child(1) {
   direction: rtl;
 }
 
-.transfer-table th:nth-child(3),
-.transfer-table td:nth-child(3) {
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.transfer-table th:nth-child(8),
-.transfer-table td:nth-child(8) {
-  width: 5rem;
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+
 
 /* transferModal.css */
 .transfer-col-small {

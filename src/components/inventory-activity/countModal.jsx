@@ -116,7 +116,7 @@ const CountModal = ({ isOpen, onClose }) => {
           key: `${sel.key}-${index}`,
           itemBatchId: sel.batchId,
           itemVariantId: sel.itemVariantId,
-          name: sel.name,
+          name: sel.itemName,
           dimension: `${Math.floor(sel.length)}×${Math.floor(sel.width)}-0${
             sel.sheetsPerBox
           }`,
@@ -411,7 +411,7 @@ const CountModal = ({ isOpen, onClose }) => {
                 sheetsPerBox={selectedItems[0].sheetsPerBox}
                 originalBalance={selectedItems[0].balanceOFR} // in sqm
                 thickness={selectedItems[0].thickness} // in mm
-                itemName={selectedItems[0].name}
+                itemName={selectedItems[0].itemName}
               />
             )}
           </div>

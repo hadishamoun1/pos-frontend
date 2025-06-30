@@ -1,7 +1,6 @@
-// TransferModal.jsx
 import React, { useState, useRef } from "react";
 import axios from "axios";
-import SearchModal from "../pos-system/searchModal";
+import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
@@ -55,33 +54,52 @@ export default function TransferModal({ isOpen, onClose }) {
 
   const handleSelectItems = (items) => {
     const mapped = items.map((i) => ({
-      itemVariantId: i.itemVariantId,
-      name: i.item,
+      itemBatchId: i.batchId,
+      name: `${i.thickness} ملم ${i.itemName}`,
       origin: i.origin,
-      type: i.type,
-      boxCount: i.box,
-      sheetCount: i.sheet,
+      type: i.itemVariantType,
       length: i.length,
       width: i.width,
-      sqm: i.sqm,
-      price: "",
+      sheetsPerBox: i.sheetsPerBox,
+      condition: i.condition,
+      dateReceived: i.dateReceived,
+      balanceOFR: i.balanceOFR,
+      quantity: 0,
+      sqm: 0,
+      price: 0,
     }));
     setRows((prev) => [...prev, ...mapped]);
     setSearchOpen(false);
+  };
+
+  const getDimensionDisplay = (row) => {
+    const len = Math.floor(row.length);
+    const wid = Math.floor(row.width);
+    if (row.type === "box") return `${len}x${wid}-${row.sheetsPerBox}`;
+    if (row.type === "sheet") return `${len}x${wid}`;
+    return `0x0`;
   };
 
   const updateRowField = (idx, field, value) =>
     setRows((rs) => {
       const copy = [...rs];
       const row = { ...copy[idx], [field]: value };
-      // re‐calc SQM
+
       const len = parseFloat(row.length) || 0;
       const wid = parseFloat(row.width) || 0;
-      const box = parseFloat(row.boxCount) || 0;
-      const sheet = parseFloat(row.sheetCount) || 0;
       const m2 = (len / 100) * (wid / 100);
-      if (row.type === "box") row.sqm = (m2 * box * sheet).toFixed(2);
-      else if (row.type === "sheet") row.sqm = (m2 * sheet).toFixed(2);
+      const qty = parseFloat(row.quantity) || 0;
+
+      if (field === "quantity") {
+        if (row.type === "box") {
+          row.sqm = (m2 * row.sheetsPerBox * qty).toFixed(2);
+        } else if (row.type === "sheet") {
+          row.sqm = (m2 * qty).toFixed(2);
+        } else if (row.type === "sqm") {
+          row.sqm = qty.toFixed(2);
+        }
+      }
+
       copy[idx] = row;
       return copy;
     });
@@ -95,13 +113,8 @@ export default function TransferModal({ isOpen, onClose }) {
     setSaving(true);
     try {
       const payloadItems = rows.map((r) => ({
-        itemVariantId: r.itemVariantId,
-        quantity:
-          r.type === "box"
-            ? Number(r.boxCount)
-            : r.type === "sheet"
-            ? Number(r.sheetCount)
-            : Number(r.sqm),
+        itemBatchId: r.itemBatchId,
+        quantity: Number(r.quantity),
         sqm: Number(r.sqm),
         price: Number(r.price) || 0,
       }));
@@ -263,13 +276,13 @@ export default function TransferModal({ isOpen, onClose }) {
                   <thead>
                     <tr>
                       <th>Item Name</th>
+                      <th>Dimension</th>
                       <th>Origin</th>
                       <th>Type</th>
-                      <th>Box</th>
-                      <th>Sheet</th>
-                      <th>Length</th>
-                      <th>Width</th>
+                      <th>Quantity</th>
                       <th>SQM</th>
+                      <th>Condition</th>
+                      <th>Date Received</th>
                       <th>Item Price</th>
                     </tr>
                   </thead>
@@ -296,6 +309,13 @@ export default function TransferModal({ isOpen, onClose }) {
                           <td>
                             <input
                               className="transfer-input"
+                              value={getDimensionDisplay(r)}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
                               value={r.origin}
                               readOnly
                             />
@@ -311,42 +331,9 @@ export default function TransferModal({ isOpen, onClose }) {
                             <input
                               type="number"
                               className="transfer-input transfer-col-small"
-                              value={r.boxCount}
+                              value={r.quantity}
                               onChange={(e) =>
-                                updateRowField(i, "boxCount", e.target.value)
-                              }
-                              disabled={saving}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              className="transfer-input transfer-col-small"
-                              value={r.sheetCount}
-                              onChange={(e) =>
-                                updateRowField(i, "sheetCount", e.target.value)
-                              }
-                              disabled={saving}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="transfer-input"
-                              type="number"
-                              value={r.length}
-                              onChange={(e) =>
-                                updateRowField(i, "length", e.target.value)
-                              }
-                              disabled={saving}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              className="transfer-input"
-                              type="number"
-                              value={r.width}
-                              onChange={(e) =>
-                                updateRowField(i, "width", e.target.value)
+                                updateRowField(i, "quantity", e.target.value)
                               }
                               disabled={saving}
                             />
@@ -355,6 +342,20 @@ export default function TransferModal({ isOpen, onClose }) {
                             <input
                               className="transfer-input"
                               value={r.sqm}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.condition || ""}
+                              readOnly
+                            />
+                          </td>
+                          <td>
+                            <input
+                              className="transfer-input"
+                              value={r.dateReceived || ""}
                               readOnly
                             />
                           </td>
@@ -378,10 +379,11 @@ export default function TransferModal({ isOpen, onClose }) {
             </div>
           )}
 
-          <SearchModal
+          <TransferSearchModal
             isOpen={searchOpen}
             onClose={() => setSearchOpen(false)}
-            onSelectItems={handleSelectItems}
+            onSelect={handleSelectItems}
+            existingKeys={new Set(rows.map((r) => `${r.itemBatchId}`))}
           />
         </div>
       </div>

@@ -1,0 +1,139 @@
+.transfer-search-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.transfer-search-modal-content {
+  background: #fff;
+  width: 100%;
+  max-width: 1400px;
+  max-height: 90vh;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.transfer-search-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #eee;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.transfer-search-modal-close:hover {
+  background: #ddd;
+}
+
+.transfer-search-modal-searchbar {
+  width: 92%;
+  margin: 4rem 1rem 1rem;
+}
+
+.transfer-search-modal-input {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+
+.transfer-search-modal-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.transfer-search-modal-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 1rem;
+}
+
+.transfer-search-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.transfer-search-modal-table th,
+.transfer-search-modal-table td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.transfer-search-modal-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #fff;
+  font-weight: 600;
+}
+
+.transfer-search-modal-table tbody tr {
+  transition: background 0.2s;
+}
+
+.transfer-search-modal-table tbody tr:hover {
+  background: #f0f8ff;
+}
+
+.transfer-search-modal-table td:first-child {
+  text-align: center;
+}
+
+.transfer-search-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.5rem;
+}
+
+.transfer-search-modal-ok {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(53, 122, 184, 0.3);
+  transition: background 0.3s, transform 0.2s;
+}
+
+.transfer-search-modal-ok:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.transfer-search-modal-ok:not(:disabled):hover {
+  background: linear-gradient(135deg, #0056b3, #003f7f);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .transfer-search-modal-table {
+    font-size: 0.9rem;
+    min-width: unset;
+  }
+  .transfer-search-modal-input {
+    font-size: 0.9rem;
+  }
+}

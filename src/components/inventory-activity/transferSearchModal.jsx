@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./countSearchModal.css";
+import "./transferSearchModal.css";
 
-const CountSearchModal = ({
+const TransferSearchModal = ({
   isOpen,
   onClose,
   onSelect,
@@ -26,30 +26,34 @@ const CountSearchModal = ({
 
   if (!isOpen) return null;
 
-  const rows = items.flatMap((item) => {
-    return item.batches.map((batch) => {
-      const key = `${item.itemId}-${batch.id}`;
-      return {
-        key,
-        itemId: item.itemId,
-        itemName: item.itemName,
-        thickness: item.thickness,
-        length: item.length,
-        width: item.width,
-        sheetsPerBox: item.sheetsPerBox,
-        origin: item.origin,
-        itemVariantType: item.type,
-        itemNameDescriptionId: item.itemNameDescriptionId,
-        itemNameDescription: item.itemNameDescription,
-
-        batchId: batch.id,
-        condition: batch.condition,
-        dateReceived: batch.dateReceived,
-        balance: batch.balance,
-        balanceOFR: batch.balanceOFR,
-      };
-    });
-  });
+  const rows = items.flatMap((item) =>
+    item.thicknesses.flatMap((thickness) =>
+      thickness.variants.flatMap((variant) => {
+        if (!variant.batches || variant.batches.length === 0) return [];
+        return variant.batches.map((batch) => {
+          const key = `${variant.id}-${batch.id}`;
+          return {
+            key,
+            itemId: item.id,
+            itemName: item.itemName,
+            thickness: thickness.thickness,
+            length: variant.length,
+            width: variant.width,
+            sheetsPerBox: variant.sheetsPerBox,
+            origin: variant.origin,
+            itemVariantType: item.type,
+            itemNameDescriptionId: variant.itemNameDescriptionId,
+            itemNameDescription: variant.itemNameDescription,
+            batchId: batch.id,
+            condition: batch.condition,
+            dateReceived: batch.dateReceived,
+            balance: batch.balance,
+            balanceOFR: batch.balanceOFR,
+          };
+        });
+      })
+    )
+  );
 
   const filtered = rows.filter(
     (r) =>
@@ -76,19 +80,19 @@ const CountSearchModal = ({
   };
 
   return (
-    <div className="count-search-modal-overlay" onClick={onClose}>
+    <div className="transfer-search-modal-overlay" onClick={onClose}>
       <div
-        className="count-search-modal-content"
+        className="transfer-search-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="count-search-modal-close" onClick={onClose}>
+        <button className="transfer-search-modal-close" onClick={onClose}>
           &times;
         </button>
 
-        <div className="count-search-modal-searchbar">
+        <div className="transfer-search-modal-searchbar">
           <input
             type="text"
-            className="count-search-modal-input"
+            className="transfer-search-modal-input"
             placeholder="Search by item name or condition…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -96,8 +100,8 @@ const CountSearchModal = ({
           />
         </div>
 
-        <div className="count-search-modal-table-wrapper">
-          <table className="count-search-modal-table">
+        <div className="transfer-search-modal-table-wrapper">
+          <table className="transfer-search-modal-table">
             <thead>
               <tr>
                 <th></th>
@@ -148,9 +152,9 @@ const CountSearchModal = ({
         </div>
 
         {!singleSelect && (
-          <div className="count-search-modal-footer">
+          <div className="transfer-search-modal-footer">
             <button
-              className="count-search-modal-ok"
+              className="transfer-search-modal-ok"
               onClick={handleOk}
               disabled={selectedSet.size === 0}
             >
@@ -163,4 +167,4 @@ const CountSearchModal = ({
   );
 };
 
-export default CountSearchModal;
+export default TransferSearchModal;
