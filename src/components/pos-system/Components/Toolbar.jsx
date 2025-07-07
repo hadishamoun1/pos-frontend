@@ -82,6 +82,17 @@ const Toolbar = ({
               {loading ? "Processing..." : "Offer"}
             </button>
           )}
+          {/* ✅ Show "RVR" button for return invoices */}
+          {(selectedInvoiceType === "RVR" ||
+            selectedInvoiceType === "Both") && (
+            <button
+              className="pos-page-toolbar-button pos-page-purple-button"
+              onClick={() => handleCreateInvoice("RVR")}
+              disabled={loading || selectedRequestId !== null}
+            >
+              {loading ? "Processing..." : "RVR"}
+            </button>
+          )}
         </>
       )}
 

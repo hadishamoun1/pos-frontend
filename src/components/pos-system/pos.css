@@ -172,7 +172,7 @@
 
 .pos-page-toggle-wrapper {
   position: absolute;
-  top:3.5rem;
+  top: 3.5rem;
   right: 2rem;
   z-index: 999;
 }
@@ -206,7 +206,6 @@
 .pos-page-add-row-button:hover {
   transform: scale(1.05);
 }
-
 
 .pos-page-customer-name-row {
   width: 100%;
@@ -424,12 +423,12 @@ input:disabled {
 /* 🔹 Customer Search Container */
 .pos-page-customer-search-container {
   position: relative;
-  width: 200%;
+  width: 100%;
 }
 
 /* 🔹 Input Field */
 .pos-page-customer-name-input {
-  width: 20%;
+  width: 40%;
   padding: 10px;
   margin-right: 10px;
   font-size: 16px;
@@ -481,4 +480,9 @@ input:disabled {
   padding: 12px;
   color: #999;
   text-align: center;
+}
+
+.pos-page-purple-button {
+  background-color: rgb(231, 113, 2);
+  color: white;
 }

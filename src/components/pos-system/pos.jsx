@@ -13,7 +13,7 @@ import InventoryTable from "./Components/InventoryTable";
 import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
 import InvoiceModal from "./invoicePreviewModal";
-import InvoicePreview from "./invoicePreview"
+import InvoicePreview from "./invoicePreview";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -61,19 +61,46 @@ const POSSystemPage = () => {
   });
 
   const handleSelectItems = (selectedItems) => {
-    const updatedData = selectedItems.map((item) => ({
-      itemVariantId: item.itemVariantId,
-      origin: item.origin || "",
-      item: item.item || "",
-      type: item.type || "",
-      length: item.length || "",
-      width: item.width || "",
-      box: item.type === "box" ? 1 : "",
-      sheet: item.type === "sheet" ? 1 : item.sheetsPerBox,
-      sqm: item.sqm,
-      price: "",
-      total: "0.00",
-    }));
+    const updatedData = selectedItems.map((item) => {
+      const length = parseFloat(item.length);
+      const width = parseFloat(item.width);
+      const type = item.type;
+      const sheetsPerBox = parseFloat(item.sheetsPerBox);
+
+      // Default quantity = 1 for both types
+      const quantity = 1;
+
+      let sqm = "";
+      if (length && width && quantity) {
+        const sqmPerSheet = (length / 100) * (width / 100);
+        if (type === "box") {
+          sqm = (sqmPerSheet * sheetsPerBox * quantity).toFixed(2);
+        } else if (type === "sheet") {
+          sqm = (sqmPerSheet * quantity).toFixed(2);
+        } else if (type === "sqm") {
+          sqm = quantity.toFixed(2);
+        }
+      }
+
+      return {
+        itemVariantId: item.itemVariantId,
+        batchId: item.batchId,
+        origin: item.origin || "",
+        item: `${parseFloat(item.thickness)} ملم ${item.itemName}` || "",
+        type: item.type || "",
+        length: item.length || "",
+        width: item.width || "",
+        box: type === "box" ? quantity : "",
+        sheet: type === "sheet" ? quantity : item.sheetsPerBox,
+        quantity,
+        sqm,
+        price: "",
+        total: "0.00",
+      };
+    });
+
+    console.log("Selected Items:", selectedItems);
+    console.log("Updated Table Data:", updatedData);
 
     setTableData((prevData) => [...prevData, ...updatedData]);
   };
@@ -285,7 +312,7 @@ const POSSystemPage = () => {
     }
   };
 
-  const handleCreateInvoice = async (invoiceType) => {
+  const handleCreateInvoice = async (invoiceType = "S") => {
     if (!selectedCustomerId || tableData.length === 0) {
       setError("Customer and items are required.");
       return;
@@ -297,7 +324,7 @@ const POSSystemPage = () => {
     const vatPercentageValue = Number(vat);
     const vatRate = vatPercentageValue / 100;
 
-    const formattedItems = tableData.map((item) => {
+    const items = tableData.map((item) => {
       const unitPrice = Number(item.price) || 0;
       const sqm = Number(item.sqm) || 0;
       const quantity =
@@ -308,34 +335,49 @@ const POSSystemPage = () => {
 
       return {
         itemVariantId: item.itemVariantId,
-        sqm: sqm,
-        unitPrice: unitPrice,
-        vat: vatAmount,
+        itemBatchId: item.batchId, // ensure batchId is present
+        sqm,
+        unitPrice,
+        totalAmount: Number(totalAmount.toFixed(2)),
+        vat: Number(vatAmount.toFixed(2)),
         quantity,
       };
     });
 
-    const invoiceData = {
+    const totalWithoutVAT = items.reduce(
+      (acc, item) => acc + item.totalAmount,
+      0
+    );
+    const totalVAT = items.reduce((acc, item) => acc + item.vat, 0);
+    const grandTotal = totalWithoutVAT + totalVAT;
+
+    const payload = {
       customerId: selectedCustomerId,
-      invoiceType,
       date,
+      invoiceType, // should be "S"
+      documentNumber: "DOC-0001", // Can be replaced with actual document number if needed
+      currencyId: 1, // You can make this dynamic later
+      totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
+      totalVAT: Number(totalVAT.toFixed(2)),
+      grandTotal: Number(grandTotal.toFixed(2)),
       currencyRate: parseFloat(currencyRate) || 1,
       vatPercentage: vatPercentageValue,
-      items: formattedItems,
+      items,
     };
 
-    console.log("📤 Sending Invoice Data:", invoiceData);
+    console.log("📤 Invoice Payload:", payload);
 
     try {
       const response = await axios.post(
         "http://localhost:3000/invoices",
-        invoiceData
+        payload
       );
       console.log("✅ Invoice Created:", response.data);
       showNotification(
         "success",
         `Invoice ${invoiceType} created successfully!`
       );
+      setTableData([]); // Clear after successful creation
     } catch (err) {
       console.error("❌ Error creating invoice:", err);
       showNotification(

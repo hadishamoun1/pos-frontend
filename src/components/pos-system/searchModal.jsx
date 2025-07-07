@@ -9,7 +9,6 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // reset search + selections each time it opens
       setSearchTerm("");
       setSelectedItems(new Set());
       fetchItems();
@@ -21,145 +20,161 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       const response = await axios.get(
         "http://localhost:3000/items/v1/filtered-items"
       );
-      setItems(response.data);
+      setItems(response.data || []);
     } catch (error) {
       console.error("Error fetching items:", error);
     }
   };
 
   const handleSelect = (uniqueId) => {
-    const newSelectedItems = new Set(selectedItems);
-    if (newSelectedItems.has(uniqueId)) {
-      newSelectedItems.delete(uniqueId);
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(uniqueId)) {
+      newSelected.delete(uniqueId);
     } else {
-      newSelectedItems.add(uniqueId);
+      newSelected.add(uniqueId);
     }
-    setSelectedItems(newSelectedItems);
-  };
-  const calculateSQM = (length, width, type, box, sheet) => {
-    if (!length || !width || !sheet) return ""; // Prevent empty values
-
-    const lengthInMeters = length / 100; // Convert cm to meters
-    const widthInMeters = width / 100; // Convert cm to meters
-
-    if (type === "box") {
-      return (lengthInMeters * widthInMeters * box * sheet).toFixed(2);
-    } else if (type === "sheet") {
-      return (lengthInMeters * widthInMeters * sheet).toFixed(2);
-    }
-    return "";
+    setSelectedItems(newSelected);
   };
 
   const handleOk = () => {
-    const selectedData = items
-      .flatMap((item) =>
-        item.thicknesses.flatMap((thickness) =>
-          thickness.variants.map((variant) => {
-            const box = item.type === "box" ? 1 : "";
-            const sheet = item.type === "sheet" ? 1 : variant.sheetsPerBox;
+    const selectedData = [];
 
-            return {
-              itemVariantId: variant.id,
-              origin: variant.origin,
-              item: `${parseFloat(thickness.thickness)} ملم ${item.itemName}`,
-              type: item.type,
-              length: Math.floor(variant.length),
-              width: Math.floor(variant.width),
-              sheetsPerBox: variant.sheetsPerBox,
-              box: box,
-              sheet: sheet,
-              sqm: calculateSQM(
-                variant.length,
-                variant.width,
-                item.type,
-                box,
-                sheet
-              ), // Auto-calculate SQM
-              uniqueId: `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`,
-            };
-          })
-        )
-      )
-      .filter((row) => selectedItems.has(row.uniqueId));
+    items.forEach((item) => {
+      item.thicknesses.forEach((thickness) => {
+        thickness.variants.forEach((variant) => {
+          if (!variant.batches || variant.batches.length === 0) return;
+
+          variant.batches.forEach((batch) => {
+            const uniqueId = `${variant.id}-${batch.id}`;
+            if (selectedItems.has(uniqueId)) {
+              selectedData.push({
+                itemVariantId: variant.id,
+                itemName: item.itemName,
+                type: item.type,
+                thickness: thickness.thickness,
+                length: parseFloat(variant.length),
+                width: parseFloat(variant.width),
+                sheetsPerBox: variant.sheetsPerBox,
+                origin: variant.origin,
+                condition: batch.condition,
+                dateReceived: batch.dateReceived,
+                balanceOFR: batch.balanceOFR,
+                batchId: batch.id,
+              });
+            }
+          });
+        });
+      });
+    });
 
     onSelectItems(selectedData);
     onClose();
   };
 
-  const filteredItems = items.filter((item) =>
-    item.itemName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRows = items
+    .flatMap((item) =>
+      item.thicknesses.flatMap((thickness) =>
+        thickness.variants.flatMap((variant) => {
+          if (!variant.batches || variant.batches.length === 0) return [];
+          return variant.batches.map((batch) => {
+            const uniqueId = `${variant.id}-${batch.id}`;
+            return {
+              uniqueId,
+              itemName: item.itemName,
+              type: item.type,
+              thickness: thickness.thickness,
+              length: Math.floor(variant.length),
+              width: Math.floor(variant.width),
+              sheetsPerBox: variant.sheetsPerBox,
+              origin: variant.origin,
+              condition: batch.condition,
+              dateReceived: batch.dateReceived,
+              balanceOFR: batch.balanceOFR,
+            };
+          });
+        })
+      )
+    )
+    .filter(
+      (r) =>
+        r.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.condition &&
+          r.condition.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   if (!isOpen) return null;
 
   return (
-    <div className="search-modal-overlay">
-      <div className="search-modal-content">
-        {/* Modal Header */}
+    <div className="search-modal-overlay" onClick={onClose}>
+      <div
+        className="search-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
           <div className="search-modal-buttons">
             <button className="search-modal-close-button" onClick={onClose}>
               Close
             </button>
-            <button className="search-modal-ok-button" onClick={handleOk}>
-              OK
+            <button
+              className="search-modal-ok-button"
+              onClick={handleOk}
+              disabled={selectedItems.size === 0}
+            >
+              OK ({selectedItems.size})
             </button>
           </div>
         </div>
 
-        {/* Search Bar */}
         <input
           type="text"
-          placeholder="Enter search term"
+          placeholder="Search by item name or condition"
           className="search-modal-input"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          autoFocus
         />
 
-        {/* Results Table */}
         <table className="search-modal-table">
           <thead>
             <tr>
               <th>Select</th>
-              <th>Origin</th>
               <th>Item</th>
               <th>Type</th>
+              <th>Thickness</th>
               <th>Length</th>
               <th>Width</th>
               <th>Sheets/Box</th>
+              <th>Origin</th>
+              <th>Condition</th>
+              <th>Date Received</th>
+              <th>Balance OFR</th>
             </tr>
           </thead>
           <tbody>
-            {filteredItems.flatMap((item) =>
-              item.thicknesses.flatMap((thickness) =>
-                thickness.variants.map((variant, index) => {
-                  const uniqueId = `${item.itemName}-${variant.origin}-${thickness.thickness}-${variant.length}-${variant.width}-${variant.sheetsPerBox}`;
-                  return (
-                    <tr key={`${item.id}-${index}`}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          className="search-modal-select-checkbox"
-                          checked={selectedItems.has(uniqueId)}
-                          onChange={() => handleSelect(uniqueId)}
-                        />
-                      </td>
-                      <td>{variant.origin}</td>
-                      <td style={{ direction: "rtl", textAlign: "right" }}>
-                        {`${parseFloat(thickness.thickness)} ملم ${
-                          item.itemName
-                        }`}
-                      </td>
-                      <td>{item.type}</td>
-                      <td>{Math.floor(variant.length)}</td>
-                      <td>{Math.floor(variant.width)}</td>
-                      <td>{variant.sheetsPerBox}</td>
-                    </tr>
-                  );
-                })
-              )
-            )}
+            {filteredRows.map((r) => (
+              <tr key={r.uniqueId}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.has(r.uniqueId)}
+                    onChange={() => handleSelect(r.uniqueId)}
+                  />
+                </td>
+                <td style={{ direction: "rtl", textAlign: "right" }}>
+                  {`${parseFloat(r.thickness)} ملم ${r.itemName}`}
+                </td>
+                <td>{r.type}</td>
+                <td>{r.thickness}</td>
+                <td>{r.length}</td>
+                <td>{r.width}</td>
+                <td>{r.sheetsPerBox}</td>
+                <td>{r.origin}</td>
+                <td>{r.condition}</td>
+                <td>{r.dateReceived}</td>
+                <td>{r.balanceOFR}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
