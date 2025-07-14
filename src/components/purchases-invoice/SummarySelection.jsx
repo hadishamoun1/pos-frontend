@@ -15,6 +15,7 @@ const SummarySection = ({
   isEditable,
   invoiceType,
   status,
+  shippingCostComputed,
 
   // ← new props:
   selectedItems,
@@ -54,11 +55,14 @@ const SummarySection = ({
             Shipping Cost
             <input
               type="number"
-              value={shippingCost}
+              value={
+                status === "Recieved" ? shippingCostComputed : shippingCost
+              }
               onChange={(e) => setShippingCost(Number(e.target.value))}
-              disabled={!isEditable}
+              disabled={!isEditable || status === "Recieved"}
             />
           </label>
+
           <label>
             Nb of Containers
             <input

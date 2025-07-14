@@ -36,6 +36,12 @@ const CustomerDetails = ({
             <option value="6">6%</option>
             <option value="11">11%</option>
           </select>
+
+          {/* Currency Dropdown */}
+          <select className="pos-page-currency-dropdown">
+            <option value="USD">USD</option>
+            <option value="LL">LL</option>
+          </select>
         </div>
 
         <div className="pos-page-checkbox-container">

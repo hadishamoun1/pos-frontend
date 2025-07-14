@@ -70,6 +70,7 @@ const PurchasesInvoicePage = () => {
   const isInvoiceSelected = selectedInvoiceId !== null;
   const canEdit = !isInvoiceSelected || isEditMode;
   const [invoiceType, setInvoiceType] = useState("S");
+  const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
 
   const resetFields = () => {
     setSupplierName("");
@@ -88,6 +89,7 @@ const PurchasesInvoicePage = () => {
     setInvoiceNumber("");
     setFinalCost(0);
     setInvoiceType("S");
+    setPoDate(new Date().toISOString().slice(0, 10));
   };
 
   const handleCurrencyChange = (e) => {
@@ -169,6 +171,13 @@ const PurchasesInvoicePage = () => {
     setShowItemModal(false);
   };
 
+  const getCorrectShippingCost = () => {
+    if (invoiceType === "S") return shippingCostComputed; // from normal (value)
+    if (invoiceType === "G" || invoiceType === "SR" || invoiceType === "RVR")
+      return shippingCostOFR; // from OFR (valueOFR)
+    return 0;
+  };
+
   const handleModalSave = (data) => {
     setUnitPriceRows(data); // Save modal rows
     const total = data.reduce(
@@ -214,6 +223,7 @@ const PurchasesInvoicePage = () => {
         invoiceNumber,
         date: inputedDate,
         expectedArrivalDate: invoiceDate,
+        poDate: poDate,
         type,
         supplierId,
         vatAmount: calculatedVatAmount,
@@ -355,6 +365,8 @@ const PurchasesInvoicePage = () => {
     setShippingCostInput(Number(fullInvoice.shippingCost));
     setFinalCost(Number(fullInvoice.finalCost));
     setInvoiceType(fullInvoice.type);
+    setPoDate(fullInvoice.poDate?.slice(0, 10) || "");
+
     // 4) items
     // AFTER
     setItems(
@@ -572,7 +584,10 @@ const PurchasesInvoicePage = () => {
   const getCostPercentage = () => {
     const poAmount = itemsTotalAmount || 0;
     if (poAmount === 0) return 0;
-    return totalCharges / poAmount;
+
+    let final = totalCharges / poAmount;
+    console.log("Final Cost Percentage:", final);
+    return final;
   };
 
   // 5️⃣ Finally, your “real” final cost:
@@ -694,7 +709,7 @@ const PurchasesInvoicePage = () => {
 
         <div className="invoice-details">
           {/* ----------- ROW 1 ----------- */}
-          <div className="invoice-row">
+          <div className="invoice-row row-1">
             <SupplierInput
               supplierName={supplierName}
               onSupplierNameChange={handleSupplierNameChange}
@@ -737,10 +752,9 @@ const PurchasesInvoicePage = () => {
                 disabled={!canEdit}
               />
             </label>
-          </div>
 
-          {/* ----------- ROW 2 ----------- */}
-          <div className="invoice-row">
+            {/* ----------- ROW 2 ----------- */}
+
             <label>
               Currency
               <select
@@ -779,6 +793,17 @@ const PurchasesInvoicePage = () => {
                 onChange={(e) => setInvoiceDate(e.target.value)}
               />
             </label>
+
+            <label>
+              PO Date
+              <input
+                type="date"
+                value={poDate}
+                onChange={(e) => setPoDate(e.target.value)}
+                disabled={!canEdit}
+              />
+            </label>
+
             <label>
               Type
               <select
@@ -885,6 +910,7 @@ const PurchasesInvoicePage = () => {
             selectedItems={items}
             invoiceType={invoiceType}
             status={status}
+            shippingCostComputed={getCorrectShippingCost()}
           />
         ) : (
           <AlternativeSummarySection
