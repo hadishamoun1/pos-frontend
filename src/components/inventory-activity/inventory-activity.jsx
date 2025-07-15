@@ -55,9 +55,27 @@ const DraggableColumnHeader = ({ column }) => {
 
 const InventoryActivityPage = () => {
   const [rows, setRows] = useState([]);
+  const [totals, setTotals] = useState({
+    totalQuantity: 0,
+    totalQuantityOFR: 0,
+    totalSQM: 0,
+    totalSQMOFR: 0,
+  });
   const [showCountModal, setShowCountModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [columnOrder, setColumnOrder] = useState([]);
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    column: null,
+    value: "",
+    record: null,
+  });
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const pageSize = 30;
 
   const defaultColumns = useMemo(
     () => [
@@ -80,58 +98,95 @@ const InventoryActivityPage = () => {
     []
   );
 
-  useEffect(() => {
-    fetch("http://localhost:3000/inventory-transactions/activity")
+  const fetchData = (url, append = false) => {
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        setRows(data);
-        setColumnOrder(defaultColumns.map((col) => col.accessor));
+        if (Array.isArray(data.data)) {
+          setRows((prev) => (append ? [...prev, ...data.data] : data.data));
+          setTotals(data.totals || totals);
+          setHasMore(data.data.length === pageSize);
+          setColumnOrder(defaultColumns.map((col) => col.accessor));
+        }
       })
       .catch(console.error);
+  };
 
+  useEffect(() => {
+    fetchData(
+      `http://localhost:3000/inventory-transactions/activity?page=${page}&pageSize=${pageSize}`
+    );
     socket.on("inventoryActivityUpdate", (data) => {
-      setRows(data);
+      if (Array.isArray(data.data)) {
+        setRows(data.data);
+        setTotals(data.totals || totals);
+      }
     });
-
-    return () => {
-      socket.off("inventoryActivityUpdate");
-    };
+    return () => socket.off("inventoryActivityUpdate");
   }, [defaultColumns]);
 
+  const applyFilters = () => {
+    const query = activeFilters
+      .map((f) => `${f.key}=${encodeURIComponent(f.value)}`)
+      .join("&");
+    setPage(1);
+    fetchData(
+      `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=1&pageSize=${pageSize}`
+    );
+  };
+
+  const cancelFilters = () => {
+    setActiveFilters([]);
+    setPage(1);
+    fetchData(
+      `http://localhost:3000/inventory-transactions/activity?page=1&pageSize=${pageSize}`
+    );
+  };
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    const query = activeFilters
+      .map((f) => `${f.key}=${encodeURIComponent(f.value)}`)
+      .join("&");
+    const url =
+      activeFilters.length > 0
+        ? `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=${nextPage}&pageSize=${pageSize}`
+        : `http://localhost:3000/inventory-transactions/activity?page=${nextPage}&pageSize=${pageSize}`;
+    fetchData(url, true);
+  };
+
   const data = useMemo(() => {
-    return rows.map((r) => {
-      return {
-        name: `${r.thickness} ملم ${r.itemName}`,
-        condition: r.itemBatch?.condition || "—",
-        batchDate: r.itemBatch?.dateReceived || "—",
-        dimension:
-          r.itemType === "box" && r.sheetsPerBox
-            ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
-            : `${r.length}×${r.width}`,
-        origin: r.origin,
-        quantity: r.quantity,
-        quantityofr: r.quantityofr,
-        sqm: r.sqm.toFixed(2),
-        sqmofr: r.sqmofr.toFixed(2),
-        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
-        finalcostofr:
-          r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
-        unit:
-          r.itemType === "box"
-            ? "Box"
-            : r.itemType === "sheet"
-            ? "Sheet"
-            : "SQM",
-        status:
-          r.transactionType === "purchase"
-            ? "Purchase"
-            : r.transactionType === "sale"
-            ? "Sales"
-            : r.transactionType || "-",
-        date: r.invoiceDate || "—",
-        invoiceNo: r.invoiceNumber || "—",
-      };
-    });
+    if (!Array.isArray(rows)) return [];
+    return rows.map((r) => ({
+      name: `${r.thickness} ملم ${r.itemName}`,
+      condition: r.itemBatch?.condition || "—",
+      batchDate: r.itemBatch?.dateReceived || "—",
+      dimension:
+        r.itemType === "box" && r.sheetsPerBox
+          ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
+          : `${r.length}×${r.width}`,
+      origin: r.origin,
+      quantity: r.quantity,
+      quantityofr: r.quantityofr,
+      sqm: r.sqm.toFixed(2),
+      sqmofr: r.sqmofr.toFixed(2),
+      finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
+      finalcostofr:
+        r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
+      unit:
+        r.itemType === "box" ? "Box" : r.itemType === "sheet" ? "Sheet" : "SQM",
+      status:
+        r.transactionType === "purchase"
+          ? "Purchase"
+          : r.transactionType === "sale"
+          ? "Sales"
+          : r.transactionType || "-",
+      date: r.invoiceDate || "—",
+      invoiceNo: r.invoiceNumber || "—",
+      itemVariantId: r.itemVariantId,
+      itemBatch: r.itemBatch,
+    }));
   }, [rows]);
 
   const {
@@ -141,16 +196,9 @@ const InventoryActivityPage = () => {
     rows: tableRows,
     prepareRow,
     setColumnOrder: updateColumnOrder,
-  } = useTable(
-    {
-      columns: defaultColumns,
-      data,
-    },
-    useColumnOrder
-  );
+  } = useTable({ columns: defaultColumns, data }, useColumnOrder);
 
   const sensors = useSensors(useSensor(PointerSensor));
-
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
@@ -159,6 +207,33 @@ const InventoryActivityPage = () => {
       const newOrder = arrayMove(columnOrder, oldIndex, newIndex);
       setColumnOrder(newOrder);
       updateColumnOrder(newOrder);
+    }
+  };
+
+  useEffect(() => {
+    const closeMenu = () => {
+      if (contextMenu.visible)
+        setContextMenu({ ...contextMenu, visible: false });
+    };
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, [contextMenu]);
+
+  const addFilter = (column, value, record) => {
+    let filter = {};
+    if (column === "name" && record.itemVariantId) {
+      filter = { key: "itemVariantId", value: record.itemVariantId };
+    } else if (column === "condition" && record.itemBatch?.id) {
+      filter = { key: "itemBatchId", value: record.itemBatch.id };
+    } else {
+      filter = { key: column, value: value };
+    }
+    if (
+      !activeFilters.find(
+        (f) => f.key === filter.key && f.value === filter.value
+      )
+    ) {
+      setActiveFilters([...activeFilters, filter]);
     }
   };
 
@@ -181,6 +256,53 @@ const InventoryActivityPage = () => {
           </button>
         </div>
       </div>
+
+      {contextMenu.visible && (
+        <div
+          style={{
+            position: "fixed",
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: "#fff",
+            border: "1px solid #ccc",
+            zIndex: 1000,
+            padding: "5px",
+            cursor: "pointer",
+          }}
+          onClick={() => {
+            addFilter(
+              contextMenu.column,
+              contextMenu.value,
+              contextMenu.record
+            );
+            setContextMenu({ ...contextMenu, visible: false });
+          }}
+        >
+          Add "{contextMenu.value}" to Filters
+        </div>
+      )}
+
+      {activeFilters.length > 0 && (
+        <div className="active-filters-bar">
+          <strong>Active Filters:</strong>
+          {activeFilters.map((f, idx) => (
+            <span key={idx} className="active-filters-tag">
+              {f.key}: {f.value}
+              <button
+                onClick={() =>
+                  setActiveFilters(activeFilters.filter((_, i) => i !== idx))
+                }
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <div className="filters-action-buttons">
+            <button onClick={applyFilters}>Apply Filters</button>
+            <button onClick={cancelFilters}>Cancel Filters</button>
+          </div>
+        </div>
+      )}
 
       <div className="inventory-activity-container">
         <div className="inventory-activity-table-wrapper">
@@ -212,7 +334,20 @@ const InventoryActivityPage = () => {
                     return (
                       <tr {...row.getRowProps()}>
                         {row.cells.map((cell) => (
-                          <td {...cell.getCellProps()}>
+                          <td
+                            {...cell.getCellProps()}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setContextMenu({
+                                visible: true,
+                                x: e.clientX,
+                                y: e.clientY,
+                                column: cell.column.id,
+                                value: cell.value,
+                                record: row.original,
+                              });
+                            }}
+                          >
                             {cell.render("Cell")}
                           </td>
                         ))}
@@ -220,9 +355,43 @@ const InventoryActivityPage = () => {
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td style={{ fontWeight: "bold" }}>Totals</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {Number(totals.totalQuantity).toFixed(2)}
+                    </td>
+                    <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {Number(totals.totalQuantityOFR).toFixed(2)}
+                    </td>
+                    <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {Number(totals.totalSQM).toFixed(2)}
+                    </td>
+                    <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {Number(totals.totalSQMOFR).toFixed(2)}
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
             </SortableContext>
           </DndContext>
+          {hasMore && (
+            <div className="load-more-container">
+              <button className="load-more-btn" onClick={loadMore}>
+                Load More
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
