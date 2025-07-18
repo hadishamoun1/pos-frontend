@@ -417,30 +417,46 @@ const JournalVoucherPage = () => {
 
       setDate(jv.date);
       setType(jv.jvType);
+
       setEntries(
-        jv.details.map((d) => ({
-          accountId: d.accountId,
-          accountNumber: d.accountNumber || d.account?.accountNumber || "",
-          accountName: d.accountName || d.account?.accountName || "",
-          type: d.jvType,
-          currency: d.currency || "",
-          debit: d.dr.toString(),
-          credit: d.cr.toString(),
-          debitOFR: d.drOFR.toString(),
-          creditOFR: d.crOFR.toString(),
-          exchangeRate: d.exRateUSD.toString(),
-          exchangeRateEURtoUSD: d.exRateEUROToUSD.toString(),
-          debitUSD: d.drUSD.toString(),
-          creditUSD: d.crUSD.toString(),
-          debitEx: d.drLL.toString(),
-          creditEx: d.crLL.toString(),
-          debitUSDOFR: d.drUSDOFR.toString(),
-          creditUSDOFR: d.crUSDOFR.toString(),
-          debitExOFR: d.drLLOFR.toString(),
-          creditExOFR: d.crLLOFR.toString(),
-          description: d.description || "",
-          documentNbr: d.docNbr || "",
-        }))
+        jv.details.map((d) => {
+          // Unified ID and Number from account/supplier/customer
+          const entityId = d.accountId || d.supplierId || d.customerId || null;
+          const entityNumber =
+            d.account?.accountNumber ||
+            d.supplier?.supplierAccountNumber || // assuming supplierNumber exists
+            d.customer?.customerAccountNumber || // assuming customerNumber exists
+            "";
+          const entityName =
+            d.account?.accountName ||
+            d.supplier?.supplierName ||
+            d.customer?.customerName ||
+            "";
+
+          return {
+            accountId: entityId,
+            accountNumber: entityNumber,
+            accountName: entityName,
+            type: d.jvType,
+            currency: d.currency || "",
+            debit: d.dr.toString(),
+            credit: d.cr.toString(),
+            debitOFR: d.drOFR.toString(),
+            creditOFR: d.crOFR.toString(),
+            exchangeRate: d.exRateUSD.toString(),
+            exchangeRateEURtoUSD: d.exRateEUROToUSD.toString(),
+            debitUSD: d.drUSD.toString(),
+            creditUSD: d.crUSD.toString(),
+            debitEx: d.drLL.toString(),
+            creditEx: d.crLL.toString(),
+            debitUSDOFR: d.drUSDOFR.toString(),
+            creditUSDOFR: d.crUSDOFR.toString(),
+            debitExOFR: d.drLLOFR.toString(),
+            creditExOFR: d.crLLOFR.toString(),
+            description: d.description || "",
+            documentNbr: d.docNbr || "",
+          };
+        })
       );
     } catch (error) {
       console.error("Error fetching journal voucher by ID:", error);
