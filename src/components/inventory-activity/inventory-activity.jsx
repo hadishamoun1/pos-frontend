@@ -76,6 +76,7 @@ const InventoryActivityPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const pageSize = 30;
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const defaultColumns = useMemo(
     () => [
@@ -105,8 +106,20 @@ const InventoryActivityPage = () => {
         if (Array.isArray(data.data)) {
           setRows((prev) => (append ? [...prev, ...data.data] : data.data));
           setTotals(data.totals || totals);
-          setHasMore(data.data.length === pageSize);
+          setTotalRecords(data.totalRecords || 0);
+
           setColumnOrder(defaultColumns.map((col) => col.accessor));
+
+          const shown = append
+            ? rows.length + data.data.length
+            : data.data.length;
+          console.log("Total Records from API:", data.totalRecords);
+          console.log("Rows currently shown:", shown);
+          console.log("Remaining Records:", data.totalRecords - shown);
+
+          setHasMore(data.totalRecords > shown);
+        } else {
+          setHasMore(false);
         }
       })
       .catch(console.error);
@@ -144,16 +157,53 @@ const InventoryActivityPage = () => {
   };
 
   const loadMore = () => {
+    const remaining = totalRecords - rows.length;
+    if (remaining <= 0) {
+      console.log("✅ All records loaded, stopping loadMore");
+      setHasMore(false);
+      return;
+    }
+
     const nextPage = page + 1;
-    setPage(nextPage);
+    const nextPageSize = Math.min(pageSize, remaining);
+    console.log(`🔵 Loading page ${nextPage} with pageSize ${nextPageSize}`);
+
     const query = activeFilters
       .map((f) => `${f.key}=${encodeURIComponent(f.value)}`)
       .join("&");
+
     const url =
       activeFilters.length > 0
-        ? `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=${nextPage}&pageSize=${pageSize}`
-        : `http://localhost:3000/inventory-transactions/activity?page=${nextPage}&pageSize=${pageSize}`;
-    fetchData(url, true);
+        ? `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=${nextPage}&pageSize=${nextPageSize}`
+        : `http://localhost:3000/inventory-transactions/activity?page=${nextPage}&pageSize=${nextPageSize}`;
+
+    console.log(`🟡 Fetching URL: ${url}`);
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(`🟢 Fetched ${data.data.length} records from API`);
+        console.log(`📝 Total Records Reported by API: ${data.totalRecords}`);
+        setTotalRecords(data.totalRecords || 0);
+        if (Array.isArray(data.data) && data.data.length > 0) {
+          setRows((prev) => {
+            const updatedRows = [...prev, ...data.data];
+
+            if (updatedRows.length >= data.totalRecords) {
+              setHasMore(false);
+            }
+            return updatedRows;
+          });
+          setTotals(data.totals || totals);
+          setPage(nextPage);
+        } else {
+          console.log("🚫 No records fetched, disabling Load More");
+          setHasMore(false);
+        }
+      })
+      .catch((err) => {
+        console.error("❌ Error while fetching data:", err);
+      });
   };
 
   const data = useMemo(() => {
@@ -162,6 +212,8 @@ const InventoryActivityPage = () => {
       name: `${r.thickness} ملم ${r.itemName}`,
       condition: r.itemBatch?.condition || "—",
       batchDate: r.itemBatch?.dateReceived || "—",
+      thickness: r.thickness,
+      itemName: r.itemName,
       dimension:
         r.itemType === "box" && r.sheetsPerBox
           ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
@@ -221,13 +273,18 @@ const InventoryActivityPage = () => {
 
   const addFilter = (column, value, record) => {
     let filter = {};
-    if (column === "name" && record.itemVariantId) {
-      filter = { key: "itemVariantId", value: record.itemVariantId };
+    if (column === "name" && record.thickness && record.itemName) {
+      filter = {
+        key: "itemNameWithThickness",
+        value: `${record.thickness}|${record.itemName}`,
+      };
     } else if (column === "condition" && record.itemBatch?.id) {
-      filter = { key: "itemBatchId", value: record.itemBatch.id };
+      filter = { key: "condition", value: record.itemBatch.condition };
     } else {
       filter = { key: column, value: value };
     }
+
+    console.log("Applied filter:", filter); // ✅ Add here
     if (
       !activeFilters.find(
         (f) => f.key === filter.key && f.value === filter.value
