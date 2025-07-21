@@ -424,8 +424,8 @@ const JournalVoucherPage = () => {
           const entityId = d.accountId || d.supplierId || d.customerId || null;
           const entityNumber =
             d.account?.accountNumber ||
-            d.supplier?.supplierAccountNumber || // assuming supplierNumber exists
-            d.customer?.customerAccountNumber || // assuming customerNumber exists
+            d.supplier?.supplierAccountNumber ||
+            d.customer?.customerAccountNumber || 
             "";
           const entityName =
             d.account?.accountName ||

@@ -1,47 +1,190 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./pricingTable.css";
 
+const pageSize = 5;
+
 const PricingTable = () => {
+  const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [customerInput, setCustomerInput] = useState("");
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
-  const data = [
-    {
-      invoiceDate: "2025-03-26",
-      invoiceNumber: "INV-001",
-      origin: "Kaveh",
-      item: "5.5mm Clear",
-      type: "Box",
-      box: 10,
-      sheet: 100,
-      sqm: 250.5,
-      price: 15,
-      vat: `${10}%`,
-      total: 4132.5,
-    },
-    {
-      invoiceDate: "2025-03-27",
-      invoiceNumber: "INV-002",
-      origin: "AGC",
-      item: "6ملم تريبلكس برونز",
-      type: "Sheet",
-      box: "-",
-      sheet: 40,
-      sqm: 85,
-      price: 17,
-      vat: `${8}%`,
-      total: 1564.2,
-    },
-  ];
+  useEffect(() => {
+    if (selectedCustomerId) loadInitialData();
+  }, [selectedCustomerId]);
 
-  const filteredData = data.filter((row) =>
-    Object.values(row).some((val) =>
-      val.toString().toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const fetchCustomers = async (query) => {
+    try {
+      const res = await axios.get(`http://localhost:3000/customers/v1/search`, {
+        params: { query },
+      });
+      setCustomerSuggestions(res.data);
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+    }
+  };
+
+  const handleCustomerInputChange = (e) => {
+    const query = e.target.value;
+    setCustomerInput(query);
+    if (query.length > 1) fetchCustomers(query);
+    else setCustomerSuggestions([]);
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomerId(customer.id);
+    setCustomerInput(customer.customerName);
+    setCustomerSuggestions([]);
+  };
+
+  const handleKeyDown = (e) => {
+    if (customerSuggestions.length === 0) return;
+    if (e.key === "ArrowDown")
+      setHighlightedIndex((prev) =>
+        prev < customerSuggestions.length - 1 ? prev + 1 : prev
+      );
+    else if (e.key === "ArrowUp")
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    else if (e.key === "Enter" && highlightedIndex !== -1)
+      handleCustomerSelect(customerSuggestions[highlightedIndex]);
+  };
+
+  const loadInitialData = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:3000/invoices/v1/browsing/${selectedCustomerId}`
+      );
+      setGroups(res.data);
+    } catch (err) {
+      console.error("Error loading pricing data:", err);
+    }
+  };
+
+  const loadMore = async (groupKey, currentPage) => {
+    try {
+      const nextPage = currentPage + 1;
+      const res = await axios.get(
+        `http://localhost:3000/invoices/v1/browsing/${selectedCustomerId}`,
+        {
+          params: { groupKey, page: nextPage, limit: pageSize },
+        }
+      );
+
+      setGroups((prev) =>
+        prev.map((grp) => {
+          if (grp.groupKey === groupKey) {
+            // ✅ Append only the new page, not overwrite
+            return {
+              ...grp,
+              page: nextPage,
+              items: [...grp.items, ...res.data.items],
+              total: res.data.total,
+            };
+          }
+          return grp;
+        })
+      );
+    } catch (err) {
+      console.error("Error loading more:", err);
+    }
+  };
+
+  const renderTableRows = () => {
+    return groups.flatMap((grp) => {
+      const rows = grp.items.map((item, index) => (
+        <tr
+          key={`${grp.groupKey}-${index}`}
+          className={index === 0 ? "latest-item-row" : ""}
+        >
+          <td>{item.invoiceDate}</td>
+          <td>{item.invoiceNumber}</td>
+          <td>{item.origin}</td>
+          <td>{`${parseFloat(item.thickness)} ملم ${item.itemName}`}</td>
+          <td>{item.type}</td>
+          <td>{item.box}</td>
+          <td>{item.sheet}</td>
+          <td>{item.sqm}</td>
+          <td>{item.unitPrice}</td>
+          <td>{item.vat}</td>
+          <td>{item.totalAmount}</td>
+        </tr>
+      ));
+
+      if (grp.items.length < grp.total) {
+        rows.push(
+          <tr key={`${grp.groupKey}-loadmore`}>
+            <td colSpan={11}>
+              <button
+                onClick={() => loadMore(grp.groupKey, grp.page)}
+                className="load-more-btn"
+              >
+                Load more ({grp.items.length}/{grp.total})
+              </button>
+            </td>
+          </tr>
+        );
+      }
+
+      // ✅ Add a spacer row between groups
+      rows.push(
+        <tr key={`${grp.groupKey}-spacer`} className="group-spacer-row">
+          <td colSpan={11}></td>
+        </tr>
+      );
+
+      return rows;
+    });
+  };
+
+  const filteredRows = renderTableRows().filter((row) => {
+    if (typeof row.key === "string" && row.key.includes("loadmore"))
+      return true;
+    return (
+      !searchTerm ||
+      (typeof row.props?.children === "object" &&
+        row.props.children.some((cell) =>
+          cell.props.children
+            ?.toString()
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        ))
+    );
+  });
 
   return (
     <div className="pricing-table-container">
       <div className="pricing-table-content">
+        <div className="pos-page-customer-name-row">
+          <label className="pos-page-customer-name-label">Customer Name</label>
+          <div className="pos-page-customer-search-container">
+            <input
+              type="text"
+              value={customerInput}
+              onChange={handleCustomerInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Search Customer Name"
+              className="pos-page-customer-name-input"
+            />
+
+            {customerSuggestions.length > 0 && (
+              <ul className="customer-suggestions-dropdown">
+                {customerSuggestions.map((customer, index) => (
+                  <li
+                    key={customer.id}
+                    className={index === highlightedIndex ? "selected" : ""}
+                    onClick={() => handleCustomerSelect(customer)}
+                  >
+                    {customer.customerName}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
         <input
           type="text"
           placeholder="Search by any field"
@@ -67,23 +210,7 @@ const PricingTable = () => {
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredData.map((row, index) => (
-                <tr key={index}>
-                  <td>{row.invoiceDate}</td>
-                  <td>{row.invoiceNumber}</td>
-                  <td>{row.origin}</td>
-                  <td>{row.item}</td>
-                  <td>{row.type}</td>
-                  <td>{row.box}</td>
-                  <td>{row.sheet}</td>
-                  <td>{row.sqm}</td>
-                  <td>{row.price}</td>
-                  <td>{row.vat}</td>
-                  <td>{row.total}</td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody>{filteredRows}</tbody>
           </table>
         </div>
       </div>
