@@ -1,0 +1,196 @@
+/* Backdrop */
+.receipt-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+}
+
+/* Preview Wrapper scales only the preview */
+.receipt-preview-wrapper {
+  transform: scale(0.6);
+  transform-origin: center center;
+}
+
+/* Paper - Actual A3 Size */
+.receipt-paper {
+  width: 297mm;
+  height: 420mm;
+  background: white;
+  padding: 3mm;
+  box-sizing: border-box;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Buttons */
+.top-right-controls {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 100000;
+}
+
+.download-btn-fixed {
+  background: #28a745;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.download-btn-fixed:hover {
+  background: #1e7e34;
+}
+
+.modal-close-btn-fixed {
+  background: #dc3545;
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-close-btn-fixed:hover {
+  background: #b02a37;
+}
+
+/* Header */
+.receipt-header-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.Reciept-Txt {
+  font-size: 30pt;
+  font-weight: bold;
+}
+
+/* Info Box */
+.receipt-info-box {
+  border: 2px solid #000;
+  padding: 2mm;
+  margin-top: 2mm;
+  display: flex;
+  flex-direction: column;
+  gap: 2mm;
+}
+
+.info-box-stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  margin-left: 10px; /* optional for padding inside the box */
+}
+.info-row {
+  margin-right: 7mm;
+}
+
+.info-box-stacked .info-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 14pt;
+}
+
+/* Main Box */
+.receipt-main-box {
+  border: 2px solid #000;
+  padding: 5mm;
+  margin-top: 2mm;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  height: 350px;
+}
+
+.main-row,
+.sum-words,
+.bank-section {
+  font-size: 14pt;
+}
+
+.with-bank {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10mm;
+}
+
+.for-section {
+  font-size: 14pt;
+}
+
+.for-line {
+  border-bottom: 2px solid black;
+  height: 2mm;
+  margin-top: 2mm;
+}
+
+.signature-container-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.signature-text {
+  font-size: 16pt;
+  margin-bottom: 2mm;
+  text-align: center;
+  width: 30%;
+}
+
+.signature-line {
+  border-bottom: 2px solid black;
+  width: 30%;
+  height: 2mm;
+}
+
+/* ✅ Print Mode - Remove scaling */
+.printing-mode {
+  transform: none !important;
+  box-shadow: none !important;
+}
+.with-usd-value {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+.usd-value {
+  font-weight: bold;
+  font-size: 14pt;
+}
+.special-container {
+  border: 0.5px solid rgb(97, 97, 97);
+  padding: 2mm;
+  text-align: flex-start;
+  font-weight: normal;
+  height: 150px;
+}
+@media print {
+  .top-right-controls {
+    display: none !important;
+  }
+
+  .receipt-modal-backdrop {
+    background: none !important;
+    position: static !important;
+    box-shadow: none !important;
+  }
+
+  body {
+    overflow: visible !important;
+    margin: 0 !important;
+  }
+}

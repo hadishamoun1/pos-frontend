@@ -721,7 +721,7 @@ const PurchasesInvoicePage = () => {
             />
 
             <label>
-              Date
+              Recieved Date
               <input
                 type="date"
                 value={inputedDate}

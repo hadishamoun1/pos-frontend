@@ -6,6 +6,7 @@ import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";
 import axios from "axios";
 import io from "socket.io-client";
+import RctPaper from "./rctPreview";
 
 const AccountingPage = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -19,6 +20,7 @@ const AccountingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [receiptPreviewRecord, setReceiptPreviewRecord] = useState(null);
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -171,140 +173,159 @@ const AccountingPage = () => {
     );
   };
 
+  const handlePreviewReceipt = (record) => {
+    setReceiptPreviewRecord(record);
+  };
+
   return (
-    <div className="accounting-container">
-      <div className="accounting-section top-section">
-        <div className="top-toolbar">
-          <input
-            type="text"
-            placeholder="Search by Customer, Ref Invoice, JV#, Comments or PMT"
-            className="search-input"
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-          <div className="button-group">
-            <button className="action-button" onClick={openNewModal}>
-              New
-            </button>
-            <button className="action-button" onClick={openEditModal}>
-              Edit
-            </button>
-            <button className="delete-button" onClick={openDeleteModal}>
-              Delete
-            </button>
+    <>
+      <div className="accounting-container">
+        <div className="accounting-section top-section">
+          <div className="top-toolbar">
+            <input
+              type="text"
+              placeholder="Search by Customer, Ref Invoice, JV#, Comments or PMT"
+              className="search-input"
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+            <div className="button-group">
+              <button className="action-button" onClick={openNewModal}>
+                New
+              </button>
+              <button className="action-button" onClick={openEditModal}>
+                Edit
+              </button>
+              <button className="delete-button" onClick={openDeleteModal}>
+                Delete
+              </button>
+            </div>
           </div>
+
+          {loading ? (
+            <p>Loading data...</p>
+          ) : error ? (
+            <p className="error-text">{error}</p>
+          ) : (
+            <table className="accounting-table">
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Customer Name</th>
+                  <th>Cur</th>
+                  <th>Ex Rate</th>
+                  <th>Amount Ex</th>
+                  <th>Cash Number</th>
+                  <th>Date</th>
+                  <th>Ref Invoice</th>
+                  <th>JV Number</th>
+                  <th>PMT Type</th>
+                  <th>Comments</th>
+                  <th>RCT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row, idx) => (
+                  <tr key={row.id}>
+                    <td>
+                      <input
+                        type="radio"
+                        name="selectedRow"
+                        checked={selectedRowIndex === idx}
+                        onChange={() => setSelectedRowIndex(idx)}
+                      />
+                    </td>
+                    <td>{row.customerName}</td>
+                    <td>{row.currency}</td>
+                    <td>{row.exchangeRate}</td>
+                    <td>{formatNumberWithCommas(row.amountExchanged)}</td>
+                    <td>{formatNumberWithCommas(row.cashNumber)}</td>
+                    <td>{row.date}</td>
+                    <td>{row.refInvoice}</td>
+                    <td>{row.invoiceNumber}</td>
+                    <td>{row.pmtType}</td>
+                    <td>{row.comments}</td>
+                    <td>
+                      <button
+                        className="receipt-preview-button"
+                        onClick={() => handlePreviewReceipt(row)}
+                      >
+                        Receipt
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {loading ? (
-          <p>Loading data...</p>
-        ) : error ? (
-          <p className="error-text">{error}</p>
-        ) : (
-          <table className="accounting-table">
-            <thead>
-              <tr>
-                <th>Select</th>
-                <th>Customer Name</th>
-                <th>Cur</th>
-                <th>Ex Rate</th>
-                <th>Amount Ex</th>
-                <th>Cash Number</th>
-                <th>Date</th>
-                <th>Ref Invoice</th>
-                <th>JV Number</th>
-                <th>PMT Type</th>
-                <th>Comments</th>
-                <th>RCT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((row, idx) => (
-                <tr key={row.id}>
-                  <td>
-                    <input
-                      type="radio"
-                      name="selectedRow"
-                      checked={selectedRowIndex === idx}
-                      onChange={() => setSelectedRowIndex(idx)}
-                    />
-                  </td>
-                  <td>{row.customerName}</td>
-                  <td>{row.currency}</td>
-                  <td>{row.exchangeRate}</td>
-                  <td>{formatNumberWithCommas(row.amountExchanged)}</td>
-                  <td>{formatNumberWithCommas(row.cashNumber)}</td>
-                  <td>{row.date}</td>
-                  <td>{row.refInvoice}</td>
-                  <td>{row.invoiceNumber}</td>
-                  <td>{row.pmtType}</td>
-                  <td>{row.comments}</td>
-                  <td>{row.rct}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {isNewModalOpen && (
+          <NewRecordModal
+            onClose={closeNewModal}
+            onSave={(created) => {
+              setData((d) => [...d, ...created]);
+              setFilteredData((d) => [...d, ...created]);
+              closeNewModal();
+            }}
+          />
+        )}
+        {isEditModalOpen && selectedRow && (
+          <EditRecordModal
+            selectedRow={selectedRow}
+            onClose={closeEditModal}
+            onSave={(updated) => {
+              const idx = data.findIndex((r) => r.id === updated.id);
+              if (idx > -1) {
+                const copy = [...data];
+                copy[idx] = {
+                  ...copy[idx],
+                  date: updated.date.slice(0, 10),
+                  customerName: updated.customerName,
+                  customerAccountId: updated.customerid,
+                  currency: updated.currency,
+                  exchangeRate: updated.exchangeRate,
+                  cashNumber: updated.cashNumber,
+                  amountExchanged: updated.amountExchanged,
+                  refInvoice: updated.invoiceId,
+                  invoiceNumber: updated.jvNumber,
+                  pmtType: updated.pmtType,
+                  comments: updated.comments,
+                  rct: updated.jvNumber,
+                  type: updated.type,
+                };
+                setData(copy);
+                setFilteredData(copy);
+              }
+              closeEditModal();
+            }}
+          />
+        )}
+        {isDeleteModalOpen && (
+          <NotificationModal
+            type="warning"
+            message="Are you sure you want to delete this entry?"
+            onClose={closeDeleteModal}
+            onConfirm={handleDelete}
+            confirmLabel="Yes"
+            cancelLabel="No"
+          />
+        )}
+        {notification && (
+          <NotificationModal
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />
         )}
       </div>
-
-      {isNewModalOpen && (
-        <NewRecordModal
-          onClose={closeNewModal}
-          onSave={(created) => {
-            setData((d) => [...d, ...created]);
-            setFilteredData((d) => [...d, ...created]);
-            closeNewModal();
-          }}
+      {receiptPreviewRecord && (
+        <RctPaper
+          record={receiptPreviewRecord}
+          onClose={() => setReceiptPreviewRecord(null)}
         />
       )}
-      {isEditModalOpen && selectedRow && (
-        <EditRecordModal
-          selectedRow={selectedRow}
-          onClose={closeEditModal}
-          onSave={(updated) => {
-            const idx = data.findIndex((r) => r.id === updated.id);
-            if (idx > -1) {
-              const copy = [...data];
-              copy[idx] = {
-                ...copy[idx],
-                date: updated.date.slice(0, 10),
-                customerName: updated.customerName,
-                customerAccountId: updated.customerid,
-                currency: updated.currency,
-                exchangeRate: updated.exchangeRate,
-                cashNumber: updated.cashNumber,
-                amountExchanged: updated.amountExchanged,
-                refInvoice: updated.invoiceId,
-                invoiceNumber: updated.jvNumber,
-                pmtType: updated.pmtType,
-                comments: updated.comments,
-                rct: updated.jvNumber,
-                type: updated.type,
-              };
-              setData(copy);
-              setFilteredData(copy);
-            }
-            closeEditModal();
-          }}
-        />
-      )}
-      {isDeleteModalOpen && (
-        <NotificationModal
-          type="warning"
-          message="Are you sure you want to delete this entry?"
-          onClose={closeDeleteModal}
-          onConfirm={handleDelete}
-          confirmLabel="Yes"
-          cancelLabel="No"
-        />
-      )}
-      {notification && (
-        <NotificationModal
-          type={notification.type}
-          message={notification.message}
-          onClose={() => setNotification(null)}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
