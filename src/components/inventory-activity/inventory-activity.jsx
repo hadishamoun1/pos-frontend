@@ -218,45 +218,53 @@ const InventoryActivityPage = () => {
 
   const data = useMemo(
     () =>
-      sortedRows.map((r) => ({
-        // ← NEW: map the four description fields
-        category: r.description?.categoryName ?? "—",
-        subCategory: r.description?.subCategory ?? "—",
-        color: r.description?.colorName ?? "—",
-        design: r.description?.designName ?? "—",
+      sortedRows.map((r) => {
+        // pick category/subCategory from flat fields if present,
+        // otherwise fall back to nested description.*
+        const category = r.category ?? r.description?.categoryName ?? "—";
+        const subCategory = r.subCategory ?? r.description?.subCategory ?? "—";
+        const color = r.color ?? r.description?.colorName ?? "—";
+        const design = r.design ?? r.description?.designName ?? "—";
 
-        name: `${r.thickness} ملم ${r.itemName}`,
-        condition: r.itemBatch?.condition || "—",
-        batchDate: r.itemBatch?.dateReceived || "—",
-        dimension:
-          r.itemType === "box" && r.sheetsPerBox
-            ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
-            : `${r.length}×${r.width}`,
-        origin: r.origin,
-        quantity: r.quantity,
-        quantityofr: r.quantityofr,
-        sqm: typeof r.sqm === "number" ? r.sqm.toFixed(2) : r.sqm,
-        sqmofr: typeof r.sqmofr === "number" ? r.sqmofr.toFixed(2) : r.sqmofr,
-        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
-        finalcostofr:
-          r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
-        unit:
-          r.itemType === "box"
-            ? "Box"
-            : r.itemType === "sheet"
-            ? "Sheet"
-            : "SQM",
-        status:
-          r.transactionType === "purchase"
-            ? "Purchase"
-            : r.transactionType === "sale"
-            ? "Sales"
-            : r.transactionType || "-",
-        date: r.invoiceDate || "—",
-        invoiceNo: r.invoiceNumber || "—",
-        itemVariantId: r.itemVariantId,
-        itemBatch: r.itemBatch,
-      })),
+        return {
+          category,
+          subCategory,
+          color,
+          design,
+
+          name: `${r.thickness} ملم ${r.itemName}`,
+          condition: r.itemBatch?.condition || "—",
+          batchDate: r.itemBatch?.dateReceived || "—",
+          dimension:
+            r.itemType === "box" && r.sheetsPerBox
+              ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
+              : `${r.length}×${r.width}`,
+          origin: r.origin,
+          quantity: r.quantity,
+          quantityofr: r.quantityofr,
+          sqm: typeof r.sqm === "number" ? r.sqm.toFixed(2) : r.sqm,
+          sqmofr: typeof r.sqmofr === "number" ? r.sqmofr.toFixed(2) : r.sqmofr,
+          finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
+          finalcostofr:
+            r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
+          unit:
+            r.itemType === "box"
+              ? "Box"
+              : r.itemType === "sheet"
+              ? "Sheet"
+              : "SQM",
+          status:
+            r.transactionType === "purchase"
+              ? "Purchase"
+              : r.transactionType === "sale"
+              ? "Sales"
+              : r.transactionType || "-",
+          date: r.invoiceDate || "—",
+          invoiceNo: r.invoiceNumber || "—",
+          itemVariantId: r.itemVariantId,
+          itemBatch: r.itemBatch,
+        };
+      }),
     [sortedRows]
   );
 
@@ -293,23 +301,37 @@ const InventoryActivityPage = () => {
   }, [contextMenu, sortMenu]);
 
   const addFilter = (column, value, record, op = "eq") => {
-    let key, val;
-    if (column === "name") {
+    let key;
+    let val;
+
+    // 1) Category column
+    if (column === "category") {
+      key = "category";
+      val = record.category;
+
+      // 2) Subcategory column
+    } else if (column === "subCategory") {
+      key = "subCategory";
+      val = record.subCategory;
+
+      // 3) Special name-column = itemNameWithThickness
+    } else if (column === "name") {
       key = "itemNameWithThickness";
       // record.name is like "8 ملم laminated clear"
       const [thStr, itemStr] = record.name.split(" ملم ");
       val = `${thStr}|${itemStr}`;
+
+      // 4) All other columns: either eq or Gt/Lt
     } else {
       key = op === "eq" ? column : `${column}${op}`;
-      val = value;
+      val = String(value);
     }
+
     const filter = { key, value: val };
-    if (
-      !activeFilters.find(
-        (f) => f.key === filter.key && f.value === filter.value
-      )
-    ) {
-      setActiveFilters((f) => [...f, filter]);
+
+    // Avoid duplicate filters
+    if (!activeFilters.some((f) => f.key === key && f.value === val)) {
+      setActiveFilters((prev) => [...prev, filter]);
     }
   };
   return (
