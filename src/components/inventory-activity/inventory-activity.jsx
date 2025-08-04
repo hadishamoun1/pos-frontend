@@ -21,7 +21,7 @@ import { io } from "socket.io-client";
 
 const socket = io("http://localhost:3000");
 
-const DraggableColumnHeader = ({ column }) => {
+const DraggableColumnHeader = ({ column, onContextMenu }) => {
   const {
     attributes,
     listeners,
@@ -38,6 +38,7 @@ const DraggableColumnHeader = ({ column }) => {
     zIndex: isDragging ? 10 : undefined,
     backgroundColor: isDragging ? "#f0f8ff" : undefined,
     willChange: "transform",
+    overflow: "visible",
   };
 
   return (
@@ -47,6 +48,7 @@ const DraggableColumnHeader = ({ column }) => {
       style={style}
       {...attributes}
       {...listeners}
+      onContextMenu={onContextMenu}
     >
       {column.render("Header")}
     </th>
@@ -78,8 +80,20 @@ const InventoryActivityPage = () => {
   const pageSize = 30;
   const [totalRecords, setTotalRecords] = useState(0);
 
+  // for sorting via right-click menu
+  const [sortConfig, setSortConfig] = useState({
+    column: null,
+    direction: null,
+  });
+  const [sortMenu, setSortMenu] = useState({ visible: false, x: 0, y: 0 });
+
   const defaultColumns = useMemo(
     () => [
+      // ← NEW: four description columns at the very beginning
+      { Header: "Category", accessor: "category" },
+      { Header: "Subcategory", accessor: "subCategory" },
+
+      // existing columns follow
       { Header: "Item Name", accessor: "name" },
       { Header: "Condition", accessor: "condition" },
       { Header: "Batch Date", accessor: "batchDate" },
@@ -93,11 +107,28 @@ const InventoryActivityPage = () => {
       { Header: "Final Cost OFR", accessor: "finalcostofr" },
       { Header: "Unit", accessor: "unit" },
       { Header: "Status", accessor: "status" },
-      { Header: "Date", accessor: "date" },
+      { Header: "Date", accessor: "date", id: "date" },
       { Header: "Invoice #", accessor: "invoiceNo" },
     ],
     []
   );
+
+  // build URL with pagination, filters, and (optional) sort
+  const buildUrl = (pg, filters) => {
+    const params = new URLSearchParams();
+    params.set("page", pg);
+    params.set("pageSize", pageSize);
+    filters.forEach((f) => params.append(f.key, f.value));
+    if (sortConfig.column) {
+      params.set("sortBy", sortConfig.column);
+      params.set("sortDir", sortConfig.direction);
+    }
+    const base =
+      filters.length > 0 || sortConfig.column
+        ? "/inventory-transactions/activity/v1/filtered"
+        : "/inventory-transactions/activity";
+    return `http://localhost:3000${base}?${params.toString()}`;
+  };
 
   const fetchData = (url, append = false) => {
     fetch(url)
@@ -105,18 +136,19 @@ const InventoryActivityPage = () => {
       .then((data) => {
         if (Array.isArray(data.data)) {
           setRows((prev) => (append ? [...prev, ...data.data] : data.data));
-          setTotals(data.totals || totals);
-          setTotalRecords(data.totalRecords || 0);
-
+          if (data.totals) {
+            setTotals({
+              totalQuantity: Number(data.totals.totalQuantity) || 0,
+              totalQuantityOFR: Number(data.totals.totalQuantityOFR) || 0,
+              totalSQM: Number(data.totals.totalSQM) || 0,
+              totalSQMOFR: Number(data.totals.totalSQMOFR) || 0,
+            });
+          }
+          setTotalRecords(data.totalRecords ?? 0);
           setColumnOrder(defaultColumns.map((col) => col.accessor));
-
           const shown = append
             ? rows.length + data.data.length
             : data.data.length;
-          console.log("Total Records from API:", data.totalRecords);
-          console.log("Rows currently shown:", shown);
-          console.log("Remaining Records:", data.totalRecords - shown);
-
           setHasMore(data.totalRecords > shown);
         } else {
           setHasMore(false);
@@ -125,121 +157,108 @@ const InventoryActivityPage = () => {
       .catch(console.error);
   };
 
+  // update socket listener to coerce totals
   useEffect(() => {
-    fetchData(
-      `http://localhost:3000/inventory-transactions/activity?page=${page}&pageSize=${pageSize}`
-    );
     socket.on("inventoryActivityUpdate", (data) => {
       if (Array.isArray(data.data)) {
         setRows(data.data);
-        setTotals(data.totals || totals);
+        if (data.totals) {
+          setTotals({
+            totalQuantity: Number(data.totals.totalQuantity) || 0,
+            totalQuantityOFR: Number(data.totals.totalQuantityOFR) || 0,
+            totalSQM: Number(data.totals.totalSQM) || 0,
+            totalSQMOFR: Number(data.totals.totalSQMOFR) || 0,
+          });
+        }
       }
     });
     return () => socket.off("inventoryActivityUpdate");
-  }, [defaultColumns]);
+  }, []);
 
-  const applyFilters = () => {
-    const query = activeFilters
-      .map((f) => `${f.key}=${encodeURIComponent(f.value)}`)
-      .join("&");
-    setPage(1);
-    fetchData(
-      `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=1&pageSize=${pageSize}`
-    );
-  };
+  // merge server + client sort,
+  // but let the server handle the "date" column entirely
+  const sortedRows = useMemo(() => {
+    if (!Array.isArray(rows)) return [];
+    if (!sortConfig.column) return rows;
+    if (sortConfig.column === "date") {
+      return rows;
+    }
+    const dir = sortConfig.direction === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const key = sortConfig.column;
+      const na = Number(a[key]);
+      const nb = Number(b[key]);
+      if (!isNaN(na) && !isNaN(nb)) {
+        return dir * (na - nb);
+      }
+      return dir * String(a[key] ?? "").localeCompare(String(b[key] ?? ""));
+    });
+  }, [rows, sortConfig]);
 
+  // initial fetch & on page/filters/sort change
+  useEffect(() => {
+    const url = buildUrl(page, activeFilters);
+    fetchData(url, page > 1);
+  }, [page, activeFilters, sortConfig]);
+
+  const applyFilters = () => setPage(1);
   const cancelFilters = () => {
     setActiveFilters([]);
+    setSortConfig({ column: null, direction: null });
     setPage(1);
-    fetchData(
-      `http://localhost:3000/inventory-transactions/activity?page=1&pageSize=${pageSize}`
-    );
   };
-
   const loadMore = () => {
     const remaining = totalRecords - rows.length;
     if (remaining <= 0) {
-      console.log("✅ All records loaded, stopping loadMore");
       setHasMore(false);
       return;
     }
-
-    const nextPage = page + 1;
-    const nextPageSize = Math.min(pageSize, remaining);
-    console.log(`🔵 Loading page ${nextPage} with pageSize ${nextPageSize}`);
-
-    const query = activeFilters
-      .map((f) => `${f.key}=${encodeURIComponent(f.value)}`)
-      .join("&");
-
-    const url =
-      activeFilters.length > 0
-        ? `http://localhost:3000/inventory-transactions/activity/v1/filtered?${query}&page=${nextPage}&pageSize=${nextPageSize}`
-        : `http://localhost:3000/inventory-transactions/activity?page=${nextPage}&pageSize=${nextPageSize}`;
-
-    console.log(`🟡 Fetching URL: ${url}`);
-
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(`🟢 Fetched ${data.data.length} records from API`);
-        console.log(`📝 Total Records Reported by API: ${data.totalRecords}`);
-        setTotalRecords(data.totalRecords || 0);
-        if (Array.isArray(data.data) && data.data.length > 0) {
-          setRows((prev) => {
-            const updatedRows = [...prev, ...data.data];
-
-            if (updatedRows.length >= data.totalRecords) {
-              setHasMore(false);
-            }
-            return updatedRows;
-          });
-          setTotals(data.totals || totals);
-          setPage(nextPage);
-        } else {
-          console.log("🚫 No records fetched, disabling Load More");
-          setHasMore(false);
-        }
-      })
-      .catch((err) => {
-        console.error("❌ Error while fetching data:", err);
-      });
+    setPage((p) => p + 1);
   };
 
-  const data = useMemo(() => {
-    if (!Array.isArray(rows)) return [];
-    return rows.map((r) => ({
-      name: `${r.thickness} ملم ${r.itemName}`,
-      condition: r.itemBatch?.condition || "—",
-      batchDate: r.itemBatch?.dateReceived || "—",
-      thickness: r.thickness,
-      itemName: r.itemName,
-      dimension:
-        r.itemType === "box" && r.sheetsPerBox
-          ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
-          : `${r.length}×${r.width}`,
-      origin: r.origin,
-      quantity: r.quantity,
-      quantityofr: r.quantityofr,
-      sqm: r.sqm.toFixed(2),
-      sqmofr: r.sqmofr.toFixed(2),
-      finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
-      finalcostofr:
-        r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
-      unit:
-        r.itemType === "box" ? "Box" : r.itemType === "sheet" ? "Sheet" : "SQM",
-      status:
-        r.transactionType === "purchase"
-          ? "Purchase"
-          : r.transactionType === "sale"
-          ? "Sales"
-          : r.transactionType || "-",
-      date: r.invoiceDate || "—",
-      invoiceNo: r.invoiceNumber || "—",
-      itemVariantId: r.itemVariantId,
-      itemBatch: r.itemBatch,
-    }));
-  }, [rows]);
+  const data = useMemo(
+    () =>
+      sortedRows.map((r) => ({
+        // ← NEW: map the four description fields
+        category: r.description?.categoryName ?? "—",
+        subCategory: r.description?.subCategory ?? "—",
+        color: r.description?.colorName ?? "—",
+        design: r.description?.designName ?? "—",
+
+        name: `${r.thickness} ملم ${r.itemName}`,
+        condition: r.itemBatch?.condition || "—",
+        batchDate: r.itemBatch?.dateReceived || "—",
+        dimension:
+          r.itemType === "box" && r.sheetsPerBox
+            ? `${r.length}×${r.width}-0${r.sheetsPerBox}`
+            : `${r.length}×${r.width}`,
+        origin: r.origin,
+        quantity: r.quantity,
+        quantityofr: r.quantityofr,
+        sqm: typeof r.sqm === "number" ? r.sqm.toFixed(2) : r.sqm,
+        sqmofr: typeof r.sqmofr === "number" ? r.sqmofr.toFixed(2) : r.sqmofr,
+        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
+        finalcostofr:
+          r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
+        unit:
+          r.itemType === "box"
+            ? "Box"
+            : r.itemType === "sheet"
+            ? "Sheet"
+            : "SQM",
+        status:
+          r.transactionType === "purchase"
+            ? "Purchase"
+            : r.transactionType === "sale"
+            ? "Sales"
+            : r.transactionType || "-",
+        date: r.invoiceDate || "—",
+        invoiceNo: r.invoiceNumber || "—",
+        itemVariantId: r.itemVariantId,
+        itemBatch: r.itemBatch,
+      })),
+    [sortedRows]
+  );
 
   const {
     getTableProps,
@@ -262,38 +281,37 @@ const InventoryActivityPage = () => {
     }
   };
 
+  // close menus on outside click
   useEffect(() => {
-    const closeMenu = () => {
+    const closeMenus = () => {
       if (contextMenu.visible)
         setContextMenu({ ...contextMenu, visible: false });
+      if (sortMenu.visible) setSortMenu({ ...sortMenu, visible: false });
     };
-    window.addEventListener("click", closeMenu);
-    return () => window.removeEventListener("click", closeMenu);
-  }, [contextMenu]);
+    window.addEventListener("click", closeMenus);
+    return () => window.removeEventListener("click", closeMenus);
+  }, [contextMenu, sortMenu]);
 
-  const addFilter = (column, value, record) => {
-    let filter = {};
-    if (column === "name" && record.thickness && record.itemName) {
-      filter = {
-        key: "itemNameWithThickness",
-        value: `${record.thickness}|${record.itemName}`,
-      };
-    } else if (column === "condition" && record.itemBatch?.id) {
-      filter = { key: "condition", value: record.itemBatch.condition };
+  const addFilter = (column, value, record, op = "eq") => {
+    let key, val;
+    if (column === "name") {
+      key = "itemNameWithThickness";
+      // record.name is like "8 ملم laminated clear"
+      const [thStr, itemStr] = record.name.split(" ملم ");
+      val = `${thStr}|${itemStr}`;
     } else {
-      filter = { key: column, value: value };
+      key = op === "eq" ? column : `${column}${op}`;
+      val = value;
     }
-
-    console.log("Applied filter:", filter); // ✅ Add here
+    const filter = { key, value: val };
     if (
       !activeFilters.find(
         (f) => f.key === filter.key && f.value === filter.value
       )
     ) {
-      setActiveFilters([...activeFilters, filter]);
+      setActiveFilters((f) => [...f, filter]);
     }
   };
-
   return (
     <div className="inventory-activity-page">
       <div className="inventory-activity-header-bar">
@@ -314,6 +332,43 @@ const InventoryActivityPage = () => {
         </div>
       </div>
 
+      {/* ▶️ Sort menu */}
+      {sortMenu.visible && (
+        <div
+          style={{
+            position: "fixed",
+            top: sortMenu.y,
+            left: sortMenu.x,
+            background: "#fff",
+            border: "1px solid #ccc",
+            zIndex: 2000,
+            padding: "5px",
+          }}
+        >
+          <div
+            style={{ padding: "4px", cursor: "pointer" }}
+            onClick={() => {
+              setSortConfig({ column: "date", direction: "asc" });
+              setSortMenu((v) => ({ ...v, visible: false }));
+              setPage(1);
+            }}
+          >
+            Sort A → Z
+          </div>
+          <div
+            style={{ padding: "4px", cursor: "pointer" }}
+            onClick={() => {
+              setSortConfig({ column: "date", direction: "desc" });
+              setSortMenu((v) => ({ ...v, visible: false }));
+              setPage(1);
+            }}
+          >
+            Sort Z → A
+          </div>
+        </div>
+      )}
+
+      {/* FILTER MENU */}
       {contextMenu.visible && (
         <div
           style={{
@@ -326,19 +381,89 @@ const InventoryActivityPage = () => {
             padding: "5px",
             cursor: "pointer",
           }}
-          onClick={() => {
-            addFilter(
-              contextMenu.column,
-              contextMenu.value,
-              contextMenu.record
-            );
-            setContextMenu({ ...contextMenu, visible: false });
-          }}
         >
-          Add "{contextMenu.value}" to Filters
+          <div
+            style={{ padding: "4px", cursor: "pointer" }}
+            onClick={() => {
+              addFilter(
+                contextMenu.column,
+                contextMenu.value,
+                contextMenu.record
+              );
+              setContextMenu({ ...contextMenu, visible: false });
+            }}
+          >
+            Add "{contextMenu.value}" to Filters
+          </div>
+
+          {contextMenu.column === "date" ? (
+            // only for the Date column: show Before / After
+            <>
+              <div
+                style={{ padding: "4px" }}
+                onClick={() => {
+                  addFilter(
+                    "date", // base column
+                    contextMenu.value, // e.g. "2025-07-21"
+                    contextMenu.record,
+                    "Lt" // will produce key: "dateLt"
+                  );
+                  setContextMenu({ ...contextMenu, visible: false });
+                }}
+              >
+                Before {contextMenu.value}
+              </div>
+              <div
+                style={{ padding: "4px" }}
+                onClick={() => {
+                  addFilter(
+                    "date",
+                    contextMenu.value,
+                    contextMenu.record,
+                    "Gt" // will produce key: "dateGt"
+                  );
+                  setContextMenu({ ...contextMenu, visible: false });
+                }}
+              >
+                After {contextMenu.value}
+              </div>
+            </>
+          ) : !isNaN(Number(contextMenu.value)) ? (
+            <>
+              <div
+                style={{ padding: "4px", cursor: "pointer" }}
+                onClick={() => {
+                  addFilter(
+                    contextMenu.column,
+                    contextMenu.value,
+                    contextMenu.record,
+                    "Gt"
+                  );
+                  setContextMenu({ ...contextMenu, visible: false });
+                }}
+              >
+                {contextMenu.column} &gt; {contextMenu.value}
+              </div>
+              <div
+                style={{ padding: "4px", cursor: "pointer" }}
+                onClick={() => {
+                  addFilter(
+                    contextMenu.column,
+                    contextMenu.value,
+                    contextMenu.record,
+                    "Lt"
+                  );
+                  setContextMenu({ ...contextMenu, visible: false });
+                }}
+              >
+                {contextMenu.column} &lt; {contextMenu.value}
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 
+      {/* ACTIVE FILTERS */}
       {activeFilters.length > 0 && (
         <div className="active-filters-bar">
           <strong>Active Filters:</strong>
@@ -361,6 +486,7 @@ const InventoryActivityPage = () => {
         </div>
       )}
 
+      {/* TABLE */}
       <div className="inventory-activity-container">
         <div className="inventory-activity-table-wrapper">
           <DndContext
@@ -374,14 +500,30 @@ const InventoryActivityPage = () => {
             >
               <table className="inventory-activity-table" {...getTableProps()}>
                 <thead>
-                  {headerGroups.map((headerGroup) => (
-                    <tr {...headerGroup.getHeaderGroupProps()}>
-                      {headerGroup.headers.map((column) => (
-                        <DraggableColumnHeader
-                          key={column.id}
-                          column={column}
-                        />
-                      ))}
+                  {headerGroups.map((hg) => (
+                    <tr {...hg.getHeaderGroupProps()}>
+                      {hg.headers.map((col) => {
+                        // right‑click Date header to sort
+                        if (col.id === "date") {
+                          return (
+                            <DraggableColumnHeader
+                              key={col.id}
+                              column={col}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setSortMenu({
+                                  visible: true,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                });
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <DraggableColumnHeader key={col.id} column={col} />
+                        );
+                      })}
                     </tr>
                   ))}
                 </thead>
@@ -415,28 +557,28 @@ const InventoryActivityPage = () => {
                 <tfoot>
                   <tr>
                     <td style={{ fontWeight: "bold" }}>Totals</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td />
+                    <td />
+                    <td />
+                    <td />
                     <td style={{ fontWeight: "bold", textAlign: "center" }}>
-                      {Number(totals.totalQuantity).toFixed(2)}
+                      {totals.totalQuantity.toFixed(2)}
                     </td>
                     <td style={{ fontWeight: "bold", textAlign: "center" }}>
-                      {Number(totals.totalQuantityOFR).toFixed(2)}
+                      {totals.totalQuantityOFR.toFixed(2)}
                     </td>
                     <td style={{ fontWeight: "bold", textAlign: "center" }}>
-                      {Number(totals.totalSQM).toFixed(2)}
+                      {totals.totalSQM.toFixed(2)}
                     </td>
                     <td style={{ fontWeight: "bold", textAlign: "center" }}>
-                      {Number(totals.totalSQMOFR).toFixed(2)}
+                      {totals.totalSQMOFR.toFixed(2)}
                     </td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td />
+                    <td />
+                    <td />
+                    <td />
+                    <td />
+                    <td />
                   </tr>
                 </tfoot>
               </table>

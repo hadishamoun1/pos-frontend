@@ -79,6 +79,7 @@
   border-collapse: collapse;
   background: #fff;
   border: 1px solid #ddd;
+  white-space: nowrap;
 }
 
 .inventory-activity-table th {

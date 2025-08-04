@@ -137,11 +137,21 @@ const UniqueItemsPage = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
+    // —— NEW: strip out any variants without an origin before sending ——
+    const payload = {
+      ...newItemData,
+      thicknesses: newItemData.thicknesses.map((th) => ({
+        thickness: th.thickness,
+        variants: th.variants.filter((v) => v.origin.trim() !== ""),
+      })),
+    };
+
     try {
       const response = await fetch(`${baseUrl}/items/v1/full`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItemData),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const newItem = await response.json();
@@ -189,7 +199,7 @@ const UniqueItemsPage = () => {
             <th>Subcategory</th>
             <th>Color</th>
             <th>Design</th>
-            <th >Item Name</th>
+            <th>Item Name</th>
             <th>Type</th>
             <th>Thickness(mm)</th>
             <th>Length(cm)</th>
