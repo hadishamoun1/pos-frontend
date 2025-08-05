@@ -1,4 +1,6 @@
-/* Overall Page Styling */
+/* ------------------------------------------ */
+/* Overall Page Styling                       */
+/* ------------------------------------------ */
 .unique-items-page {
   font-family: "Montserrat", sans-serif;
   margin: 2rem;
@@ -20,7 +22,9 @@
   font-weight: 700;
 }
 
-/* Search Bar Wrapper */
+/* ------------------------------------------ */
+/* Search Bar Wrapper                         */
+/* ------------------------------------------ */
 .search-bar-wrapper {
   display: flex;
   justify-content: center;
@@ -78,7 +82,9 @@
   transform: scale(1.05);
 }
 
-/* New Item Button */
+/* ------------------------------------------ */
+/* New Item Button                            */
+/* ------------------------------------------ */
 .new-item-button {
   position: absolute;
   right: 0;
@@ -100,7 +106,9 @@
   transform: scale(1.05);
 }
 
-/* Modal Styling */
+/* ------------------------------------------ */
+/* Modal Styling                              */
+/* ------------------------------------------ */
 .modal {
   position: fixed;
   top: 0;
@@ -127,7 +135,6 @@
   max-height: 90vh;
 }
 
-/* Modal Header */
 .modal-content h2 {
   margin-bottom: 1.5rem;
   text-align: center;
@@ -136,14 +143,15 @@
   color: #222;
 }
 
-/* Form Structure */
+/* ------------------------------------------ */
+/* Form Structure                             */
+/* ------------------------------------------ */
 .modal-content form {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 4 columns */
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem 1rem;
 }
 
-/* Form Fields */
 .modal-content form label {
   font-weight: 600;
   color: #444;
@@ -170,7 +178,6 @@
   outline: none;
 }
 
-/* Modal Buttons */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -215,7 +222,9 @@
   transform: scale(1.05);
 }
 
-/* Animations */
+/* ------------------------------------------ */
+/* Animations                                 */
+/* ------------------------------------------ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -236,7 +245,17 @@
   }
 }
 
-/* Table Styling */
+/* ------------------------------------------ */
+/* Table Wrapper (for horizontal scroll)      */
+/* ------------------------------------------ */
+.unique-items-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ------------------------------------------ */
+/* Table Styling                              */
+/* ------------------------------------------ */
 .unique-items-table {
   width: 100%;
   border-collapse: collapse;
@@ -245,6 +264,7 @@
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   background-color: #fff;
+  table-layout: fixed;
 }
 
 .unique-items-table th,
@@ -276,33 +296,42 @@
   transition: all 0.2s ease-in-out;
 }
 
-/* Responsive Design */
-@media screen and (max-width: 768px) {
+/* ------------------------------------------ */
+/* Desktop/Tablet Layout (>=769px)            */
+/* ------------------------------------------ */
+@media screen and (min-width: 769px) {
   .unique-items-table {
+    table-layout: fixed;
     width: 100%;
   }
+  .unique-items-table thead {
+    display: table-header-group;
+  }
+  .unique-items-table tbody {
+    display: table-row-group;
+  }
+  .unique-items-table tr {
+    display: table-row;
+  }
+  .unique-items-table th,
+  .unique-items-table td {
+    display: table-cell;
+  }
+}
 
+/* ------------------------------------------ */
+/* Mobile Layout (<768px)                     */
+/* ------------------------------------------ */
+@media screen and (max-width: 768px) {
   .unique-items-table th,
   .unique-items-table td {
     display: block;
   }
-
-  .unique-items-table th {
-    text-align: left;
-  }
-
-  .unique-items-table td {
-    border: none;
-    border-bottom: 1px solid #ddd;
-    padding: 1rem 0;
-  }
-
   .unique-items-table td:before {
     content: attr(data-label);
     float: left;
     font-weight: bold;
-    color: #333;
     margin-right: 1rem;
   }
-
+  /* (any other mobile-only tweaks go here) */
 }

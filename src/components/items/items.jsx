@@ -13,12 +13,7 @@ const UniqueItemsPage = () => {
     type: "box",
     descriptions: [
       {
-        categoryName: "",
-        subCategory: "",
-        colorName: "",
-        designName: "",
-      },
-      {
+        itemNumber: "", // ← NEW
         categoryName: "",
         subCategory: "",
         colorName: "",
@@ -54,17 +49,19 @@ const UniqueItemsPage = () => {
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
+  // ─── extracted fetch into its own function ──────────────────────────────────
+  const refreshItems = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/items/v1/filtered-items`);
+      const data = await response.json();
+      setItems(data);
+    } catch (error) {
+      console.error("Error fetching items:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${baseUrl}/items/v1/filtered-items`);
-        const data = await response.json();
-        setItems(data);
-      } catch (error) {
-        console.error("Error fetching items:", error);
-      }
-    };
-    fetchData();
+    refreshItems(); // ← initial load
   }, [baseUrl]);
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
@@ -76,6 +73,7 @@ const UniqueItemsPage = () => {
       type: "box",
       descriptions: [
         {
+          itemNumber: "",
           categoryName: "",
           subCategory: "",
           colorName: "",
@@ -124,6 +122,9 @@ const UniqueItemsPage = () => {
         updated.thicknesses[0].variants[variantIndex][name] = checked;
       } else if (name === "itemName") {
         updated.itemName = value;
+      } else if (name === "itemNumber") {
+        // NEW: handle the itemNumber field
+        updated.descriptions[index].itemNumber = value;
       } else if (
         ["categoryName", "subCategory", "colorName", "designName"].includes(
           name
@@ -138,7 +139,7 @@ const UniqueItemsPage = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    // —— NEW: strip out any variants without an origin before sending ——
+    // strip out any variants without an origin
     const payload = {
       ...newItemData,
       thicknesses: newItemData.thicknesses.map((th) => ({
@@ -154,8 +155,8 @@ const UniqueItemsPage = () => {
         body: JSON.stringify(payload),
       });
       if (response.ok) {
-        const newItem = await response.json();
-        setItems((prev) => [...prev, newItem]);
+        // ← replaced setItems([...]) with a fresh re-fetch
+        await refreshItems();
         setModalType("success");
       } else {
         setModalType("error");
@@ -192,66 +193,69 @@ const UniqueItemsPage = () => {
         </button>
       </div>
 
-      <table className="unique-items-table">
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Subcategory</th>
-            <th>Color</th>
-            <th>Design</th>
-            <th>Item Name</th>
-            <th>Type</th>
-            <th>Thickness(mm)</th>
-            <th>Length(cm)</th>
-            <th>Width(cm)</th>
-            <th>Sheets/Box</th>
-            <th>Origin</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredItems.map((item) =>
-            item.descriptions.length > 0
-              ? item.descriptions.map((desc, descIndex) =>
-                  item.thicknesses.map((thick) =>
-                    thick.variants.map((v, vIndex) => (
-                      <tr key={`${item.id}-${thick.id}-${v.id}-${desc.id}`}>
-                        <td>{desc.categoryName}</td>
-                        <td>{desc.subCategory}</td>
-                        <td>{desc.colorName}</td>
-                        <td>{desc.designName}</td>
-                        <td style={{ direction: "rtl", textAlign: "right" }}>
-                          {`${thick.thickness} ملم ${item.itemName}`}
-                        </td>
-                        <td>{item.type}</td>
-                        <td>{thick.thickness}</td>
-                        {item.type === "sqm" ? (
-                          <>
-                            <td>—</td>
-                            <td>—</td>
-                          </>
-                        ) : (
-                          <>
-                            <td>{v.length}</td>
-                            <td>{v.width}</td>
-                          </>
-                        )}
-                        <td>
-                          {item.type === "box"
-                            ? v.sheetsPerBox
-                            : item.type === "sheet"
-                            ? "—"
-                            : "—"}
-                        </td>
-                        <td>{v.origin}</td>
-                      </tr>
-                    ))
-                  )
-                )
-              : null
-          )}
-        </tbody>
-      </table>
+      {/* scrolling wrapper so <tbody> spans full width */}
+      <div className="unique-items-table-wrapper">
+        <table className="unique-items-table">
+          <thead>
+            <tr>
+              <th>Item Number</th>
+              <th>Category</th>
+              <th>Subcategory</th>
+              <th>Color</th>
+              <th>Design</th>
+              <th>Item Name</th>
+              <th>Type</th>
+              <th>Thickness(mm)</th>
+              <th>Length(cm)</th>
+              <th>Width(cm)</th>
+              <th>Sheets/Box</th>
+              <th>Origin</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredItems.map((item) =>
+              item.thicknesses.map((thick) =>
+                thick.variants.map((v) => {
+                  const d = v.itemNameDescription || {};
+                  return (
+                    <tr key={`${item.id}-${thick.id}-${v.id}`}>
+                      <td>{d.itemNumber || "—"}</td>
+                      <td>{d.categoryName || "—"}</td>
+                      <td>{d.subCategory || "—"}</td>
+                      <td>{d.colorName || "—"}</td>
+                      <td>{d.designName || "—"}</td>
+                      <td style={{ direction: "rtl", textAlign: "right" }}>
+                        {`${thick.thickness} ملم ${item.itemName}`}
+                      </td>
+                      <td>{item.type}</td>
+                      <td>{thick.thickness}</td>
+                      {item.type === "sqm" ? (
+                        <>
+                          <td>—</td>
+                          <td>—</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{v.length}</td>
+                          <td>{v.width}</td>
+                        </>
+                      )}
+                      <td>
+                        {item.type === "box"
+                          ? v.sheetsPerBox
+                          : item.type === "sheet"
+                          ? "—"
+                          : "—"}
+                      </td>
+                      <td>{v.origin}</td>
+                    </tr>
+                  );
+                })
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {showModal && (
         <div className="modal">
@@ -268,6 +272,7 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
+
               <label>
                 Type:
                 <select
@@ -280,6 +285,19 @@ const UniqueItemsPage = () => {
                   <option value="sqm">SQM</option>
                 </select>
               </label>
+
+              {/* NEW Item Number field */}
+              <label>
+                Item Number:
+                <input
+                  type="text"
+                  name="itemNumber"
+                  value={newItemData.descriptions[0].itemNumber}
+                  onChange={handleInputChange}
+                  required
+                />
+              </label>
+
               <label>
                 Category:
                 <input
@@ -316,6 +334,7 @@ const UniqueItemsPage = () => {
                   onChange={handleInputChange}
                 />
               </label>
+
               <label>
                 Thickness (mm):
                 <input
@@ -326,6 +345,7 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
+
               {newItemData.type !== "sqm" && (
                 <>
                   <label>
@@ -348,6 +368,7 @@ const UniqueItemsPage = () => {
                   </label>
                 </>
               )}
+
               {newItemData.type === "box" && (
                 <label>
                   Sheets Per Box:
@@ -360,6 +381,7 @@ const UniqueItemsPage = () => {
                   />
                 </label>
               )}
+
               <label>
                 Origin:
                 <input
@@ -370,6 +392,7 @@ const UniqueItemsPage = () => {
                   required
                 />
               </label>
+
               <div className="button-row">
                 <button type="submit">Create Item</button>
                 <button type="button" onClick={handleModalToggle}>
