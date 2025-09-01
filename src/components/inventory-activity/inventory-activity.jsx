@@ -106,6 +106,21 @@ const InventoryActivityPage = () => {
       { Header: "Final Cost", accessor: "finalcost" },
       { Header: "Final Cost OFR", accessor: "finalcostofr" },
       { Header: "Unit", accessor: "unit" },
+
+      // ───────── NEW PurchaseInvoiceItem fields ─────────
+      { Header: "Prev Qty", accessor: "previousQuantity" },
+      { Header: "Prev Qty C", accessor: "previousQuantityC" },
+      { Header: "Prev Qty VM", accessor: "previousQuantityVM" },
+      { Header: "Prev Avg Cost", accessor: "previousAverageCost" },
+      { Header: "Prev Avg Cost C", accessor: "previousAverageCostC" },
+      { Header: "Prev Avg Cost VM", accessor: "previousAverageCostVM" },
+      { Header: "Prev Avg Cost CVM", accessor: "previousAverageCostCVM" },
+      { Header: "Avg Cost", accessor: "averageCost" },
+      { Header: "Avg Cost C", accessor: "averageCostC" },
+      { Header: "Avg Cost CVM", accessor: "averageCostCVM" },
+      { Header: "Avg Cost VM", accessor: "averageCostVM" },
+
+      // remaining columns
       { Header: "Status", accessor: "status" },
       { Header: "Date", accessor: "date", id: "date" },
       { Header: "Invoice #", accessor: "invoiceNo" },
@@ -261,6 +276,47 @@ const InventoryActivityPage = () => {
               : r.transactionType || "-",
           date: r.invoiceDate || "—",
           invoiceNo: r.invoiceNumber || "—",
+
+          // ───────── NEW FIELDS ─────────
+          previousQuantity:
+            r.previousQuantity != null
+              ? Number(r.previousQuantity).toFixed(2)
+              : "—",
+          previousQuantityC:
+            r.previousQuantityC != null
+              ? Number(r.previousQuantityC).toFixed(2)
+              : "—",
+          previousQuantityVM:
+            r.previousQuantityVM != null
+              ? Number(r.previousQuantityVM).toFixed(2)
+              : "—",
+          previousAverageCost:
+            r.previousAverageCost != null
+              ? Number(r.previousAverageCost).toFixed(2)
+              : "—",
+          previousAverageCostC:
+            r.previousAverageCostC != null
+              ? Number(r.previousAverageCostC).toFixed(2)
+              : "—",
+          previousAverageCostVM:
+            r.previousAverageCostVM != null
+              ? Number(r.previousAverageCostVM).toFixed(2)
+              : "—",
+          previousAverageCostCVM:
+            r.previousAverageCostCVM != null
+              ? Number(r.previousAverageCostCVM).toFixed(2)
+              : "—",
+          averageCost:
+            r.averageCost != null ? Number(r.averageCost).toFixed(2) : "—",
+          averageCostC:
+            r.averageCostC != null ? Number(r.averageCostC).toFixed(2) : "—",
+          averageCostCVM:
+            r.averageCostCVM != null
+              ? Number(r.averageCostCVM).toFixed(2)
+              : "—",
+          averageCostVM:
+            r.averageCostVM != null ? Number(r.averageCostVM).toFixed(2) : "—",
+
           itemVariantId: r.itemVariantId,
           itemBatch: r.itemBatch,
         };
@@ -303,33 +359,21 @@ const InventoryActivityPage = () => {
   const addFilter = (column, value, record, op = "eq") => {
     let key;
     let val;
-
-    // 1) Category column
     if (column === "category") {
       key = "category";
       val = record.category;
-
-      // 2) Subcategory column
     } else if (column === "subCategory") {
       key = "subCategory";
       val = record.subCategory;
-
-      // 3) Special name-column = itemNameWithThickness
     } else if (column === "name") {
       key = "itemNameWithThickness";
-      // record.name is like "8 ملم laminated clear"
       const [thStr, itemStr] = record.name.split(" ملم ");
       val = `${thStr}|${itemStr}`;
-
-      // 4) All other columns: either eq or Gt/Lt
     } else {
       key = op === "eq" ? column : `${column}${op}`;
       val = String(value);
     }
-
     const filter = { key, value: val };
-
-    // Avoid duplicate filters
     if (!activeFilters.some((f) => f.key === key && f.value === val)) {
       setActiveFilters((prev) => [...prev, filter]);
     }
@@ -419,16 +463,15 @@ const InventoryActivityPage = () => {
           </div>
 
           {contextMenu.column === "date" ? (
-            // only for the Date column: show Before / After
             <>
               <div
                 style={{ padding: "4px" }}
                 onClick={() => {
                   addFilter(
-                    "date", // base column
-                    contextMenu.value, // e.g. "2025-07-21"
+                    "date",
+                    contextMenu.value,
                     contextMenu.record,
-                    "Lt" // will produce key: "dateLt"
+                    "Lt"
                   );
                   setContextMenu({ ...contextMenu, visible: false });
                 }}
@@ -442,7 +485,7 @@ const InventoryActivityPage = () => {
                     "date",
                     contextMenu.value,
                     contextMenu.record,
-                    "Gt" // will produce key: "dateGt"
+                    "Gt"
                   );
                   setContextMenu({ ...contextMenu, visible: false });
                 }}
@@ -525,7 +568,6 @@ const InventoryActivityPage = () => {
                   {headerGroups.map((hg) => (
                     <tr {...hg.getHeaderGroupProps()}>
                       {hg.headers.map((col) => {
-                        // right‑click Date header to sort
                         if (col.id === "date") {
                           return (
                             <DraggableColumnHeader
@@ -579,6 +621,8 @@ const InventoryActivityPage = () => {
                 <tfoot>
                   <tr>
                     <td style={{ fontWeight: "bold" }}>Totals</td>
+                    <td />
+                    <td />
                     <td />
                     <td />
                     <td />
