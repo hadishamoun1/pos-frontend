@@ -1,0 +1,95 @@
+/* === Statement Modal (scoped) === */
+.pos-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.pos-modal {
+  width: min(900px, 96vw);
+  max-height: 90vh;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.pos-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.pos-modal-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.pos-modal-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.pos-modal-controls select,
+.pos-modal-controls input[type="date"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.pos-modal-error {
+  color: #c0392b;
+  padding: 0.5rem 1rem;
+}
+
+.pos-modal-body {
+  padding: 0.75rem 1rem;
+  overflow: auto;
+}
+
+.stmt-summary {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.stmt-table-wrap {
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.stmt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stmt-table th,
+.stmt-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f1f1f1;
+  text-align: center;
+}

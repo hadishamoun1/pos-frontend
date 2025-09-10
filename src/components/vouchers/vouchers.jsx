@@ -21,7 +21,9 @@ const JournalVoucherPage = () => {
   });
   const [entries, setEntries] = useState([
     {
-      accountId: null,
+   accountId: null,
+      customerId: null,
+  supplierId: null,
       accountNumber: "",
       accountName: "",
       currency: "",
@@ -71,7 +73,9 @@ const JournalVoucherPage = () => {
     setEntries((e) => [
       ...e,
       {
-        accountId: "",
+          accountId: null,
+      customerId: null,
+  supplierId: null,
         accountNumber: "",
         accountName: "",
         currency: "",
@@ -114,35 +118,46 @@ const JournalVoucherPage = () => {
     entry.debitExOFR = "0";
     entry.creditExOFR = "0";
 
-    // TYPE S
-    if (type === "S") {
-      if (entry.currency === "USD") {
-        entry.debitUSD = toS(d);
-        entry.creditUSD = toS(c);
-        entry.debitUSDOFR = toS(d);
-        entry.creditUSDOFR = toS(c);
-        entry.debitEx = toS(d * r);
-        entry.creditEx = toS(c * r);
-        entry.debitExOFR = toS(d * r);
-        entry.creditExOFR = toS(c * r);
-        entry.debitOFR = toS(d);
-        entry.creditOFR = toS(c);
-      } else if (entry.currency === "LL") {
-        entry.debitEx = toS(d);
-        entry.creditEx = toS(c);
-        entry.debitExOFR = toS(ofrD);
-        entry.creditExOFR = toS(ofrC);
-        entry.debitUSD = toS(d / r);
-        entry.creditUSD = toS(c / r);
-        entry.debitUSDOFR = toS(ofrD / r);
-        entry.creditUSDOFR = toS(ofrC / r);
-        entry.debit = entry.debitEx;
-        entry.credit = entry.creditEx;
-        entry.debitOFR = entry.debitExOFR;
-        entry.creditOFR = entry.creditExOFR;
-      }
+   // TYPE S
+if (type === "S") {
+  if (entry.currency === "USD") {
+    entry.debitUSD  = toS(d);
+    entry.creditUSD = toS(c);
+
+    // Keep OFR base equal to base for S-USD
+    entry.debitOFR  = toS(d);
+    entry.creditOFR = toS(c);
+
+    // LL = base * rate
+    entry.debitEx   = toS(d * r);          // ✅ Dr LL = Dr * rate
+    entry.creditEx  = toS(c * r);          // ✅ Cr LL = Cr * rate
+
+    // LL OFR = OFR * rate  (use ofrD/ofrC, not d/c)
+    entry.debitExOFR  = toS(ofrD * r);     // ✅ Dr LL OFR = Dr OFR * rate
+    entry.creditExOFR = toS(ofrC * r);     // ✅ Cr LL OFR = Cr OFR * rate
+
+    // USD OFR mirrors OFR amounts for S-USD
+    entry.debitUSDOFR  = toS(ofrD);        // equals d, but keep the intent explicit
+    entry.creditUSDOFR = toS(ofrC);
+  } else if (entry.currency === "LL") {
+    // (unchanged)
+    entry.debitEx     = toS(d);
+    entry.creditEx    = toS(c);
+    entry.debitExOFR  = toS(ofrD);
+    entry.creditExOFR = toS(ofrC);
+    entry.debitUSD    = toS(d / r);
+    entry.creditUSD   = toS(c / r);
+    entry.debitUSDOFR = toS(ofrD / r);
+    entry.creditUSDOFR= toS(ofrC / r);
+    entry.debit       = entry.debitEx;
+    entry.credit      = entry.creditEx;
+    entry.debitOFR    = entry.debitExOFR;
+    entry.creditOFR   = entry.creditExOFR;
+  }
+}
+
       // (add EUR same pattern if needed)
-    }
+    
     // TYPE G
     else if (type === "G") {
       if (entry.currency === "USD") {
@@ -214,24 +229,33 @@ const JournalVoucherPage = () => {
     setEntries(updated);
   };
 
-  const handleAccountSelection = (account) => {
-    if (currentRowIndex === null) {
-      // If no specific row is selected, show an error or handle as needed
+const handleAccountSelection = (entity) => {
+  if (currentRowIndex === null) {
+    alert("Please select a row to assign an account.");
+    return;
+  }
 
-      alert("Please select a row to assign an account.");
-      return;
-    }
+  const updatedEntries = [...entries];
+  const row = updatedEntries[currentRowIndex];
 
-    // Set account for the selected entry
-    const updatedEntries = [...entries];
-    updatedEntries[currentRowIndex].accountId = account.id; // Set the accountId
-    updatedEntries[currentRowIndex].accountNumber = account.accountNumber; // Set the accountNumber
-    updatedEntries[currentRowIndex].accountName = account.accountName; // Set the accountName
+  // clear previous FKs
+  row.accountId = null;
+  row.customerId = null;
+  row.supplierId = null;
 
-    console.log("Updated entries after account selection:", updatedEntries); // Log updated entries
-    setEntries(updatedEntries); // Update the state with modified entries
-    setIsModalOpen(false); // Close the modal
-  };
+  // set the correct FK based on what was chosen
+  if (entity.entityType === "account")  row.accountId  = entity.id;
+  if (entity.entityType === "customer") row.customerId = entity.id;
+  if (entity.entityType === "supplier") row.supplierId = entity.id;
+
+  // display number/name in the grid
+  row.accountNumber = entity.accountNumber;
+  row.accountName   = entity.accountName;
+
+  setEntries(updatedEntries);
+  setIsModalOpen(false);
+};
+
 
   const handleAccountNumberClick = (index) => {
     setCurrentRowIndex(index);
@@ -280,19 +304,44 @@ const JournalVoucherPage = () => {
 
   const handleSubmit = async () => {
     console.log("Current entries state:", entries);
+
+    // helper: treat "", null, "0", "0.00" as zero
+const isZero = (v) => {
+  const n = parseNumber(v);
+  return !n || n === 0;
+};
+
+// helper: a row is "empty" if it has no FK and no amounts
+const isEmptyRow = (e) =>
+  !e.accountId && !e.customerId && !e.supplierId &&
+  isZero(e.debit) && isZero(e.credit) &&
+  isZero(e.debitOFR) && isZero(e.creditOFR);
+
+// ignore totally empty rows
+const effectiveEntries = entries.filter((e) => !isEmptyRow(e));
+
     try {
       // Validate that every entry has an accountId
-      const invalidEntries = entries.filter((entry) => !entry.accountId);
-      if (invalidEntries.length > 0) {
-        setNotification({
-          visible: true,
-          type: "error",
-          message: "All entries must have a valid account selected.",
-        });
-
-        console.log("Invalid entries:", invalidEntries);
-        return;
-      }
+ if (effectiveEntries.length === 0) {
+  setNotification({
+    visible: true,
+    type: "error",
+    message: "Please add at least one non-empty entry.",
+  });
+  return;
+}
+// VALIDATION: allow account OR customer OR supplier
+const invalidEntries = effectiveEntries.filter(
+  (e) => !e.accountId && !e.customerId && !e.supplierId
+);
+if (invalidEntries.length > 0) {
+  setNotification({
+    visible: true,
+    type: "error",
+    message: "Each row must pick an Account, Customer, or Supplier.",
+  });
+  return;
+}
       if (!type) {
         setNotification({
           type: "error",
@@ -314,24 +363,27 @@ const JournalVoucherPage = () => {
       const removeCommas = (value) =>
         typeof value === "string" ? value.replace(/,/g, "") : value;
 
-      const payload = {
-        date,
-        jvType: type,
-        details: entries.map((entry) => ({
-          accountId: entry.accountId,
-          description: entry.description,
-          debit: removeCommas(entry.debit),
-          debitUSD: removeCommas(entry.debitUSD),
-          debitLL: removeCommas(entry.debitEx),
-          credit: removeCommas(entry.credit),
-          creditUSD: removeCommas(entry.creditUSD),
-          creditLL: removeCommas(entry.creditEx),
-          currency: entry.currency,
-          exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
-          exchangeRate: removeCommas(entry.exchangeRate),
-          docNbr: entry.documentNbr,
-        })),
-      };
+  const payload = {
+  date,
+  jvType: type,
+  details: effectiveEntries.map((entry) => ({
+    accountId:  entry.accountId  || undefined,
+    customerId: entry.customerId || undefined,
+    supplierId: entry.supplierId || undefined,
+    description: entry.description,
+    debit: removeCommas(entry.debit),
+    debitUSD: removeCommas(entry.debitUSD),
+    debitLL: removeCommas(entry.debitEx),
+    credit: removeCommas(entry.credit),
+    creditUSD: removeCommas(entry.creditUSD),
+    creditLL: removeCommas(entry.creditEx),
+    currency: entry.currency,
+    exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
+    exchangeRate: removeCommas(entry.exchangeRate),
+    docNbr: entry.documentNbr,
+  })),
+};
+
       console.log("Payload to be sent:", JSON.stringify(payload, null, 2));
 
       // Make the API call
@@ -434,7 +486,9 @@ const JournalVoucherPage = () => {
             "";
 
           return {
-            accountId: entityId,
+            accountId:  d.accountId  ?? null,
+  customerId: d.customerId ?? null,
+    supplierId: d.supplierId ?? null,
             accountNumber: entityNumber,
             accountName: entityName,
             type: d.jvType,
@@ -480,24 +534,32 @@ const JournalVoucherPage = () => {
     setDate(""); // Clear date
     setType(""); // Clear type
     setEntries([
-      // Reset entries to the initial empty state
-      {
-        accountId: null,
-        accountNumber: "",
-        accountName: "",
-        currency: "",
-        debit: "",
-        credit: "",
-        exchangeRate: "1",
-        exchangeRateEURtoUSD: "",
-        debitUSD: "",
-        creditUSD: "",
-        debitEx: "",
-        creditEx: "",
-        description: "",
-        documentNbr: "",
-      },
-    ]);
+  {
+    accountId: null,
+    customerId: null,
+    supplierId: null,
+    accountNumber: "",
+    accountName: "",
+    currency: "",
+    debit: "",
+    debitOFR: "",
+    credit: "",
+    creditOFR: "",
+    exchangeRate: "1",
+    exchangeRateEURtoUSD: "",
+    debitUSD: "",
+    debitUSDOFR: "",
+    creditUSD: "",
+    creditUSDOFR: "",
+    debitEx: "",
+    debitExOFR: "",
+    creditEx: "",
+    creditExOFR: "",
+    description: "",
+    documentNbr: "",
+  },
+]);
+
     setViewMode(false); // Disable view mode to allow editing
   };
 
@@ -756,16 +818,18 @@ const JournalVoucherPage = () => {
                     />
                   </td>
                   {/* OFR Debit USD */}
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.debitUSDOFR}
-                      placeholder="Dr USD OFR"
-                      readOnly
-                      disabled={viewMode}
-                      className="general-vouchers-input column-debit-usd-ofr"
-                    />
-                  </td>
+              <td>
+  <input
+    type="text"
+    value={entry.debitOFR}
+    placeholder="Dr OFR"
+    onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
+    onBlur={() => handleInputBlur(index, "debitOFR")}
+    className="general-vouchers-input column-debit-ofr"  
+    readOnly={viewMode || type === "S"}                
+    disabled={viewMode || type === "S"}
+  />
+</td>
 
                   {/* Base Debit LL */}
                   <td>

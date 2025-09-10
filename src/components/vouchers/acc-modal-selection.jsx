@@ -49,7 +49,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
         <tr
           key={account.id}
           className="acc-modal-selection-row"
-          onClick={() => onSelect(account)}
+         onClick={() => onSelect({ ...account, entityType: "account" })}
         >
           <td
             className="acc-modal-selection-cell"
@@ -84,7 +84,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
           <tr
             key={`customer-${customer.id}`}
             className="acc-modal-selection-row"
-            onClick={() => onSelect(customer)}
+            onClick={() => onSelect({ ...customer, entityType: "customer" })}
           >
             <td
               className="acc-modal-selection-cell"
@@ -111,7 +111,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
           <tr
             key={`supplier-${supplier.id}`}
             className="acc-modal-selection-row"
-            onClick={() => onSelect(supplier)}
+            onClick={() => onSelect({ ...supplier, entityType: "supplier" })}
           >
             <td
               className="acc-modal-selection-cell"

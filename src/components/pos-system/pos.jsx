@@ -14,6 +14,7 @@ import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
 import InvoiceModal from "./invoicePreviewModal";
 import InvoicePreview from "./invoicePreview";
+import StatementModal from "./Components/StatementModal";
 
 const POSSystemPage = () => {
   const [tableData, setTableData] = useState([]);
@@ -36,6 +37,7 @@ const POSSystemPage = () => {
   const [invoiceData, setInvoiceData] = useState(null);
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showStatement, setShowStatement] = useState(false);
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -660,13 +662,23 @@ const POSSystemPage = () => {
             setDate={setDate}
             isEditable={isEditable}
             setShowPreview={setShowPreview}
+                handleOpenStatement={() => setShowStatement(true)}
+    canOpenStatement={!!selectedCustomerId}
+
           />
+          
           {showPreview && (
             <InvoiceModal
               invoiceData={<InvoicePreview invoiceData={invoiceData} />}
               onClose={() => setShowPreview(false)}
             />
           )}
+          <StatementModal
+  isOpen={showStatement}
+  onClose={() => setShowStatement(false)}
+  customerId={selectedCustomerId}
+  defaultDate={date}
+/>
 
           <CustomerDetails
             currencyRate={currencyRate}
