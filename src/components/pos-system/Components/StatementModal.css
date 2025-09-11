@@ -25,7 +25,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #cfcfcf;
 }
 
 .pos-modal-close {
@@ -41,7 +41,7 @@
   align-items: center;
   flex-wrap: wrap;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #cfcfcf;
 }
 
 .pos-modal-controls label {
@@ -90,6 +90,47 @@
 .stmt-table th,
 .stmt-table td {
   padding: 0.5rem;
-  border-bottom: 1px solid #f1f1f1;
+  border: 1px solid #cfcfcf;
   text-align: center;
 }
+
+.stmt-table tr:hover {
+  background-color: rgb(207, 241, 255);
+}
+
+.pos-modal-controls {
+  display: flex;
+  align-items: end; /* or center */
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pos-modal-controls .controls-left {
+  display: flex;
+  align-items: end; /* or center */
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pos-modal-controls .controls-right {
+  margin-left: auto; /* pushes "Report" to the far right */
+}
+
+.statement-report-button{
+    padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  background-color: rgb(1, 145, 22);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+
+.statement-report-button:hover{
+
+  transform: scale(1.05);
+}
+
