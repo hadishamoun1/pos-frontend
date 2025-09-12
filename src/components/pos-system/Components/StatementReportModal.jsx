@@ -1,13 +1,14 @@
 import React from "react";
-import "./StatementReportModal.css"; // the CSS you just added/merged
+import "./StatementReportModal.css";
 
 const StatementReportModal = ({
   open,
   onClose,
-  data,         // { openingBalance, totals, closingBalance, items: [] }
+  data,
   from,
   to,
   type = "ALL",
+  customerName,
 }) => {
   if (!open) return null;
 
@@ -17,6 +18,14 @@ const StatementReportModal = ({
     if (!isFinite(n)) return "0.00";
     return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  const openingBalance = Number(data?.openingBalance ?? 0);
+  const clientName =
+    customerName ||
+    data?.customerName ||
+    data?.customer?.name ||
+    data?.accountName ||
+    "-";
 
   return (
     <div className="statement-report-modal-overlay" onClick={onClose}>
@@ -31,10 +40,8 @@ const StatementReportModal = ({
 
         <div className="statement-report-modal-body">
           <div className="statement-report-modal-a4">
-
-            {/* HEADER (copied layout from invoice header) */}
+            {/* HEADER */}
             <div className="statement-report-modal-header">
-              {/* Right (Arabic) */}
               <div className="statement-report-modal-header-right">
                 <h2 className="statement-report-modal-company-arabic-title">شركة شمعون</h2>
                 <h2 className="statement-report-modal-company-arabic-subtitle">للزجاج و المرايا</h2>
@@ -59,7 +66,6 @@ const StatementReportModal = ({
                 </div>
               </div>
 
-              {/* Left (English) */}
               <div className="statement-report-modal-header-left">
                 <h1 className="statement-report-modal-company-title">Shamoun Company</h1>
                 <h2 className="statement-report-modal-company-subtitle">For Glass & Mirrors</h2>
@@ -70,46 +76,14 @@ const StatementReportModal = ({
               </div>
             </div>
 
-            {/* META */}
-            <div className="statement-report-modal-meta">
-              <div className="statement-report-modal-meta-right">
-                <div className="statement-report-modal-meta-line">
-                  <span className="statement-report-modal-meta-label">Email</span>
-                  <span className="statement-report-modal-meta-colon">:</span>
-                  <span className="statement-report-modal-meta-value">info@shamoun.com</span>
-                </div>
-                <div className="statement-report-modal-meta-line">
-                  <span className="statement-report-modal-meta-label">VAT</span>
-                  <span className="statement-report-modal-meta-colon">:</span>
-                  <span className="statement-report-modal-meta-value">10909-601</span>
-                </div>
-              </div>
+            {/* TITLE ROW (centered) */}
+            <div className="statement-report-modal-titlebar">كشف حساب</div>
 
-              <div className="statement-report-modal-meta-left">
-                <div className="statement-report-modal-meta-line">
-                  <span className="statement-report-modal-meta-label">من</span>
-                  <span className="statement-report-modal-meta-colon">:</span>
-                  <span className="statement-report-modal-meta-value">{from}</span>
-                </div>
-                <div className="statement-report-modal-meta-line">
-                  <span className="statement-report-modal-meta-label">إلى</span>
-                  <span className="statement-report-modal-meta-colon">:</span>
-                  <span className="statement-report-modal-meta-value">{to}</span>
-                </div>
-                <div className="statement-report-modal-meta-line">
-                  <span className="statement-report-modal-meta-label">النوع</span>
-                  <span className="statement-report-modal-meta-colon">:</span>
-                  <span className="statement-report-modal-meta-value">{type}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SUMMARY LINE (optional) */}
-            <div style={{margin: "0 8px 6px 8px", direction: "rtl", fontFamily: "Arial, sans-serif"}}>
-              <span style={{marginInlineStart: "8px"}}>الرصيد: <strong>{fmt((data?.closingBalance ?? 0).toFixed?.(2) || data?.closingBalance)}</strong></span>
-              <span style={{marginInlineStart: "12px"}}>مجموع الدفعات: <strong>{fmt((data?.totals?.totalCredit ?? 0).toFixed?.(2) || data?.totals?.totalCredit)}</strong></span>
-              <span style={{marginInlineStart: "12px"}}>مجموع الفواتير: <strong>{fmt((data?.totals?.totalDebit ?? 0).toFixed?.(2) || data?.totals?.totalDebit)}</strong></span>
-              <span style={{marginInlineStart: "12px"}}>رصيد سابق: <strong>{fmt((data?.openingBalance ?? 0).toFixed?.(2) || data?.openingBalance)}</strong></span>
+            {/* CLIENT LINE */}
+            <div className="statement-report-modal-clientline">
+              <span className="statement-report-modal-clientline-label">السادة</span>
+              <span className="statement-report-modal-clientline-colon">:</span>
+              <span className="statement-report-modal-clientline-value">{clientName}</span>
             </div>
 
             {/* TABLE */}
@@ -117,23 +91,32 @@ const StatementReportModal = ({
               <table className="statement-report-modal-table">
                 <thead>
                   <tr>
-                    <th>رصيد</th>
-                    <th>لكم</th>
-                    <th>عليكم</th>
-                    <th>شرح</th>
-                    <th>رقم الفاتورة</th>
                     <th>تاريخ</th>
+                    <th>رقم الفاتورة</th>
+                    <th>شرح</th>
+                    <th>عليكم</th>
+                    <th>لكم</th>
+                    <th>رصيد</th>
                   </tr>
                 </thead>
                 <tbody>
+                  <tr className="statement-report-modal-opening-row">
+                    <td>{from}</td>
+                    <td>—</td>
+                    <td>رصيد سابق</td>
+                    <td>{fmt(0)}</td>
+                    <td>{fmt(0)}</td>
+                    <td>{fmt(openingBalance)}</td>
+                  </tr>
+
                   {data?.items?.map((r, i) => (
                     <tr key={i}>
-                      <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
-                      <td>{fmt(Number(r.credit || 0).toFixed(2))}</td>
-                      <td>{fmt(Number(r.debit || 0).toFixed(2))}</td>
-                      <td>{r.description}</td>
-                      <td>{r.docNbr}</td>
                       <td>{String(r.date).split("T")[0]}</td>
+                      <td>{r.docNbr}</td>
+                      <td>{r.description}</td>
+                      <td>{fmt(Number(r.debit || 0).toFixed(2))}</td>
+                      <td>{fmt(Number(r.credit || 0).toFixed(2))}</td>
+                      <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -115,6 +115,7 @@ const POSSystemPage = () => {
     setSelectedRequestId(requestId);
     setSelectedInvoiceId(null);
     setLoading(true);
+    setSelectedCustomerName(requestId.customerName || "");
     setIsEditable(false);
 
     try {
@@ -186,6 +187,7 @@ const POSSystemPage = () => {
     setTableData([]);
     setSelectedCustomerId(null);
     setCustomerInput("");
+    setSelectedCustomerName(""); 
     setCurrencyRate("89000");
     setVat("11");
     setSelectedInvoiceId(null);
@@ -411,6 +413,7 @@ const POSSystemPage = () => {
 
     setCustomerInput(invoice.customerName);
     setSelectedCustomerId(invoice.customerId);
+    setSelectedCustomerName(invoice.customerName || "");
     setCurrencyRate(currencyRateValue);
     setIsEditable(false);
     setVat(vatPercentage);
@@ -678,6 +681,7 @@ const POSSystemPage = () => {
   onClose={() => setShowStatement(false)}
   customerId={selectedCustomerId}
   defaultDate={date}
+   customerName={selectedCustomerName} 
 />
 
           <CustomerDetails

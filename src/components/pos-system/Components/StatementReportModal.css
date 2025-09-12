@@ -261,3 +261,42 @@
   }
   .statement-report-modal-table thead th { position: static; }
 }
+/* Single client line (السادة: <name>) */
+.statement-report-modal-clientline {
+  display: grid;
+  grid-template-columns: 80px 12px 1fr; /* label | : | value */
+  align-items: center;
+  padding: 6px 10px;
+  margin: 0 8px 6px 8px;
+  border: 1px solid #000;
+  box-sizing: border-box;
+  direction: rtl;
+  font-family: Arial, sans-serif;
+  font-size: 20px;
+}
+
+.statement-report-modal-clientline-label {
+  text-align: right;
+  font-weight: 700;
+}
+
+.statement-report-modal-clientline-colon {
+  text-align: center;
+}
+
+.statement-report-modal-clientline-value {
+  text-align: right;  /* Arabic name aligned right */
+  direction: rtl;
+}
+/* Centered title row: "كشف حساب" */
+.statement-report-modal-titlebar {
+  margin: 0 8px 6px 8px;
+  padding: 8px 10px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  direction: rtl;
+  box-sizing: border-box;
+  background: #fff;
+}
