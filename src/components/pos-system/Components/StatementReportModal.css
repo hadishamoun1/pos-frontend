@@ -43,7 +43,7 @@
   color: #fff;
   cursor: pointer;
 }
-.statement-report-modal-toolbar .btn-secondary {
+.statement-report-modal-toolbar .btn.btn-secondary {
   background: #e5e7eb;
   color: #111827;
 }
@@ -72,7 +72,7 @@
   padding: 8px 10px;
   border: 1px solid #000;
   margin: 8px;
-  min-height: 138px;
+  min-height: 138px; /* can grow with content */
   align-items: start;
   box-sizing: border-box;
   direction: rtl;
@@ -154,41 +154,86 @@
   .statement-report-modal-company-arabic-subtitle { font-size: 19px; }
 }
 
-/* ====== META STRIP ====== */
-.statement-report-modal-meta {
+/* ====== CENTERED TITLE ====== */
+.statement-report-modal-titlebar {
+  margin: 0 8px 6px 8px;
+  padding: 6px 10px;
+ 
+  box-sizing: border-box;
+  text-align: center;
+  font-weight: 700;
+  font-size: 18px;
+  background: #fff;
+}
+
+/* ====== CLIENT LINE ====== */
+.statement-report-modal-clientline {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* right (account info) | left (date/type) */
-  gap: 8px;
+  grid-template-columns: 80px 12px 1fr; /* label | : | value */
+  align-items: center;
   padding: 6px 10px;
   margin: 0 8px 6px 8px;
   border: 1px solid #000;
-  font-family: Arial, sans-serif;
-  font-size: 15px;
   box-sizing: border-box;
   direction: rtl;
+  font-family: Arial, sans-serif;
+  font-size: 15px;
 }
-.statement-report-modal-meta-right,
-.statement-report-modal-meta-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.statement-report-modal-clientline-label {
+  text-align: right;
+  font-weight: 700;
 }
-.statement-report-modal-meta-line {
-  display: grid;
-  grid-template-columns: 90px 12px 1fr;
-  align-items: center;
+.statement-report-modal-clientline-colon { text-align: center; }
+.statement-report-modal-clientline-value {
+  text-align: right;
+  direction: rtl;
 }
-.statement-report-modal-meta-label { font-weight: 700; text-align: right; }
-.statement-report-modal-meta-colon { text-align: center; }
-.statement-report-modal-meta-value { direction: ltr; text-align: left; }
 
-/* ====== TABLE WRAP & TABLE ====== */
+/* ====== TWO-ROW INFO TABLE ====== */
+.statement-report-modal-info {
+  width: 80%;
+  /*          T   R    B    L  */
+  margin: 0 8px 6px auto;  /* right = 8px, left = auto → stick to right */
+  border: 1px solid #000;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.statement-report-modal-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  direction: rtl;
+}
+.statement-report-modal-info-table thead th {
+  background: #f9fafb;
+  border-bottom: 1px solid #000;
+  padding: 6px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+.statement-report-modal-info-table tbody td {
+  padding: 6px 8px;
+  text-align: center;
+  border-top: 1px solid #000;
+  direction: ltr; /* numbers & dates */
+}
+.statement-report-modal-info-table th,
+.statement-report-modal-info-table td {
+  border-left: 1px solid #000;
+}
+
+
+/* ====== TRANSACTIONS TABLE WRAP & TABLE ====== */
 .statement-report-modal-table-wrap {
-  max-height: 55vh;
-  overflow: auto;
+  max-height: none;
+  overflow: visible;
   border: 1px solid #eee;
   border-radius: 8px;
   margin: 8px;
+  background: #fff;
 }
 
 .statement-report-modal-table {
@@ -219,84 +264,117 @@
 .statement-report-modal-table tbody tr:hover { background: rgb(207,241,255); }
 .statement-report-modal-table tbody tr:nth-child(even) { background: #fafafa; }
 
-/* Column alignment (order: Balance, Credit, Debit, Desc, Doc, Date) */
+/* Column alignment — order: Date, Doc No, Desc, Debit, Credit, Balance */
 .statement-report-modal-table th:nth-child(1),
-.statement-report-modal-table td:nth-child(1),
+.statement-report-modal-table td:nth-child(1) {
+  direction: ltr;
+  text-align: center;
+  white-space: nowrap;
+}
 .statement-report-modal-table th:nth-child(2),
-.statement-report-modal-table td:nth-child(2),
+.statement-report-modal-table td:nth-child(2) {
+  direction: ltr;
+  text-align: left;
+}
 .statement-report-modal-table th:nth-child(3),
 .statement-report-modal-table td:nth-child(3) {
-  direction: ltr;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.statement-report-modal-table th:nth-child(4),
-.statement-report-modal-table td:nth-child(4) {
   direction: rtl;
   text-align: right;
   white-space: normal;
   word-break: break-word;
 }
+.statement-report-modal-table th:nth-child(4),
+.statement-report-modal-table td:nth-child(4),
 .statement-report-modal-table th:nth-child(5),
-.statement-report-modal-table td:nth-child(5) {
-  direction: ltr;
-  text-align: left;
-}
+.statement-report-modal-table td:nth-child(5),
 .statement-report-modal-table th:nth-child(6),
 .statement-report-modal-table td:nth-child(6) {
   direction: ltr;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* Print */
-@media print {
-  .statement-report-modal-overlay,
-  .statement-report-modal-toolbar { display: none !important; }
-  .statement-report-modal-a4 {
-    width: 100%;
-    min-height: auto;
-    box-shadow: none;
-    margin: 0;
-  }
-  .statement-report-modal-table thead th { position: static; }
-}
-/* Single client line (السادة: <name>) */
-.statement-report-modal-clientline {
-  display: grid;
-  grid-template-columns: 80px 12px 1fr; /* label | : | value */
-  align-items: center;
-  padding: 6px 10px;
-  margin: 0 8px 6px 8px;
-  border: 1px solid #000;
-  box-sizing: border-box;
-  direction: rtl;
-  font-family: Arial, sans-serif;
-  font-size: 20px;
-}
-
-.statement-report-modal-clientline-label {
   text-align: right;
-  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.statement-report-modal-clientline-colon {
-  text-align: center;
+/* Opening row emphasis (optional) */
+.statement-report-modal-opening-row td {
+  font-weight: 600;
+  background: #f7fbff;
 }
 
-.statement-report-modal-clientline-value {
-  text-align: right;  /* Arabic name aligned right */
-  direction: rtl;
+
+/* ---- PRINT EXACTLY THE A4 REPORT, FULL WIDTH ---- */
+
+/* Use a realistic printable margin so the browser doesn't shrink further */
+@page {
+  size: A4 portrait;
+  margin: 10mm;               /* adjust to your printer if needed */
 }
-/* Centered title row: "كشف حساب" */
-.statement-report-modal-titlebar {
-  margin: 0 8px 6px 8px;
-  padding: 8px 10px;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  font-weight: 700;
-  font-size: 24px;
-  direction: rtl;
-  box-sizing: border-box;
-  background: #fff;
+
+@media print {
+
+
+  /* Turn overlay into normal page content */
+  .statement-report-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Remove modal sizing that causes shrinking */
+  .statement-report-modal {
+    width: 100% !important;         /* ignore min(980px, 96vw) */
+    max-width: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+  }
+
+  /* Hide the toolbar entirely */
+  .statement-report-modal-toolbar {
+    display: none !important;
+  }
+
+  /* No inner padding/scroll in print */
+  .statement-report-modal-body {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  /* Make the A4 wrapper fill the page content box (not fixed 794px) */
+  .statement-report-modal-a4 {
+    width: 100% !important;         /* expands to @page width minus margins */
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+    page-break-after: always;       /* legacy fallback */
+  }
+  .statement-report-modal-a4:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Remove margins that waste space in print */
+  .statement-report-modal-header,
+  .statement-report-modal-titlebar,
+  .statement-report-modal-clientline,
+  .statement-report-modal-info,
+  .statement-report-modal-table-wrap {
+    margin: 1 !important;
+  }
+
+  /* Disable sticky and avoid splitting rows */
+  .statement-report-modal-table thead th { position: static !important; }
+  .statement-report-modal-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Keep colors solid in print */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
