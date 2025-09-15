@@ -3,22 +3,16 @@ import axios from "axios";
 import "./TrialBalance.css";
 
 /**
- * Filters added:
- * - mainFrom, mainTo (dropdowns)
- * - subFrom, subTo (dropdowns; refetched when main range changes)
- * - level (numeric)
- * - currency (dropdown)
- * - invoiceType (dropdown)
- *
- * Adjust the OPTION_ENDPOINTS section if your API paths differ.
+ * Arranged accounts tree:
+ *   GET http://localhost:3000/accounts/v1/acc-flat-arranged
+ * New: "Main Acc (codes)" input. Example: 601 or 601,705.
+ *  - When filled, it overrides Main From/To and disables those selects.
+ *  - Sub accounts are built from any accounts whose code starts with
+ *    any prefix, plus all their descendants.
  */
 
-const OPTION_ENDPOINTS = {
-  mainAccounts: "http://localhost:3000/accounts/main",
-  subAccounts:  "http://localhost:3000/accounts/sub",
-  currencies:   "http://localhost:3000/currencies",
-  // if you have invoice types endpoint, add it here; otherwise we fallback
-};
+const ARRANGED_ACCOUNTS_ENDPOINT = "http://localhost:3000/accounts/v1/acc-flat-arranged";
+const CURRENCIES_ENDPOINT = "http://localhost:3000/currency";
 
 export default function TrialBalance() {
   const today = new Date().toISOString().split("T")[0];
@@ -28,22 +22,28 @@ export default function TrialBalance() {
   const [to, setTo] = useState(today);
 
   // filters
-  const [level, setLevel] = useState(3);          // numeric level depth
-  const [currency, setCurrency] = useState("");   // currency code
-  const [invoiceType, setInvoiceType] = useState("ALL"); // ALL | S | G | ...
+  const [level, setLevel] = useState(3);
+  const [currency, setCurrency] = useState("");
+  const [invoiceType, setInvoiceType] = useState("ALL"); // ALL | S | G
 
+  // account filters
   const [mainFrom, setMainFrom] = useState("");
   const [mainTo, setMainTo] = useState("");
   const [subFrom, setSubFrom] = useState("");
-  const [subTo, setSubTo] = useState("");
+  const [subTo,   setSubTo]   = useState("");
 
-  // options
-  const [mainOptions, setMainOptions] = useState([]);
-  const [subOptions, setSubOptions]   = useState([]);
+  // NEW: comma-separated prefixes
+  const [mainPrefixes, setMainPrefixes] = useState(""); // e.g. "601,705"
+
+  // options / data
+  const [accountsTree, setAccountsTree] = useState([]);
   const [currencyOptions, setCurrencyOptions] = useState([]);
-  const invoiceTypeOptions = ["ALL", "S", "G"]; // fallback; adjust if you have more
+  const [accLoading, setAccLoading] = useState(false);
+  const [accError, setAccError] = useState("");
 
-  // data
+  const invoiceTypeOptions = ["ALL", "S", "G"];
+
+  // result data
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [rows, setRows] = useState([]);
@@ -62,102 +62,188 @@ export default function TrialBalance() {
     return { debit, credit, diff: debit - credit };
   }, [rows]);
 
-  // ---------- Fetch options ----------
+  // -------- fetch arranged accounts + currencies --------
   useEffect(() => {
-    const fetchMainAccounts = async () => {
+    let cancelled = false;
+
+    const load = async () => {
+      setAccLoading(true);
+      setAccError("");
       try {
-        const res = await axios.get(OPTION_ENDPOINTS.mainAccounts);
-        // map to {value, label}
-        const data = Array.isArray(res.data) ? res.data : res.data?.rows || [];
-        const mapped = data.map((a) => ({
-          value: a.code ?? a.accountCode ?? a.id ?? "",
-          label: `${a.code ?? a.accountCode ?? ""} — ${a.name ?? a.accountName ?? ""}`.trim(),
-        })).filter(opt => opt.value);
-        setMainOptions(mapped);
-        if (!mainFrom && mapped[0]) setMainFrom(mapped[0].value);
-        if (!mainTo && mapped[mapped.length - 1]) setMainTo(mapped[mapped.length - 1].value);
-      } catch {
-        // Safe fallback (edit/remove if not needed)
-        const fallback = [
-          { value: "1000", label: "1000 — Assets" },
-          { value: "2000", label: "2000 — Liabilities" },
-          { value: "3000", label: "3000 — Equity" },
-          { value: "4000", label: "4000 — Revenue" },
-          { value: "5000", label: "5000 — Expenses" },
-        ];
-        setMainOptions(fallback);
-        if (!mainFrom) setMainFrom("1000");
-        if (!mainTo) setMainTo("5000");
-      }
-    };
+        const [accRes, curRes] = await Promise.all([
+          axios.get(ARRANGED_ACCOUNTS_ENDPOINT),
+          axios.get(CURRENCIES_ENDPOINT)
+        ]);
 
-    const fetchCurrencies = async () => {
-      try {
-        const res = await axios.get(OPTION_ENDPOINTS.currencies);
-        const data = Array.isArray(res.data) ? res.data : res.data?.rows || [];
-        const mapped = data.map((c) => ({
-          value: c.code ?? c.currencyCode ?? c.id ?? "",
-          label: c.code ?? c.currencyCode ?? c.name ?? "",
-        })).filter(opt => opt.value);
-        setCurrencyOptions(mapped);
-        if (!currency && mapped[0]) setCurrency(mapped[0].value);
-      } catch {
-        // fallback
-        const fb = [
-          { value: "USD", label: "USD" },
-          { value: "LBP", label: "LBP" },
-        ];
-        setCurrencyOptions(fb);
-        if (!currency) setCurrency("USD");
-      }
-    };
+        if (!cancelled) {
+          setAccountsTree(Array.isArray(accRes.data) ? accRes.data : accRes.data?.rows || []);
 
-    fetchMainAccounts();
-    fetchCurrencies();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // once on mount
-
-  useEffect(() => {
-    const fetchSubAccounts = async () => {
-      try {
-        const params = {};
-        if (mainFrom) params.mainFrom = mainFrom;
-        if (mainTo) params.mainTo = mainTo;
-
-        const res = await axios.get(OPTION_ENDPOINTS.subAccounts, { params });
-        const data = Array.isArray(res.data) ? res.data : res.data?.rows || [];
-        const mapped = data.map((a) => ({
-          value: a.code ?? a.accountCode ?? a.id ?? "",
-          label: `${a.code ?? a.accountCode ?? ""} — ${a.name ?? a.accountName ?? ""}`.trim(),
-        })).filter(opt => opt.value);
-        setSubOptions(mapped);
-
-        if (!mapped.length) {
-          setSubFrom("");
-          setSubTo("");
-          return;
+          const curData = Array.isArray(curRes.data) ? curRes.data : curRes.data?.rows || [];
+          const curOpts = curData
+            .map((c) => ({
+              value: c.code ?? c.currencyCode ?? c.id ?? "",
+              label: c.code ?? c.currencyCode ?? c.name ?? ""
+            }))
+            .filter((o) => o.value);
+          setCurrencyOptions(curOpts.length ? curOpts : [{ value: "USD", label: "USD" }, { value: "LBP", label: "LBP" }]);
+          if (!currency && (curOpts[0]?.value || "USD")) {
+            setCurrency(curOpts[0]?.value || "USD");
+          }
         }
-        // If current selected sub range falls outside new list, reset to bounds
-        const values = mapped.map(m => m.value);
-        if (!subFrom || !values.includes(subFrom)) setSubFrom(values[0]);
-        if (!subTo   || !values.includes(subTo))   setSubTo(values[values.length - 1]);
-      } catch {
-        // fallback: synthesize a few subs under the selected main range
-        const fb = [
-          { value: "1000-01", label: "1000-01 — Cash" },
-          { value: "1000-02", label: "1000-02 — Bank" },
-          { value: "1000-03", label: "1000-03 — Petty Cash" },
-          { value: "4000-01", label: "4000-01 — Sales" },
-          { value: "5000-01", label: "5000-01 — COGS" },
-        ];
-        setSubOptions(fb);
-        if (!subFrom) setSubFrom(fb[0].value);
-        if (!subTo) setSubTo(fb[fb.length - 1].value);
+      } catch (e) {
+        if (!cancelled) {
+          setAccError(e?.response?.data?.message || e.message || "Failed to load accounts/currencies");
+          // Fallback sample tree (optional)
+          setAccountsTree([
+            { id: 1, accountNumber: "1000", accountName: "Assets", children: [
+              { id: 11, accountNumber: "1000-01", accountName: "Cash", children: [] },
+              { id: 12, accountNumber: "1000-02", accountName: "Bank", children: [] },
+            ]},
+            { id: 2, accountNumber: "2000", accountName: "Liabilities", children: [
+              { id: 21, accountNumber: "2000-01", accountName: "Payables", children: [] },
+            ]},
+            { id: 3, accountNumber: "3000", accountName: "Equity", children: [] },
+            { id: 4, accountNumber: "4000", accountName: "Revenue", children: [
+              { id: 41, accountNumber: "4000-01", accountName: "Sales", children: [] },
+            ]},
+            { id: 5, accountNumber: "5000", accountName: "Expenses", children: [
+              { id: 51, accountNumber: "5000-01", accountName: "COGS", children: [] },
+            ]},
+          ]);
+          setCurrencyOptions([{ value: "USD", label: "USD" }, { value: "LBP", label: "LBP" }]);
+          if (!currency) setCurrency("USD");
+        }
+      } finally {
+        if (!cancelled) setAccLoading(false);
       }
     };
 
-    fetchSubAccounts();
-  }, [mainFrom, mainTo]); // refresh sub accounts when main range changes
+    load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // -------- flatten arranged tree (store node + depth) --------
+  const flatAccounts = useMemo(() => {
+    const out = [];
+    const walk = (nodes, depth = 0) => {
+      (nodes || []).forEach((n) => {
+        const id   = n.id ?? n.accountId ?? n.code ?? n.accountNumber ?? n.accountCode ?? null;
+        const code = n.accountNumber ?? n.accountCode ?? n.code ?? "";
+        const name = n.accountName ?? n.name ?? "";
+        out.push({ id, code: String(code), name: String(name), depth, node: n });
+        if (Array.isArray(n.children) && n.children.length) walk(n.children, depth + 1);
+      });
+    };
+    walk(accountsTree, 0);
+    return out.filter((x) => x.id && x.code);
+  }, [accountsTree]);
+
+  // Map node->depth (for displaying correct indent when traversing)
+  const nodeDepth = useMemo(() => {
+    const m = new Map();
+    flatAccounts.forEach((fa) => m.set(fa.node, fa.depth));
+    return m;
+  }, [flatAccounts]);
+
+  // main options = depth 0 only
+  const mainOptions = useMemo(() => {
+    return flatAccounts
+      .filter((n) => n.depth === 0)
+      .map((n) => ({
+        value: n.code,
+        label: `${n.code} — ${n.name}`,
+        node: n.node,
+      }));
+  }, [flatAccounts]);
+
+  // root mains (depth 0) as [{code, node}]
+  const rootMains = useMemo(() => {
+    return mainOptions.map(m => ({ code: m.value, node: m.node }));
+  }, [mainOptions]);
+
+  // Parse comma-separated prefixes (numbers only, trimmed)
+  const prefixes = useMemo(() => {
+    const raw = (mainPrefixes || "").split(",").map(s => s.trim()).filter(Boolean);
+    // keep as-is (don’t strip non-digits in case codes have letters); compare via startsWith
+    return raw;
+  }, [mainPrefixes]);
+
+  // sub options
+  const subOptions = useMemo(() => {
+    const out = [];
+    const added = new Set(); // dedupe by code
+
+    // utility to push a node (depth-aware)
+    const pushNode = (node) => {
+      const code = node?.accountNumber ?? node?.accountCode ?? node?.code ?? "";
+      const name = node?.accountName ?? node?.name ?? "";
+      if (!code || added.has(code)) return;
+      const d = nodeDepth.get(node) ?? 0;
+      const indent = "\u00A0\u00A0".repeat(Math.max(0, d)); // show absolute hierarchy
+      out.push({ value: code, label: `${indent}${code} — ${name}` });
+      added.add(code);
+    };
+
+    // traverse descendants
+    const walkDesc = (node) => {
+      const kids = node?.children || [];
+      for (const ch of kids) {
+        pushNode(ch);
+        if (Array.isArray(ch.children) && ch.children.length) walkDesc(ch);
+      }
+    };
+
+    // If prefixes exist, override main range logic
+    if (prefixes.length) {
+      // any account (any depth) whose code starts with any prefix:
+      flatAccounts.forEach((fa) => {
+        if (prefixes.some((p) => fa.code.startsWith(p))) {
+          if (fa.depth === 0) {
+            // main matched → include ALL descendants (subs only)
+            walkDesc(fa.node);
+          } else {
+            // sub matched → include this node + its descendants
+            pushNode(fa.node);
+            walkDesc(fa.node);
+          }
+        }
+      });
+      return out;
+    }
+
+    // else: use main From→To (by index in root mains)
+    if (!rootMains.length) return out;
+
+    const findIdx = (codeVal) => rootMains.findIndex(m => m.code === codeVal);
+    const startIdx = mainFrom ? findIdx(mainFrom) : 0;
+    const endIdxRaw = mainTo ? findIdx(mainTo) : rootMains.length - 1;
+
+    const iFrom = startIdx < 0 ? 0 : startIdx;
+    const iTo = Math.max(iFrom, endIdxRaw < 0 ? iFrom : endIdxRaw);
+
+    const selectedMains = rootMains.slice(iFrom, iTo + 1);
+    selectedMains.forEach((m) => walkDesc(m.node));
+
+    return out;
+  }, [flatAccounts, nodeDepth, rootMains, mainFrom, mainTo, prefixes]);
+
+  // set initial mainFrom/mainTo after accounts load
+  useEffect(() => {
+    if (!mainOptions.length) return;
+    if (!mainFrom) setMainFrom(mainOptions[0].value);
+    if (!mainTo)   setMainTo(mainOptions[mainOptions.length - 1].value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainOptions.length]);
+
+  // adjust subFrom/subTo when subOptions change
+  useEffect(() => {
+    if (!subOptions.length) { setSubFrom(""); setSubTo(""); return; }
+    const values = subOptions.map((o) => o.value);
+    if (!values.includes(subFrom)) setSubFrom(values[0]);
+    if (!values.includes(subTo))   setSubTo(values[values.length - 1]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subOptions.length, mainFrom, mainTo, mainPrefixes]);
 
   // ---------- Fetch report ----------
   const fetchTB = async () => {
@@ -167,17 +253,17 @@ export default function TrialBalance() {
       const params = {
         from,
         to,
-        level,           // numeric
-        currency,        // code
-        invoiceType,     // e.g., ALL | S | G
-        mainFrom,
-        mainTo,
+        level,
+        currency,
+        invoiceType,
+        mainFrom: prefixes.length ? undefined : mainFrom, // range not used when prefixes provided
+        mainTo:   prefixes.length ? undefined : mainTo,
         subFrom,
         subTo,
+        mainPrefixes: prefixes.length ? prefixes.join(",") : undefined, // send if your API supports it
       };
 
       const res = await axios.get("http://localhost:3000/reports/trial-balance", { params });
-
       const data = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data?.rows)
@@ -227,6 +313,7 @@ export default function TrialBalance() {
   const handlePrint = () => {
     const root = printRef.current;
     if (!root) return;
+
     const copiedStyles = Array.from(
       document.querySelectorAll('style, link[rel="stylesheet"]')
     ).map((n) => n.outerHTML).join("");
@@ -280,6 +367,11 @@ export default function TrialBalance() {
     };
   };
 
+  const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;
+  const mainDisplay = mainPrefixes.trim()
+    ? mainPrefixes
+    : `${mainFrom || "—"} → ${mainTo || "—"}`;
+
   return (
     <div className="tb-wrap">
       {/* Controls */}
@@ -295,9 +387,27 @@ export default function TrialBalance() {
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </label>
 
+<label className="tb-field">
+  <span className="tb-label-row">
+    <span className="tb-label">Main Acc (codes)</span>
+    <span className="tb-hint-inline">Comma-separated prefixes. Overrides range.</span>
+  </span>
+  <input
+    type="text"
+    placeholder="e.g. 601 or 601,705"
+    value={mainPrefixes}
+    onChange={(e) => setMainPrefixes(e.target.value)}
+  />
+</label>
+
+
           <label className="tb-field">
             Main Acc (From)
-            <select value={mainFrom} onChange={(e) => setMainFrom(e.target.value)}>
+            <select
+              value={mainFrom}
+              onChange={(e) => setMainFrom(e.target.value)}
+              disabled={mainDisabled}
+            >
               {mainOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -306,7 +416,11 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Main Acc (To)
-            <select value={mainTo} onChange={(e) => setMainTo(e.target.value)}>
+            <select
+              value={mainTo}
+              onChange={(e) => setMainTo(e.target.value)}
+              disabled={mainDisabled}
+            >
               {mainOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -315,7 +429,11 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Sub Acc (From)
-            <select value={subFrom} onChange={(e) => setSubFrom(e.target.value)}>
+            <select
+              value={subFrom}
+              onChange={(e) => setSubFrom(e.target.value)}
+              disabled={accLoading}  /* only while loading */
+            >
               {subOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -324,7 +442,11 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Sub Acc (To)
-            <select value={subTo} onChange={(e) => setSubTo(e.target.value)}>
+            <select
+              value={subTo}
+              onChange={(e) => setSubTo(e.target.value)}
+              disabled={accLoading}
+            >
               {subOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
@@ -358,10 +480,12 @@ export default function TrialBalance() {
             </select>
           </label>
 
-          <button className="tb-btn tb-btn-primary" onClick={fetchTB} disabled={loading}>
-            {loading ? "Loading…" : "Generate"}
+          <button className="tb-btn tb-btn-primary" onClick={fetchTB} disabled={loading || accLoading}>
+            {(loading || accLoading) ? "Loading…" : "Generate"}
           </button>
         </div>
+
+        {accError && <div className="tb-error" style={{ marginTop: 12 }}>{accError}</div>}
 
         <div className="tb-actions">
           <button className="tb-btn" onClick={exportCSV} disabled={!rows.length}>
@@ -382,7 +506,7 @@ export default function TrialBalance() {
           <div className="tb-meta">
             <div><strong>From:</strong> {from}</div>
             <div><strong>To:</strong> {to}</div>
-            <div><strong>Main:</strong> {mainFrom || "—"} → {mainTo || "—"}</div>
+            <div><strong>Main:</strong> {mainDisplay}</div>
             <div><strong>Sub:</strong> {subFrom || "—"} → {subTo || "—"}</div>
             <div><strong>Level:</strong> {level}</div>
             <div><strong>Currency:</strong> {currency || "—"}</div>

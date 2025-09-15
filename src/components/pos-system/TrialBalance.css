@@ -55,10 +55,21 @@
   color: var(--tb-muted);
 }
 
-.tb-field input[type="date"],
-.tb-field select {
-  appearance: none;
+.tb-field input[type="date"]
+{
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--tb-text);
+  background: #fff;
+  outline: none;
+}
 
+
+.tb-field select {
+
+width: 100%;
   border: 1px solid var(--tb-border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -195,6 +206,101 @@
   font-weight: 700;
   background: #f9fafb;
 }
+
+/* inline label + hint for the prefixes field */
+.tb-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* keep on one line when there's space; wrap gracefully on small screens */
+  flex-wrap: wrap;
+}
+
+.tb-label-row .tb-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tb-muted);
+}
+
+/* the small hint text inline with the label */
+.tb-hint-inline {
+  font-size: 11px;
+  color: var(--tb-muted);
+  opacity: 0.9;
+}
+
+/* make the text input look like the date/select controls */
+.tb-field input[type="text"] {
+  appearance: none;
+
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--tb-text);
+  background: #fff;
+  outline: none;
+}
+
+.tb-field input[type="text"]:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+}
+
+/* ===== Disabled controls (selects, inputs) ===== */
+.tb-field select:disabled,
+.tb-field input:disabled {
+  opacity: 1;                           /* override UA dimming so our colors apply */
+  color: var(--tb-muted);
+  background: #f9fafb;
+  border: 1px solid var(--tb-border);
+  cursor: not-allowed;
+}
+
+/* Remove focus/glow when disabled */
+.tb-field select:disabled:focus,
+.tb-field input:disabled:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Option text color inside disabled select (where supported) */
+.tb-field select:disabled option {
+  color: #9ca3af;
+}
+
+/* Safari text color fix for disabled inputs */
+.tb-field input:disabled,
+.tb-field select:disabled {
+  -webkit-text-fill-color: var(--tb-muted);
+}
+
+/* Dim the label/hint when the field contains a disabled control
+   (Works in modern Chrome/Safari; if you need broader support,
+   add a .is-disabled class to .tb-field instead.) */
+.tb-field:has(:disabled) .tb-label,
+.tb-field:has(:disabled) .tb-hint-inline {
+  color: #9ca3af;
+}
+
+/* --- Optional: class-based fallback if :has() isn't supported --- */
+/* Add `className="tb-field is-disabled"` from React when you disable the control */
+.tb-field.is-disabled select,
+.tb-field.is-disabled input {
+  opacity: 1;
+  color: var(--tb-muted);
+  background: #f9fafb;
+  border-color: var(--tb-border);
+  cursor: not-allowed;
+}
+.tb-field.is-disabled .tb-label,
+.tb-field.is-disabled .tb-hint-inline {
+  color: #9ca3af;
+}
+
+
+
+
 
 /* Small screens */
 @media (max-width: 640px) {
