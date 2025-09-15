@@ -1,0 +1,208 @@
+/* ===== Trial Balance (screen styles) ===== */
+
+:root {
+  --tb-bg: #0b1220;                /* page bg (if you use it) */
+  --tb-surface: #ffffff;
+  --tb-text: #0f172a;
+  --tb-muted: #6b7280;
+  --tb-primary: #2563eb;
+  --tb-border: #e5e7eb;
+  --tb-accent: #f3f4f6;
+  --tb-radius: 12px;
+  --tb-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+}
+
+.tb-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- Toolbar / Filters --- */
+.tb-toolbar {
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  box-shadow: var(--tb-shadow);
+  padding: 16px;
+}
+
+.tb-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px 14px;
+  align-items: end;
+}
+
+/* Each field takes 3 columns on desktop, 6 on tablet, full on mobile */
+.tb-field {
+  display: grid;
+  gap: 6px;
+  grid-column: span 3;
+}
+
+@media (max-width: 1024px) {
+  .tb-field { grid-column: span 6; }
+}
+@media (max-width: 640px) {
+  .tb-field { grid-column: 1 / -1; }
+}
+
+.tb-field > label,
+.tb-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tb-muted);
+}
+
+.tb-field input[type="date"],
+.tb-field select {
+  appearance: none;
+
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--tb-text);
+  background: #fff;
+  outline: none;
+}
+
+.tb-field input[type="date"]:focus,
+.tb-field select:focus {
+  border-color: #c7d2fe;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+}
+
+/* Actions (right side) */
+.tb-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.tb-btn {
+  border: 1px solid var(--tb-border);
+  background: #fff;
+  color: var(--tb-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tb-btn:hover { background: #f9fafb; }
+
+.tb-btn-primary {
+  background: var(--tb-primary);
+  color: #fff;
+  border-color: var(--tb-primary);
+}
+
+.tb-btn-primary:hover { filter: brightness(0.98); }
+
+/* --- Errors & Empty --- */
+.tb-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.tb-empty {
+  text-align: center;
+  color: var(--tb-muted);
+  border: 2px dashed var(--tb-border);
+  border-radius: var(--tb-radius);
+  padding: 28px 14px;
+  background: #fff;
+}
+
+/* --- “Paper” preview area (screen only) --- */
+.tb-paper {
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: var(--tb-radius);
+  box-shadow: var(--tb-shadow);
+  padding: 16px;
+}
+
+/* A4 preview container (screen) */
+.tb-a4 {
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+/* Title + meta row */
+.tb-title {
+  text-align: center;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--tb-text);
+  margin-bottom: 8px;
+}
+
+.tb-meta {
+  display: flex;
+  gap: 18px 28px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--tb-muted);
+  margin-bottom: 12px;
+}
+
+/* --- Data table --- */
+.tb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  border: 1px solid var(--tb-border);
+}
+
+.tb-table thead th {
+  background: var(--tb-accent);
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.tb-table td {
+  padding: 9px 10px;
+  border-top: 1px solid var(--tb-border);
+}
+
+.tb-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.tb-table tbody tr:hover {
+  background: #eef2ff;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.totals-row td {
+  font-weight: 700;
+  background: #f9fafb;
+}
+
+/* Small screens */
+@media (max-width: 640px) {
+  .tb-title { font-size: 18px; }
+  .tb-table { font-size: 13px; }
+}
+
+/* (Optional) nice scrollbar on webkit for large result sets */
+.tb-paper::-webkit-scrollbar { height: 10px; width: 10px; }
+.tb-paper::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+.tb-paper::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
