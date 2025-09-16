@@ -179,7 +179,7 @@ width: 100%;
 .tb-table thead th {
   background: var(--tb-accent);
   font-weight: 700;
-  text-align: left;
+  text-align: center;
   padding: 10px 10px;
   border-bottom: 1px solid var(--tb-border);
 }
@@ -187,6 +187,7 @@ width: 100%;
 .tb-table td {
   padding: 9px 10px;
   border-top: 1px solid var(--tb-border);
+  align-self: center;
 }
 
 .tb-table tbody tr:nth-child(even) {
@@ -299,6 +300,17 @@ width: 100%;
 }
 
 
+/* Center all table header/data cells */
+.tb-table th,
+.tb-table td {
+  text-align: center;
+  vertical-align: middle; /* vertical centering */
+}
+
+/* Override the old right-aligned .num */
+.tb-table .num {
+  text-align: center; /* or remove the .num class from your JSX */
+}
 
 
 

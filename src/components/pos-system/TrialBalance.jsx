@@ -1,18 +1,30 @@
+// src/pages/Reports/TrialBalance.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import "./TrialBalance.css";
 
-/**
- * Arranged accounts tree:
- *   GET http://localhost:3000/accounts/v1/acc-flat-arranged
- * New: "Main Acc (codes)" input. Example: 601 or 601,705.
- *  - When filled, it overrides Main From/To and disables those selects.
- *  - Sub accounts are built from any accounts whose code starts with
- *    any prefix, plus all their descendants.
- */
+const BASE_URL =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE_URL) ||
+  process.env.REACT_APP_API_BASE_URL ||
+  "http://localhost:3000";
 
-const ARRANGED_ACCOUNTS_ENDPOINT = "http://localhost:3000/accounts/v1/acc-flat-arranged";
-const CURRENCIES_ENDPOINT = "http://localhost:3000/currency";
+const ENDPOINTS = {
+  arrangedAccounts: `${BASE_URL}/accounts/v1/acc-flat-arranged`,
+  currencies: `${BASE_URL}/currency`,
+  trialBalance: `${BASE_URL}/reports/trial-balance`,
+};
+
+function sanitizeParams(p) {
+  const out = {};
+  Object.entries(p).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    if (typeof v === "string" && v.trim() === "") return;
+    out[k] = v;
+  });
+  return out;
+}
 
 export default function TrialBalance() {
   const today = new Date().toISOString().split("T")[0];
@@ -30,9 +42,10 @@ export default function TrialBalance() {
   const [mainFrom, setMainFrom] = useState("");
   const [mainTo, setMainTo] = useState("");
   const [subFrom, setSubFrom] = useState("");
-  const [subTo,   setSubTo]   = useState("");
+  const [subTo, setSubTo] = useState("");
+  const [subTouched, setSubTouched] = useState(false); // NEW: only apply sub-range if user changed it
 
-  // NEW: comma-separated prefixes
+  // comma-separated prefixes input (overrides main From/To)
   const [mainPrefixes, setMainPrefixes] = useState(""); // e.g. "601,705"
 
   // options / data
@@ -47,20 +60,18 @@ export default function TrialBalance() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [rows, setRows] = useState([]);
+  const [hasExtended, setHasExtended] = useState(false); // opening/period/closing support
 
   const printRef = useRef(null);
 
   const fmt = (v) => {
     const n = Number(typeof v === "string" ? v.replace(/,/g, "") : v ?? 0);
     if (!isFinite(n)) return "0.00";
-    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
-
-  const totals = useMemo(() => {
-    const debit = rows.reduce((a, r) => a + (Number(r.debit) || 0), 0);
-    const credit = rows.reduce((a, r) => a + (Number(r.credit) || 0), 0);
-    return { debit, credit, diff: debit - credit };
-  }, [rows]);
 
   // -------- fetch arranged accounts + currencies --------
   useEffect(() => {
@@ -71,46 +82,86 @@ export default function TrialBalance() {
       setAccError("");
       try {
         const [accRes, curRes] = await Promise.all([
-          axios.get(ARRANGED_ACCOUNTS_ENDPOINT),
-          axios.get(CURRENCIES_ENDPOINT)
+          axios.get(ENDPOINTS.arrangedAccounts),
+          axios.get(ENDPOINTS.currencies),
         ]);
 
         if (!cancelled) {
-          setAccountsTree(Array.isArray(accRes.data) ? accRes.data : accRes.data?.rows || []);
+          const accTree = Array.isArray(accRes.data)
+            ? accRes.data
+            : accRes.data?.rows || [];
+          setAccountsTree(accTree);
 
-          const curData = Array.isArray(curRes.data) ? curRes.data : curRes.data?.rows || [];
+          const curData = Array.isArray(curRes.data)
+            ? curRes.data
+            : curRes.data?.rows || [];
           const curOpts = curData
             .map((c) => ({
               value: c.code ?? c.currencyCode ?? c.id ?? "",
-              label: c.code ?? c.currencyCode ?? c.name ?? ""
+              label: c.code ?? c.currencyCode ?? c.name ?? "",
             }))
             .filter((o) => o.value);
-          setCurrencyOptions(curOpts.length ? curOpts : [{ value: "USD", label: "USD" }, { value: "LBP", label: "LBP" }]);
-          if (!currency && (curOpts[0]?.value || "USD")) {
-            setCurrency(curOpts[0]?.value || "USD");
-          }
+
+          const opts =
+            curOpts.length > 0
+              ? curOpts
+              : [
+                  { value: "USD", label: "USD" },
+                  { value: "LBP", label: "LBP" },
+                ];
+
+          setCurrencyOptions(opts);
+          if (!currency) setCurrency(opts[0].value);
         }
       } catch (e) {
         if (!cancelled) {
-          setAccError(e?.response?.data?.message || e.message || "Failed to load accounts/currencies");
+          setAccError(
+            e?.response?.data?.message ||
+              e.message ||
+              "Failed to load accounts/currencies"
+          );
           // Fallback sample tree (optional)
           setAccountsTree([
-            { id: 1, accountNumber: "1000", accountName: "Assets", children: [
-              { id: 11, accountNumber: "1000-01", accountName: "Cash", children: [] },
-              { id: 12, accountNumber: "1000-02", accountName: "Bank", children: [] },
-            ]},
-            { id: 2, accountNumber: "2000", accountName: "Liabilities", children: [
-              { id: 21, accountNumber: "2000-01", accountName: "Payables", children: [] },
-            ]},
+            {
+              id: 1,
+              accountNumber: "1000",
+              accountName: "Assets",
+              children: [
+                { id: 11, accountNumber: "1000-01", accountName: "Cash", children: [] },
+                { id: 12, accountNumber: "1000-02", accountName: "Bank", children: [] },
+              ],
+            },
+            {
+              id: 2,
+              accountNumber: "2000",
+              accountName: "Liabilities",
+              children: [
+                { id: 21, accountNumber: "2000-01", accountName: "Payables", children: [] },
+              ],
+            },
             { id: 3, accountNumber: "3000", accountName: "Equity", children: [] },
-            { id: 4, accountNumber: "4000", accountName: "Revenue", children: [
-              { id: 41, accountNumber: "4000-01", accountName: "Sales", children: [] },
-            ]},
-            { id: 5, accountNumber: "5000", accountName: "Expenses", children: [
-              { id: 51, accountNumber: "5000-01", accountName: "COGS", children: [] },
-            ]},
+            {
+              id: 4,
+              accountNumber: "4000",
+              accountName: "Revenue",
+              children: [
+                { id: 41, accountNumber: "4000-01", accountName: "Sales", children: [] },
+              ],
+            },
+            {
+              id: 5,
+              accountNumber: "5000",
+              accountName: "Expenses",
+              children: [
+                { id: 51, accountNumber: "5000-01", accountName: "COGS", children: [] },
+              ],
+            },
           ]);
-          setCurrencyOptions([{ value: "USD", label: "USD" }, { value: "LBP", label: "LBP" }]);
+          const opts = [
+            { value: "USD", label: "USD" },
+            { value: "LBP", label: "LBP" },
+          ];
+          setCurrencyOptions(opts);
           if (!currency) setCurrency("USD");
         }
       } finally {
@@ -119,7 +170,9 @@ export default function TrialBalance() {
     };
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -128,11 +181,18 @@ export default function TrialBalance() {
     const out = [];
     const walk = (nodes, depth = 0) => {
       (nodes || []).forEach((n) => {
-        const id   = n.id ?? n.accountId ?? n.code ?? n.accountNumber ?? n.accountCode ?? null;
+        const id =
+          n.id ??
+          n.accountId ??
+          n.code ??
+          n.accountNumber ??
+          n.accountCode ??
+          null;
         const code = n.accountNumber ?? n.accountCode ?? n.code ?? "";
         const name = n.accountName ?? n.name ?? "";
         out.push({ id, code: String(code), name: String(name), depth, node: n });
-        if (Array.isArray(n.children) && n.children.length) walk(n.children, depth + 1);
+        if (Array.isArray(n.children) && n.children.length)
+          walk(n.children, depth + 1);
       });
     };
     walk(accountsTree, 0);
@@ -159,13 +219,15 @@ export default function TrialBalance() {
 
   // root mains (depth 0) as [{code, node}]
   const rootMains = useMemo(() => {
-    return mainOptions.map(m => ({ code: m.value, node: m.node }));
+    return mainOptions.map((m) => ({ code: m.value, node: m.node }));
   }, [mainOptions]);
 
-  // Parse comma-separated prefixes (numbers only, trimmed)
+  // Parse comma-separated prefixes (kept as-is; match via startsWith)
   const prefixes = useMemo(() => {
-    const raw = (mainPrefixes || "").split(",").map(s => s.trim()).filter(Boolean);
-    // keep as-is (don’t strip non-digits in case codes have letters); compare via startsWith
+    const raw = (mainPrefixes || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     return raw;
   }, [mainPrefixes]);
 
@@ -174,18 +236,16 @@ export default function TrialBalance() {
     const out = [];
     const added = new Set(); // dedupe by code
 
-    // utility to push a node (depth-aware)
     const pushNode = (node) => {
       const code = node?.accountNumber ?? node?.accountCode ?? node?.code ?? "";
       const name = node?.accountName ?? node?.name ?? "";
       if (!code || added.has(code)) return;
       const d = nodeDepth.get(node) ?? 0;
-      const indent = "\u00A0\u00A0".repeat(Math.max(0, d)); // show absolute hierarchy
+      const indent = "\u00A0\u00A0".repeat(Math.max(0, d));
       out.push({ value: code, label: `${indent}${code} — ${name}` });
       added.add(code);
     };
 
-    // traverse descendants
     const walkDesc = (node) => {
       const kids = node?.children || [];
       for (const ch of kids) {
@@ -196,14 +256,13 @@ export default function TrialBalance() {
 
     // If prefixes exist, override main range logic
     if (prefixes.length) {
-      // any account (any depth) whose code starts with any prefix:
       flatAccounts.forEach((fa) => {
         if (prefixes.some((p) => fa.code.startsWith(p))) {
           if (fa.depth === 0) {
-            // main matched → include ALL descendants (subs only)
+            // main matched → include ALL descendants
             walkDesc(fa.node);
           } else {
-            // sub matched → include this node + its descendants
+            // sub matched → include this node + descendants
             pushNode(fa.node);
             walkDesc(fa.node);
           }
@@ -215,7 +274,7 @@ export default function TrialBalance() {
     // else: use main From→To (by index in root mains)
     if (!rootMains.length) return out;
 
-    const findIdx = (codeVal) => rootMains.findIndex(m => m.code === codeVal);
+    const findIdx = (codeVal) => rootMains.findIndex((m) => m.code === codeVal);
     const startIdx = mainFrom ? findIdx(mainFrom) : 0;
     const endIdxRaw = mainTo ? findIdx(mainTo) : rootMains.length - 1;
 
@@ -232,16 +291,20 @@ export default function TrialBalance() {
   useEffect(() => {
     if (!mainOptions.length) return;
     if (!mainFrom) setMainFrom(mainOptions[0].value);
-    if (!mainTo)   setMainTo(mainOptions[mainOptions.length - 1].value);
+    if (!mainTo) setMainTo(mainOptions[mainOptions.length - 1].value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mainOptions.length]);
 
-  // adjust subFrom/subTo when subOptions change
+  // adjust subFrom/subTo when subOptions change (do NOT mark touched)
   useEffect(() => {
-    if (!subOptions.length) { setSubFrom(""); setSubTo(""); return; }
+    if (!subOptions.length) {
+      setSubFrom("");
+      setSubTo("");
+      return;
+    }
     const values = subOptions.map((o) => o.value);
     if (!values.includes(subFrom)) setSubFrom(values[0]);
-    if (!values.includes(subTo))   setSubTo(values[values.length - 1]);
+    if (!values.includes(subTo)) setSubTo(values[values.length - 1]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subOptions.length, mainFrom, mainTo, mainPrefixes]);
 
@@ -250,56 +313,111 @@ export default function TrialBalance() {
     setLoading(true);
     setErr("");
     try {
-      const params = {
+      const params = sanitizeParams({
         from,
         to,
         level,
         currency,
         invoiceType,
-        mainFrom: prefixes.length ? undefined : mainFrom, // range not used when prefixes provided
-        mainTo:   prefixes.length ? undefined : mainTo,
-        subFrom,
-        subTo,
-        mainPrefixes: prefixes.length ? prefixes.join(",") : undefined, // send if your API supports it
-      };
+        mainFrom: prefixes.length ? undefined : mainFrom,
+        mainTo: prefixes.length ? undefined : mainTo,
+        // Only apply sub-range IF user explicitly changed it:
+        ...(subTouched ? { subFrom, subTo } : {}),
+        mainPrefixes: prefixes.length ? prefixes.join(",") : undefined,
+      });
 
-      const res = await axios.get("http://localhost:3000/reports/trial-balance", { params });
-      const data = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.rows)
-        ? res.data.rows
-        : [];
+      const res = await axios.get(ENDPOINTS.trialBalance, { params });
+      const raw = Array.isArray(res.data) ? res.data : res.data?.rows ?? [];
 
-      const normalized = data.map((r, i) => ({
-        id: r.id ?? i,
-        accountCode: r.accountCode ?? r.code ?? "",
-        accountName: r.accountName ?? r.name ?? "",
-        debit: Number(r.debit) || 0,
-        credit: Number(r.credit) || 0,
-      }));
+      // Detect "extended" shape from backend (opening/period/closing)
+      const extended =
+        raw?.length > 0 &&
+        (Object.prototype.hasOwnProperty.call(raw[0], "openingBalance") ||
+          Object.prototype.hasOwnProperty.call(raw[0], "periodDebit") ||
+          Object.prototype.hasOwnProperty.call(raw[0], "closingBalance"));
 
-      setRows(normalized);
+      // Normalize but DO NOT re-sort — keep backend order exactly
+      const normalized = raw.map((r) => {
+        if (extended) {
+          const openingBalance =
+            "openingBalance" in r
+              ? Number(r.openingBalance) || 0
+              : (Number(r.openingDebit) || 0) - (Number(r.openingCredit) || 0);
+          const periodDebit = Number(r.periodDebit) || Number(r.debit) || 0;
+          const periodCredit = Number(r.periodCredit) || Number(r.credit) || 0;
+          const closingBalance =
+            "closingBalance" in r
+              ? Number(r.closingBalance) || 0
+              : openingBalance + (periodDebit - periodCredit);
+
+          return {
+            accountCode: r.accountCode ?? r.code ?? "",
+            accountName: r.accountName ?? r.name ?? "",
+            openingBalance,
+            periodDebit,
+            periodCredit,
+            closingBalance,
+            debit: periodDebit,
+            credit: periodCredit,
+          };
+        } else {
+          const debit = Number(r.debit) || 0;
+          const credit = Number(r.credit) || 0;
+          return {
+            accountCode: r.accountCode ?? r.code ?? "",
+            accountName: r.accountName ?? r.name ?? "",
+            debit,
+            credit,
+            openingBalance: 0,
+            periodDebit: debit,
+            periodCredit: credit,
+            closingBalance: debit - credit,
+          };
+        }
+      });
+
+      setHasExtended(extended);
+      setRows(normalized); // preserve backend order
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
       setRows([]);
+      setHasExtended(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // ---------- CSV ----------
-  const exportCSV = () => {
-    const header = ["Account Code", "Account Name", "Debit", "Credit"].join(",");
-    const lines = rows.map((r) =>
-      [
-        `"${(r.accountCode ?? "").replace(/"/g, '""')}"`,
-        `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
-        fmt(r.debit),
-        fmt(r.credit),
-      ].join(",")
+  // ---------- Totals ----------
+  const totals = useMemo(() => {
+    if (!rows.length) {
+      return {
+        openingBalance: 0,
+        periodDebit: 0,
+        periodCredit: 0,
+        closingBalance: 0,
+        diff: 0,
+      };
+    }
+    const acc = rows.reduce(
+      (t, r) => {
+        t.openingBalance += Number(r.openingBalance || 0);
+        t.periodDebit += Number(r.periodDebit || 0);
+        t.periodCredit += Number(r.periodCredit || 0);
+        t.closingBalance += Number(r.closingBalance || 0);
+        return t;
+      },
+      {
+        openingBalance: 0,
+        periodDebit: 0,
+        periodCredit: 0,
+        closingBalance: 0,
+      }
     );
-    const footer = ["", "TOTAL", fmt(totals.debit), fmt(totals.credit)].join(",");
-    const csv = [header, ...lines, footer].join("\n");
+    return { ...acc, diff: acc.periodDebit - acc.periodCredit };
+  }, [rows]);
+
+  // ---------- CSV ----------
+  const downloadCSV = (csv) => {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -309,6 +427,56 @@ export default function TrialBalance() {
     URL.revokeObjectURL(url);
   };
 
+  const exportCSV = () => {
+    let header;
+    let lines;
+
+    if (hasExtended) {
+      header = [
+        "Account Code",
+        "Account Name",
+        "Opening Balance",
+        "Period Debit",
+        "Period Credit",
+        "Closing Balance",
+      ].join(",");
+
+      lines = rows.map((r) =>
+        [
+          `"${(r.accountCode ?? "").replace(/"/g, '""')}"`,
+          `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
+          fmt(r.openingBalance),
+          fmt(r.periodDebit),
+          fmt(r.periodCredit),
+          fmt(r.closingBalance),
+        ].join(",")
+      );
+      const footer = [
+        "",
+        "TOTAL",
+        fmt(totals.openingBalance),
+        fmt(totals.periodDebit),
+        fmt(totals.periodCredit),
+        fmt(totals.closingBalance),
+      ].join(",");
+      downloadCSV([header, ...lines, footer].join("\n"));
+    } else {
+      header = ["Account Code", "Account Name", "Debit", "Credit"].join(",");
+      lines = rows.map((r) =>
+        [
+          `"${(r.accountCode ?? "").replace(/"/g, '""')}"`,
+          `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
+          fmt(r.debit),
+          fmt(r.credit),
+        ].join(",")
+      );
+      const footer = ["", "TOTAL", fmt(totals.periodDebit), fmt(totals.periodCredit)].join(
+        ","
+      );
+      downloadCSV([header, ...lines, footer].join("\n"));
+    }
+  };
+
   // ---------- Print (A4 iframe technique) ----------
   const handlePrint = () => {
     const root = printRef.current;
@@ -316,11 +484,18 @@ export default function TrialBalance() {
 
     const copiedStyles = Array.from(
       document.querySelectorAll('style, link[rel="stylesheet"]')
-    ).map((n) => n.outerHTML).join("");
+    )
+      .map((n) => n.outerHTML)
+      .join("");
 
     const iframe = document.createElement("iframe");
     Object.assign(iframe.style, {
-      position: "fixed", right: "0", bottom: "0", width: "0", height: "0", border: "0",
+      position: "fixed",
+      right: "0",
+      bottom: "0",
+      width: "0",
+      height: "0",
+      border: "0",
     });
     document.body.appendChild(iframe);
 
@@ -367,10 +542,21 @@ export default function TrialBalance() {
     };
   };
 
-  const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;
+  const mainDisabled =
+    !!mainPrefixes.trim() || !mainOptions.length || accLoading;
   const mainDisplay = mainPrefixes.trim()
     ? mainPrefixes
     : `${mainFrom || "—"} → ${mainTo || "—"}`;
+  const subDisplay = subTouched ? `${subFrom || "—"} → ${subTo || "—"}` : "ALL";
+
+  // Inline styles to FORCE native table semantics (overrides any flex/grid rules)
+  const tStyles = {
+    thead: { display: "table-header-group" },
+    tbody: { display: "table-row-group" },
+    tr: { display: "table-row" },
+    th: { display: "table-cell" },
+    td: { display: "table-cell" },
+  };
 
   return (
     <div className="tb-wrap">
@@ -379,29 +565,38 @@ export default function TrialBalance() {
         <div className="tb-controls tb-controls-grid">
           <label className="tb-field">
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
           </label>
 
           <label className="tb-field">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </label>
 
-<label className="tb-field">
-  <span className="tb-label-row">
-    <span className="tb-label">Main Acc (codes)</span>
-    <span className="tb-hint-inline">Comma-separated prefixes. Overrides range.</span>
-  </span>
-  <input
-    type="text"
-    placeholder="e.g. 601 or 601,705"
-    value={mainPrefixes}
-    onChange={(e) => setMainPrefixes(e.target.value)}
-  />
-</label>
-
-
           <label className="tb-field">
+            <span className="tb-label-row">
+              <span className="tb-label">Main Acc (codes)</span>
+              <span className="tb-hint-inline">
+                Comma-separated prefixes. Overrides range.
+              </span>
+            </span>
+            <input
+              type="text"
+              placeholder="e.g. 601 or 601,705"
+              value={mainPrefixes}
+              onChange={(e) => setMainPrefixes(e.target.value)}
+            />
+          </label>
+
+          <label className={`tb-field ${mainDisabled ? "is-disabled" : ""}`}>
             Main Acc (From)
             <select
               value={mainFrom}
@@ -409,12 +604,14 @@ export default function TrialBalance() {
               disabled={mainDisabled}
             >
               {mainOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </label>
 
-          <label className="tb-field">
+          <label className={`tb-field ${mainDisabled ? "is-disabled" : ""}`}>
             Main Acc (To)
             <select
               value={mainTo}
@@ -422,7 +619,9 @@ export default function TrialBalance() {
               disabled={mainDisabled}
             >
               {mainOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </label>
@@ -431,11 +630,13 @@ export default function TrialBalance() {
             Sub Acc (From)
             <select
               value={subFrom}
-              onChange={(e) => setSubFrom(e.target.value)}
-              disabled={accLoading}  /* only while loading */
+              onChange={(e) => { setSubFrom(e.target.value); setSubTouched(true); }}
+              disabled={accLoading}
             >
               {subOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </label>
@@ -444,54 +645,83 @@ export default function TrialBalance() {
             Sub Acc (To)
             <select
               value={subTo}
-              onChange={(e) => setSubTo(e.target.value)}
+              onChange={(e) => { setSubTo(e.target.value); setSubTouched(true); }}
               disabled={accLoading}
             >
               {subOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="tb-field">
             Level
-            <select value={level} onChange={(e) => setLevel(Number(e.target.value))}>
-              {[1,2,3,4,5,6].map((n) => (
-                <option key={n} value={n}>{n}</option>
+            <select
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
+            >
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="tb-field">
             Currency
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+            >
               {currencyOptions.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </label>
 
           <label className="tb-field">
             Invoice Type
-            <select value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
+            <select
+              value={invoiceType}
+              onChange={(e) => setInvoiceType(e.target.value)}
+            >
               {invoiceTypeOptions.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </label>
 
-          <button className="tb-btn tb-btn-primary" onClick={fetchTB} disabled={loading || accLoading}>
-            {(loading || accLoading) ? "Loading…" : "Generate"}
+          <button
+            className="tb-btn tb-btn-primary"
+            onClick={fetchTB}
+            disabled={loading || accLoading}
+          >
+            {loading || accLoading ? "Loading…" : "Generate"}
           </button>
         </div>
 
-        {accError && <div className="tb-error" style={{ marginTop: 12 }}>{accError}</div>}
+        {accError && (
+          <div className="tb-error" style={{ marginTop: 12 }}>
+            {accError}
+          </div>
+        )}
 
         <div className="tb-actions">
           <button className="tb-btn" onClick={exportCSV} disabled={!rows.length}>
             Export CSV
           </button>
-          <button className="tb-btn tb-btn-primary" onClick={handlePrint} disabled={!rows.length}>
+          <button
+            className="tb-btn tb-btn-primary"
+            onClick={handlePrint}
+            disabled={!rows.length}
+          >
             Print
           </button>
         </div>
@@ -507,44 +737,83 @@ export default function TrialBalance() {
             <div><strong>From:</strong> {from}</div>
             <div><strong>To:</strong> {to}</div>
             <div><strong>Main:</strong> {mainDisplay}</div>
-            <div><strong>Sub:</strong> {subFrom || "—"} → {subTo || "—"}</div>
+            <div><strong>Sub:</strong> {subDisplay}</div>
             <div><strong>Level:</strong> {level}</div>
             <div><strong>Currency:</strong> {currency || "—"}</div>
             <div><strong>Invoice Type:</strong> {invoiceType}</div>
             <div><strong>Date:</strong> {new Date().toISOString().split("T")[0]}</div>
           </div>
 
-          <table className="tb-table">
-            <thead>
-              <tr>
-                <th style={{ width: "18%" }}>Account Code</th>
-                <th>Account Name</th>
-                <th style={{ width: "18%" }}>Debit</th>
-                <th style={{ width: "18%" }}>Credit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.accountCode}</td>
-                  <td>{r.accountName}</td>
-                  <td className="num">{fmt(r.debit)}</td>
-                  <td className="num">{fmt(r.credit)}</td>
+          {!hasExtended ? (
+            // ---- Simple table (legacy shape) ----
+            <table className="tb-table">
+              <thead style={tStyles.thead}>
+                <tr style={tStyles.tr}>
+                  <th style={{ ...tStyles.th, width: "18%" }}>Account Code</th>
+                  <th style={tStyles.th}>Account Name</th>
+                  <th style={{ ...tStyles.th, width: "18%" }}>Debit</th>
+                  <th style={{ ...tStyles.th, width: "18%" }}>Credit</th>
                 </tr>
-              ))}
-              <tr className="totals-row">
-                <td></td>
-                <td>Total</td>
-                <td className="num">{fmt(totals.debit)}</td>
-                <td className="num">{fmt(totals.credit)}</td>
-              </tr>
-              <tr>
-                <td></td>
-                <td>Difference (Debit - Credit)</td>
-                <td className="num" colSpan={2}>{fmt(totals.diff)}</td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody style={tStyles.tbody}>
+                {rows.map((r, idx) => (
+                  <tr key={idx} style={tStyles.tr}>
+                    <td style={tStyles.td}>{r.accountCode}</td>
+                    <td style={tStyles.td}>{r.accountName}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.debit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.credit)}</td>
+                  </tr>
+                ))}
+                <tr className="totals-row" style={tStyles.tr}>
+                  <td style={tStyles.td}></td>
+                  <td style={tStyles.td}>Total</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
+                </tr>
+                <tr style={tStyles.tr}>
+                  <td style={tStyles.td}></td>
+                  <td style={tStyles.td}>Difference (Debit - Credit)</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num" colSpan={2}>
+                    {fmt(totals.diff)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            // ---- Extended table (Opening Balance + Period + Closing) ----
+            <table className="tb-table">
+              <thead style={tStyles.thead}>
+                <tr style={tStyles.tr}>
+                  <th style={{ ...tStyles.th, width: "20%" }}>Account Code</th>
+                  <th style={tStyles.th}>Account Name</th>
+                  <th style={{ ...tStyles.th, width: "15%" }}>Opening Balance</th>
+                  <th style={{ ...tStyles.th, width: "15%" }}>Period Debit</th>
+                  <th style={{ ...tStyles.th, width: "15%" }}>Period Credit</th>
+                  <th style={{ ...tStyles.th, width: "15%" }}>Closing Balance</th>
+                </tr>
+              </thead>
+              <tbody style={tStyles.tbody}>
+                {rows.map((r, idx) => (
+                  <tr key={idx} style={tStyles.tr}>
+                    <td style={tStyles.td}>{r.accountCode}</td>
+                    <td style={tStyles.td}>{r.accountName}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
+                  </tr>
+                ))}
+                <tr className="totals-row" style={tStyles.tr}>
+                  <td style={tStyles.td}></td>
+                  <td style={tStyles.td}>Total</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
