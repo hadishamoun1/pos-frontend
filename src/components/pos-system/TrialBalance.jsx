@@ -14,6 +14,7 @@ const ENDPOINTS = {
   arrangedAccounts: `${BASE_URL}/accounts/v1/acc-flat-arranged`,
   currencies: `${BASE_URL}/currency`,
   trialBalance: `${BASE_URL}/reports/trial-balance`,
+  standardTrialBalance: `${BASE_URL}/reports/trial-balance/standard`, // Standard API
 };
 
 function sanitizeParams(p) {
@@ -38,18 +39,26 @@ export default function TrialBalance() {
   const [currency, setCurrency] = useState("");
   const [invoiceType, setInvoiceType] = useState("ALL"); // ALL | S | G
 
+  // report type
+  const reportTypeOptions = [
+    { value: "STANDARD", label: "Standard" },
+    { value: "CURRENCIES", label: "Currencies" },
+    { value: "GROUPED", label: "Grouped" },
+  ];
+  const [reportType, setReportType] = useState("STANDARD");
+
   // account filters
   const [mainFrom, setMainFrom] = useState("");
   const [mainTo, setMainTo] = useState("");
   const [subFrom, setSubFrom] = useState("");
   const [subTo, setSubTo] = useState("");
-  const [subTouched, setSubTouched] = useState(false); // NEW: only apply sub-range if user changed it
+  const [subTouched, setSubTouched] = useState(false); // only apply sub-range if user changed it
 
   // comma-separated prefixes input (overrides main From/To)
   const [mainPrefixes, setMainPrefixes] = useState(""); // e.g. "601,705"
 
   // options / data
-  const [accountsTree, setAccountsTree] = useState([]);
+   const [accountsTree, setAccountsTree] = useState([]);
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [accLoading, setAccLoading] = useState(false);
   const [accError, setAccError] = useState("");
@@ -313,31 +322,41 @@ export default function TrialBalance() {
     setLoading(true);
     setErr("");
     try {
+      // choose endpoint
+      const endpoint =
+        reportType === "STANDARD"
+          ? ENDPOINTS.standardTrialBalance
+          : ENDPOINTS.trialBalance;
+
+      // build params (do NOT override any UI selections)
       const params = sanitizeParams({
         from,
         to,
-        level,
+        level, // harmless for standard
         currency,
         invoiceType,
         mainFrom: prefixes.length ? undefined : mainFrom,
         mainTo: prefixes.length ? undefined : mainTo,
-        // Only apply sub-range IF user explicitly changed it:
         ...(subTouched ? { subFrom, subTo } : {}),
         mainPrefixes: prefixes.length ? prefixes.join(",") : undefined,
       });
 
-      const res = await axios.get(ENDPOINTS.trialBalance, { params });
-      const raw = Array.isArray(res.data) ? res.data : res.data?.rows ?? [];
+      const res = await axios.get(endpoint, { params });
+
+      // Always keep backend order EXACTLY as delivered
+      const rawRows = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.rows ?? []);
 
       // Detect "extended" shape from backend (opening/period/closing)
       const extended =
-        raw?.length > 0 &&
-        (Object.prototype.hasOwnProperty.call(raw[0], "openingBalance") ||
-          Object.prototype.hasOwnProperty.call(raw[0], "periodDebit") ||
-          Object.prototype.hasOwnProperty.call(raw[0], "closingBalance"));
+        rawRows?.length > 0 &&
+        (Object.prototype.hasOwnProperty.call(rawRows[0], "openingBalance") ||
+          Object.prototype.hasOwnProperty.call(rawRows[0], "periodDebit") ||
+          Object.prototype.hasOwnProperty.call(rawRows[0], "closingBalance"));
 
-      // Normalize but DO NOT re-sort — keep backend order exactly
-      const normalized = raw.map((r) => {
+      // Normalize but remember server index (_ord) from the API list
+      const normalized = rawRows.map((r, _ord) => {
         if (extended) {
           const openingBalance =
             "openingBalance" in r
@@ -350,34 +369,62 @@ export default function TrialBalance() {
               ? Number(r.closingBalance) || 0
               : openingBalance + (periodDebit - periodCredit);
 
+          const openingDebit = Number(r.openingDebit) || 0;
+          const openingCredit = Number(r.openingCredit) || 0;
+          const balance =
+            "balance" in r ? Number(r.balance) || 0 : periodDebit - periodCredit;
+
+          const parentCode = r.parentCode ?? null;
+          const parentName = r.parentName ?? null;
+
           return {
+            _ord,
             accountCode: r.accountCode ?? r.code ?? "",
             accountName: r.accountName ?? r.name ?? "",
+            parentCode,
+            parentName,
+            openingDebit,
+            openingCredit,
             openingBalance,
             periodDebit,
             periodCredit,
+            balance,
             closingBalance,
+            // legacy fields
             debit: periodDebit,
             credit: periodCredit,
           };
         } else {
           const debit = Number(r.debit) || 0;
           const credit = Number(r.credit) || 0;
+          const openingBalance = 0;
+          const periodDebit = debit;
+          const periodCredit = credit;
+          const balance = periodDebit - periodCredit;
+          const closingBalance = openingBalance + balance;
+
           return {
+            _ord,
             accountCode: r.accountCode ?? r.code ?? "",
             accountName: r.accountName ?? r.name ?? "",
+            parentCode: r.parentCode ?? null,
+            parentName: r.parentName ?? null,
+            // shaped for the table we show
+            openingBalance,
+            periodDebit,
+            periodCredit,
+            balance,
+            closingBalance,
+            // legacy fields
             debit,
             credit,
-            openingBalance: 0,
-            periodDebit: debit,
-            periodCredit: credit,
-            closingBalance: debit - credit,
           };
         }
       });
 
+      // No sorting here—React will render in this exact order
       setHasExtended(extended);
-      setRows(normalized); // preserve backend order
+      setRows(normalized);
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
       setRows([]);
@@ -394,6 +441,7 @@ export default function TrialBalance() {
         openingBalance: 0,
         periodDebit: 0,
         periodCredit: 0,
+        balance: 0,
         closingBalance: 0,
         diff: 0,
       };
@@ -403,6 +451,7 @@ export default function TrialBalance() {
         t.openingBalance += Number(r.openingBalance || 0);
         t.periodDebit += Number(r.periodDebit || 0);
         t.periodCredit += Number(r.periodCredit || 0);
+        t.balance += Number(r.balance || 0);
         t.closingBalance += Number(r.closingBalance || 0);
         return t;
       },
@@ -410,6 +459,7 @@ export default function TrialBalance() {
         openingBalance: 0,
         periodDebit: 0,
         periodCredit: 0,
+        balance: 0,
         closingBalance: 0,
       }
     );
@@ -428,53 +478,42 @@ export default function TrialBalance() {
   };
 
   const exportCSV = () => {
-    let header;
-    let lines;
+    const displayCode = (r) =>
+      r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
 
-    if (hasExtended) {
-      header = [
-        "Account Code",
-        "Account Name",
-        "Opening Balance",
-        "Period Debit",
-        "Period Credit",
-        "Closing Balance",
-      ].join(",");
+    const header = [
+      "Account Code",
+      "Account Name",
+      "Prev Balance",
+      "Debit",
+      "Credit",
+      "Balance",
+      "Ending Balance",
+    ].join(",");
 
-      lines = rows.map((r) =>
-        [
-          `"${(r.accountCode ?? "").replace(/"/g, '""')}"`,
-          `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
-          fmt(r.openingBalance),
-          fmt(r.periodDebit),
-          fmt(r.periodCredit),
-          fmt(r.closingBalance),
-        ].join(",")
-      );
-      const footer = [
-        "",
-        "TOTAL",
-        fmt(totals.openingBalance),
-        fmt(totals.periodDebit),
-        fmt(totals.periodCredit),
-        fmt(totals.closingBalance),
-      ].join(",");
-      downloadCSV([header, ...lines, footer].join("\n"));
-    } else {
-      header = ["Account Code", "Account Name", "Debit", "Credit"].join(",");
-      lines = rows.map((r) =>
-        [
-          `"${(r.accountCode ?? "").replace(/"/g, '""')}"`,
-          `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
-          fmt(r.debit),
-          fmt(r.credit),
-        ].join(",")
-      );
-      const footer = ["", "TOTAL", fmt(totals.periodDebit), fmt(totals.periodCredit)].join(
-        ","
-      );
-      downloadCSV([header, ...lines, footer].join("\n"));
-    }
+    const lines = rows.map((r) =>
+      [
+        `"${(displayCode(r) ?? "").replace(/"/g, '""')}"`,
+        `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
+        fmt(r.openingBalance),
+        fmt(r.periodDebit),
+        fmt(r.periodCredit),
+        fmt(r.balance),
+        fmt(r.closingBalance),
+      ].join(",")
+    );
+
+    const footer = [
+      "",
+      "TOTAL",
+      fmt(totals.openingBalance),
+      fmt(totals.periodDebit),
+      fmt(totals.periodCredit),
+      fmt(totals.balance),
+      fmt(totals.closingBalance),
+    ].join(",");
+
+    downloadCSV([header, ...lines, footer].join("\n"));
   };
 
   // ---------- Print (A4 iframe technique) ----------
@@ -507,18 +546,21 @@ export default function TrialBalance() {
   <meta charset="utf-8"/>
   ${copiedStyles}
   <style>
-    @page { size: A4 portrait; margin: 10mm; }
+    /* PRINT-ONLY SETTINGS */
+    @page { size: A4 landscape; margin: 10mm; }
     html, body { margin: 0; padding: 0; }
     .tb-a4 {
-      width: 190mm;
-      min-height: 277mm;
+      width: 277mm; /* A4 landscape content width */
+      min-height: 190mm;
       margin: 0;
       padding: 0 2mm;
       box-shadow: none;
     }
     .tb-title { text-align: center; font-weight: 700; font-size: 18px; margin: 4mm 0; }
     .tb-meta { display: flex; flex-wrap: wrap; gap: 8mm; margin: 2mm 0 4mm 0; font-size: 12px; }
-    .tb-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+    /* Table + numeric alignment */
+    .tb-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
     .tb-table th, .tb-table td { border: 1px solid #000; padding: 4px 6px; }
     .tb-table th { background: #f3f4f6; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -526,6 +568,12 @@ export default function TrialBalance() {
     .tb-table thead th { position: static !important; }
     .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    /* PRINT-ONLY column widths (override inline widths) */
+    .tb-table th:nth-child(1),
+    .tb-table td:nth-child(1) { width: 10% !important; } /* Account Code */
+    .tb-table th:nth-child(2),
+    .tb-table td:nth-child(2) { width: 23% !important; } /* Account Name */
   </style>
   <title>Trial Balance</title>
 </head>
@@ -542,9 +590,13 @@ export default function TrialBalance() {
     };
   };
 
-  const mainDisabled =
-    !!mainPrefixes.trim() || !mainOptions.length || accLoading;
-  const mainDisplay = mainPrefixes.trim()
+  const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;
+
+  // For meta header: show the actual current selections
+  const reportTypeLabel =
+    reportTypeOptions.find((o) => o.value === reportType)?.label || reportType;
+
+  const mainDisplay = (mainPrefixes || "").trim()
     ? mainPrefixes
     : `${mainFrom || "—"} → ${mainTo || "—"}`;
   const subDisplay = subTouched ? `${subFrom || "—"} → ${subTo || "—"}` : "ALL";
@@ -557,6 +609,10 @@ export default function TrialBalance() {
     th: { display: "table-cell" },
     td: { display: "table-cell" },
   };
+
+  // Helper to render account code as "parentCode-accountCode" when available
+  const renderAccountCode = (r) =>
+    r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
 
   return (
     <div className="tb-wrap">
@@ -630,7 +686,10 @@ export default function TrialBalance() {
             Sub Acc (From)
             <select
               value={subFrom}
-              onChange={(e) => { setSubFrom(e.target.value); setSubTouched(true); }}
+              onChange={(e) => {
+                setSubFrom(e.target.value);
+                setSubTouched(true);
+              }}
               disabled={accLoading}
             >
               {subOptions.map((o) => (
@@ -645,7 +704,10 @@ export default function TrialBalance() {
             Sub Acc (To)
             <select
               value={subTo}
-              onChange={(e) => { setSubTo(e.target.value); setSubTouched(true); }}
+              onChange={(e) => {
+                setSubTo(e.target.value);
+                setSubTouched(true);
+              }}
               disabled={accLoading}
             >
               {subOptions.map((o) => (
@@ -698,6 +760,21 @@ export default function TrialBalance() {
             </select>
           </label>
 
+          {/* Report Type */}
+          <label className="tb-field">
+            Report Type
+            <select
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+            >
+              {reportTypeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <button
             className="tb-btn tb-btn-primary"
             onClick={fetchTB}
@@ -741,79 +818,46 @@ export default function TrialBalance() {
             <div><strong>Level:</strong> {level}</div>
             <div><strong>Currency:</strong> {currency || "—"}</div>
             <div><strong>Invoice Type:</strong> {invoiceType}</div>
+            <div><strong>Report Type:</strong> {reportTypeLabel}</div>
             <div><strong>Date:</strong> {new Date().toISOString().split("T")[0]}</div>
           </div>
 
-          {!hasExtended ? (
-            // ---- Simple table (legacy shape) ----
-            <table className="tb-table">
-              <thead style={tStyles.thead}>
-                <tr style={tStyles.tr}>
-                  <th style={{ ...tStyles.th, width: "18%" }}>Account Code</th>
-                  <th style={tStyles.th}>Account Name</th>
-                  <th style={{ ...tStyles.th, width: "18%" }}>Debit</th>
-                  <th style={{ ...tStyles.th, width: "18%" }}>Credit</th>
+          {/* We use the same columns in both paths now */}
+          <table className="tb-table">
+            <thead style={tStyles.thead}>
+              <tr style={tStyles.tr}>
+                <th style={{ ...tStyles.th, width: "20%" }}>Account Code</th>
+                <th style={tStyles.th}>Account Name</th>
+                <th style={{ ...tStyles.th, width: "13%" }}>Prev Balance</th>
+                <th style={{ ...tStyles.th, width: "13%" }}>Debit</th>
+                <th style={{ ...tStyles.th, width: "13%" }}>Credit</th>
+                <th style={{ ...tStyles.th, width: "13%" }}>Balance</th>
+                <th style={{ ...tStyles.th, width: "13%" }}>Ending Balance</th>
+              </tr>
+            </thead>
+            <tbody style={tStyles.tbody}>
+              {rows.map((r, i) => (
+                <tr key={r._ord ?? i} style={tStyles.tr}>
+                  <td style={tStyles.td}>{renderAccountCode(r)}</td>
+                  <td style={tStyles.td}>{r.accountName}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
                 </tr>
-              </thead>
-              <tbody style={tStyles.tbody}>
-                {rows.map((r, idx) => (
-                  <tr key={idx} style={tStyles.tr}>
-                    <td style={tStyles.td}>{r.accountCode}</td>
-                    <td style={tStyles.td}>{r.accountName}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.debit)}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.credit)}</td>
-                  </tr>
-                ))}
-                <tr className="totals-row" style={tStyles.tr}>
-                  <td style={tStyles.td}></td>
-                  <td style={tStyles.td}>Total</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
-                </tr>
-                <tr style={tStyles.tr}>
-                  <td style={tStyles.td}></td>
-                  <td style={tStyles.td}>Difference (Debit - Credit)</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num" colSpan={2}>
-                    {fmt(totals.diff)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          ) : (
-            // ---- Extended table (Opening Balance + Period + Closing) ----
-            <table className="tb-table">
-              <thead style={tStyles.thead}>
-                <tr style={tStyles.tr}>
-                  <th style={{ ...tStyles.th, width: "20%" }}>Account Code</th>
-                  <th style={tStyles.th}>Account Name</th>
-                  <th style={{ ...tStyles.th, width: "15%" }}>Opening Balance</th>
-                  <th style={{ ...tStyles.th, width: "15%" }}>Period Debit</th>
-                  <th style={{ ...tStyles.th, width: "15%" }}>Period Credit</th>
-                  <th style={{ ...tStyles.th, width: "15%" }}>Closing Balance</th>
-                </tr>
-              </thead>
-              <tbody style={tStyles.tbody}>
-                {rows.map((r, idx) => (
-                  <tr key={idx} style={tStyles.tr}>
-                    <td style={tStyles.td}>{r.accountCode}</td>
-                    <td style={tStyles.td}>{r.accountName}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
-                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
-                  </tr>
-                ))}
-                <tr className="totals-row" style={tStyles.tr}>
-                  <td style={tStyles.td}></td>
-                  <td style={tStyles.td}>Total</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
-                </tr>
-              </tbody>
-            </table>
-          )}
+              ))}
+              <tr className="totals-row" style={tStyles.tr}>
+                <td style={tStyles.td}></td>
+                <td style={tStyles.td}>Total</td>
+                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
+                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
+                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
+                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balance)}</td>
+                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
