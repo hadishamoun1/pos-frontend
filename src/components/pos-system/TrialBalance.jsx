@@ -14,7 +14,8 @@ const ENDPOINTS = {
   arrangedAccounts: `${BASE_URL}/accounts/v1/acc-flat-arranged`,
   currencies: `${BASE_URL}/currency`,
   trialBalance: `${BASE_URL}/reports/trial-balance`,
-  standardTrialBalance: `${BASE_URL}/reports/trial-balance/standard`, // Standard API
+  standardTrialBalance: `${BASE_URL}/reports/trial-balance/standard`,
+  trialBalanceCurrencies: `${BASE_URL}/reports/trial-balance/currencies`, // NEW
 };
 
 function sanitizeParams(p) {
@@ -58,7 +59,7 @@ export default function TrialBalance() {
   const [mainPrefixes, setMainPrefixes] = useState(""); // e.g. "601,705"
 
   // options / data
-   const [accountsTree, setAccountsTree] = useState([]);
+  const [accountsTree, setAccountsTree] = useState([]);
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [accLoading, setAccLoading] = useState(false);
   const [accError, setAccError] = useState("");
@@ -326,13 +327,15 @@ export default function TrialBalance() {
       const endpoint =
         reportType === "STANDARD"
           ? ENDPOINTS.standardTrialBalance
+          : reportType === "CURRENCIES"
+          ? ENDPOINTS.trialBalanceCurrencies
           : ENDPOINTS.trialBalance;
 
       // build params (do NOT override any UI selections)
       const params = sanitizeParams({
         from,
         to,
-        level, // harmless for standard
+        level, // harmless for standard/currencies
         currency,
         invoiceType,
         mainFrom: prefixes.length ? undefined : mainFrom,
@@ -355,36 +358,58 @@ export default function TrialBalance() {
           Object.prototype.hasOwnProperty.call(rawRows[0], "periodDebit") ||
           Object.prototype.hasOwnProperty.call(rawRows[0], "closingBalance"));
 
-      // Normalize but remember server index (_ord) from the API list
+      // Normalize minimally, preserve order with _ord, no re-sorting
       const normalized = rawRows.map((r, _ord) => {
-        if (extended) {
+        const coerce = (x) => (x === null || x === undefined ? 0 : Number(x) || 0);
+
+        // Common fields
+        const base = {
+          _ord,
+          accountCode: r.accountCode ?? r.code ?? "",
+          accountName: r.accountName ?? r.name ?? "",
+          parentCode: r.parentCode ?? null,
+          parentName: r.parentName ?? null,
+        };
+
+        if (reportType === "CURRENCIES") {
+          // Expecting both USD (default names) and LL (…LL) as sent by the server.
+          return {
+            ...base,
+            // USD side (server-calculated)
+            openingBalance: coerce(r.openingBalance),
+            periodDebit: coerce(r.periodDebit),
+            periodCredit: coerce(r.periodCredit),
+            balance: coerce(r.balance),
+            closingBalance: coerce(r.closingBalance),
+
+            // LL side (server-calculated)
+            prevBalanceLL: coerce(r.prevBalanceLL ?? r.openingBalanceLL),
+            debitLL: coerce(r.debitLL ?? r.periodDebitLL),
+            creditLL: coerce(r.creditLL ?? r.periodCreditLL),
+            balanceLL: coerce(r.balanceLL),
+            endingBalanceLL: coerce(r.endingBalanceLL ?? r.closingBalanceLL),
+
+            // legacy mirrors (not used in CURRENCIES view for CSV on USD headers)
+            debit: coerce(r.periodDebit),
+            credit: coerce(r.periodCredit),
+          };
+        } else if (extended) {
+          // Standard / Grouped extended
           const openingBalance =
             "openingBalance" in r
-              ? Number(r.openingBalance) || 0
-              : (Number(r.openingDebit) || 0) - (Number(r.openingCredit) || 0);
-          const periodDebit = Number(r.periodDebit) || Number(r.debit) || 0;
-          const periodCredit = Number(r.periodCredit) || Number(r.credit) || 0;
+              ? coerce(r.openingBalance)
+              : coerce(r.openingDebit) - coerce(r.openingCredit);
+          const periodDebit = coerce(r.periodDebit ?? r.debit);
+          const periodCredit = coerce(r.periodCredit ?? r.credit);
           const closingBalance =
             "closingBalance" in r
-              ? Number(r.closingBalance) || 0
+              ? coerce(r.closingBalance)
               : openingBalance + (periodDebit - periodCredit);
-
-          const openingDebit = Number(r.openingDebit) || 0;
-          const openingCredit = Number(r.openingCredit) || 0;
           const balance =
-            "balance" in r ? Number(r.balance) || 0 : periodDebit - periodCredit;
-
-          const parentCode = r.parentCode ?? null;
-          const parentName = r.parentName ?? null;
+            "balance" in r ? coerce(r.balance) : periodDebit - periodCredit;
 
           return {
-            _ord,
-            accountCode: r.accountCode ?? r.code ?? "",
-            accountName: r.accountName ?? r.name ?? "",
-            parentCode,
-            parentName,
-            openingDebit,
-            openingCredit,
+            ...base,
             openingBalance,
             periodDebit,
             periodCredit,
@@ -395,8 +420,9 @@ export default function TrialBalance() {
             credit: periodCredit,
           };
         } else {
-          const debit = Number(r.debit) || 0;
-          const credit = Number(r.credit) || 0;
+          // Legacy short shape
+          const debit = coerce(r.debit);
+          const credit = coerce(r.credit);
           const openingBalance = 0;
           const periodDebit = debit;
           const periodCredit = credit;
@@ -404,25 +430,19 @@ export default function TrialBalance() {
           const closingBalance = openingBalance + balance;
 
           return {
-            _ord,
-            accountCode: r.accountCode ?? r.code ?? "",
-            accountName: r.accountName ?? r.name ?? "",
-            parentCode: r.parentCode ?? null,
-            parentName: r.parentName ?? null,
-            // shaped for the table we show
+            ...base,
             openingBalance,
             periodDebit,
             periodCredit,
             balance,
             closingBalance,
-            // legacy fields
+            // legacy
             debit,
             credit,
           };
         }
       });
 
-      // No sorting here—React will render in this exact order
       setHasExtended(extended);
       setRows(normalized);
     } catch (e) {
@@ -443,6 +463,12 @@ export default function TrialBalance() {
         periodCredit: 0,
         balance: 0,
         closingBalance: 0,
+        // LL totals (only used in CURRENCIES view)
+        prevBalanceLL: 0,
+        debitLL: 0,
+        creditLL: 0,
+        balanceLL: 0,
+        endingBalanceLL: 0,
         diff: 0,
       };
     }
@@ -453,6 +479,14 @@ export default function TrialBalance() {
         t.periodCredit += Number(r.periodCredit || 0);
         t.balance += Number(r.balance || 0);
         t.closingBalance += Number(r.closingBalance || 0);
+
+        // LL if present
+        t.prevBalanceLL += Number(r.prevBalanceLL || 0);
+        t.debitLL += Number(r.debitLL || 0);
+        t.creditLL += Number(r.creditLL || 0);
+        t.balanceLL += Number(r.balanceLL || 0);
+        t.endingBalanceLL += Number(r.endingBalanceLL || 0);
+
         return t;
       },
       {
@@ -461,6 +495,11 @@ export default function TrialBalance() {
         periodCredit: 0,
         balance: 0,
         closingBalance: 0,
+        prevBalanceLL: 0,
+        debitLL: 0,
+        creditLL: 0,
+        balanceLL: 0,
+        endingBalanceLL: 0,
       }
     );
     return { ...acc, diff: acc.periodDebit - acc.periodCredit };
@@ -481,6 +520,65 @@ export default function TrialBalance() {
     const displayCode = (r) =>
       r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
 
+    if (reportType === "CURRENCIES") {
+      const header = [
+        "Account Code",
+        "Account Name",
+        // USD
+        "Prev Balance (USD)",
+        "Debit (USD)",
+        "Credit (USD)",
+        "Balance (USD)",
+        "Ending Balance (USD)",
+        // LL
+        "Prev Balance (LL)",
+        "Debit (LL)",
+        "Credit (LL)",
+        "Balance (LL)",
+        "Ending Balance (LL)",
+      ].join(",");
+
+      const lines = rows.map((r) =>
+        [
+          `"${(displayCode(r) ?? "").replace(/"/g, '""')}"`,
+          `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
+          // USD
+          fmt(r.openingBalance),
+          fmt(r.periodDebit),
+          fmt(r.periodCredit),
+          fmt(r.balance),
+          fmt(r.closingBalance),
+          // LL
+          fmt(r.prevBalanceLL),
+          fmt(r.debitLL),
+          fmt(r.creditLL),
+          fmt(r.balanceLL),
+          fmt(r.endingBalanceLL),
+        ].join(",")
+      );
+
+      const footer = [
+        "",
+        "TOTAL",
+        // USD totals
+        fmt(totals.openingBalance),
+        fmt(totals.periodDebit),
+        fmt(totals.periodCredit),
+        fmt(totals.balance),
+        fmt(totals.closingBalance),
+        // LL totals
+        fmt(totals.prevBalanceLL),
+        fmt(totals.debitLL),
+        fmt(totals.creditLL),
+        fmt(totals.balanceLL),
+        fmt(totals.endingBalanceLL),
+      ].join(",");
+
+      downloadCSV([header, ...lines, footer].join("\n"));
+      return;
+    }
+
+    // Standard / Grouped
     const header = [
       "Account Code",
       "Account Name",
@@ -521,11 +619,157 @@ export default function TrialBalance() {
     const root = printRef.current;
     if (!root) return;
 
+    const isCurrencies = reportType === "CURRENCIES";
+
+    // meta (same as screen)
+    const metaHTML = `
+      <div class="tb-title">Trial Balance / ميزان المراجعة</div>
+      <div class="tb-meta">
+        <div><strong>From:</strong> ${from}</div>
+        <div><strong>To:</strong> ${to}</div>
+        <div><strong>Main:</strong> ${ (mainPrefixes || "").trim() ? mainPrefixes : `${mainFrom || "—"} → ${mainTo || "—"}` }</div>
+        <div><strong>Sub:</strong> ${ subTouched ? `${subFrom || "—"} → ${subTo || "—"}` : "ALL" }</div>
+        <div><strong>Level:</strong> ${level}</div>
+        <div><strong>Currency:</strong> ${currency || "—"}</div>
+        <div><strong>Invoice Type:</strong> ${invoiceType}</div>
+        <div><strong>Report Type:</strong> ${reportTypeOptions.find(o => o.value === reportType)?.label || reportType}</div>
+        <div><strong>Date:</strong> ${new Date().toISOString().split("T")[0]}</div>
+      </div>
+    `;
+
+    // currencies table builder (2 rows per account)
+    const buildCurrenciesPrintTable = () => {
+      const rowHTML = rows.map((r) => {
+        const codeCell = `<td class="code" rowspan="2">${r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode}</td>`;
+        const nameCell = `<td class="name" rowspan="2">${r.accountName ?? ""}</td>`;
+
+        const usdRow = `
+          <tr>
+            ${codeCell}
+            ${nameCell}
+            <td class="num">${fmt(r.openingBalance)}</td>
+            <td class="num">${fmt(r.periodDebit)}</td>
+            <td class="num">${fmt(r.periodCredit)}</td>
+            <td class="num">${fmt(r.balance)}</td>
+            <td class="num">${fmt(r.closingBalance)}</td>
+          </tr>`;
+
+        const llRow = `
+          <tr class="ll-row">
+            <td class="num">${fmt(r.prevBalanceLL)}</td>
+            <td class="num">${fmt(r.debitLL)}</td>
+            <td class="num">${fmt(r.creditLL)}</td>
+            <td class="num">${fmt(r.balanceLL)}</td>
+            <td class="num">${fmt(r.endingBalanceLL)}</td>
+          </tr>`;
+
+        return usdRow + llRow;
+      }).join("");
+
+      const totalsHTML = `
+        <tr class="totals-row">
+          <td class="total-label" colspan="2" rowspan="2">Total</td>
+          <td class="num">${fmt(totals.openingBalance)}</td>
+          <td class="num">${fmt(totals.periodDebit)}</td>
+          <td class="num">${fmt(totals.periodCredit)}</td>
+          <td class="num">${fmt(totals.balance)}</td>
+          <td class="num">${fmt(totals.closingBalance)}</td>
+        </tr>
+        <tr class="totals-row ll-row">
+          <td class="num">${fmt(totals.prevBalanceLL)}</td>
+          <td class="num">${fmt(totals.debitLL)}</td>
+          <td class="num">${fmt(totals.creditLL)}</td>
+          <td class="num">${fmt(totals.balanceLL)}</td>
+          <td class="num">${fmt(totals.endingBalanceLL)}</td>
+        </tr>`;
+
+      // colgroup for currencies (Account Name narrower)
+      return `
+        <table class="tb-table tb-cur">
+          <colgroup>
+            <col style="width:12%">
+            <col style="width:15%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:17%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th rowspan="2" class="code">Account Code</th>
+              <th rowspan="2" class="name">Account Name</th>
+              <th colspan="5" class="usd-head">USD</th>
+            </tr>
+            <tr>
+              <th>Prev</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Balance</th>
+              <th>Ending</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowHTML}
+            ${totalsHTML}
+          </tbody>
+        </table>
+      `;
+    };
+
+    const printBody = !isCurrencies
+      ? root.innerHTML
+      : `<div class="tb-a4">${metaHTML}${buildCurrenciesPrintTable()}</div>`;
+
     const copiedStyles = Array.from(
       document.querySelectorAll('style, link[rel="stylesheet"]')
-    )
-      .map((n) => n.outerHTML)
-      .join("");
+    ).map((n) => n.outerHTML).join("");
+
+    // IMPORTANT: style is now scoped per mode (no leaking)
+    const styleStandard = `
+      <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        html, body { margin: 0; padding: 0; }
+        .tb-a4 { width: 277mm; min-height: 190mm; margin: 0; padding: 0 2mm; box-shadow: none; }
+        .tb-title { text-align: center; font-weight: 700; font-size: 18px; margin: 4mm 0; }
+        .tb-meta { display: flex; flex-wrap: wrap; gap: 8mm; margin: 2mm 0 4mm 0; font-size: 12px; }
+
+        .tb-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .tb-table th, .tb-table td { border: 1px solid #000; padding: 4px 6px; }
+        .tb-table th { background: #f3f4f6; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .totals-row td { font-weight: 700; background: #f9fafb; }
+        .tb-table thead th { position: static !important; }
+        .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        /* No currencies-specific rules here */
+      </style>
+    `;
+
+    const styleCurrencies = `
+      <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        html, body { margin: 0; padding: 0; }
+        .tb-a4 { width: 277mm; min-height: 190mm; margin: 0; padding: 0 2mm; box-shadow: none; }
+        .tb-title { text-align: center; font-weight: 700; font-size: 18px; margin: 4mm 0; }
+        .tb-meta { display: flex; flex-wrap: wrap; gap: 8mm; margin: 2mm 0 4mm 0; font-size: 12px; }
+
+        .tb-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .tb-table th, .tb-table td { border: 1px solid #000; padding: 4px 6px; }
+        .tb-table th { background: #f3f4f6; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .totals-row td { font-weight: 700; background: #f9fafb; }
+        .tb-table thead th { position: static !important; }
+        .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+        /* currencies-only rules */
+        .tb-table.tb-cur th, .tb-table.tb-cur td { width: auto !important; }
+        .tb-table.tb-cur col { width: auto; } /* widths come from colgroup */
+        .tb-table.tb-cur .ll-row td { background: #fcfcfc; }
+        .tb-table.tb-cur .usd-head { text-align: center; }
+      </style>
+    `;
 
     const iframe = document.createElement("iframe");
     Object.assign(iframe.style, {
@@ -545,40 +789,11 @@ export default function TrialBalance() {
 <head>
   <meta charset="utf-8"/>
   ${copiedStyles}
-  <style>
-    /* PRINT-ONLY SETTINGS */
-    @page { size: A4 landscape; margin: 10mm; }
-    html, body { margin: 0; padding: 0; }
-    .tb-a4 {
-      width: 277mm; /* A4 landscape content width */
-      min-height: 190mm;
-      margin: 0;
-      padding: 0 2mm;
-      box-shadow: none;
-    }
-    .tb-title { text-align: center; font-weight: 700; font-size: 18px; margin: 4mm 0; }
-    .tb-meta { display: flex; flex-wrap: wrap; gap: 8mm; margin: 2mm 0 4mm 0; font-size: 12px; }
-
-    /* Table + numeric alignment */
-    .tb-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-    .tb-table th, .tb-table td { border: 1px solid #000; padding: 4px 6px; }
-    .tb-table th { background: #f3f4f6; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .totals-row td { font-weight: 700; background: #f9fafb; }
-    .tb-table thead th { position: static !important; }
-    .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-    /* PRINT-ONLY column widths (override inline widths) */
-    .tb-table th:nth-child(1),
-    .tb-table td:nth-child(1) { width: 10% !important; } /* Account Code */
-    .tb-table th:nth-child(2),
-    .tb-table td:nth-child(2) { width: 23% !important; } /* Account Name */
-  </style>
+  ${isCurrencies ? styleCurrencies : styleStandard}
   <title>Trial Balance</title>
 </head>
 <body>
-  ${root.innerHTML}
+  ${printBody}
 </body>
 </html>`);
     doc.close();
@@ -613,6 +828,8 @@ export default function TrialBalance() {
   // Helper to render account code as "parentCode-accountCode" when available
   const renderAccountCode = (r) =>
     r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
+
+  const isCurrencies = reportType === "CURRENCIES";
 
   return (
     <div className="tb-wrap">
@@ -813,8 +1030,8 @@ export default function TrialBalance() {
           <div className="tb-meta">
             <div><strong>From:</strong> {from}</div>
             <div><strong>To:</strong> {to}</div>
-            <div><strong>Main:</strong> {mainDisplay}</div>
-            <div><strong>Sub:</strong> {subDisplay}</div>
+            <div><strong>Main:</strong> {(mainPrefixes || "").trim() ? mainPrefixes : `${mainFrom || "—"} → ${mainTo || "—"}`}</div>
+            <div><strong>Sub:</strong> {subTouched ? `${subFrom || "—"} → ${subTo || "—"}` : "ALL"}</div>
             <div><strong>Level:</strong> {level}</div>
             <div><strong>Currency:</strong> {currency || "—"}</div>
             <div><strong>Invoice Type:</strong> {invoiceType}</div>
@@ -822,42 +1039,103 @@ export default function TrialBalance() {
             <div><strong>Date:</strong> {new Date().toISOString().split("T")[0]}</div>
           </div>
 
-          {/* We use the same columns in both paths now */}
-          <table className="tb-table">
-            <thead style={tStyles.thead}>
-              <tr style={tStyles.tr}>
-                <th style={{ ...tStyles.th, width: "20%" }}>Account Code</th>
-                <th style={tStyles.th}>Account Name</th>
-                <th style={{ ...tStyles.th, width: "13%" }}>Prev Balance</th>
-                <th style={{ ...tStyles.th, width: "13%" }}>Debit</th>
-                <th style={{ ...tStyles.th, width: "13%" }}>Credit</th>
-                <th style={{ ...tStyles.th, width: "13%" }}>Balance</th>
-                <th style={{ ...tStyles.th, width: "13%" }}>Ending Balance</th>
-              </tr>
-            </thead>
-            <tbody style={tStyles.tbody}>
-              {rows.map((r, i) => (
-                <tr key={r._ord ?? i} style={tStyles.tr}>
-                  <td style={tStyles.td}>{renderAccountCode(r)}</td>
-                  <td style={tStyles.td}>{r.accountName}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balance)}</td>
-                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
+          {/* Table */}
+          {reportType !== "CURRENCIES" ? (
+            // Standard/Grouped: USD only
+            <table className="tb-table">
+              <thead style={tStyles.thead}>
+                <tr style={tStyles.tr}>
+                  <th style={{ ...tStyles.th, width: "12%" }}>Account Code</th>
+                  <th style={{ ...tStyles.th, width: "20%" }}>Account Name</th>
+                  <th style={{ ...tStyles.th, width: "13%" }}>Prev Balance</th>
+                  <th style={{ ...tStyles.th, width: "13%" }}>Debit</th>
+                  <th style={{ ...tStyles.th, width: "13%" }}>Credit</th>
+                  <th style={{ ...tStyles.th, width: "13%" }}>Balance</th>
+                  <th style={{ ...tStyles.th, width: "13%" }}>Ending Balance</th>
                 </tr>
-              ))}
-              <tr className="totals-row" style={tStyles.tr}>
-                <td style={tStyles.td}></td>
-                <td style={tStyles.td}>Total</td>
-                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
-                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
-                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
-                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balance)}</td>
-                <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
-              </tr>
-            </tbody>
-          </table>
+              </thead>
+              <tbody style={tStyles.tbody}>
+                {rows.map((r, i) => (
+                  <tr key={r._ord ?? i} style={tStyles.tr}>
+                    <td style={tStyles.td}>{renderAccountCode(r)}</td>
+                    <td style={tStyles.td}>{r.accountName}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balance)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
+                  </tr>
+                ))}
+                <tr className="totals-row" style={tStyles.tr}>
+                  <td style={tStyles.td}></td>
+                  <td style={tStyles.td}>Total</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            // CURRENCIES: USD + LL (screen view only; print uses special layout)
+            <table className="tb-table">
+              <thead style={tStyles.thead}>
+                <tr style={tStyles.tr}>
+                  <th style={{...tStyles.th, width: "10%"}}>Account Code</th>
+                  <th style={{...tStyles.th, width: "10%"}}>Account Name</th>
+                  {/* USD */}
+                  <th style={tStyles.th}>Prev (USD)</th>
+                  <th style={tStyles.th}>Debit (USD)</th>
+                  <th style={tStyles.th}>Credit (USD)</th>
+                  <th style={tStyles.th}>Balance (USD)</th>
+                  <th style={tStyles.th}>Ending (USD)</th>
+                  {/* LL */}
+                  <th style={tStyles.th}>Prev (LL)</th>
+                  <th style={tStyles.th}>Debit (LL)</th>
+                  <th style={tStyles.th}>Credit (LL)</th>
+                  <th style={tStyles.th}>Balance (LL)</th>
+                  <th style={tStyles.th}>Ending (LL)</th>
+                </tr>
+              </thead>
+              <tbody style={tStyles.tbody}>
+                {rows.map((r, i) => (
+                  <tr key={r._ord ?? i} style={tStyles.tr}>
+                    <td style={tStyles.td}>{renderAccountCode(r)}</td>
+                    <td style={tStyles.td}>{r.accountName}</td>
+                    {/* USD */}
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balance)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
+                    {/* LL */}
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.prevBalanceLL)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.debitLL)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.creditLL)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balanceLL)}</td>
+                    <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.endingBalanceLL)}</td>
+                  </tr>
+                ))}
+                <tr className="totals-row" style={tStyles.tr}>
+                  <td style={tStyles.td}></td>
+                  <td style={tStyles.td}>Total</td>
+                  {/* USD totals */}
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balance)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
+                  {/* LL totals */}
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.prevBalanceLL)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.debitLL)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.creditLL)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balanceLL)}</td>
+                  <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.endingBalanceLL)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
