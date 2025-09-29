@@ -3,6 +3,7 @@ import "./payments.css";
 import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
 import NotificationModal from "../recievables/NotificationModal";
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,7 +35,7 @@ const PaymentsPage = () => {
       setLoading(true);
       setError("");
       const response = await fetch(
-        "http://localhost:3000/payment-vouchers/v1/formatted"
+        `${baseUrl}/payment-vouchers/v1/formatted`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch payment vouchers");
@@ -66,7 +67,7 @@ const PaymentsPage = () => {
       }).toString();
 
       const response = await fetch(
-        `http://localhost:3000/payment-vouchers/v1/filter?${queryString}`
+        `${baseUrl}/payment-vouchers/v1/filter?${queryString}`
       );
 
       if (!response.ok) {
@@ -124,7 +125,7 @@ const PaymentsPage = () => {
   const handleSaveEdit = async (updatedRow) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/payment-vouchers/${updatedRow.id}`,
+        `${baseUrl}/payment-vouchers/${updatedRow.id}`,
         {
           method: "PATCH",
           headers: {
@@ -187,7 +188,7 @@ const PaymentsPage = () => {
     try {
       await Promise.all(
         selectedRows.map((id) =>
-          fetch(`http://localhost:3000/payment-vouchers/${id}`, {
+          fetch(`${baseUrl}/payment-vouchers/${id}`, {
             method: "DELETE",
           })
         )

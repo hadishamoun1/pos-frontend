@@ -11,12 +11,12 @@ const ItemModal = ({
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
   // Fetch items from the API
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await fetch("http://localhost:3000/items");
+        const response = await fetch(`${baseUrl}/items`);
         const data = await response.json();
 
         if (Array.isArray(data)) {

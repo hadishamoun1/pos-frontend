@@ -16,10 +16,11 @@ const RequestCard = ({ onSelectRequest }) => {
 
   const requestListRef = useRef(null);
   const socketRef = useRef(null);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // Connect WebSocket on Mount
   useEffect(() => {
-    socketRef.current = io("http://localhost:3000");
+    socketRef.current = io(`${baseUrl}`);
 
     socketRef.current.on("newRequest", (newRequest) => {
       console.log("New Request Received:", newRequest);
@@ -52,7 +53,7 @@ const RequestCard = ({ onSelectRequest }) => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/requests/v1/filtered?page=${pageNum}`
+        `${baseUrl}/requests/v1/filtered?page=${pageNum}`
       );
 
       if (response.data?.data && Array.isArray(response.data.data)) {

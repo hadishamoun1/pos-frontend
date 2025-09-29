@@ -13,6 +13,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
   const [error, setError] = useState(""); // Stores errors
   const [newInvoiceBatch, setNewInvoiceBatch] = useState([]); // Tracks new invoices to blink
   const [batchEndTime, setBatchEndTime] = useState(null); // Tracks the batch end time for blinking
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const invoicesListRef = useRef(null); // Reference to invoices container
   const socketRef = useRef(null); // WebSocket connection reference
@@ -24,7 +25,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
     fetchInvoices(1); // Fetch invoices when the component mounts
 
     // Set up the WebSocket client
-    socketRef.current = io("http://localhost:3000"); // Adjust URL to match your backend WebSocket
+    socketRef.current = io(`${baseUrl}`); // Adjust URL to match your backend WebSocket
 
     // Listen for the newInvoice event
     socketRef.current.on("newInvoice", (invoice) => {
@@ -78,7 +79,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/invoices/filtered?page=${pageNum}`
+        `${baseUrl}/invoices/filtered?page=${pageNum}`
       );
 
       if (response.data?.data && Array.isArray(response.data.data)) {
@@ -106,7 +107,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
   const handleInvoiceClick = async (invoice) => {
     try {
       const response = await axios.get(
-        `http://localhost:3000/invoices/v1/${invoice.id}`
+        `${baseUrl}/invoices/v1/${invoice.id}`
       );
       const fullInvoice = response.data;
       console.log("Fetched Invoice Details:", fullInvoice);

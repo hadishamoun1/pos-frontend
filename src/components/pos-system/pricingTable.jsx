@@ -11,6 +11,7 @@ const PricingTable = () => {
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (selectedCustomerId) loadInitialData();
@@ -18,7 +19,7 @@ const PricingTable = () => {
 
   const fetchCustomers = async (query) => {
     try {
-      const res = await axios.get(`http://localhost:3000/customers/v1/search`, {
+      const res = await axios.get(`${baseUrl}/customers/v1/search`, {
         params: { query },
       });
       setCustomerSuggestions(res.data);
@@ -55,7 +56,7 @@ const PricingTable = () => {
   const loadInitialData = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:3000/invoices/v1/browsing/${selectedCustomerId}`
+        `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`
       );
       setGroups(res.data);
     } catch (err) {
@@ -67,7 +68,7 @@ const PricingTable = () => {
     try {
       const nextPage = currentPage + 1;
       const res = await axios.get(
-        `http://localhost:3000/invoices/v1/browsing/${selectedCustomerId}`,
+        `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`,
         {
           params: { groupKey, page: nextPage, limit: pageSize },
         }

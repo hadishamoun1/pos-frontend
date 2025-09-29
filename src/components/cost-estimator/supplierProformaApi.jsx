@@ -1,6 +1,7 @@
 import axios from "axios";
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
-const API_URL = "http://localhost:3000/supplier-proformas";
+const API_URL = `${baseUrl}/supplier-proformas`;
 
 export const createSupplierProforma = async (proformaData) => {
   const response = await axios.post(API_URL, proformaData);

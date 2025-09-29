@@ -11,14 +11,15 @@ const PurchaseInvoiceSettings = () => {
     type: "",
     message: "",
   });
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // Fetch accounts and existing settings on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [accountsRes, settingsRes] = await Promise.all([
-          axios.get("http://localhost:3000/accounts/v1/acc-flat-arranged"),
-          axios.get("http://localhost:3000/purchase-invoice-setting"),
+          axios.get(`${baseUrl}/accounts/v1/acc-flat-arranged`),
+          axios.get(`${baseUrl}/purchase-invoice-setting`),
         ]);
 
         setAccounts(accountsRes.data);
@@ -109,7 +110,7 @@ const PurchaseInvoiceSettings = () => {
 
     try {
       await axios.post(
-        "http://localhost:3000/purchase-invoice-setting",
+        `${baseUrl}/purchase-invoice-setting`,
         sanitized
       );
       setNotification({

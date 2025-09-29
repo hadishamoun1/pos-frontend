@@ -6,6 +6,7 @@ import NotificationModal from "../recievables/NotificationModal";
 import "./editModal.css";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const [rows, setRows] = useState([]);
@@ -90,7 +91,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
             finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
           };
           return axios.patch(
-            `http://localhost:3000/inventory-count/${r.id}`,
+            `${baseUrl}/inventory-count/${r.id}`,
             body
           );
         })

@@ -15,12 +15,13 @@ const SupplierDetails = ({
   });
   const [suppliers, setSuppliers] = useState([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState([]);
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // Fetch suppliers from the API
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch("http://localhost:3000/suppliers");
+        const response = await fetch(`${baseUrl}/suppliers`);
         const data = await response.json();
         console.log("calling");
         setSuppliers(data);

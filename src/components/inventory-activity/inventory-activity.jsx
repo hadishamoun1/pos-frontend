@@ -18,8 +18,9 @@ import CountModal from "./countModal";
 import TransferModal from "./transferModal";
 import "./inventory-activity.css";
 import { io } from "socket.io-client";
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
-const socket = io("http://localhost:3000");
+const socket = io(`${baseUrl}`);
 
 const DraggableColumnHeader = ({ column, onContextMenu }) => {
   const {
@@ -142,7 +143,7 @@ const InventoryActivityPage = () => {
       filters.length > 0 || sortConfig.column
         ? "/inventory-transactions/activity/v1/filtered"
         : "/inventory-transactions/activity";
-    return `http://localhost:3000${base}?${params.toString()}`;
+    return `${baseUrl}${base}?${params.toString()}`;
   };
 
   const fetchData = (url, append = false) => {

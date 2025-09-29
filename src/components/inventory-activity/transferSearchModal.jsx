@@ -12,11 +12,12 @@ const TransferSearchModal = ({
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSet, setSelectedSet] = useState(new Set());
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (!isOpen) return;
     axios
-      .get("http://localhost:3000/items/v1/filtered-items")
+      .get(`${baseUrl}/items/v1/filtered-items`)
       .then((res) => setItems(res.data || []))
       .catch(console.error);
 

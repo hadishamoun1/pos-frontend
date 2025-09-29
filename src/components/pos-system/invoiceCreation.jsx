@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
 const InvoiceCreation = ({
   invoiceType,
   customerId,
@@ -38,7 +40,7 @@ const InvoiceCreation = ({
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/invoices",
+        `${baseUrl}/invoices`,
         invoiceData
       );
       console.log("Invoice Created:", response.data);

@@ -13,6 +13,7 @@ export default function UnitPriceModal({
   const [rows, setRows] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // delete‐menu state
   const [deleteMenu, setDeleteMenu] = useState({
@@ -77,20 +78,20 @@ export default function UnitPriceModal({
 
     // suppliers
     axios
-      .get("http://localhost:3000/suppliers")
+      .get(`${baseUrl}/suppliers`)
       .then((res) => setSuppliers(res.data))
       .catch(console.error);
 
     // accounts (flat, nested)
     axios
-      .get("http://localhost:3000/accounts/v1/acc-flat-arranged")
+      .get(`${baseUrl}/accounts/v1/acc-flat-arranged`)
       .then((res) => setAccounts(res.data))
       .catch(console.error);
 
     if (invoiceId) {
       // editing → load existing rows
       axios
-        .get(`http://localhost:3000/purchase-invoices/${invoiceId}`)
+        .get(`${baseUrl}/purchase-invoices/${invoiceId}`)
         .then((res) => {
           setRows(
             res.data.unitPriceRows.map((r) => ({
@@ -118,7 +119,7 @@ export default function UnitPriceModal({
     } else {
       // new → load default settings
       axios
-        .get("http://localhost:3000/purchase-invoice-setting")
+        .get(`${baseUrl}/purchase-invoice-setting`)
         .then((res) => {
           setRows(
             res.data.map((row) => ({

@@ -12,6 +12,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (isOpen) {
@@ -39,7 +40,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
       const params = { from, to };
       if (type !== "ALL") params.type = type;
       const res = await axios.get(
-        `http://localhost:3000/journal-vouchers/statements/customers/${customerId}`,
+        `${baseUrl}/journal-vouchers/statements/customers/${customerId}`,
         { params }
       );
       setData(res.data);

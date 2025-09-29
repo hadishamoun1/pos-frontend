@@ -10,10 +10,11 @@ const PreviewTable = () => {
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [editOpen, setEditOpen] = useState(false);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/inventory-count/v1/filtered")
+      .get(`${baseUrl}/inventory-count/v1/filtered`)
       .then((res) => setRows(res.data))
       .catch((err) => {
         console.error("Failed to fetch count transactions", err);

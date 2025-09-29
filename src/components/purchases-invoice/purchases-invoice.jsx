@@ -15,15 +15,17 @@ import "./styles/invoiceModel.css";
 import axios from "axios";
 import AlternativeSummarySection from "./AlternativeSummarySection";
 
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
 const fetchSuppliersByQuery = async (query) => {
   const response = await fetch(
-    `http://localhost:3000/suppliers/v1/search?query=${query}`
+    `${baseUrl}/suppliers/v1/search?query=${query}`
   );
   return response.json();
 };
 
 const fetchItems = async () => {
-  const response = await fetch("http://localhost:3000/items/v1/filtered-items");
+  const response = await fetch(`${baseUrl}/items/v1/filtered-items`);
   return response.json();
 };
 
@@ -264,7 +266,7 @@ const PurchasesInvoicePage = () => {
           JSON.stringify(invoiceData, null, 2)
         );
         res = await axios.put(
-          `http://localhost:3000/purchase-invoices/${selectedInvoiceId}`,
+          `${baseUrl}/purchase-invoices/${selectedInvoiceId}`,
           invoiceData
         );
         alert(`Invoice updated successfully: ${res.data.invoiceNumber}`);
@@ -272,7 +274,7 @@ const PurchasesInvoicePage = () => {
       } else {
         // creating new invoice
         res = await axios.post(
-          "http://localhost:3000/purchase-invoices",
+          `${baseUrl}/purchase-invoices`,
           invoiceData
         );
         alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
@@ -315,14 +317,14 @@ const PurchasesInvoicePage = () => {
     }
   };
   const fetchFullInvoice = async (id) => {
-    const res = await fetch(`http://localhost:3000/purchase-invoices/${id}`);
+    const res = await fetch(`${baseUrl}/purchase-invoices/${id}`);
     if (!res.ok) throw new Error("Error fetching invoice");
     return res.json();
   };
 
   const fetchMinimalInvoices = async () => {
     const response = await fetch(
-      "http://localhost:3000/purchase-invoices/v1/minimal"
+      `${baseUrl}/purchase-invoices/v1/minimal`
     );
     return response.json();
   };

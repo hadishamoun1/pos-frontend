@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([
@@ -157,7 +158,7 @@ const PaymentsModal = ({ onClose }) => {
       }));
 
       const response = await fetch(
-        "http://localhost:3000/payment-vouchers/v1/bulk",
+        `${baseUrl}/payment-vouchers/v1/bulk`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

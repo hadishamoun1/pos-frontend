@@ -5,6 +5,8 @@ import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
 
+
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
   "JF",
@@ -119,7 +121,7 @@ export default function TransferModal({ isOpen, onClose }) {
         price: Number(r.price) || 0,
       }));
 
-      await axios.post("http://localhost:3000/transfers", {
+      await axios.post(`${baseUrl}/transfers`, {
         date: details.date,
         type: details.type,
         location: details.location,

@@ -4,6 +4,7 @@ import "./openingCountModal.css";
 import CountOpeningSearchModal from "./countOpeningSearchModal";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   const [saving, setSaving] = useState(false);
@@ -102,7 +103,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
 
         console.log("Sending payload:", payload);
 
-        await fetch("http://localhost:3000/inventory-count/v1/opening", {
+        await fetch(`${baseUrl}/inventory-count/v1/opening`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

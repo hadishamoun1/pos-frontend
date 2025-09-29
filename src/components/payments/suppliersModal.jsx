@@ -4,13 +4,14 @@ import "./suppliersModal.css";
 const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [suppliers, setSuppliers] = useState([]);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     // Fetch suppliers from API
     const fetchSuppliers = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/suppliers/v1/filtered"
+          `${baseUrl}/suppliers/v1/filtered`
         );
         const data = await response.json();
         setSuppliers(data);

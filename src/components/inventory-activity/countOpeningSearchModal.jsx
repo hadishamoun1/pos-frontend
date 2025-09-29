@@ -7,6 +7,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (isOpen) {
@@ -19,7 +20,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const fetchItems = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3000/items/v1/filtered-items"
+        `${baseUrl}/items/v1/filtered-items`
       );
       setItems(response.data);
     } catch (error) {

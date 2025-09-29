@@ -6,10 +6,11 @@ export default function PreviewTransferTable() {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/transfers/v1/details")
+      .get(`${baseUrl}/transfers/v1/details`)
       .then((res) => setTransfers(res.data))
       .catch((err) => {
         console.error(err);

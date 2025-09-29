@@ -18,6 +18,8 @@ const CountModal = ({ isOpen, onClose }) => {
   const [view, setView] = useState("create");
   const [dateCountOpen, setDateCountOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
@@ -62,7 +64,7 @@ const CountModal = ({ isOpen, onClose }) => {
       console.log("✅ Payload being sent:", payload);
 
       await axios.post(
-        "http://localhost:3000/inventory-count/v1/inventory-check",
+        `${baseUrl}/inventory-count/v1/inventory-check`,
         payload
       );
 

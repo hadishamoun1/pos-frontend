@@ -38,6 +38,7 @@ const POSSystemPage = () => {
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const handleSearchClick = () => {
     setModalOpen(true);
@@ -120,7 +121,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:3000/requests/${requestId}`
+        `${baseUrl}/requests/${requestId}`
       );
       const request = response.data;
 
@@ -256,7 +257,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:3000/customers/v1/search`,
+        `${baseUrl}/customers/v1/search`,
         {
           params: { query },
         }
@@ -287,7 +288,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.get(
-        `http://localhost:3000/customers/${customer.id}`
+        `${baseUrl}/customers/${customer.id}`
       );
       const customerData = response.data;
 
@@ -373,7 +374,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/invoices",
+        `${baseUrl}/invoices`,
         payload
       );
       console.log("✅ Invoice Created:", response.data);
@@ -503,7 +504,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/requests/${selectedRequestId}`,
+        `${baseUrl}/requests/${selectedRequestId}`,
         updatedRequestData
       );
       console.log("✅ Request Updated:", response.data);
@@ -558,7 +559,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/invoices/${selectedInvoiceId}`,
+        `${baseUrl}/invoices/${selectedInvoiceId}`,
         invoiceData
       );
       console.log("Invoice Updated:", response.data);
@@ -605,7 +606,7 @@ const POSSystemPage = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3000/requests",
+        `${baseUrl}/requests`,
         requestData
       );
       console.log("✅ Request Created:", response.data);

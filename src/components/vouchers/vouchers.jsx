@@ -12,6 +12,7 @@ const JournalVoucherPage = () => {
   const [date, setDate] = useState("");
   const [type, setType] = useState("");
   const [viewMode, setViewMode] = useState(false);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const [notification, setNotification] = useState({
     visible: false,
@@ -388,7 +389,7 @@ if (invalidEntries.length > 0) {
 
       // Make the API call
       const response = await axios.post(
-        "http://localhost:3000/journal-vouchers",
+        `${baseUrl}/journal-vouchers`,
         payload
       );
 
@@ -444,7 +445,7 @@ if (invalidEntries.length > 0) {
     setLoading(true);
     try {
       const response = await axios.get(
-        "http://localhost:3000/journal-vouchers/v1/list"
+        `${baseUrl}/journal-vouchers/v1/list`
       );
       setJournalData(response.data); // Update the journalData state
     } catch (error) {
@@ -464,7 +465,7 @@ if (invalidEntries.length > 0) {
   const fetchJournalVoucherById = async (id) => {
     try {
       const { data: jv } = await axios.get(
-        `http://localhost:3000/journal-vouchers/${id}`
+        `${baseUrl}/journal-vouchers/${id}`
       );
 
       setDate(jv.date);
