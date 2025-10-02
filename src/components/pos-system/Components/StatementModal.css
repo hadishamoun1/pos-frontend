@@ -10,6 +10,7 @@
 }
 
 .pos-modal {
+  position: relative;               /* ✅ make modal a positioning context */
   width: min(900px, 96vw);
   max-height: 90vh;
   background: #fff;
@@ -117,7 +118,7 @@
 }
 
 .statement-report-button{
-    padding: 0.8rem 1.5rem;
+  padding: 0.8rem 1.5rem;
   font-size: 1rem;
   font-weight: bold;
   border: none;
@@ -128,9 +129,47 @@
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-
 .statement-report-button:hover{
-
   transform: scale(1.05);
 }
 
+/* ✅ Loading overlay styles (modal-scoped) */
+.stmt-loading-overlay {
+  position: absolute;          /* change to fixed for full-screen */
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  z-index: 9999;               /* above modal contents */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stmt-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  font-size: 14px;
+  color: #111827;
+}
+
+.stmt-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  animation: stmt-spin .8s linear infinite;
+}
+
+@keyframes stmt-spin { to { transform: rotate(360deg); } }
+
+.stmt-loading-text {
+  font-weight: 600;
+}

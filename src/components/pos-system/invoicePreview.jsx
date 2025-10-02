@@ -1,162 +1,271 @@
-import React, { useRef } from "react";
-import "./invoicePreview.css";
-import html2pdf from "html2pdf.js";
+import React, { useMemo } from "react";
 
-const InvoicePreview = () => {
-  return (
-    <div className="invoice-a4-wrapper">
-      <div className="invoice-body">
-        <div className="invoice-header">
-          <div className="right-info">
-            <h2 className="company-arabic-title">شركة شمعون</h2>
-            <h2 className="company-arabic-subtitle">للزجاج و المرايا</h2>
-            <p className="small-subtitle">الحدث/ شويفات</p>
-            <div className="invoice-arabic-contact">
-              <div className="invoice-arabic-line">
-                <span className="invoice-arabic-label">تلفون</span>
-                <span className="invoice-arabic-colon">:</span>
-                <span className="invoice-arabic-value">
-                  05/810888 05/814964
-                </span>
-              </div>
-              <div className="invoice-arabic-line">
-                <span className="invoice-arabic-label">خلوي/ واتساب</span>
-                <span className="invoice-arabic-colon">:</span>
-                <span className="invoice-arabic-value">79/100068</span>
-              </div>
-              <div className="invoice-arabic-line">
-                <span className="invoice-arabic-label">فاكس</span>
-                <span className="invoice-arabic-colon">:</span>
-                <span className="invoice-arabic-value">05/814961</span>
-              </div>
+/** number formatter */
+function fmt(n, d = 2) {
+  const num = Number(n);
+  if (Number.isNaN(num)) return "";
+  return num.toLocaleString("en-US", {
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  });
+}
+/** date formatter (DD Mon YYYY) */
+function fmtDate(iso) {
+  if (!iso) return "";
+  const dt = new Date(iso);
+  return isNaN(dt) ? "" : dt.toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+/**
+ * Build the full HTML doc as a string for srcDoc.
+ * If you pass inlineCss, it will be embedded. Otherwise it will <link> cssHref.
+ */
+function buildInvoiceHtml(invoiceData = {}, { cssHref, inlineCss } = {}) {
+  const {
+    invoiceNumber = "",
+    date = "",
+    customerName = "",
+    customerAddress = "",
+    customerPhone = "",
+    customerAccountNumber = "",
+    customerTaxNumber = "",
+    currencyRate = 1,
+    vatPercentage = 0,
+    totalWithoutVAT = 0,
+    totalVAT = 0,
+    grandTotal = 0,
+    items = [],
+    currencyCode = "USD",
+  } = invoiceData;
+
+  const grandTotalLL = grandTotal * currencyRate;
+  const totalVatLL = totalVAT * currencyRate;
+
+  // build rows html
+  const rowsHtml =
+    items.length === 0
+      ? `<tr><td colspan="9" style="text-align:center;padding:12px">لا توجد أصناف</td></tr>`
+      : items
+          .map((it) => {
+            const amount =
+              it.totalAmount ?? (Number(it.unitPrice || 0) * Number(it.sqm || 0));
+            const isBox = it.itemType === "box";
+            const isSheet = it.itemType === "sheet";
+            return `
+              <tr>
+                <td>${fmt(amount)}</td>
+                <td>${fmt(it.unitPrice)}</td>
+                <td>${fmt(it.sqm)}</td>
+                <td>${it.width ?? ""}</td>
+                <td>${it.length ?? ""}</td>
+                <td>${isSheet ? (it.quantity ?? "") : ""}</td>
+                <td>${isBox ? (it.quantity ?? "") : ""}</td>
+                <td class="arabic-item-name">${it.itemName ?? ""}</td>
+                <td>${it.itemVariantId ?? ""}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+  const headCss = inlineCss
+    ? `<style>${inlineCss}</style>`
+    : cssHref
+    ? `<link rel="stylesheet" href="${cssHref}">`
+    : "";
+
+  // a tiny fallback so it looks okay even if CSS doesn’t load
+  const fallbackCss = `
+    <style>
+      html,body { margin:0; padding:0; }
+      .invoice-a4-wrapper { padding: 16px; font-family: Arial, sans-serif; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ddd; padding: 6px; font-size: 12px; }
+      thead th { background:#f2f2f2; }
+      .invoice-header, .invoice-meta, .invoice-footer { margin-bottom: 12px; }
+      .arabic-item-name { direction: rtl; text-align: right; }
+    </style>
+  `;
+
+  return `<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+${headCss || fallbackCss}
+</head>
+<body>
+  <div class="invoice-a4-wrapper">
+    <div class="invoice-body">
+      <div class="invoice-header">
+        <div class="right-info">
+          <h2 class="company-arabic-title">شركة شمعون</h2>
+          <h2 class="company-arabic-subtitle">للزجاج و المرايا</h2>
+          <p class="small-subtitle">الحدث/ شويفات</p>
+          <div class="invoice-arabic-contact">
+            <div class="invoice-arabic-line">
+              <span class="invoice-arabic-label">تلفون</span>
+              <span class="invoice-arabic-colon">:</span>
+              <span class="invoice-arabic-value">05/810888 05/814964</span>
             </div>
-          </div>
-          <div className="left-info">
-            <h1 className="company-title">Shamoun Company</h1>
-            <h2 className="company-subtitle">For Glass & Mirrors</h2>
-            <p>Chweifat - Near Spot Mall</p>
-            <p>Tel: 05-810 888 ; 79-1000 68 ; Fax: 05-814 961</p>
-            <p>Email: info@shamoun.com</p>
-            <p>VAT Reg.No 10909-601</p>
+            <div class="invoice-arabic-line">
+              <span class="invoice-arabic-label">خلوي/ واتساب</span>
+              <span class="invoice-arabic-colon">:</span>
+              <span class="invoice-arabic-value">79/100068</span>
+            </div>
+            <div class="invoice-arabic-line">
+              <span class="invoice-arabic-label">فاكس</span>
+              <span class="invoice-arabic-colon">:</span>
+              <span class="invoice-arabic-value">05/814961</span>
+            </div>
           </div>
         </div>
-
-        <div className="invoice-meta">
-          <div className="meta-right">
-            <div className="meta-line">
-              <span className="meta-label">اسم الزبون</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">أن جي NG ش.م.م</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">العنوان</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">طرابلس - الميناء</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">تلفون</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">06/385332</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">رقم الحساب</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">411104039</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">الرقم الضريبي</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">436736-601</span>
-            </div>
-          </div>
-          <div className="meta-left">
-            <div className="meta-line">
-              <span className="meta-label">رقم الفاتورة</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">24-258</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">التاريخ</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">01-Mar-2024</span>
-            </div>
-            <div className="meta-line">
-              <span className="meta-label">العملة</span>
-              <span className="meta-colon">:</span>
-              <span className="meta-value">USD</span>
-            </div>
-          </div>
+        <div class="left-info">
+          <h1 class="company-title">Shamoun Company</h1>
+          <h2 class="company-subtitle">For Glass & Mirrors</h2>
+          <p>Chweifat - Near Spot Mall</p>
+          <p>Tel: 05-810 888 ; 79-1000 68 ; Fax: 05-814 961</p>
+          <p>Email: info@shamoun.com</p>
+          <p>VAT Reg.No 10909-601</p>
         </div>
-
-        <table className="invoice-table">
-          <thead>
-            <tr>
-              <th className="col-amount">المبلغ</th>
-              <th className="col-price">السعر</th>
-              <th className="col-area">مساحة</th>
-              <th className="col-small">عرض</th>
-              <th className="col-small">طول</th>
-              <th className="col-small">لوح</th>
-              <th className="col-small">صندوق</th>
-              <th className="col-description">الشرح</th>
-              <th className="col-item">الصنف</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>154.05</td>
-              <td>5.75</td>
-              <td>50000.79</td>
-              <td>366</td>
-              <td>244</td>
-              <td>27</td>
-              <td>1</td>
-              <td className="arabic-item-name">5ملم محجر اسيد ابيض</td>
-              <td>00101-055-4</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
 
-      <div className="invoice-footer">
-        <div className="footer-right">
-          <div className="footer-row">
-            <span className="footer-label">VAT LBP</span>
-            <span className="footer-label">المجموع</span>
-            <span className="footer-value">177,771.00</span>
+      <div class="invoice-meta">
+        <div class="meta-right">
+          <div class="meta-line">
+            <span class="meta-label">اسم الزبون</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${customerName || "-"}</span>
           </div>
-          <div className="footer-row">
-            <span className="footer-vat-value">1,516,622.25</span>
-            <span className="footer-label">V.A.T 11%</span>
-            <span className="footer-value">16.946</span>
+          <div class="meta-line">
+            <span class="meta-label">العنوان</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${customerAddress || "-"}</span>
           </div>
-          <div className="footer-total-line">
-            <strong className="footer-total-label">المجموع الصافي</strong>
-            <span className="footer-total-amount">171.00 USD</span>
+          <div class="meta-line">
+            <span class="meta-label">تلفون</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${customerPhone || "-"}</span>
+          </div>
+          <div class="meta-line">
+            <span class="meta-label">رقم الحساب</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${customerAccountNumber || "-"}</span>
+          </div>
+          <div class="meta-line">
+            <span class="meta-label">الرقم الضريبي</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${customerTaxNumber || "-"}</span>
           </div>
         </div>
+        <div class="meta-left">
+          <div class="meta-line">
+            <span class="meta-label">رقم الفاتورة</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${invoiceNumber || "-"}</span>
+          </div>
+          <div class="meta-line">
+            <span class="meta-label">التاريخ</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${fmtDate(date)}</span>
+          </div>
+          <div class="meta-line">
+            <span class="meta-label">العملة</span>
+            <span class="meta-colon">:</span>
+            <span class="meta-value">${currencyCode}</span>
+          </div>
+        </div>
+      </div>
 
-        <div className="footer-left">
-          <p className="amount-in-words">
-            One Hundred Seventy Point Ninety Nine USD Only
-          </p>
-          <div className="footer-left-table">
-            <div className="footer-left-row">
-              <div className="footer-left-cell"></div>
-              <div className="footer-left-cell border-left"></div>
-            </div>
-            <div className="footer-left-label-row">
-              <span className="footer-left-label">المستلم:</span>
-              <span className="footer-left-label">الإمضاء:</span>
-            </div>
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th class="col-amount">المبلغ</th>
+            <th class="col-price">السعر</th>
+            <th class="col-area">مساحة</th>
+            <th class="col-small">عرض</th>
+            <th class="col-small">طول</th>
+            <th class="col-small">لوح</th>
+            <th class="col-small">صندوق</th>
+            <th class="col-description">الشرح</th>
+            <th class="col-item">الصنف</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="invoice-footer">
+      <div class="footer-right">
+        <div class="footer-row">
+          <span class="footer-label">VAT LBP</span>
+          <span class="footer-label">المجموع</span>
+          <span class="footer-value">${fmt(grandTotalLL)}</span>
+        </div>
+        <div class="footer-row">
+          <span class="footer-vat-value">${fmt(totalVatLL)}</span>
+          <span class="footer-label">V.A.T ${vatPercentage}%</span>
+          <span class="footer-value">${fmt(totalVAT)}</span>
+        </div>
+        <div class="footer-total-line">
+          <strong class="footer-total-label">المجموع الصافي</strong>
+          <span class="footer-total-amount">${fmt(grandTotal)} ${currencyCode}</span>
+        </div>
+      </div>
+
+      <div class="footer-left">
+        <p class="amount-in-words"></p>
+        <div class="footer-left-table">
+          <div class="footer-left-row">
+            <div class="footer-left-cell"></div>
+            <div class="footer-left-cell border-left"></div>
           </div>
-          <div className="footer-left-note">
-            <span className="footer-left-label-note">ملاحظات:</span>
+          <div class="footer-left-label-row">
+            <span class="footer-left-label">المستلم:</span>
+            <span class="footer-left-label">الإمضاء:</span>
           </div>
+        </div>
+        <div class="footer-left-note">
+          <span class="footer-left-label-note">ملاحظات:</span>
         </div>
       </div>
     </div>
+  </div>
+</body>
+</html>`;
+}
+
+const frameStyle = {
+  width: "100%",
+  height: "100%",
+  border: "0",
+};
+
+/**
+ * Props:
+ *  - invoiceData: the same object you already pass
+ *  - cssHref: (optional) path to the same CSS file, e.g. "/invoicePreview.css" (put it in /public)
+ *  - inlineCss: (optional) a CSS string to embed directly into the iframe
+ *  - className / style: styling for the iframe element
+ */
+const InvoicePreviewIframe = ({ invoiceData, cssHref = "/invoicePreview.css", inlineCss, className, style }) => {
+  const html = useMemo(
+    () => buildInvoiceHtml(invoiceData, { cssHref, inlineCss }),
+    [invoiceData, cssHref, inlineCss]
+  );
+
+  return (
+    <iframe
+      title="Invoice Preview"
+      className={className}
+      style={{ width: "100%", minHeight: "1123px", border: 0 }}
+      srcDoc={html}
+      sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+    />
   );
 };
 
-export default InvoicePreview;
+export default InvoicePreviewIframe;

@@ -311,6 +311,47 @@ width: 100%;
 .tb-table .num {
   text-align: center; /* or remove the .num class from your JSX */
 }
+.tb-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  z-index: 9999;              /* above everything */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tb-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  font-size: 14px;
+  color: #111827;
+}
+
+.tb-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;   /* primary */
+  animation: tb-spin .8s linear infinite;
+}
+
+@keyframes tb-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tb-loading-text {
+  font-weight: 600;
+}
 
 
 

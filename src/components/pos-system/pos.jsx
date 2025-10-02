@@ -94,7 +94,12 @@ const POSSystemPage = () => {
         length: item.length || "",
         width: item.width || "",
         box: type === "box" ? quantity : "",
-        sheet: type === "sheet" ? quantity : item.sheetsPerBox,
+            sheet:
+        type === "sheet"
+          ? quantity
+          : type === "box"
+          ? sheetsPerBox
+          : "",
         quantity,
         sqm,
         price: "",
@@ -197,28 +202,41 @@ const POSSystemPage = () => {
     setIsEditable(true);
   };
 
-  const handleInputChange = (index, field, value) => {
-    const newData = [...tableData];
-    newData[index][field] = value;
+const handleInputChange = (index, field, value) => {
+  const newData = [...tableData];
+  newData[index][field] = value;
 
-    if (newData[index].length && newData[index].width && newData[index].sheet) {
-      newData[index].sqm = calculateSQM(
-        newData[index].length,
-        newData[index].width,
-        newData[index].type,
-        newData[index].box || 1,
-        newData[index].sheet
-      );
-    } else {
-      newData[index].sqm = "";
-    }
+  const row = newData[index];
 
-    const price = parseFloat(newData[index].price) || 0;
-    const sqm = parseFloat(newData[index].sqm) || 0;
-    newData[index].total = (sqm * price).toFixed(2);
-
+  // 👉 If this row is "sqm", keep whatever the user types in sqm
+  if (row.type === "sqm") {
+    const price = parseFloat(row.price) || 0;
+    const sqm = parseFloat(row.sqm) || 0;   // user-entered
+    row.total = (sqm * price).toFixed(2);
     setTableData(newData);
-  };
+    return;
+  }
+
+  // For box/sheet: auto-calc sqm
+  if (row.length && row.width && row.sheet !== "" && row.sheet !== undefined) {
+    row.sqm = calculateSQM(
+      row.length,
+      row.width,
+      row.type,
+      row.box || 1,
+      row.sheet
+    );
+  } else {
+    row.sqm = "";
+  }
+
+  const price = parseFloat(row.price) || 0;
+  const sqm = parseFloat(row.sqm) || 0;
+  row.total = (sqm * price).toFixed(2);
+
+  setTableData(newData);
+};
+
 
   const handleRightClick = (event, index) => {
     event.preventDefault();
@@ -332,8 +350,11 @@ const POSSystemPage = () => {
     const items = tableData.map((item) => {
       const unitPrice = Number(item.price) || 0;
       const sqm = Number(item.sqm) || 0;
-      const quantity =
-        item.type === "box" ? Number(item.box) : Number(item.sheet);
+const quantity =
+  item.type === "box"  ? Number(item.box)  :
+  item.type === "sheet"? Number(item.sheet):
+  item.type === "sqm"  ? Number(item.sqm)  : 0;
+
 
       const totalAmount = sqm * unitPrice;
       const vatAmount = totalAmount * vatRate;
@@ -671,12 +692,16 @@ const POSSystemPage = () => {
 
           />
           
-          {showPreview && (
-            <InvoiceModal
-              invoiceData={<InvoicePreview invoiceData={invoiceData} />}
-              onClose={() => setShowPreview(false)}
-            />
-          )}
+ {showPreview && (
+  <InvoiceModal
+    isOpen={showPreview}
+    onClose={() => setShowPreview(false)}
+    invoiceData={invoiceData}           // <-- the object you already set in handleSelectInvoice
+       cssHref="/invoicePreview.css"       // put this CSS in /public
+  />
+)}
+
+
           <StatementModal
   isOpen={showStatement}
   onClose={() => setShowStatement(false)}

@@ -18,6 +18,19 @@ const ENDPOINTS = {
   trialBalanceCurrencies: `${BASE_URL}/reports/trial-balance/currencies`, // NEW
 };
 
+function LoadingScreen({ show, text = "Generating report…" }) {
+  if (!show) return null;
+  return (
+    <div className="tb-loading-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div className="tb-loading-card">
+        <div className="tb-spinner" aria-hidden="true" />
+        <div className="tb-loading-text">{text}</div>
+      </div>
+    </div>
+  );
+}
+
+
 function sanitizeParams(p) {
   const out = {};
   Object.entries(p).forEach(([k, v]) => {
@@ -1137,6 +1150,9 @@ export default function TrialBalance() {
             </table>
           )}
         </div>
+
+        <LoadingScreen show={loading || accLoading} text={accLoading ? "Loading accounts & currencies…" : "Generating report…"} />
+
       </div>
 
       {!rows.length && !loading && !err && (

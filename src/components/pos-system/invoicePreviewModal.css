@@ -1,129 +1,72 @@
+/* invoicePreviewModal.css — popup container, not the invoice page itself */
+
 .invoice-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(15, 23, 42, 0.55); /* slate-900/55 */
   display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: flex-start;
   z-index: 9999;
-  overflow: hidden;
+  padding: 24px;
 }
 
-.invoice-modal-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  background: #e74c3c;
-  color: white;
-  border: none;
-  font-size: 1.2rem;
-  border-radius: 6px;
-  padding: 0.4rem 0.7rem;
-  cursor: pointer;
-  z-index: 10;
+.invoice-modal-window {
+  background: #f8fafc;              /* slate-50 */
+  width: min(1100px, 96vw);
+  max-height: 96vh;
+  border-radius: 12px;
+  box-shadow:
+    0 20px 25px -5px rgba(0,0,0,.1),
+    0 10px 10px -5px rgba(0,0,0,.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;        /* gray-200 */
 }
 
 .invoice-modal-header {
-  position: absolute;
-  top: 10px;
-  right: 15px;
   display: flex;
   gap: 8px;
-  z-index: 10;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 10px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
+
+.invoice-modal-icon-btn,
 .invoice-modal-x-btn {
-  background-color: red;
-  color: white;
-  border: none;
-  font-size: 1rem;
-  border-radius: 50%;
-  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-  width: 36px;
-  height: 36px;
+  font-size: 14px;
+  line-height: 1;
+}
+.invoice-modal-icon-btn:hover,
+.invoice-modal-x-btn:hover {
+  background: #f1f5f9;              /* slate-100 */
 }
 
-.invoice-modal-icon-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  font-size: 1rem;
-  border-radius: 50%;
-  padding: 0.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-  width: 36px;
-  height: 36px;
-}
-
-.invoice-modal-icon-btn:hover {
-  background-color: #34495e;
-}
-
-/* A4 Container */
 .invoice-modal-content {
-  position: relative;
-  max-height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  background: #eef2f7;
+  padding: 12px;
+  overflow: auto;
 }
 
-/* ✅ Wrap and scale the invoice to fit viewport */
-.invoice-scale-wrapper {
-  transform: scale(0.85); /* Start with default laptop scaling */
-  transform-origin: top left;
-  height: auto;
-}
-
-/* ✅ Disable scaling when exporting to PDF */
-.pdf-mode {
-  transform: none !important;
-  zoom: 1 !important;
-}
-.zoom-controls {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 10px 0;
-}
-
-.zoom-controls button {
-  font-size: 18px;
-  font-weight: bold;
-  padding: 6px 12px;
-  background-color: #f1f1f1;
-  border: 1px solid #999;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.zoom-controls button:hover {
-  background-color: #e0e0e0;
-}
 .invoice-layout {
-  width: 100%;
-  height: 100%;
-  overflow: auto; /* ✅ Enables both vertical and horizontal scroll */
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 20px;
+  background: #e5e7eb;
+  border: 1px dashed #cbd5e1;
+  padding: 8px;
 }
-.invoice-modal-icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.invoice-scale-wrapper.pdf-mode {
-  transform: none !important;
-  width: 100% !important;
+
+.invoice-scale-wrapper {
+  transform-origin: top center;
+  transition: transform 0.15s ease;
+  margin: 0 auto;
 }

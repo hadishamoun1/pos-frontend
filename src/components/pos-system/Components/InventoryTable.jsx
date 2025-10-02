@@ -4,7 +4,7 @@ const InventoryTable = ({
   handleRightClick,
   selectedRowIndex,
   handleInputChange,
-  isEditable, // This controls whether fields are editable
+  isEditable, // controls whether editable fields are enabled
 }) => {
   return (
     <table className="pos-page-inventory-table">
@@ -17,91 +17,104 @@ const InventoryTable = ({
           <th>Width</th>
           <th>Box</th>
           <th>Sheet</th>
-          <th>SQM</th>
           <th>Price</th>
+          <th>SQM</th>
           <th>Total</th>
         </tr>
       </thead>
       <tbody>
-        {tableData.map((row, index) => (
-          <tr
-            key={index}
-            onClick={() => handleRowClick(index)}
-            onContextMenu={(e) => handleRightClick(e, index)}
-            className={index === selectedRowIndex ? "pos-selected-row" : ""}
-          >
-            {/* Origin (Always non-editable) */}
-            <td>
-              <input type="text" value={row.origin} readOnly={true} />
-            </td>
+        {tableData.map((row, index) => {
+          const canEditBox = isEditable && row.type === "box";
+          const canEditSheet = isEditable && row.type === "sheet";
+          const canEditSQM = isEditable && row.type === "sqm";
 
-            {/* Item (Always non-editable) */}
-            <td>
-              <input type="text" value={row.item} readOnly={true} />
-            </td>
+          return (
+            <tr
+              key={index}
+              onClick={() => handleRowClick(index)}
+              onContextMenu={(e) => handleRightClick(e, index)}
+              className={index === selectedRowIndex ? "pos-selected-row" : ""}
+            >
+              {/* Origin (read-only) */}
+              <td>
+                <input type="text" value={row.origin} readOnly />
+              </td>
 
-            {/* Type (Always non-editable) */}
-            <td>
-              <input type="text" value={row.type} readOnly={true} />
-            </td>
+              {/* Item (read-only) */}
+              <td>
+                <input type="text" value={row.item} readOnly />
+              </td>
 
-            {/* Length (Always non-editable) */}
-            <td>
-              <input type="text" value={row.length} readOnly={true} />
-            </td>
+              {/* Type (read-only) */}
+              <td>
+                <input type="text" value={row.type} readOnly />
+              </td>
 
-            {/* Width (Always non-editable) */}
-            <td>
-              <input type="text" value={row.width} readOnly={true} />
-            </td>
+              {/* Length (read-only) */}
+              <td>
+                <input type="text" value={row.length} readOnly />
+              </td>
 
-            {/* Box (Editable when type is "box" and isEditable is true) */}
-            <td>
-              <input
-                type="text"
-                value={row.box}
-                onChange={(e) =>
-                  handleInputChange(index, "box", e.target.value)
-                }
-                disabled={row.type === "sheet" || !isEditable}
-              />
-            </td>
+              {/* Width (read-only) */}
+              <td>
+                <input type="text" value={row.width} readOnly />
+              </td>
 
-            {/* Sheet (Editable when type is "sheet" and isEditable is true) */}
-            <td>
-              <input
-                type="text"
-                value={row.sheet}
-                onChange={(e) =>
-                  handleInputChange(index, "sheet", e.target.value)
-                }
-                readOnly={!(row.type === "sheet" && isEditable)} // Editable if type is sheet and isEditable is true
-              />
-            </td>
+              {/* Box (editable only when type is "box") */}
+              <td>
+                <input
+                  type="number"
+                  value={row.box ?? ""}
+                  onChange={(e) => handleInputChange(index, "box", e.target.value)}
+                  disabled={!canEditBox}
+                  placeholder={canEditBox ? "Enter boxes…" : ""}
+                />
+              </td>
 
-            {/* SQM (Always non-editable) */}
-            <td>
-              <input type="text" value={row.sqm} readOnly={true} />
-            </td>
+              {/* Sheet (editable only when type is "sheet") */}
+              <td>
+                <input
+                  type="number"
+                  value={row.sheet ?? ""}
+                  onChange={(e) => handleInputChange(index, "sheet", e.target.value)}
+                  disabled={!canEditSheet}
+                  placeholder={canEditSheet ? "Enter sheets…" : ""}
+                />
+              </td>
 
-            {/* Price (Editable when isEditable is true) */}
-            <td>
-              <input
-                type="number"
-                value={row.price}
-                onChange={(e) =>
-                  handleInputChange(index, "price", e.target.value)
-                }
-                readOnly={!isEditable} // Editable if isEditable is true
-              />
-            </td>
 
-            {/* Total (Always non-editable) */}
-            <td>
-              <input type="text" value={row.total} readOnly={true} />
-            </td>
-          </tr>
-        ))}
+                       {/* Price (editable when isEditable) */}
+              <td>
+                <input
+                  type="number"
+                  value={row.price ?? ""}
+                  onChange={(e) => handleInputChange(index, "price", e.target.value)}
+                  disabled={!isEditable}
+                  step="0.01"
+                  placeholder={isEditable ? "" : ""}
+                />
+              </td>
+
+              {/* SQM (editable only when type is "sqm") */}
+              <td>
+                <input
+                  type="number"
+                  value={row.sqm ?? ""}
+                  onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
+                  disabled={!canEditSQM}
+                  placeholder={canEditSQM ? " " : ""}
+                />
+              </td>
+
+     
+
+              {/* Total (read-only) */}
+              <td>
+                <input type="text" value={row.total ?? ""} readOnly />
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

@@ -34,15 +34,19 @@
   border-radius: 12px;
   border: 1px solid rgb(13, 95, 248);
   box-shadow: 0 4px 10px #007bff;
+min-width:0;
 }
 
 /* Inventory Table */
 .pos-page-inventory-table {
-  width: 100%;
+  width: max-content;   /* table grows to content */
+  min-width: 1200px;    /* baseline so you get a scrollbar on smaller screens */
   border-collapse: collapse;
   margin-top: 1.5rem;
   border-radius: 8px;
+  table-layout: fixed;
 }
+
 /* Scrollbar Styling */
 .pos-page-inventory-table-container::-webkit-scrollbar {
   height: 8px;
@@ -66,12 +70,15 @@
 .pos-page-inventory-table-container {
   width: 100%;
   max-height: 670px;
-  overflow-y: auto;
+  overflow-x: auto;      /* ✅ add this */
+  overflow-y: auto;      /* keep vertical scroll */
   display: block;
   border: 1px solid #ddd;
   border-radius: 8px;
   background: white;
+  position: relative;    /* good with sticky header */
 }
+
 .pos-page-inventory-table thead {
   position: sticky;
   top: 0;
@@ -81,7 +88,7 @@
 }
 
 .pos-page-inventory-table th {
-  padding: 0.7rem;
+  padding: 0.6rem;
   text-align: center;
   background: linear-gradient(to right, #007bff, #0056b3);
   color: white;
@@ -89,19 +96,19 @@
   text-transform: uppercase;
   border-left: 2px solid #ddd;
   border-right: 2px solid #ddd;
-  font-size: 1rem;
+  font-size: 0.95rem;
   vertical-align: middle;
 }
 
 /* Adjust Column Widths */
 .pos-page-inventory-table th:nth-child(1),
 .pos-page-inventory-table td:nth-child(1) {
-  width: 16%; /* Origin */
+  width: 40px; /* Origin */
 }
 
 .pos-page-inventory-table th:nth-child(2),
 .pos-page-inventory-table td:nth-child(2) {
-  width: 21%; /* Item */
+  width: 150px; /* Item */
 }
 
 .pos-page-inventory-table th:nth-child(3),
@@ -115,14 +122,14 @@
 .pos-page-inventory-table th:nth-child(7),
 .pos-page-inventory-table td:nth-child(7),
 .pos-page-inventory-table th:nth-child(8),
-.pos-page-inventory-table td:nth-child(8),
-.pos-page-inventory-table th:nth-child(9),
-.pos-page-inventory-table td:nth-child(9) {
-  width: 9%; /* Remaining Columns */
+.pos-page-inventory-table td:nth-child(8) {
+  width:40px; /* Remaining Columns */
 }
+
+.pos-page-inventory-table td:nth-child(9),
 .pos-page-inventory-table td:nth-child(10) {
-  width: 11%;
-  min-width: 100px;
+  width: 95px;
+  
 }
 
 .pos-page-inventory-table td {
@@ -138,7 +145,7 @@
   padding-left: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   text-align: center;
   background: #f8f9fa;
   transition: all 0.3s ease;

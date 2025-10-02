@@ -3,7 +3,7 @@ import axios from "axios";
 import "./StatementModal.css";
 import StatementReportModal from "./StatementReportModal";
 
-const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName }) => { // ✅ added customerName
+const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName }) => {
   const today = defaultDate || new Date().toISOString().split("T")[0];
   const [type, setType] = useState("ALL");
   const [from, setFrom] = useState(today);
@@ -12,7 +12,14 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+  // ✅ Support both CRA and Vite envs
+  const baseUrl =
+    (typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_APP_API_BASE_URL)) ||
+    process.env.REACT_APP_API_BASE_URL ||
+    "http://localhost:3000";
 
   useEffect(() => {
     if (isOpen) {
@@ -31,8 +38,21 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
     return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  // Loading overlay (uses CSS classes)
+  function LoadingScreen({ show, text = "Generating…" }) {
+    if (!show) return null;
+    return (
+      <div className="stmt-loading-overlay" role="status" aria-live="polite" aria-busy="true">
+        <div className="stmt-loading-card">
+          <div className="stmt-spinner" aria-hidden="true" />
+          <div className="stmt-loading-text">{text}</div>
+        </div>
+      </div>
+    );
+  }
+
   const fetchStatement = async () => {
-    if (!customerId) return;
+    if (!customerId) return;             // button is disabled when !customerId
     setLoading(true);
     setErr("");
     setData(null);
@@ -53,7 +73,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
 
   if (!isOpen) return null;
 
-  // ✅ Prefer the name passed from parent; fallback to API data if needed
+  // Prefer the name passed from parent; fallback to API data if needed
   const reportCustomerName =
     customerName ||
     data?.customerName ||
@@ -63,18 +83,18 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
     "-";
 
   return (
-    <div className="pos-modal-overlay" onClick={onClose}>
+    <div className="pos-modal-overlay" onClick={loading ? undefined : onClose}>
       <div className="pos-modal" onClick={(e) => e.stopPropagation()}>
         <div className="pos-modal-header">
           <h2>كشف حساب</h2>
-          <button className="pos-modal-close" onClick={onClose}>✕</button>
+          <button className="pos-modal-close" onClick={onClose} disabled={loading}>✕</button>
         </div>
 
         <div className="pos-modal-controls">
           <div className="controls-left">
             <label>
               Type
-              <select value={type} onChange={(e) => setType(e.target.value)}>
+              <select value={type} onChange={(e) => setType(e.target.value)} disabled={loading}>
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="ALL">All</option>
@@ -83,12 +103,12 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
 
             <label>
               From
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} disabled={loading} />
             </label>
 
             <label>
               To
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} disabled={loading} />
             </label>
 
             <button
@@ -104,7 +124,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
             <button
               className="statement-report-button"
               onClick={() => setShowReportModal(true)}
-              disabled={!customerId}
+              disabled={!customerId || loading}
             >
               Report
             </button>
@@ -116,10 +136,10 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
         {data && (
           <div className="pos-modal-body">
             <div className="stmt-summary">
-              <div><strong>رصيد سابق:</strong> {fmt(data.openingBalance.toFixed(2))}</div>
-              <div><strong>مجموع الفواتير:</strong> {fmt(data.totals?.totalDebit.toFixed(2))}</div>
-              <div><strong>مجموع الدفعات:</strong> {fmt(data.totals?.totalCredit.toFixed(2))}</div>
-              <div><strong>رصيد:</strong> {fmt(data.closingBalance.toFixed(2))}</div>
+              <div><strong>رصيد سابق:</strong> {fmt(data.openingBalance?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>مجموع الفواتير:</strong> {fmt(data.totals?.totalDebit?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>مجموع الدفعات:</strong> {fmt(data.totals?.totalCredit?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>رصيد:</strong> {fmt(data.closingBalance?.toFixed?.(2) ?? 0)}</div>
             </div>
             <div className="stmt-table-wrap">
               <table className="stmt-table">
@@ -157,7 +177,13 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
           from={from}
           to={to}
           type={type}
-          customerName={reportCustomerName}  // ✅ forward the name
+          customerName={reportCustomerName}
+        />
+
+        {/* ✅ Loading overlay (modal-scoped) */}
+        <LoadingScreen
+          show={loading}
+          text={type === "ALL" ? "Generating statement…" : `Generating (${type})…`}
         />
       </div>
     </div>
