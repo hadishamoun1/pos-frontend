@@ -12,6 +12,7 @@ const CustomerDetails = ({
   handleCustomerSelect,
   highlightedIndex,
   handleSearchClick,
+    setHighlightedIndex,
 }) => {
   return (
     <div>
@@ -70,19 +71,65 @@ const CustomerDetails = ({
           />
 
           {/* Suggestions Dropdown */}
-          {customerSuggestions.length > 0 && (
-            <ul className="customer-suggestions-dropdown">
-              {customerSuggestions.map((customer, index) => (
-                <li
-                  key={customer.id}
-                  className={index === highlightedIndex ? "selected" : ""}
-                  onClick={() => handleCustomerSelect(customer)}
-                >
-                  {customer.customerName}
-                </li>
-              ))}
-            </ul>
-          )}
+ {customerSuggestions.length > 0 && (
+        <ul className="customer-suggestions-dropdown" role="listbox">
+          {customerSuggestions.map((c, index) => (
+            <li
+              key={c.id ?? index}
+              role="option"
+              aria-selected={index === highlightedIndex}
+              className={`cust-sugg ${index === highlightedIndex ? "is-active" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}       // keep focus in the input
+              onMouseEnter={() => setHighlightedIndex(index)} // sync hover with highlight
+              onClick={() => handleCustomerSelect(c)}
+       // auto-detect RTL/LTR per row
+            >
+              {/* Left: circular initials */}
+              <div className="cust-sugg-avatar">
+                {String(c.customerName || c.firstName || "?").trim().charAt(0).toUpperCase()}
+              </div>
+
+              {/* Right: content */}
+              <div className="cust-sugg-content" dir="auto">
+                <div className="cust-sugg-line1" dir="auto">
+                  <span
+                    className="cust-sugg-name"
+                    dir="auto"
+                    title={c.customerName || ""}
+                  >
+                    {c.customerName || "—"}
+                  </span>
+                  {c.firstName ? (
+                    <span className="cust-sugg-first" dir="auto">
+                      ({c.firstName})
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="cust-sugg-line2">
+                  {c.phoneNumber ? (
+                    <span className="cust-sugg-pill">
+                      <span className="cust-icon">📞</span>
+                      {c.phoneNumber}
+                    </span>
+                  ) : null}
+
+                  {c.address ? (
+                    <span className="cust-sugg-addr" dir="auto" title={c.address}>
+                      <span className="cust-icon">📍</span>
+                      {c.address}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+   
+ 
+
 
           <button
             className="pos-page-toolbar-button pos-page-blue-button"

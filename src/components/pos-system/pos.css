@@ -477,43 +477,168 @@ input:disabled {
 }
 
 /* 🔹 Suggestions Dropdown */
+/* Container (you already have position/width) */
 .customer-suggestions-dropdown {
   position: absolute;
-  width: 25%;
-  max-height: 250px;
+  width: 70%;
+  max-height: 320px;
   overflow-y: auto;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e6eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.12);
   list-style: none;
-  margin: 5px 0 0;
-  padding: 0;
+  margin: 6px 0 0;
+  padding: 6px;
   z-index: 1000;
+
+  /* Arabic-friendly font for the whole dropdown */
+  font-family: "Tajawal", "Cairo", "Noto Sans Arabic", system-ui, -apple-system,
+               "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.4;
 }
 
-/* 🔹 Each Suggestion Item */
-.customer-suggestions-dropdown li {
-  padding: 12px;
+/* Each suggestion (compact, two-line) */
+.cust-sugg {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background 0.2s ease-in-out;
-  font-size: 16px;
-  color: #333;
+  transition: background .15s ease, transform .06s ease;
+ 
+}
+.cust-sugg + .cust-sugg { margin-top: 4px; }
+
+.cust-sugg:hover { background: #f3f7ff; }
+.cust-sugg.is-active { background: #e7f0ff; }
+/* REMOVE this spacer when using borders */
+/* .cust-sugg + .cust-sugg { margin-top: 4px; } */
+
+/* Remove the vertical gap so borders can meet */
+.cust-sugg + .cust-sugg { margin-top: 0; }
+
+/* Always draw a bottom border; drop it for the last item */
+.customer-suggestions-dropdown .cust-sugg {
+  position: relative;
+  border-bottom: 1px solid #e5e9f0;   /* separator */
+  box-sizing: border-box;             /* make sure border spans full width */
 }
 
-/* Hover Effect */
-.customer-suggestions-dropdown li:hover,
-.customer-suggestions-dropdown li.selected {
-  background: #007bff;
-  color: white;
+.customer-suggestions-dropdown .cust-sugg:last-child {
+  border-bottom: 0;
 }
 
-/* 🔹 No Suggestions Message */
+/* Keep the border visible when hovered/active */
+.customer-suggestions-dropdown .cust-sugg:hover,
+.customer-suggestions-dropdown .cust-sugg.is-active {
+  background: #f3f7ff;
+  border-bottom-color: #d2dbea;
+}
+
+
+
+/* Left: avatar circle */
+.cust-sugg-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0a66ff 0%, #2f88ff 100%);
+  color: #fff;
+  display: grid; place-items: center;
+  font-weight: 700;
+  letter-spacing: .2px;
+   border: 1px solid black;
+}
+
+/* Right: content */
+.cust-sugg-content { min-width: 0; }
+.cust-sugg-line1 {
+  display: flex; align-items: baseline; gap: 6px;
+  line-height: 1.1; margin-bottom: 4px;
+}
+
+/* Names: make Arabic clear & handle mixed text properly */
+.cust-sugg-name {
+  font-weight: 700;
+  color: #1f2937;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: larger;
+
+  /* ✅ Arabic-mixed text handling */
+  direction: rtl;              /* Arabic reads right-to-left */
+  unicode-bidi: plaintext;     /* keep Latin/numbers flowing naturally */
+  text-align: start;           /* start aligns right in RTL, left in LTR */
+  padding-bottom: 5px;
+}
+.cust-sugg-first {
+  color: #6b7280; font-weight: 600;
+
+  /* ✅ Arabic-mixed text handling */
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Second line: phone pill + address text */
+.cust-sugg-line2 {
+  display: flex; align-items: center; gap: 8px;
+  color: #616978; font-size: .93rem;
+  min-width: 0;
+}
+
+/* Phone pill: force LTR so numbers read correctly next to Arabic */
+.cust-sugg-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #eef4ff; color: #274472;
+  padding: 4px 8px; border-radius: 999px;
+  border: 1px solid #dce8ff;
+  white-space: nowrap;
+
+  /* ✅ keep numbers LTR inside Arabic context */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Address: Arabic-friendly and truncated nicely */
+.cust-sugg-addr {
+  display: inline-flex; align-items: center; gap: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 60%;
+
+  /* ✅ Arabic-mixed text handling */
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+.cust-icon { opacity: .9; }
+
+/* Keep keyboard-selected text color readable */
+.customer-suggestions-dropdown li.selected { color: inherit; }
+
+/* Optional: no-result hint */
 .no-suggestions {
-  padding: 12px;
-  color: #999;
-  text-align: center;
+  margin-top: 6px;
+  background: #fff7e6;
+  color: #744c0e;
+  border: 1px solid #f3e0b6;
+  padding: 8px 10px;
+  border-radius: 10px;
+  width: 25%;
+  font-size: .95rem;
+
+  /* Use same Arabic-friendly font & spacing */
+  font-family: "Tajawal", "Cairo", "Noto Sans Arabic", system-ui, -apple-system,
+               "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.4;
 }
+
+
+
+
 
 .pos-page-purple-button {
   background-color: rgb(231, 113, 2);

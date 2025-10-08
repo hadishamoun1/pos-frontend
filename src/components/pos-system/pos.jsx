@@ -721,6 +721,7 @@ const quantity =
             handleCustomerSelect={handleCustomerSelect}
             highlightedIndex={highlightedIndex}
             handleSearchClick={handleSearchClick}
+             setHighlightedIndex={setHighlightedIndex}  
           />
         </div>
         <div className="pos-page-inventory-table-container">
