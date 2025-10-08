@@ -1,6 +1,7 @@
 // invoicePreviewModal.jsx
 import React, { useMemo, useRef, useEffect } from "react";
 import html2pdf from "html2pdf.js";
+import html2canvas from "html2canvas"; // ⬅️ ADDED
 
 // helpers
 function fmt(n, d = 2) {
@@ -52,6 +53,10 @@ const MODAL_CSS = `
 /* Secondary (Download PDF) */
 .btn-secondary { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
 .btn-secondary:hover { background: #0284c7; border-color: #0284c7; }
+
+/* NEW: Tertiary (Screenshot PNG) */
+.btn-tertiary { background: #22c55e; color: #fff; border-color: #22c55e; }
+.btn-tertiary:hover { background: #16a34a; border-color: #16a34a; }
 
 /* Outline (Close) */
 .btn-outline { background: #fff; color: #0f172a; border-color: #e5e7eb; }
@@ -385,6 +390,63 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     printFrame.srcdoc = html;
   };
 
+  // 🆕 Screenshot the entire invoice (PNG), even if the iframe scrolls
+  const handleScreenshot = async () => {
+    try {
+      const doc = iframeRef.current?.contentDocument || iframeRef.current?.contentWindow?.document;
+      if (!doc) return;
+
+      const invoiceRoot = doc.querySelector(".invoice-a4-wrapper");
+      if (!invoiceRoot) {
+        alert("Invoice content not ready yet.");
+        return;
+      }
+
+      // Wait a tick for fonts/layout to settle
+      await new Promise((r) => setTimeout(r, 30));
+
+      const canvas = await html2canvas(invoiceRoot, {
+        scale: 3,                // high-DPI for sharp text (adjust to 2 if file is too big)
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: invoiceRoot.scrollWidth,
+        windowHeight: invoiceRoot.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      const fileName = `Invoice-${invoiceData?.invoiceNumber || "Preview"}.png`;
+
+      if (canvas.toBlob) {
+        canvas.toBlob((blob) => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+            a.remove();
+          }, 100);
+        }, "image/png");
+      } else {
+        // Fallback
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } catch (e) {
+      console.error("Screenshot failed:", e);
+      alert("Could not capture the invoice screenshot.");
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -404,6 +466,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
             <div className="invoice-modal-controls">
               <button onClick={handlePrint} className="btn btn-primary" title="Print (A4)">🖨 Print</button>
               <button onClick={handleDownloadPDF} className="btn btn-secondary" title="Download PDF">⬇ Download PDF</button>
+              <button onClick={handleScreenshot} className="btn btn-tertiary" title="Save PNG">📸 Screenshot</button> {/* ⬅️ ADDED */}
               <button onClick={onClose} className="btn btn-outline" title="Close">✕ Close</button>
             </div>
           </div>

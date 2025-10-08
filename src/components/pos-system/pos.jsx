@@ -13,7 +13,6 @@ import InventoryTable from "./Components/InventoryTable";
 import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
 import InvoiceModal from "./invoicePreviewModal";
-import InvoicePreview from "./invoicePreview";
 import StatementModal from "./Components/StatementModal";
 
 const POSSystemPage = () => {
