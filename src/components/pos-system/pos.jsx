@@ -37,11 +37,17 @@ const POSSystemPage = () => {
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
+
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const handleSearchClick = () => {
     setModalOpen(true);
   };
+const handleReorder = (newRows) => {
+  setTableData(newRows);
+};
+
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -733,6 +739,7 @@ const quantity =
             handleInputChange={handleInputChange}
             isEditable={isEditable}
             selectedRequestId={selectedRequestId}
+              onReorder={handleReorder}
           />
         </div>
       </div>

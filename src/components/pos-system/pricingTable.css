@@ -1,5 +1,9 @@
+/* =========================
+   Price Browsing (renamed)
+   ========================= */
+
 /* Outer Container */
-.pricing-table-container {
+.price-browsing-container {
   display: flex;
   height: 96vh;
   width: 45%;
@@ -9,7 +13,7 @@
 }
 
 /* Inner Panel Style */
-.pricing-table-content {
+.price-browsing-content {
   flex: 1;
   background-color: #ffffff;
   padding: 1.5rem;
@@ -21,20 +25,159 @@
   overflow: hidden;
 }
 
-/* Search Input */
-.pricing-table-search-input {
-  width: 30%;
-  padding: 0.6rem;
-  font-size: 1rem;
-  border: 2px solid #007bff;
+/* -------------------------
+   Customer suggestion input
+   ------------------------- */
+
+.price-browsing-customer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.price-browsing-customer-name-label {
+  font-weight: 600;
+  min-width: 120px;
+}
+
+/* Anchor for dropdown */
+.price-browsing-customer-search-container {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Input */
+.price-browsing-customer-name-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  color: #111827;
+  background: #ffffff;
+  border: 1.5px solid #dfe3ea;
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  font-size: 1.3rem;
+}
+
+.price-browsing-customer-name-input::placeholder {
+  color: #6b7280;
+}
+
+.price-browsing-customer-name-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* Dropdown */
+.price-browsing-suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 28px rgba(16, 24, 40, 0.12),
+    0 2px 6px rgba(16, 24, 40, 0.06);
+
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.price-browsing-suggestions-dropdown li {
+  padding: 10px 12px;
   border-radius: 8px;
-  background: #f8f9fa;
-  font-weight: bold;
+  cursor: pointer;
+  color: #111827;
+  transition: background-color .12s ease;
+}
+
+.price-browsing-suggestions-dropdown li + li {
+  margin-top: 6px;
+}
+
+.price-browsing-suggestions-dropdown li:hover {
+  background: #f8fafc;
+}
+
+.price-browsing-suggestions-dropdown li.price-browsing-suggestion--selected,
+.price-browsing-suggestions-dropdown li[aria-selected="true"] {
+  background: rgba(37, 99, 235, 0.08);
+  outline: 1.5px solid #c9d1dd;
+}
+
+/* -------------------------
+   Search Input (table-wide)
+   ------------------------- */
+/* Polished search input */
+.price-browsing-search-input {
+  appearance: none;
+  outline: none;
+  width: min(250px, 100%);
+  height: 44px;
+
+  /* Left space for the icon, right space for comfort */
+  padding: 0 40px 0 44px;
+
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+  color: #111827;
+
+  font-size: 1.2rem;
+  font-weight: 500;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+
+  /* Subtle magnifier icon */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239aa4b2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 12px 50%;
+  background-size: 18px 18px;
+
+  /* Space below the field */
   margin-bottom: 1rem;
 }
 
+.price-browsing-search-input::placeholder {
+  color: #9aa4b2;
+  font-weight: 400;
+}
+
+.price-browsing-search-input:hover {
+  border-color: #cbd5e1;
+}
+
+.price-browsing-search-input:focus {
+  border-color: #2563eb; /* blue-600 */
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.12),
+    0 2px 10px rgba(16, 24, 40, 0.08);
+}
+
+/* Optional: disabled state */
+.price-browsing-search-input:disabled {
+  background: #f3f4f6;
+  color: #9aa4b2;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
 /* Table Wrapper with Scroll */
-.pricing-table-wrapper {
+.price-browsing-table-wrapper {
   flex: 1;
   overflow-y: auto;
   overflow-x: auto;
@@ -42,14 +185,14 @@
 }
 
 /* Table Styling */
-.pricing-table {
+.price-browsing-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
 }
 
 /* Table Header */
-.pricing-table thead {
+.price-browsing-table thead {
   position: sticky;
   top: 0;
   background: linear-gradient(#007bff, #0056b3);
@@ -57,7 +200,7 @@
   z-index: 10;
 }
 
-.pricing-table th {
+.price-browsing-table th {
   padding: 0.7rem;
   text-align: center;
   font-weight: bold;
@@ -68,7 +211,7 @@
 }
 
 /* Table Body */
-.pricing-table td {
+.price-browsing-table td {
   text-align: center;
   vertical-align: middle;
   padding: 0.4rem;
@@ -77,26 +220,26 @@
 }
 
 /* Column Widths */
-.pricing-table th:nth-child(1),
-.pricing-table td:nth-child(1) {
+.price-browsing-table th:nth-child(1),
+.price-browsing-table td:nth-child(1) {
   width: 14%;
 }
 
-.pricing-table th:nth-child(2),
-.pricing-table td:nth-child(2) {
+.price-browsing-table th:nth-child(2),
+.price-browsing-table td:nth-child(2) {
   width: 10%;
 }
 
-.pricing-table th:nth-child(3),
-.pricing-table td:nth-child(3) {
+.price-browsing-table th:nth-child(3),
+.price-browsing-table td:nth-child(3) {
   width: 5%;
 }
 
-.pricing-table th:nth-child(4) {
+.price-browsing-table th:nth-child(4) {
   width: 15%;
 }
 
-.pricing-table td:nth-child(4) {
+.price-browsing-table td:nth-child(4) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -104,20 +247,20 @@
   text-align: center;
 }
 
-.pricing-table th:nth-child(n + 5),
-.pricing-table td:nth-child(n + 5) {
+.price-browsing-table th:nth-child(n + 5),
+.price-browsing-table td:nth-child(n + 5) {
   width: 7%;
 }
 
 /* Hover Effect on Table Rows */
-.pricing-table tbody tr:hover {
+.price-browsing-table tbody tr:hover {
   background-color: #e6f3ff;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-/* Optional: Load More Button Style */
-.load-more-btn {
+/* Load More Button */
+.price-browsing-load-more-btn {
   background-color: #007bff;
   color: white;
   border: none;
@@ -128,17 +271,18 @@
   transition: background 0.2s;
 }
 
-.load-more-btn:hover {
+.price-browsing-load-more-btn:hover {
   background-color: #0056b3;
 }
 
 /* Highlight the latest item row */
-.pricing-table tbody tr.latest-item-row {
+.price-browsing-table tbody tr.price-browsing-latest-item-row {
   background-color: #ffe6e6; /* Light red */
   font-weight: bold;
 }
+
 /* Spacer row between groups */
-.pricing-table tbody tr.group-spacer-row td {
+.price-browsing-table tbody tr.price-browsing-group-spacer-row td {
   height: 10px;
   background: transparent;
   border: none;

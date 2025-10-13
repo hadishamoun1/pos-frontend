@@ -230,15 +230,6 @@ min-width:0;
   display: block;
 }
 
-.pos-page-customer-name-input {
-  width: 30%;
-  padding: 0.6rem;
-  font-size: 1rem;
-  border: 2px solid #007bff;
-  border-radius: 8px;
-  background: #f8f9fa;
-  font-weight: bold;
-}
 
 /* 📅 Modern & Creative Date Picker */
 .pos-page-date-picker {
@@ -469,6 +460,8 @@ input:disabled {
   border-radius: 5px;
   outline: none;
   transition: all 0.3s ease-in-out;
+  font-size: larger;
+  font-weight: bold;
 }
 
 .pos-page-customer-name-input:focus {
@@ -481,7 +474,7 @@ input:disabled {
 .customer-suggestions-dropdown {
   position: absolute;
   width: 70%;
-  max-height: 320px;
+  max-height: 520px;
   overflow-y: auto;
   background: #ffffff;
   border: 1px solid #e2e6eb;
@@ -664,6 +657,32 @@ input:disabled {
 /* Orange button for Stmt */
 .pos-page-orange-button { background-color: #ff9800; color: #fff; }
 .pos-page-orange-button:hover { background-color: #fb8c00; }
+
+
+/* Drag handle column */
+.pos-page-inventory-table .drag-handle {
+  width: 34px;
+  text-align: center;
+  color: #94a3b8; /* slate-400 */
+  cursor: grab;
+  user-select: none;
+  font-weight: 600;
+}
+.pos-page-inventory-table tr:active .drag-handle {
+  cursor: grabbing;
+}
+
+/* While dragging the source row */
+.pos-page-inventory-table tr.row-dragging {
+  opacity: 0.6;
+}
+
+/* When dragging over a target row */
+.pos-page-inventory-table tr.row-dragover {
+  outline: 2px dashed #2563eb;   /* blue-600 */
+  outline-offset: -2px;
+  background: #eff6ff;           /* blue-50 */
+}
 
 
 

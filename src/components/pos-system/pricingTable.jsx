@@ -98,12 +98,14 @@ const PricingTable = () => {
       const rows = grp.items.map((item, index) => (
         <tr
           key={`${grp.groupKey}-${index}`}
-          className={index === 0 ? "latest-item-row" : ""}
+          className={index === 0 ? "price-browsing-latest-item-row" : ""}
         >
           <td>{item.invoiceDate}</td>
           <td>{item.invoiceNumber}</td>
           <td>{item.origin}</td>
-          <td>{`${parseFloat(item.thickness)} ملم ${item.itemName}`}</td>
+          <td style={{ direction: "rtl", textAlign: "center" }}>
+            {`${parseFloat(item.thickness)} ملم ${item.itemName}`}
+          </td>
           <td>{item.type}</td>
           <td>{item.box}</td>
           <td>{item.sheet}</td>
@@ -120,7 +122,7 @@ const PricingTable = () => {
             <td colSpan={11}>
               <button
                 onClick={() => loadMore(grp.groupKey, grp.page)}
-                className="load-more-btn"
+                className="price-browsing-load-more-btn"
               >
                 Load more ({grp.items.length}/{grp.total})
               </button>
@@ -131,7 +133,7 @@ const PricingTable = () => {
 
       // ✅ Add a spacer row between groups
       rows.push(
-        <tr key={`${grp.groupKey}-spacer`} className="group-spacer-row">
+        <tr key={`${grp.groupKey}-spacer`} className="price-browsing-group-spacer-row">
           <td colSpan={11}></td>
         </tr>
       );
@@ -156,26 +158,26 @@ const PricingTable = () => {
   });
 
   return (
-    <div className="pricing-table-container">
-      <div className="pricing-table-content">
-        <div className="pos-page-customer-name-row">
-          <label className="pos-page-customer-name-label">Customer Name</label>
-          <div className="pos-page-customer-search-container">
+    <div className="price-browsing-container">
+      <div className="price-browsing-content">
+        <div className="price-browsing-customer-name-row">
+      
+          <div className="price-browsing-customer-search-container">
             <input
               type="text"
               value={customerInput}
               onChange={handleCustomerInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Search Customer Name"
-              className="pos-page-customer-name-input"
+              className="price-browsing-customer-name-input"
             />
 
             {customerSuggestions.length > 0 && (
-              <ul className="customer-suggestions-dropdown">
+              <ul className="price-browsing-suggestions-dropdown">
                 {customerSuggestions.map((customer, index) => (
                   <li
                     key={customer.id}
-                    className={index === highlightedIndex ? "selected" : ""}
+                    className={index === highlightedIndex ? "price-browsing-suggestion--selected" : ""}
                     onClick={() => handleCustomerSelect(customer)}
                   >
                     {customer.customerName}
@@ -189,13 +191,13 @@ const PricingTable = () => {
         <input
           type="text"
           placeholder="Search by any field"
-          className="pricing-table-search-input"
+          className="price-browsing-search-input"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <div className="pricing-table-wrapper">
-          <table className="pricing-table">
+        <div className="price-browsing-table-wrapper">
+          <table className="price-browsing-table">
             <thead>
               <tr>
                 <th>Date</th>

@@ -1,11 +1,71 @@
+import React, { useState, useCallback } from "react";
+
 const InventoryTable = ({
   tableData,
   handleRowClick,
   handleRightClick,
   selectedRowIndex,
   handleInputChange,
-  isEditable, // controls whether editable fields are enabled
+  isEditable,            // controls editability of inputs
+  onReorder,             // (optional) parent callback: (newRows: any[]) => void
+  allowReorder = true,   // extra guard to explicitly disable drag even if isEditable=true
 }) => {
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // Only allow dragging when both flags permit it
+  const canReorder = Boolean(allowReorder && isEditable);
+
+  const reorder = useCallback((list, startIndex, endIndex) => {
+    const result = [...list];
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+    return result;
+  }, []);
+
+  const handleDragStart = (e, index) => {
+    if (!canReorder) return;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    if (e.dataTransfer.setDragImage) {
+      const ghost = document.createElement("div");
+      ghost.style.position = "absolute";
+      ghost.style.top = "-99999px";
+      ghost.style.left = "-99999px";
+      ghost.style.padding = "8px 12px";
+      ghost.style.background = "#e2e8f0";
+      ghost.style.borderRadius = "6px";
+      ghost.style.font = "14px system-ui, sans-serif";
+      ghost.textContent = "Move row";
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, 0, 0);
+      setTimeout(() => document.body.removeChild(ghost), 0);
+    }
+  };
+
+  const handleDragOver = (e, index) => {
+    if (!canReorder) return;
+    e.preventDefault();
+    if (index !== dragOverIndex) setDragOverIndex(index);
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e, index) => {
+    if (!canReorder) return;
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index) return;
+    const reordered = reorder(tableData, dragIndex, index);
+    if (onReorder) onReorder(reordered);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    if (!canReorder) return;
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <table className="pos-page-inventory-table">
       <thead>
@@ -28,39 +88,48 @@ const InventoryTable = ({
           const canEditSheet = isEditable && row.type === "sheet";
           const canEditSQM = isEditable && row.type === "sqm";
 
+          const isSelected = index === selectedRowIndex;
+          const isDragSource = canReorder && index === dragIndex;
+          const isDragOver = canReorder && dragOverIndex === index;
+
           return (
             <tr
               key={index}
               onClick={() => handleRowClick(index)}
               onContextMenu={(e) => handleRightClick(e, index)}
-              className={index === selectedRowIndex ? "pos-selected-row" : ""}
+              draggable={canReorder}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={[
+                isSelected ? "pos-selected-row" : "",
+                isDragSource ? "row-dragging" : "",
+                isDragOver ? "row-dragover" : "",
+                !canReorder ? "drag-disabled" : "",
+              ]
+                .join(" ")
+                .trim()}
+              aria-grabbed={isDragSource || undefined}
+              aria-disabled={!canReorder || undefined}
+              data-row-index={index}
+              title={!canReorder ? "Reordering disabled" : undefined}
             >
-              {/* Origin (read-only) */}
               <td>
-                <input type="text" value={row.origin} readOnly />
+                <input type="text" value={row.origin ?? ""} readOnly />
               </td>
-
-              {/* Item (read-only) */}
               <td>
-                <input type="text" value={row.item} readOnly />
+                <input type="text" value={row.item ?? ""} readOnly />
               </td>
-
-              {/* Type (read-only) */}
               <td>
-                <input type="text" value={row.type} readOnly />
+                <input type="text" value={row.type ?? ""} readOnly />
               </td>
-
-              {/* Length (read-only) */}
               <td>
-                <input type="text" value={row.length} readOnly />
+                <input type="text" value={row.length ?? ""} readOnly />
               </td>
-
-              {/* Width (read-only) */}
               <td>
-                <input type="text" value={row.width} readOnly />
+                <input type="text" value={row.width ?? ""} readOnly />
               </td>
-
-              {/* Box (editable only when type is "box") */}
               <td>
                 <input
                   type="number"
@@ -70,8 +139,6 @@ const InventoryTable = ({
                   placeholder={canEditBox ? "Enter boxes…" : ""}
                 />
               </td>
-
-              {/* Sheet (editable only when type is "sheet") */}
               <td>
                 <input
                   type="number"
@@ -81,9 +148,6 @@ const InventoryTable = ({
                   placeholder={canEditSheet ? "Enter sheets…" : ""}
                 />
               </td>
-
-
-                       {/* Price (editable when isEditable) */}
               <td>
                 <input
                   type="number"
@@ -91,11 +155,8 @@ const InventoryTable = ({
                   onChange={(e) => handleInputChange(index, "price", e.target.value)}
                   disabled={!isEditable}
                   step="0.01"
-                  placeholder={isEditable ? "" : ""}
                 />
               </td>
-
-              {/* SQM (editable only when type is "sqm") */}
               <td>
                 <input
                   type="number"
@@ -105,10 +166,6 @@ const InventoryTable = ({
                   placeholder={canEditSQM ? " " : ""}
                 />
               </td>
-
-     
-
-              {/* Total (read-only) */}
               <td>
                 <input type="text" value={row.total ?? ""} readOnly />
               </td>
