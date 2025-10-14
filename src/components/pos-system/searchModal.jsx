@@ -369,7 +369,6 @@ v = {
               <th>SELECT</th>
               <th>ITEM</th>
               <th>TYPE</th>
-              <th>THICKNESS</th>
               <th>LENGTH</th>
               <th>WIDTH</th>
               <th>SHEETS/BOX</th>
@@ -398,7 +397,6 @@ v = {
                   {`${parseFloat(r.thickness)} ملم ${r.itemName}`}
                 </td>
                 <td>{r.type}</td>
-                <td>{r.thickness}</td>
                 <td>{r.length}</td>
                 <td>{r.width}</td>
                 <td>{r.sheetsPerBox}</td>
