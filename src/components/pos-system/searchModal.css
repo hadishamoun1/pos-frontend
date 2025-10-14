@@ -211,11 +211,21 @@
   z-index: 4;
 }
 
-/* ✅ Center the checkbox using a dedicated class — not :first-child */
+/* ✅ Center the checkbox column perfectly */
+.search-modal-table th.col-select {
+  width: 56px; /* steady width for the column */
+}
+
 .search-modal-table td.cell-select {
-  text-align: center;
-  vertical-align: middle;
-  padding: 0.45rem;
+  display: flex;           /* key: flexbox cell */
+  align-items: center;     /* vertical center */
+  justify-content: center; /* horizontal center */
+  padding: 0.8rem;
+}
+.search-modal-table td.cell-select input[type="checkbox"] {
+  margin: 0;               /* remove default UA margins */
+  width: 1.3rem;           /* optional sizing */
+  height: 1.3rem;
 }
 
 /* Hover */
@@ -243,6 +253,72 @@
   text-align: center;
   padding: 12px 8px;
   opacity: .7;
+}
+
+/* ===================== TABS ===================== */
+.search-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.75rem;
+}
+
+.search-tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+  color: #334155; /* slate-700 */
+  cursor: pointer;
+  position: relative;
+  font-size: 1.2rem;
+}
+
+.search-tab:is(:hover, :focus-visible) {
+  background: #f1f5f9; /* slate-100 */
+  outline: none;
+}
+
+.search-tab.is-active {
+  color: #0f172a;           /* slate-900 */
+  background: #ffffff;
+  border-bottom: 2px solid transparent;
+}
+
+.search-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 3px;
+  background: linear-gradient(to right, #007bff, #0056b3);
+  border-radius: 2px 2px 0 0;
+}
+
+/* Placeholder for the "All" tab */
+.all-tab-placeholder {
+  min-height: 40vh;
+  display: grid;
+  place-items: center;
+}
+
+.placeholder-card {
+  border: 1px dashed #cbd5e1;  /* slate-300 */
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafc;         /* slate-50 */
+  text-align: center;
+}
+
+.placeholder-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+  color: #0f172a;
+}
+.placeholder-sub {
+  color: #475569;
 }
 
 /* ---------- Responsive tweaks ---------- */
