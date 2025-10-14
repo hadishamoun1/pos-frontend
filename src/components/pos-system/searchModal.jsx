@@ -19,7 +19,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const [dimsChip, setDimsChip] = useState(""); // e.g., "225*321-012"
 
   const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-  const abortRef = useRef(null); // ✅ JS-safe (no TypeScript generics)
+  const abortRef = useRef(null); // JS-safe
 
   // ---------- helpers --------------------------------------------------------
 
@@ -93,23 +93,33 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           )}|${vv.origin || ""}|${vv.itemNameDescriptionId || ""}` === vSig
       );
 
+      const toNum = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+
       if (!v) {
         // Prefer a real id if server provided one; else synthesize "v-..."
-        const realId =
-          typeof row.itemVariantId === "number" && Number.isFinite(row.itemVariantId)
-            ? row.itemVariantId
-            : null;
+   // Prefer a real id if server provided one; else synthesize "v-..."
+const realId =
+  toNum(row.variantId) ??
+  toNum(row.itemVariantId) ??
+  toNum(row.ItemVariantId) ??
 
-        v = {
-          id: realId ?? `v-${row.itemId}-${thVal}-${vSig}`, // synthetic for UI only
-          length: Number(row.length),
-          width: Number(row.width),
-          sheetsPerBox: Number(row.sheetsPerBox),
-          origin: row.origin,
-          itemNameDescriptionId: row.itemNameDescriptionId,
-          itemNameDescription: row.itemNameDescription || null,
-          batches: [],
-        };
+  null;
+
+v = {
+  id: realId ?? `v-${row.itemId}-${thVal}-${vSig}`, // synthetic for UI only
+  length: Number(row.length),
+  width: Number(row.width),
+  sheetsPerBox: Number(row.sheetsPerBox),
+  origin: row.origin,
+  itemNameDescriptionId: row.itemNameDescriptionId,
+  itemNameDescription: row.itemNameDescription || null,
+  batches: [],
+};
+
         th.variants.push(v);
       }
 
@@ -235,7 +245,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
             const uniqueId = `${variant.id}-${batch.id}`;
             if (selectedItems.has(uniqueId)) {
               selectedData.push({
-                itemVariantId: variantIdNum, // ✅ numeric id only
+                itemVariantId: variantIdNum, // numeric id only
                 itemName: item.itemName,
                 type: item.type,
                 thickness: thickness.thickness,
@@ -288,7 +298,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
           return variant.batches.map((batch) => ({
             uniqueId: `${variant.id}-${batch.id}`,
-            selectable: hasRealVariantId, // ✅ only real ids can be selected
+            selectable: hasRealVariantId, // only real ids can be selected
             itemName: item.itemName,
             type: item.type,
             thickness: thickness.thickness,
@@ -371,8 +381,12 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""} title={!r.selectable ? "Unavailable for selection (missing real variant id or no stock)" : undefined}>
-                <td>
+              <tr
+                key={r.uniqueId}
+                className={!r.selectable ? "row-disabled" : ""}
+                title={!r.selectable ? "Unavailable for selection (missing real variant id or no stock)" : undefined}
+              >
+                <td className="cell-select">
                   <input
                     type="checkbox"
                     disabled={!r.selectable}
@@ -394,12 +408,11 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
                 <td>{r.balanceOFR}</td>
               </tr>
             ))}
+
             {rows.length === 0 && (
-              <tr>
-                <td colSpan={11} style={{ textAlign: "center", opacity: 0.7 }}>
-                  لا توجد نتائج. اكتب اسم المادة (مثل: 5.5ملم ابيض) ثم اضغط Enter.
-                  بعد ذلك يمكنك إدخال الأبعاد (مثل: 225*321-012) والضغط Enter.
-                </td>
+              <tr className="empty-row">
+                <td className="empty-cell" colSpan={11}>
+                  No Data               </td>
               </tr>
             )}
           </tbody>

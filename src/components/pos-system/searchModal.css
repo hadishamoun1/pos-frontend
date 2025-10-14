@@ -1,11 +1,8 @@
 /* Modal Overlay */
 .search-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  background-color: rgba(0,0,0,0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -20,7 +17,7 @@
   width: 100%;
   max-width: 1300px;
   height: 92vh;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   overflow: auto;
 }
 
@@ -192,6 +189,7 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
+  table-layout: auto; /* important for colspan behavior */
 }
 .search-modal-table th,
 .search-modal-table td {
@@ -213,19 +211,17 @@
   z-index: 4;
 }
 
-/* ✅ Center the checkbox inside its column */
-.search-modal-table td:first-child {
+/* ✅ Center the checkbox using a dedicated class — not :first-child */
+.search-modal-table td.cell-select {
   text-align: center;
   vertical-align: middle;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   padding: 0.45rem;
 }
 
+/* Hover */
 .search-modal-table tbody tr:hover { background-color: #f8fafc; }
 
-/* dim rows without batches (non-selectable) */
+/* Dim rows without batches (non-selectable) */
 .row-disabled { opacity: 0.55; }
 .row-disabled td { background-image: linear-gradient(180deg, #fafafa, #ffffff); }
 
@@ -235,8 +231,19 @@
   cursor: pointer;
 }
 
+/* Width hint for last column (optional) */
 .search-modal-table th:last-child,
 .search-modal-table td:last-child { width: 10%; }
+
+/* Empty-state row spans the full width cleanly */
+.search-modal-table .empty-row .empty-cell {
+  display: table-cell !important;
+  width: auto !important;
+  max-width: none !important;
+  text-align: center;
+  padding: 12px 8px;
+  opacity: .7;
+}
 
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 720px) {
