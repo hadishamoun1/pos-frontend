@@ -1,0 +1,218 @@
+/* Scope everything to this tab to avoid clashes with other tab styles */
+.all-tab-root {
+  --all-filter-h: 76px; /* height of the pinned filter area (adjust if needed) */
+}
+
+/* ---------- Sticky filter (input left + chips right) ---------- */
+.all-tab-root .all-tab-item-input-row {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #ffffff;
+  padding: 0.75rem 0.75rem 0.9rem;
+  margin: -0.25rem -0.25rem 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-start;
+  align-items: flex-start;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.03);
+}
+
+/* Input (left block) */
+.all-tab-root .all-tab-items-input {
+  flex: 0 0 340px;
+  width: auto;
+  margin: 0;
+
+  padding: 0.8rem;
+  font-size: 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+
+  font-family: "Tajawal", "Cairo", "Noto Naskh Arabic", "Segoe UI",
+               "Helvetica Neue", Arial, sans-serif;
+
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.all-tab-root .all-tab-items-input:hover { border-color: #007bff; }
+.all-tab-root .all-tab-items-input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(96,165,250,.2);
+}
+
+/* Chips container (to the right) */
+.all-tab-root .all-tab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  max-height: 6.5rem;
+  overflow-y: auto;
+  padding: 0.25rem 0.15rem;
+  border-radius: 8px;
+  flex: 1 1 auto;
+  min-width: 220px;
+  justify-content: flex-start;
+}
+
+/* Pill chip */
+.all-tab-root .all-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #0f172a;
+  max-width: 100%;
+}
+.all-tab-root .all-chip:hover { background: #eef2f7; }
+
+/* Chip labels */
+.all-tab-root .all-chip-label {
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 5px;
+}
+
+/* Arabic name chip: RTL */
+.all-tab-root .all-chip-label--name {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+  font-family: "Tajawal", "Cairo", "Noto Naskh Arabic", "Segoe UI",
+               "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dims chip: keep numbers/symbols in LTR order */
+.all-tab-root .all-chip-label--dims {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: bidi-override;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, "Tajawal", "Cairo",
+               sans-serif;
+}
+
+/* Chip “x” */
+.all-tab-root .all-chip-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 1.35rem;
+  height: 1.45rem;
+  line-height: 1;
+  border-radius: 50%;
+  font-size: 1rem;
+  color: #475569;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.all-tab-root .all-chip-x:hover { background: #e2e8f0; color: #0f172a; }
+
+/* Results Table */
+.all-tab-root .all-tab-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  table-layout: auto;
+}
+.all-tab-root .all-tab-table th,
+.all-tab-root .all-tab-table td {
+  text-align: center;
+  padding: 0.7rem 0.4rem;
+  border: 1px solid #ddd;
+  vertical-align: middle;
+}
+.all-tab-root .all-tab-table th {
+  background: linear-gradient(to right, #007bff, #0056b3);
+  color: white;
+  text-transform: uppercase;
+}
+
+/* Sticky table header under the filter bar (uses the CSS var) */
+.all-tab-root .all-tab-table thead th {
+  position: sticky;
+  top: var(--all-filter-h);
+  z-index: 4;
+}
+
+/* ✅ Center the checkbox column perfectly */
+.all-tab-root .all-tab-table th.col-select {
+  width: 56px;
+}
+.all-tab-root .all-tab-table td.cell-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem;
+}
+.all-tab-root .all-tab-table td.cell-select input[type="checkbox"] {
+  margin: 0;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+/* Hover */
+.all-tab-root .all-tab-table tbody tr:hover { background-color: #f8fafc; }
+
+/* Dim rows without selectable variants */
+.all-tab-root .all-row-disabled { opacity: 0.55; }
+.all-tab-root .all-row-disabled td { background-image: linear-gradient(180deg, #fafafa, #ffffff); }
+
+/* Load more button */
+.all-tab-root .all-save-button {
+  padding: 0.5rem 1rem;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.all-tab-root .all-save-button:hover { background-color: #1d4ed8; }
+.all-tab-root .all-save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Empty-state row spans the full width cleanly */
+.all-tab-root .empty-row .empty-cell {
+  display: table-cell !important;
+  width: auto !important;
+  max-width: none !important;
+  text-align: center;
+  padding: 12px 8px;
+  opacity: .7;
+}
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 720px) {
+  .all-tab-root .all-tab-item-input-row { gap: 0.5rem; }
+  .all-tab-root .all-tab-chips { max-height: 5.2rem; }
+
+  .all-tab-root .all-tab-items-input {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* slightly shorter header offset on small screens */
+  .all-tab-root { --all-filter-h: 68px; }
+}

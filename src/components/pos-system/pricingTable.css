@@ -6,7 +6,7 @@
 .price-browsing-container {
   display: flex;
   height: 96vh;
-  width: 45%;
+  width: 43%;
   background-color: #f4f7fc;
   border: 1px solid rgb(10, 228, 3);
   box-shadow: 0 4px 10px #12d300;
@@ -16,7 +16,7 @@
 .price-browsing-content {
   flex: 1;
   background-color: #ffffff;
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -186,7 +186,9 @@
 
 /* Table Styling */
 .price-browsing-table {
+  table-layout: fixed;        /* respect th/col widths */
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   background: white;
 }
@@ -222,7 +224,7 @@
 /* Column Widths */
 .price-browsing-table th:nth-child(1),
 .price-browsing-table td:nth-child(1) {
-  width: 14%;
+  width: 11%;
 }
 
 .price-browsing-table th:nth-child(2),
@@ -232,11 +234,11 @@
 
 .price-browsing-table th:nth-child(3),
 .price-browsing-table td:nth-child(3) {
-  width: 5%;
+  width: 10%;
 }
 
 .price-browsing-table th:nth-child(4) {
-  width: 15%;
+  width: 18%;
 }
 
 .price-browsing-table td:nth-child(4) {

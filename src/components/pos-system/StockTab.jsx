@@ -13,15 +13,25 @@ const StockTab = forwardRef(function StockTab(
   { isOpen, onSelectionCountChange },
   ref
 ) {
-  // config
+  // ---- config
   const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
-  // state
-  const [items, setItems] = useState([]); // nested structure
+  // ---- state
+  // default list (v2/filtered-items) comes FLAT + already ordered by backend
+  const [flatRows, setFlatRows] = useState([]);
+  // search list (pos/search-modal) comes NESTED from the API
+  const [nestedItems, setNestedItems] = useState([]);
+
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
+
+  // pagination (default list only)
+  const [page, setPage] = useState(1);
+  const [limit] = useState(100);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const abortRef = useRef(null);
 
@@ -29,142 +39,101 @@ const StockTab = forwardRef(function StockTab(
   const cancelInFlight = () => {
     const ctl = abortRef.current;
     if (ctl && typeof ctl.abort === "function") {
-      try {
-        ctl.abort();
-      } catch {}
+      try { ctl.abort(); } catch {}
     }
     const next = new AbortController();
     abortRef.current = next;
     return next.signal;
   };
 
-  const normalizeDigits = useCallback(
-    (s = "") =>
-      s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ","),
-    []
-  );
-
-  const looksLikeDims = useCallback(
-    (s) => {
-      if (!s) return false;
-      const t = normalizeDigits(s).trim();
-      if (!t.includes("*")) return false;
-      const [L, rest] = t.split("*");
-      if (!L || !rest) return false;
-      if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
-      const parts = rest.split("-");
-      if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
-      if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
-      return true;
-    },
-    [normalizeDigits]
-  );
-
-  const normalizeFlatToNested = useCallback((flatRows = []) => {
-    const itemsMap = new Map();
-
-    flatRows.forEach((row) => {
-      const itemKey = row.itemId;
-      if (!itemsMap.has(itemKey)) {
-        itemsMap.set(itemKey, {
-          id: row.itemId,
-          itemName: row.itemName,
-          type: row.type,
-          thicknesses: [],
-        });
-      }
-      const item = itemsMap.get(itemKey);
-
-      // thickness
-      const thVal = Number(row.thickness);
-      let th = item.thicknesses.find((t) => Number(t.thickness) === thVal);
-      if (!th) {
-        th = { id: `${row.itemId}-${thVal}`, thickness: thVal, variants: [] };
-        item.thicknesses.push(th);
-      }
-
-      // variant signature
-      const vSig = `${Number(row.length)}|${Number(row.width)}|${Number(
-        row.sheetsPerBox
-      )}|${row.origin || ""}|${row.itemNameDescriptionId || ""}`;
-
-      let v = th.variants.find(
-        (vv) =>
-          `${Number(vv.length)}|${Number(vv.width)}|${Number(
-            vv.sheetsPerBox
-          )}|${vv.origin || ""}|${vv.itemNameDescriptionId || ""}` === vSig
-      );
-
-      const toNum = (val) => {
-        const n = Number(val);
-        return Number.isFinite(n) ? n : null;
-        };
-
-      if (!v) {
-        const realId =
-          toNum(row.variantId) ??
-          toNum(row.itemVariantId) ??
-          toNum(row.ItemVariantId) ??
-          null;
-
-        v = {
-          id: realId ?? `v-${row.itemId}-${thVal}-${vSig}`,
-          length: Number(row.length),
-          width: Number(row.width),
-          sheetsPerBox: Number(row.sheetsPerBox),
-          origin: row.origin,
-          itemNameDescriptionId: row.itemNameDescriptionId,
-          itemNameDescription: row.itemNameDescription || null,
-          batches: [],
-        };
-        th.variants.push(v);
-      }
-
-      if (Array.isArray(row.batches)) {
-        row.batches.forEach((b) => {
-          v.batches.push({
-            id: b.id,
-            condition: b.condition,
-            dateReceived: b.dateReceived,
-            balanceOFR: b.balanceOFR,
-          });
-        });
-      }
-    });
-
-    return Array.from(itemsMap.values());
+  const normalizeDigits = useCallback((s = "") => {
+    return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
   }, []);
 
-  // ---------- data fetch ----------
-  const fetchDefault = useCallback(async () => {
+  const looksLikeDims = useCallback((s) => {
+    if (!s) return false;
+    const t = normalizeDigits(s).trim();
+    if (!t.includes("*")) return false;
+    const [L, rest] = t.split("*");
+    if (!L || !rest) return false;
+    if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
+    const parts = rest.split("-");
+    if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
+    if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
+    return true;
+  }, [normalizeDigits]);
+
+  // normalize any API result to { data: [], hasMore: boolean }
+  const normalizeEnvelope = useCallback((raw) => {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const data =
+        Array.isArray(raw.data) ? raw.data :
+        Array.isArray(raw.items) ? raw.items :
+        Array.isArray(raw.results) ? raw.results : [];
+      let hm;
+      if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
+      else if (raw.page != null && raw.totalPages != null) hm = Number(raw.page) < Number(raw.totalPages);
+      else hm = data.length >= limit;
+      return { data, hasMore: hm };
+    }
+    if (Array.isArray(raw)) return { data: raw, hasMore: raw.length >= limit };
+    return { data: [], hasMore: false };
+  }, [limit]);
+
+  // ---------- default list (FLAT) ----------
+  const fetchDefaultPage = useCallback(async (targetPage) => {
+    setLoading(true);
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/v2/filtered-items`;
-      const params = { page: 1, limit: 200, includeEmpty: 1 };
+      // Backend already filters zero-stock; no includeEmpty
+      const params = { page: targetPage, limit };
       const res = await axios.get(url, { params, signal });
-      const raw = Array.isArray(res.data) ? res.data : res.data?.data || res.data || [];
-      const nested = normalizeFlatToNested(raw);
-      setItems(nested || []);
-    } catch (err) {
-      if (axios.isCancel?.(err)) return;
-      console.error("Error fetching default items:", err);
-      setItems([]);
-    }
-  }, [baseUrl, normalizeFlatToNested]);
+      const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
+      if (targetPage === 1) setFlatRows(flat || []);
+      else setFlatRows((prev) => [...prev, ...(flat || [])]); // append to preserve backend order
+
+      setNestedItems([]); // clear search data
+      setPage(targetPage);
+      setHasMore(Boolean(hm));
+    } catch (err) {
+      if (axios.isCancel && axios.isCancel(err)) return;
+      console.error("Error fetching default page:", err);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [baseUrl, limit, normalizeEnvelope]);
+
+  const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
+
+  // ---------- search list (NESTED) ----------
   const fetchSearch = useCallback(async () => {
+    setLoading(true);
     try {
       const signal = cancelInFlight();
-      const url = `${baseUrl}/items/pos/search-modal`;
-      const params = { page: 1, limit: 200, includeEmpty: 1 };
+      const url = `${baseUrl}/items/pos/search-modal-instock`;
+      // This endpoint returns nested data; keep it nested. No includeEmpty.
+      const params = { page: 1, limit: 200 };
       if (nameChip) params.q = nameChip.trim();
       if (dimsChip) params.dims = normalizeDigits(dimsChip.trim());
+
       const res = await axios.get(url, { params, signal });
-      setItems(res.data || []);
+      // Server already filters zero-stock in your new API; keep as is
+      const nested = Array.isArray(res.data) ? res.data : [];
+
+      setNestedItems(nested);
+      setFlatRows([]);    // clear flat rows in search mode
+      setHasMore(false);  // search: no "Load more"
+      setPage(1);
     } catch (err) {
-      if (axios.isCancel?.(err)) return;
+      if (axios.isCancel && axios.isCancel(err)) return;
       console.error("Error fetching search:", err);
-      setItems([]);
+      setNestedItems([]);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
     }
   }, [baseUrl, nameChip, dimsChip, normalizeDigits]);
 
@@ -175,21 +144,30 @@ const StockTab = forwardRef(function StockTab(
     setInputValue("");
     setNameChip("");
     setDimsChip("");
-    onSelectionCountChange?.(0);
+    if (onSelectionCountChange) onSelectionCountChange(0);
+    setPage(1);
+    setHasMore(false);
+    setFlatRows([]);
+    setNestedItems([]);
     fetchDefault();
     return () => {
       if (abortRef.current && typeof abortRef.current.abort === "function") {
-        try {
-          abortRef.current.abort();
-        } catch {}
+        try { abortRef.current.abort(); } catch {}
       }
     };
   }, [isOpen, fetchDefault, onSelectionCountChange]);
 
   useEffect(() => {
     if (!isOpen) return;
-    if (nameChip || dimsChip) fetchSearch();
-    else fetchDefault();
+    if (nameChip || dimsChip) {
+      fetchSearch();
+    } else {
+      setFlatRows([]);
+      setNestedItems([]);
+      setPage(1);
+      setHasMore(false);
+      fetchDefault();
+    }
   }, [isOpen, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
   // ---------- UI handlers ----------
@@ -198,10 +176,8 @@ const StockTab = forwardRef(function StockTab(
     const raw = inputValue.trim();
     if (!raw) return;
     const text = normalizeDigits(raw);
-
     if (looksLikeDims(text)) setDimsChip(text);
     else setNameChip(text);
-
     setInputValue("");
   };
 
@@ -214,88 +190,90 @@ const StockTab = forwardRef(function StockTab(
       const next = new Set(prev);
       if (next.has(uniqueId)) next.delete(uniqueId);
       else next.add(uniqueId);
-      onSelectionCountChange?.(next.size);
+      if (onSelectionCountChange) onSelectionCountChange(next.size);
       return next;
     });
   };
 
-  // ---------- rows ----------
-  const rows = useMemo(() => {
-    return (items || []).flatMap((item) =>
-      (item.thicknesses || []).flatMap((thickness) =>
-        (thickness.variants || []).flatMap((variant) => {
-          const variantIdNum = Number(variant.id);
-          const hasRealVariantId = Number.isFinite(variantIdNum);
+  // ---------- build rows for render ----------
+  // Default (flat) mode: expand only batch rows (no empty variants)
+// Default (flat) mode: API already returns one row per batch — just map it.
+const rowsFromFlat = useMemo(() => {
+  if (!flatRows.length) return [];
+  return flatRows.map((r) => {
+    const hasRealVariantId = Number.isFinite(Number(r.variantId));
+    return {
+      uniqueId: `${r.variantId}-${r.batchId ?? "n"}`, // stable key
+      selectable: hasRealVariantId,
+      itemName: r.itemName,
+      type: r.type,
+      thickness: r.thickness,
+      length: Math.floor(Number(r.length || 0)),
+      width: Math.floor(Number(r.width || 0)),
+      sheetsPerBox: Number(r.sheetsPerBox || 0),
+      origin: r.origin || "",
+      condition: r.condition ?? "",
+      dateReceived: r.dateReceived ?? "",
+      balanceOFR: r.balanceOFR ?? "",
+    };
+  });
+}, [flatRows]);
 
-          if (!variant.batches || variant.batches.length === 0) {
-            return [
-              {
-                uniqueId: `${variant.id}`,
-                selectable: false,
-                itemName: item.itemName,
-                type: item.type,
-                thickness: thickness.thickness,
-                length: Math.floor(Number(variant.length)),
-                width: Math.floor(Number(variant.width)),
-                sheetsPerBox: Number(variant.sheetsPerBox),
-                origin: variant.origin,
-                condition: "",
-                dateReceived: "",
-                balanceOFR: "",
-              },
-            ];
-          }
+  // Search (nested) mode: only variants that have batches
+  const rowsFromNested = useMemo(() => {
+    if (!nestedItems.length) return [];
+    const out = [];
+    (nestedItems || []).forEach((item) => {
+      (item.thicknesses || []).forEach((th) => {
+        (th.variants || []).forEach((v) => {
+          if (!Array.isArray(v.batches) || v.batches.length === 0) return; // skip no-stock variants
+          const hasRealVariantId = Number.isFinite(Number(v.id));
+          v.batches.forEach((b) =>
+            out.push({
+              uniqueId: `${v.id}-${b.id}`,
+              selectable: hasRealVariantId,
+              itemName: item.itemName,
+              type: item.type,
+              thickness: th.thickness,
+              length: Math.floor(Number(v.length)),
+              width: Math.floor(Number(v.width)),
+              sheetsPerBox: Number(v.sheetsPerBox),
+              origin: v.origin,
+              condition: b.condition,
+              dateReceived: b.dateReceived,
+              balanceOFR: b.balanceOFR,
+            })
+          );
+        });
+      });
+    });
+    return out;
+  }, [nestedItems]);
 
-          return variant.batches.map((batch) => ({
-            uniqueId: `${variant.id}-${batch.id}`,
-            selectable: hasRealVariantId,
-            itemName: item.itemName,
-            type: item.type,
-            thickness: thickness.thickness,
-            length: Math.floor(Number(variant.length)),
-            width: Math.floor(Number(variant.width)),
-            sheetsPerBox: Number(variant.sheetsPerBox),
-            origin: variant.origin,
-            condition: batch.condition,
-            dateReceived: batch.dateReceived,
-            balanceOFR: batch.balanceOFR,
-          }));
-        })
-      )
-    );
-  }, [items]);
+  const inSearchMode = Boolean(nameChip || dimsChip);
+  const rows = inSearchMode ? rowsFromNested : rowsFromFlat;
 
   // ---------- expose to parent ----------
   useImperativeHandle(ref, () => ({
     collectSelected: () => {
       const selectedData = [];
-      items.forEach((item) => {
-        (item.thicknesses || []).forEach((thickness) => {
-          (thickness.variants || []).forEach((variant) => {
-            const variantIdNum = Number(variant.id);
-            if (!Number.isFinite(variantIdNum)) return;
-
-            (variant.batches || []).forEach((batch) => {
-              const uniqueId = `${variant.id}-${batch.id}`;
-              if (selectedItems.has(uniqueId)) {
-                selectedData.push({
-                  itemVariantId: variantIdNum,
-                  itemName: item.itemName,
-                  type: item.type,
-                  thickness: thickness.thickness,
-                  length: parseFloat(variant.length),
-                  width: parseFloat(variant.width),
-                  sheetsPerBox: variant.sheetsPerBox,
-                  origin: variant.origin,
-                  condition: batch.condition,
-                  dateReceived: batch.dateReceived,
-                  balanceOFR: batch.balanceOFR,
-                  batchId: batch.id,
-                });
-              }
-            });
+      rows.forEach((r) => {
+        if (selectedItems.has(r.uniqueId) && r.selectable) {
+          selectedData.push({
+            itemVariantId: Number(r.uniqueId.split("-")[0]),
+            itemName: r.itemName,
+            type: r.type,
+            thickness: r.thickness,
+            length: r.length,
+            width: r.width,
+            sheetsPerBox: r.sheetsPerBox,
+            origin: r.origin,
+            condition: r.condition,
+            dateReceived: r.dateReceived,
+            balanceOFR: r.balanceOFR,
+            batchId: r.uniqueId.includes("-") ? Number(r.uniqueId.split("-")[1]) : null,
           });
-        });
+        }
       });
       return selectedData;
     },
@@ -304,32 +282,24 @@ const StockTab = forwardRef(function StockTab(
   // ---------- render ----------
   return (
     <>
-      {/* Input + chips row (pinned) */}
+      {/* Input + chips row */}
       <div className="search-modal-item-input-row">
         <input
           type="text"
           placeholder="مثال: 5.5ملم ابيض   ثم Enter — وبعدها 225*321-012 ثم Enter"
-          className="search-modal-items-input"
+        className="search-modal-items-input"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleEnter}
           autoFocus
         />
-
-        {/* Chips */}
         <div className="search-modal-chips">
           {nameChip && (
             <span className="search-chip" title={nameChip}>
               <span className="search-chip-label search-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button
-                className="search-chip-x"
-                onClick={clearNameChip}
-                aria-label="Remove name filter"
-              >
-                ×
-              </button>
+              <button className="search-chip-x" onClick={clearNameChip} aria-label="Remove name filter">×</button>
             </span>
           )}
           {dimsChip && (
@@ -337,13 +307,7 @@ const StockTab = forwardRef(function StockTab(
               <span className="search-chip-label search-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button
-                className="search-chip-x"
-                onClick={clearDimsChip}
-                aria-label="Remove dims filter"
-              >
-                ×
-              </button>
+              <button className="search-chip-x" onClick={clearDimsChip} aria-label="Remove dims filter">×</button>
             </span>
           )}
         </div>
@@ -361,7 +325,7 @@ const StockTab = forwardRef(function StockTab(
             <th>ORIGIN</th>
             <th>CONDITION</th>
             <th>DATE RECEIVED</th>
-            <th>BALANCE OFR</th>
+            <th>STOCK</th>
           </tr>
         </thead>
         <tbody>
@@ -380,29 +344,41 @@ const StockTab = forwardRef(function StockTab(
                 />
               </td>
               <td style={{ direction: "rtl", textAlign: "right" }}>
-                {`${parseFloat(r.thickness)} ملم ${r.itemName}`}
+                {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
               </td>
               <td>{r.type}</td>
-              <td>{r.length}</td>
-              <td>{r.width}</td>
-              <td>{r.sheetsPerBox}</td>
-              <td>{r.origin}</td>
-              <td>{r.condition}</td>
-              <td>{r.dateReceived}</td>
-              <td>{r.balanceOFR}</td>
+              <td>{r.length ?? ""}</td>
+              <td>{r.width ?? ""}</td>
+              <td>{r.type === "box" ? r.sheetsPerBox : ""}</td>
+              <td>{r.origin ?? ""}</td>
+              <td>{r.condition ?? ""}</td>
+              <td>{r.dateReceived ?? ""}</td>
+              <td>{r.balanceOFR ?? ""}</td>
             </tr>
           ))}
-
           {rows.length === 0 && (
             <tr className="empty-row">
-              {/* match 10 headers */}
-              <td className="empty-cell" colSpan={10}>
-                No Data
-              </td>
+              <td className="empty-cell" colSpan={10}>No Data</td>
             </tr>
           )}
         </tbody>
       </table>
+
+      {/* Load more footer (only for default list) */}
+      {!inSearchMode && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+          <button
+            className="save-button"
+            disabled={loading || !hasMore}
+            onClick={() => fetchDefaultPage(page + 1)}
+          >
+            {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
+          </button>
+          <span style={{ fontSize: 12, opacity: 0.7 }}>
+            Page {page} • Showing {rows.length} rows
+          </span>
+        </div>
+      )}
     </>
   );
 });

@@ -50,6 +50,7 @@ min-width:0;
 /* Scrollbar Styling */
 .pos-page-inventory-table-container::-webkit-scrollbar {
   height: 8px;
+  width: 7px;
 }
 
 .pos-page-inventory-table-container::-webkit-scrollbar-track {
@@ -69,7 +70,7 @@ min-width:0;
 /* Scrollable Table Container */
 .pos-page-inventory-table-container {
   width: 100%;
-  max-height: 670px;
+  max-height: 640px;
   overflow-x: auto;      /* ✅ add this */
   overflow-y: auto;      /* keep vertical scroll */
   display: block;
@@ -108,7 +109,7 @@ min-width:0;
 
 .pos-page-inventory-table th:nth-child(2),
 .pos-page-inventory-table td:nth-child(2) {
-  width: 150px; /* Item */
+  width: 120px; /* Item */
 }
 
 .pos-page-inventory-table th:nth-child(3),
@@ -641,17 +642,10 @@ input:disabled {
 
 
 /* ======== UNIFORM SCALE ONLY (no layout changes) ======== */
-:root { --ui-scale: 1; }
+
 
 /* Scale the whole POS page visually while keeping its footprint the same */
-.pos-page-container {
-  transform: scale(var(--ui-scale));
-  transform-origin: top left;
-  /* keep the same visible size after scaling */
-  width: calc(100% / var(--ui-scale));
-  height: calc(96vh / var(--ui-scale));
-  will-change: transform;
-}
+
 
 
 /* Orange button for Stmt */
@@ -688,11 +682,310 @@ input:disabled {
 
 /* Smaller screens → shrink */
 @media (max-width: 1400px) { :root { --ui-scale: 0.95; } }
-@media (max-width: 1200px) { :root { --ui-scale: 0.90; } }
-@media (max-width: 992px)  { :root { --ui-scale: 0.85; } }
-@media (max-width: 768px)  { :root { --ui-scale: 0.80; } }
+@media (max-width: 1200px) { :root { --ui-scale: 0.70; } }
+@media (max-width: 992px)  { :root { --ui-scale: 0.1; } }
+@media (max-width: 768px)  { :root { --ui-scale: 0.1; } }
 @media (max-width: 600px)  { :root { --ui-scale: 0.75; } }
 
 /* Very large screens → grow a bit */
-@media (min-width: 1700px) { :root { --ui-scale: 1.05; } }
+@media (min-width: 1700px) { :root { --ui-scale: 1.1; } }
 @media (min-width: 1920px) { :root { --ui-scale: 1.10; } }
+/* ========== GLOBAL LAYOUT ADAPTIVITY ========== */
+
+/* allow the top layout to wrap when space is tight */
+.pos-page-container {
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+/* sensible minimums so columns don't crush */
+.pos-page-left,
+.pos-page-right,
+.pos-page-center {
+  min-width: 280px;         /* prevents awkward squish */
+  box-sizing: border-box;
+}
+
+/* default (≥ 1280px): 3 columns — your current flex works fine */
+
+/* 2-COLUMN LAYOUT: between 992px and 1279px
+   - Center takes full row
+   - Sidebars share the next row (50% / 50%)
+*/
+@media (max-width: 1279px) {
+  .pos-page-center {
+    flex: 1 1 100%;
+    order: 1;
+  }
+  .pos-page-left,
+  .pos-page-right {
+    flex: 1 1 calc(50% - 0.5rem);
+    order: 2;
+  }
+}
+
+/* 1-COLUMN STACK: ≤ 991px
+   - Center, then Left, then Right (can swap left/right order if you prefer)
+*/
+@media (max-width: 991px) {
+  .pos-page-center,
+  .pos-page-left,
+  .pos-page-right {
+    flex: 1 1 100%;
+  }
+
+  .pos-page-center { order: 1; }
+  .pos-page-left   { order: 2; }
+  .pos-page-right  { order: 3; }
+
+  /* soften containers on small screens */
+  .pos-page-left,
+  .pos-page-right,
+  .pos-page-center {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+}
+
+/* ========== TABLE & SCROLL AREA ========== */
+
+/* keep the scroll area usable on all screens */
+.pos-page-inventory-table-container {
+  max-height: clamp(380px, 62vh, 640px);   /* adapts to viewport */
+}
+
+/* let the table shrink its minimum width at narrower viewports */
+@media (max-width: 1279px) {
+  .pos-page-inventory-table {
+    min-width: 980px;   /* was 1200px */
+  }
+}
+@media (max-width: 991px) {
+  .pos-page-inventory-table {
+    min-width: 820px;
+  }
+}
+@media (max-width: 767px) {
+  .pos-page-inventory-table {
+    min-width: 700px;
+  }
+}
+
+/* if columns get tight, allow ellipsis and prevent blowout */
+.pos-page-inventory-table th,
+.pos-page-inventory-table td {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* slightly shorter inputs on smaller screens */
+@media (max-width: 991px) {
+  .pos-page-inventory-table td input {
+    height: 2.2rem;
+    font-size: 1rem;
+  }
+}
+
+/* ========== TOOLBAR / CONTROLS WRAP ========== */
+
+.pos-page-toolbar-row,
+.pos-page-button-row,
+.pos-page-dropdown-container {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* make buttons wrap and fill when needed */
+@media (max-width: 991px) {
+  .pos-page-toolbar-button {
+    flex: 1 1 auto;
+    min-width: 160px;
+  }
+  .pos-page-date-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;  /* or space-between */
+  }
+}
+
+/* inputs/selects: full-ish width on small screens */
+@media (max-width: 1279px) {
+  .pos-page-search-input { width: 100%; }
+}
+
+@media (max-width: 991px) {
+  .pos-page-exchange-rate-dropdown,
+  .pos-page-vat-dropdown,
+  .pos-page-currency-dropdown {
+    width: calc(50% - 8px);      /* two per row */
+  }
+}
+@media (max-width: 575px) {
+  .pos-page-exchange-rate-dropdown,
+  .pos-page-vat-dropdown,
+  .pos-page-currency-dropdown {
+    width: 100%;                  /* one per row */
+  }
+}
+
+/* date picker fits better on small screens */
+@media (max-width: 575px) {
+  .pos-page-date-picker {
+    width: 100%;
+  }
+}
+
+/* customer input + suggestions */
+@media (max-width: 1279px) {
+  .pos-page-customer-name-input { width: 60%; }
+  .customer-suggestions-dropdown { width: 90%; }
+}
+@media (max-width: 991px) {
+  .pos-page-customer-name-input { width: 100%; }
+  .customer-suggestions-dropdown { width: 100%; max-height: 420px; }
+}
+
+/* ========== TWEAKS TO PREVENT OVERFLOW ========== */
+
+/* keep center panel from forcing horizontal scroll due to content */
+.pos-page-center { min-width: 0; }
+
+/* long Arabic/English mixes in suggestions won’t break layout */
+.cust-sugg-name,
+.cust-sugg-addr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* guard against super long toolbars */
+.pos-page-toolbar {
+  overflow: visible; /* default */
+}
+@media (max-width: 991px) {
+  .pos-page-toolbar {
+    overflow: hidden; /* prevent accidental overflow shadows */
+  }
+}
+
+/* ========== OPTIONAL: LIGHTEN SHADOWS ON SMALL DEVICES ========== */
+@media (max-width: 575px) {
+  .pos-page-left,
+  .pos-page-right,
+  .pos-page-center {
+    box-shadow: 0 3px 8px rgba(0,0,0,.08);
+  }
+
+
+
+/* =================== Very Large Screens (Desktop TV / 4K and up) =================== */
+
+/* 1600px+ — comfortable spacing, bigger center column, slight size bumps */
+@media (min-width: 1600px) {
+  .pos-page-container {
+    max-width: 2200px;        /* center the whole app, avoid super long lines */
+    margin: 0 auto;
+    gap: 1.25rem;
+  }
+
+  /* Make center panel a bit more dominant while keeping sidebars useful */
+  .pos-page-center { flex: 4 1 0; }
+  .pos-page-left,
+  .pos-page-right { flex: 1 1 0; }
+
+  /* Subtle font/input/button scaling without blowing up the UI */
+  .pos-page-left,
+  .pos-page-right,
+  .pos-page-center {
+    font-size: clamp(15px, 0.55vw, 18px);
+  }
+  .pos-page-toolbar-button {
+    padding: 0.9rem 1.6rem;
+    font-size: clamp(16px, 0.65vw, 18px);
+  }
+
+  .pos-page-search-input,
+  .pos-page-exchange-rate-dropdown,
+  .pos-page-vat-dropdown,
+  .pos-page-currency-dropdown,
+  .pos-page-date-picker {
+    height: 46px;
+    font-size: clamp(15px, 0.6vw, 18px);
+  }
+
+  /* Table can be wider; keep sticky header & scrolling behavior */
+  .pos-page-inventory-table-container {
+    max-height: clamp(520px, 64vh, 880px);   /* taller on big screens */
+  }
+  .pos-page-inventory-table {
+    min-width: 1500px;   /* was 1200px */
+  }
+  .pos-page-inventory-table th,
+  .pos-page-inventory-table td {
+    padding: 0.65rem 0.6rem;
+    font-size: clamp(14px, 0.55vw, 17px);
+  }
+  .pos-page-inventory-table td input {
+    height: 2.6rem;
+    font-size: clamp(15px, 0.6vw, 18px);
+  }
+
+  /* Suggestions dropdown: more height/comfort on 4K */
+  .customer-suggestions-dropdown {
+    max-height: 680px;
+    box-shadow: 0 14px 32px rgba(0,0,0,.12);
+  }
+  .cust-sugg { padding: 12px; }
+  .cust-sugg-avatar { width: 44px; height: 44px; }
+  .cust-sugg-name { font-size: clamp(17px, 0.7vw, 20px); }
+  .cust-sugg-addr { max-width: 70%; }
+
+  /* Larger scrollbars for TV/trackpad ergonomics */
+  .pos-page-inventory-table-container::-webkit-scrollbar {
+    height: 12px;
+    width: 10px;
+  }
+  .pos-page-inventory-table-container::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+  }
+}
+
+/* 1920px+ — widen cap a bit, keep text line-length sane */
+@media (min-width: 1920px) {
+  .pos-page-container {
+    max-width: 2400px;
+    gap: 1.5rem;
+  }
+  .pos-page-center {
+    max-width: 1600px;        /* prevents ultra-long lines */
+  }
+  .pos-page-inventory-table { min-width: 1680px; }
+  .pos-page-left,
+  .pos-page-right,
+  .pos-page-center {
+    box-shadow: 0 6px 14px rgba(0,0,0,.08);  /* soften large shadows */
+  }
+}
+
+/* 2560px+ — ultra-wide refinements */
+@media (min-width: 2560px) {
+  .pos-page-container { max-width: 2600px; }
+  .pos-page-center    { max-width: 1760px; }
+  .pos-page-inventory-table { min-width: 1840px; }
+}
+
+/* Optional: if you want the center to stretch even more on big screens,
+   you can bump its weight here without affecting smaller breakpoints. */
+/*
+@media (min-width: 1920px) {
+  .pos-page-center { flex: 5 1 0; }
+  .pos-page-left,
+  .pos-page-right { flex: 1 1 0; }
+}
+*/
+
+
+
+}
+

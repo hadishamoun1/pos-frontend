@@ -1,3 +1,4 @@
+// src/components/pos-system/SearchModal.jsx
 import React, { useEffect, useRef, useState } from "react";
 import "./searchModal.css";
 import StockTab from "./StockTab";
@@ -82,7 +83,8 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           <div id="stock-panel" role="tabpanel" aria-labelledby="stock-tab">
             <StockTab
               ref={stockRef}
-              isOpen={isOpen}
+              // ✅ Only “open” when modal is open AND this tab is active
+              isOpen={isOpen && activeTab === "stock"}
               onSelectionCountChange={setSelectedCount}
             />
           </div>
@@ -90,7 +92,11 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
         {activeTab === "all" && (
           <div id="all-panel" role="tabpanel" aria-labelledby="all-tab">
-            <AllTab />
+            <AllTab
+              // ✅ Tell AllTab when it’s open so it fetches
+              isOpen={isOpen && activeTab === "all"}
+              // (No selection wiring yet)
+            />
           </div>
         )}
       </div>

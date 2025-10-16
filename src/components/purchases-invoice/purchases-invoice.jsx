@@ -24,10 +24,6 @@ const fetchSuppliersByQuery = async (query) => {
   return response.json();
 };
 
-const fetchItems = async () => {
-  const response = await fetch(`${baseUrl}/items/v1/filtered-items`);
-  return response.json();
-};
 
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
@@ -112,14 +108,7 @@ const PurchasesInvoicePage = () => {
     (sum, item) => sum + (item.totalOFR || 0),
     0
   );
-  const { data: allItems = [] } = useQuery({
-    queryKey: ["items"],
-    queryFn: fetchItems,
-  });
 
-  const filteredItems = allItems.filter((item) =>
-    (item?.itemName || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleCheckboxChange = (item, dimension) => {
     const isSelected = selectedItems.some(
@@ -834,7 +823,7 @@ const PurchasesInvoicePage = () => {
 
         {showItemModal && (
           <ItemModal
-            filteredItems={filteredItems}
+        
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             selectedItems={selectedItems}

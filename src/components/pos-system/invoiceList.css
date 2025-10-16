@@ -1,3 +1,5 @@
+
+
 /* ✅ Invoice List Container */
 .invoices-list {
   list-style: none;
@@ -8,7 +10,7 @@
   gap: 12px;
   
   /* ✅ Enable scrolling */
-  max-height: 750px; /* Adjust based on UI */
+  max-height: 740px; /* Adjust based on UI */
   overflow-y: auto;
   overflow-x: hidden;
   position: relative; /* Needed for proper positioning */

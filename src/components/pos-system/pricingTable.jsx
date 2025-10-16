@@ -201,7 +201,7 @@ const PricingTable = () => {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Inv #</th>
+                <th>Inv#</th>
                 <th>Origin</th>
                 <th>Item</th>
                 <th>Type</th>
