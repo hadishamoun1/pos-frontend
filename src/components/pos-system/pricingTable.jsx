@@ -4,7 +4,7 @@ import "./pricingTable.css";
 
 const pageSize = 5;
 
-const PricingTable = ({ presetGroups = null, onRequestLoadMore }) => {
+const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) => {
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -27,6 +27,11 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore }) => {
       setSearchTerm("");
     }
   }, [presetGroups]);
+   useEffect(() => {
+    if (viewMode === "preset" && customerName) {
+      setCustomerInput(customerName);
+    }
+  }, [viewMode, customerName]);
 
   // If in customer mode and a customer is selected, load their browsing data
   useEffect(() => {

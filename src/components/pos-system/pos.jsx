@@ -840,6 +840,7 @@ const quantity =
     // If not, omit presetGroups to let the table work in its normal mode.
     presetGroups={Array.isArray(pricingGroups) ? pricingGroups : undefined}
     onRequestLoadMore={handlePricingLoadMore}
+    customerName={selectedCustomerName} 
   />
 )}
 

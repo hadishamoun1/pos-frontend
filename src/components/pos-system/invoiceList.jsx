@@ -158,11 +158,11 @@ const InvoicesList = ({ onSelectInvoice }) => {
                 <span className="invoice-list-invoice-number">{invoice.invoiceNumber}</span>
               </div>
               <div className="invoice-details">
-                <div className="invoice-customer-container">
+             
                   <span className="invoice-total">
                     Total: ${Number(invoice.grandTotal).toFixed(2)}
                   </span>
-                </div>
+                
 
                 <span className="invoice-date">{invoice.date}</span>
               </div>

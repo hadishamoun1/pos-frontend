@@ -8,7 +8,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  
+    -ms-overflow-style: none;      /* IE/Edge legacy */
+  scrollbar-width: none;         /* Firefox */
+  overscroll-behavior: contain;
   
   /* ✅ Enable scrolling */
   max-height: 740px; /* Adjust based on UI */
@@ -59,7 +61,7 @@
   align-items: center;
   font-size: 20px;
   font-weight: bolder;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .invoice-list-invoice-number{
@@ -179,6 +181,12 @@
   background-color: #aaa;
   cursor: not-allowed;
 }
+
+
+
+
+
+
 /* CSS for blinking effect */
 @keyframes blink-effect {
   0% {
