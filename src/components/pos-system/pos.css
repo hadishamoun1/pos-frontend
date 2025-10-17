@@ -19,6 +19,7 @@
 .pos-page-right {
   border: 1px solid red;
   box-shadow: 0 4px 10px #c0392b;
+  background: linear-gradient(to bottom, #ff8a8a, #ff4141);
 }
 
 .pos-page-left {
@@ -704,6 +705,10 @@ input:disabled {
 .pos-page-center {
   min-width: 280px;         /* prevents awkward squish */
   box-sizing: border-box;
+}
+.pos-page-left{
+  background: linear-gradient(to bottom, #fff387, #ffff34);
+  
 }
 
 /* default (≥ 1280px): 3 columns — your current flex works fine */

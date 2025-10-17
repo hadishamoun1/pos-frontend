@@ -27,6 +27,7 @@
   position: relative;
   overflow: hidden;
   min-height: 70px;
+  background-color: #fffd91;
 }
 
 .request-item:hover {
@@ -54,7 +55,7 @@ background: linear-gradient(135deg, #007bff, #0056b3);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   margin-bottom: 20px;
 }
@@ -71,7 +72,7 @@ background: linear-gradient(135deg, #007bff, #0056b3);
 .request-details {
   display: flex;
   justify-content: space-between;
-  font-size: 17px;
+  font-size: 20px;
 }
 
 /* ✅ Customer Name Container */
@@ -87,7 +88,7 @@ background: linear-gradient(135deg, #007bff, #0056b3);
 .request-customer {
   color: #333;
   font-weight: 500;
-  font-size: 17px;
+  font-size: 20px;
   display: block;
   max-width: 140px;
   white-space: nowrap;

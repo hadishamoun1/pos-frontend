@@ -91,27 +91,22 @@ const RequestCard = ({ onSelectRequest }) => {
               onClick={() => onSelectRequest(request.id)}
             >
               <div className="request-header">
-                <span className="request-number">{request.requestNumber}</span>
-                <span className="request-date">{request.requestDate}</span>
-              </div>
-
-              <div className="request-details">
-                <div className="request-customer-container">
-                  <span className="request-customer">
+              
+                 <span className="request-customer">
                     {request.customerName && request.customerName.length > 15
                       ? request.customerName.slice(0, 15) + "..."
                       : request.customerName || "Unknown"}
                   </span>
-                  {request.customerName && request.customerName.length > 15 && (
-                    <span className="request-tooltip">
-                      {request.customerName}
-                    </span>
-                  )}
-                </div>
+                
+                      <span className="request-number">{request.requestNumber}</span>
+              </div>
 
+              <div className="request-details">
                 <span className="request-total">
                   Total: ${Number(request.grandTotal || 0).toFixed(2)}
                 </span>
+               <span className="request-date">{request.requestDate}</span>
+
               </div>
             </li>
           ))

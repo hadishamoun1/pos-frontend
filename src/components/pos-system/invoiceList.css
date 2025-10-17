@@ -9,6 +9,7 @@
   flex-direction: column;
   gap: 12px;
   
+  
   /* ✅ Enable scrolling */
   max-height: 740px; /* Adjust based on UI */
   overflow-y: auto;
@@ -29,6 +30,7 @@
   position: relative;
   overflow: hidden;
   min-height: 70px;
+   background-color:rgb(255, 168, 168);
 }
 
 .invoice-item:hover {
@@ -55,13 +57,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: bolder;
   margin-bottom: 20px;
 }
 
-.invoice-number {
+.invoice-list-invoice-number{
   color: #007bff;
+
 }
 
 .invoice-date {
@@ -72,7 +75,8 @@
 .invoice-details {
   display: flex;
   justify-content: space-between;
-  font-size: 17px;
+  font-size: 20px;
+ 
 }
 
 /* ✅ Customer Name Container */
@@ -87,8 +91,8 @@
 /* ✅ Truncated Customer Name */
 .invoice-customer {
   color: #333;
-  font-weight: 500;
-  font-size: 17px;
+  font-weight: 700;
+  font-size: 20px;
   display: block;
   max-width: 140px;
   white-space: nowrap;

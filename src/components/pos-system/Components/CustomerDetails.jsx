@@ -12,7 +12,9 @@ const CustomerDetails = ({
   handleCustomerSelect,
   highlightedIndex,
   handleSearchClick,
-    setHighlightedIndex,
+  setHighlightedIndex,
+  // ✅ new handler for the Get Price button
+  handleGetPriceClick,
 }) => {
   return (
     <div>
@@ -71,72 +73,88 @@ const CustomerDetails = ({
           />
 
           {/* Suggestions Dropdown */}
- {customerSuggestions.length > 0 && (
-        <ul className="customer-suggestions-dropdown" role="listbox">
-          {customerSuggestions.map((c, index) => (
-            <li
-              key={c.id ?? index}
-              role="option"
-              aria-selected={index === highlightedIndex}
-              className={`cust-sugg ${index === highlightedIndex ? "is-active" : ""}`}
-              onMouseDown={(e) => e.preventDefault()}       // keep focus in the input
-              onMouseEnter={() => setHighlightedIndex(index)} // sync hover with highlight
-              onClick={() => handleCustomerSelect(c)}
-       // auto-detect RTL/LTR per row
-            >
-              {/* Left: circular initials */}
-              <div className="cust-sugg-avatar">
-                {String(c.customerName || c.firstName || "?").trim().charAt(0).toUpperCase()}
-              </div>
+          {customerSuggestions.length > 0 && (
+            <ul className="customer-suggestions-dropdown" role="listbox">
+              {customerSuggestions.map((c, index) => (
+                <li
+                  key={c.id ?? index}
+                  role="option"
+                  aria-selected={index === highlightedIndex}
+                  className={`cust-sugg ${
+                    index === highlightedIndex ? "is-active" : ""
+                  }`}
+                  onMouseDown={(e) => e.preventDefault()} // keep focus in the input
+                  onMouseEnter={() => setHighlightedIndex(index)} // sync hover with highlight
+                  onClick={() => handleCustomerSelect(c)}
+                >
+                  {/* Left: circular initials */}
+                  <div className="cust-sugg-avatar">
+                    {String(
+                      c.customerName || c.firstName || "?"
+                    )
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
 
-              {/* Right: content */}
-              <div className="cust-sugg-content" dir="auto">
-                <div className="cust-sugg-line1" dir="auto">
-                  <span
-                    className="cust-sugg-name"
-                    dir="auto"
-                    title={c.customerName || ""}
-                  >
-                    {c.customerName || "—"}
-                  </span>
-                  {c.firstName ? (
-                    <span className="cust-sugg-first" dir="auto">
-                      ({c.firstName})
-                    </span>
-                  ) : null}
-                </div>
+                  {/* Right: content */}
+                  <div className="cust-sugg-content" dir="auto">
+                    <div className="cust-sugg-line1" dir="auto">
+                      <span
+                        className="cust-sugg-name"
+                        dir="auto"
+                        title={c.customerName || ""}
+                      >
+                        {c.customerName || "—"}
+                      </span>
+                      {c.firstName ? (
+                        <span className="cust-sugg-first" dir="auto">
+                          ({c.firstName})
+                        </span>
+                      ) : null}
+                    </div>
 
-                <div className="cust-sugg-line2">
-                  {c.phoneNumber ? (
-                    <span className="cust-sugg-pill">
-                      <span className="cust-icon">📞</span>
-                      {c.phoneNumber}
-                    </span>
-                  ) : null}
+                    <div className="cust-sugg-line2">
+                      {c.phoneNumber ? (
+                        <span className="cust-sugg-pill">
+                          <span className="cust-icon">📞</span>
+                          {c.phoneNumber}
+                        </span>
+                      ) : null}
 
-                  {c.address ? (
-                    <span className="cust-sugg-addr" dir="auto" title={c.address}>
-                      <span className="cust-icon">📍</span>
-                      {c.address}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                      {c.address ? (
+                        <span
+                          className="cust-sugg-addr"
+                          dir="auto"
+                          title={c.address}
+                        >
+                          <span className="cust-icon">📍</span>
+                          {c.address}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
 
-   
- 
-
-
+          {/* Buttons (Search + Get Price) */}
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
             style={{ marginLeft: "auto" }}
             onClick={handleSearchClick}
           >
             Search
+          </button>
+
+          {/* ✅ New "Get Price" button beside Search */}
+          <button
+            className="pos-page-toolbar-button pos-page-orange-button"
+            style={{ marginLeft: "8px" }}
+            onClick={handleGetPriceClick}
+          >
+            Get Price
           </button>
         </div>
       </div>

@@ -155,7 +155,7 @@ const InvoicesList = ({ onSelectInvoice }) => {
                     {invoice.customerName}
                   </span>
                 )}
-                <span className="invoice-number">{invoice.invoiceNumber}</span>
+                <span className="invoice-list-invoice-number">{invoice.invoiceNumber}</span>
               </div>
               <div className="invoice-details">
                 <div className="invoice-customer-container">

@@ -123,33 +123,24 @@
 /* -------------------------
    Search Input (table-wide)
    ------------------------- */
-/* Polished search input */
 .price-browsing-search-input {
   appearance: none;
   outline: none;
   width: min(250px, 100%);
   height: 44px;
-
-  /* Left space for the icon, right space for comfort */
   padding: 0 40px 0 44px;
-
   background: #ffffff;
   border: 1px solid #dfe3ea;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
   color: #111827;
-
   font-size: 1.2rem;
   font-weight: 500;
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
-
-  /* Subtle magnifier icon */
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239aa4b2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
   background-repeat: no-repeat;
   background-position: 12px 50%;
   background-size: 18px 18px;
-
-  /* Space below the field */
   margin-bottom: 1rem;
 }
 
@@ -163,19 +154,19 @@
 }
 
 .price-browsing-search-input:focus {
-  border-color: #2563eb; /* blue-600 */
+  border-color: #2563eb;
   box-shadow:
     0 0 0 4px rgba(37, 99, 235, 0.12),
     0 2px 10px rgba(16, 24, 40, 0.08);
 }
 
-/* Optional: disabled state */
 .price-browsing-search-input:disabled {
   background: #f3f4f6;
   color: #9aa4b2;
   border-color: #e5e7eb;
   cursor: not-allowed;
 }
+
 /* Table Wrapper with Scroll */
 .price-browsing-table-wrapper {
   flex: 1;
@@ -224,21 +215,35 @@
 /* Column Widths */
 .price-browsing-table th:nth-child(1),
 .price-browsing-table td:nth-child(1) {
-  width: 11%;
+  width: 8%;
 }
 
 .price-browsing-table th:nth-child(2),
 .price-browsing-table td:nth-child(2) {
-  width: 10%;
+  width: 8%;
 }
 
 .price-browsing-table th:nth-child(3),
 .price-browsing-table td:nth-child(3) {
-  width: 10%;
+  width: 8%;
 }
 
-.price-browsing-table th:nth-child(4) {
-  width: 18%;
+.price-browsing-table th:nth-child(4),
+.price-browsing-table td:nth-child(4)  {
+  width: 16%;
+}
+.price-browsing-table th:nth-child(5),
+.price-browsing-table td:nth-child(5) {
+  width: 4%;
+}
+.price-browsing-table th:nth-child(6),
+.price-browsing-table td:nth-child(6) {
+  width: 4%;
+}
+
+.price-browsing-table th:nth-child(9),
+.price-browsing-table td:nth-child(9) {
+  width: 15%;
 }
 
 .price-browsing-table td:nth-child(4) {
@@ -249,10 +254,7 @@
   text-align: center;
 }
 
-.price-browsing-table th:nth-child(n + 5),
-.price-browsing-table td:nth-child(n + 5) {
-  width: 7%;
-}
+
 
 /* Hover Effect on Table Rows */
 .price-browsing-table tbody tr:hover {
@@ -288,4 +290,76 @@
   height: 10px;
   background: transparent;
   border: none;
+}
+
+/* =========================
+   Additions for Item dims + Quantity
+   ========================= */
+
+/* Allow two-line content inside Item cell */
+.price-browsing-table td:nth-child(4) {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+/* First line (thickness + name) */
+.price-browsing-item-main {
+  display: block;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Second line (L*W or L*W-025 for boxes) */
+.price-browsing-item-dims {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.9rem;
+  color: #374151;
+  direction: ltr;       /* keep numbers/asterisk/hyphen in LTR order */
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Emphasize Quantity col a bit */
+.price-browsing-table td:nth-child(6) {
+  font-weight: 600;
+}
+
+/* Slightly more space for Quantity on smaller desktops */
+@media (max-width: 1279px) {
+  .price-browsing-table th:nth-child(6),
+  .price-browsing-table td:nth-child(6) {
+    width: 9%;
+  }
+}
+
+/* Keep trailing money columns compact */
+.price-browsing-table th:nth-child(7),
+.price-browsing-table td:nth-child(7),
+.price-browsing-table th:nth-child(8),
+.price-browsing-table td:nth-child(8),
+.price-browsing-table th:nth-child(9),
+.price-browsing-table td:nth-child(9) {
+  white-space: nowrap;
+}
+/* The container already enforces LTR for order */
+.price-browsing-item-dims {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Base "W*L" keeps your current weight/color */
+.price-browsing-item-dims .dims-base {
+  color: #374151;
+}
+
+/* Make the "-025" suffix (sheets per box) bolder & darker */
+.price-browsing-item-dims .dims-spb {
+  font-weight: 700;   /* bolder */
+  color: #0f172a;     /* near-black */
+  letter-spacing: 0.2px; /* subtle crispness */
 }

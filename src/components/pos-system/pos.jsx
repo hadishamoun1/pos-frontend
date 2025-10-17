@@ -37,7 +37,8 @@ const POSSystemPage = () => {
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
-
+ const [selectedBatchIds, setSelectedBatchIds] = useState([]);
+  const [pricingGroups, setPricingGroups] = useState(null);
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -116,6 +117,16 @@ const handleReorder = (newRows) => {
     console.log("Updated Table Data:", updatedData);
 
     setTableData((prevData) => [...prevData, ...updatedData]);
+
+
+    const newBatchIds = selectedItems
+      .map((i) => i.batchId)
+      .filter((id) => id !== undefined && id !== null);
+    setSelectedBatchIds((prev) => {
+      const set = new Set(prev);
+      newBatchIds.forEach((id) => set.add(id));
+      return Array.from(set);
+    });
   };
 
   const handleSelectRequest = async (requestId) => {
@@ -168,6 +179,70 @@ const handleReorder = (newRows) => {
     }
   };
 
+
+  // ====================== PRICING (Get Price) ======================
+  // ✅ When user presses "Get Price": call the new API with customer + batch IDs and show in PricingTable
+ const handleGetPriceClick = async () => {
+    if (!selectedCustomerId) {
+      showNotification("error", "Please select a customer first.");
+      return;
+    }
+    if (!selectedBatchIds.length) {
+      showNotification("error", "Please select items (batches) from Search first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `${baseUrl}/invoices/v1/browsing/by-item-batches/${selectedCustomerId}`,
+        { params: { itemBatchIds: selectedBatchIds } }
+      );
+      setPricingGroups(res.data);     // array of groups
+      setShowOnlyCenter(true);        // show center + pricing panel
+    } catch (err) {
+      console.error(err);
+      showNotification("error", `Failed to fetch pricing. ${err.response?.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePricingLoadMore = async (groupKey, currentPage) => {
+    try {
+      const nextPage = currentPage + 1;
+      const res = await axios.get(
+        `${baseUrl}/invoices/v1/browsing/by-item-batches/${selectedCustomerId}`,
+        {
+          params: {
+            itemBatchIds: selectedBatchIds,
+            groupKey,
+            page: nextPage,
+            limit: 5,
+          },
+        }
+      );
+
+      setPricingGroups((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        const pageObj = res.data; // { groupKey, items, total, totalPages, page }
+        return prev.map((g) =>
+          g.groupKey === groupKey
+            ? {
+                ...g,
+                page: nextPage,
+                items: [...g.items, ...pageObj.items],
+                total: pageObj.total,
+                totalPages: pageObj.totalPages,
+              }
+            : g
+        );
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification("error", `Failed to load more. ${err.response?.data?.message || err.message}`);
+    }
+  };
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
 
@@ -205,6 +280,8 @@ const handleReorder = (newRows) => {
     setSelectedRequestId(null);
     setSelectedInvoiceType("Both");
     setIsEditable(true);
+        setSelectedBatchIds([]);
+    setPricingGroups(null);
   };
 
 const handleInputChange = (index, field, value) => {
@@ -728,6 +805,7 @@ const quantity =
             highlightedIndex={highlightedIndex}
             handleSearchClick={handleSearchClick}
              setHighlightedIndex={setHighlightedIndex}  
+             handleGetPriceClick={handleGetPriceClick}
           />
         </div>
         <div className="pos-page-inventory-table-container">
@@ -744,14 +822,28 @@ const quantity =
         </div>
       </div>
 
-      {showOnlyCenter && <PricingTable />}
-      <div className="pos-page-toggle-wrapper">
-        <ToggleSwitch
-          showOnlyCenter={showOnlyCenter}
-          setShowOnlyCenter={setShowOnlyCenter}
-        />
-      </div>
 
+
+
+
+<div className="pos-page-toggle-wrapper">
+  <ToggleSwitch
+    showOnlyCenter={showOnlyCenter}
+    setShowOnlyCenter={setShowOnlyCenter}
+  />
+</div>
+
+{/* Always show PricingTable when toggle is ON */}
+{showOnlyCenter && (
+  <PricingTable
+    // If we have API data from "Get Price", show it (controlled mode).
+    // If not, omit presetGroups to let the table work in its normal mode.
+    presetGroups={Array.isArray(pricingGroups) ? pricingGroups : undefined}
+    onRequestLoadMore={handlePricingLoadMore}
+  />
+)}
+
+      
       {!showOnlyCenter && (
         <div className="pos-page-right">
           <div className="pos-page-container-header">
