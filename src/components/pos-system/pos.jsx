@@ -50,6 +50,8 @@ const handleReorder = (newRows) => {
 };
 
 
+
+
   const handleCloseModal = () => {
     setModalOpen(false);
   };
@@ -69,65 +71,59 @@ const handleReorder = (newRows) => {
     onConfirm: null,
   });
 
-  const handleSelectItems = (selectedItems) => {
-    const updatedData = selectedItems.map((item) => {
-      const length = parseFloat(item.length);
-      const width = parseFloat(item.width);
-      const type = item.type;
-      const sheetsPerBox = parseFloat(item.sheetsPerBox);
+// Helper: recompute unique batch IDs from current rows
+const syncSelectedBatchIdsFromTable = (rows) => {
+  const ids = Array.from(
+    new Set(rows.map(r => r.batchId).filter(id => id !== undefined && id !== null))
+  );
+  setSelectedBatchIds(ids);
+};
 
-      // Default quantity = 1 for both types
-      const quantity = 1;
+// Replace your handleSelectItems with this:
+const handleSelectItems = (selectedItems) => {
+  const newRows = selectedItems.map((item) => {
+    const length = parseFloat(item.length);
+    const width  = parseFloat(item.width);
+    const type   = item.type;
+    const sheetsPerBox = parseFloat(item.sheetsPerBox);
+    const quantity = 1;
 
-      let sqm = "";
-      if (length && width && quantity) {
-        const sqmPerSheet = (length / 100) * (width / 100);
-        if (type === "box") {
-          sqm = (sqmPerSheet * sheetsPerBox * quantity).toFixed(2);
-        } else if (type === "sheet") {
-          sqm = (sqmPerSheet * quantity).toFixed(2);
-        } else if (type === "sqm") {
-          sqm = quantity.toFixed(2);
-        }
+    let sqm = "";
+    if (length && width) {
+      const sqmPerSheet = (length / 100) * (width / 100);
+      if (type === "box") {
+        sqm = (sqmPerSheet * sheetsPerBox * quantity).toFixed(2);
+      } else if (type === "sheet") {
+        sqm = (sqmPerSheet * quantity).toFixed(2);
+      } else if (type === "sqm") {
+        sqm = quantity.toFixed(2);
       }
+    }
 
-      return {
-        itemVariantId: item.itemVariantId,
-        batchId: item.batchId,
-        origin: item.origin || "",
-        item: `${parseFloat(item.thickness)} ملم ${item.itemName}` || "",
-        type: item.type || "",
-        length: item.length || "",
-        width: item.width || "",
-        box: type === "box" ? quantity : "",
-            sheet:
-        type === "sheet"
-          ? quantity
-          : type === "box"
-          ? sheetsPerBox
-          : "",
-        quantity,
-        sqm,
-        price: "",
-        total: "0.00",
-      };
-    });
+    return {
+      itemVariantId: item.itemVariantId,
+      batchId: item.batchId,           // <-- key for dedupe
+      origin: item.origin || "",
+      item: `${parseFloat(item.thickness)} ملم ${item.itemName}` || "",
+      type: item.type || "",
+      length: item.length || "",
+      width: item.width || "",
+      box: type === "box" ? quantity : "",
+      sheet: type === "sheet" ? quantity : type === "box" ? sheetsPerBox : "",
+      quantity,
+      sqm,
+      price: "",
+      total: "0.00",
+    };
+  });
 
-    console.log("Selected Items:", selectedItems);
-    console.log("Updated Table Data:", updatedData);
-
-    setTableData((prevData) => [...prevData, ...updatedData]);
-
-
-    const newBatchIds = selectedItems
-      .map((i) => i.batchId)
-      .filter((id) => id !== undefined && id !== null);
-    setSelectedBatchIds((prev) => {
-      const set = new Set(prev);
-      newBatchIds.forEach((id) => set.add(id));
-      return Array.from(set);
-    });
-  };
+  setTableData((prev) => {
+    // merge without duplicating same batchId
+    const byId = new Map(prev.map(r => [r.batchId, r]));
+    newRows.forEach(r => byId.set(r.batchId, r)); // replace/insert
+    return Array.from(byId.values());
+  });
+};
 
   const handleSelectRequest = async (requestId) => {
     console.log("Fetching request details for ID:", requestId);
@@ -171,6 +167,7 @@ const handleReorder = (newRows) => {
       }));
 
       setTableData(updatedData);
+      
     } catch (error) {
       console.error("Error fetching request details:", error);
       showNotification("error", "Failed to fetch request details.");
@@ -182,31 +179,50 @@ const handleReorder = (newRows) => {
 
   // ====================== PRICING (Get Price) ======================
   // ✅ When user presses "Get Price": call the new API with customer + batch IDs and show in PricingTable
- const handleGetPriceClick = async () => {
-    if (!selectedCustomerId) {
-      showNotification("error", "Please select a customer first.");
-      return;
-    }
-    if (!selectedBatchIds.length) {
-      showNotification("error", "Please select items (batches) from Search first.");
-      return;
-    }
+const handleGetPriceClick = async () => {
+  // derive the fresh list of batch IDs from the current table
+  const ids = Array.from(
+    new Set(tableData.map((r) => r.batchId).filter((id) => id !== undefined && id !== null))
+  );
 
-    try {
-      setLoading(true);
-      const res = await axios.get(
-        `${baseUrl}/invoices/v1/browsing/by-item-batches/${selectedCustomerId}`,
-        { params: { itemBatchIds: selectedBatchIds } }
-      );
-      setPricingGroups(res.data);     // array of groups
-      setShowOnlyCenter(true);        // show center + pricing panel
-    } catch (err) {
-      console.error(err);
-      showNotification("error", `Failed to fetch pricing. ${err.response?.data?.message || err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!selectedCustomerId) {
+    showNotification("error", "Please select a customer first.");
+    return;
+  }
+  if (!ids.length) {
+    showNotification("error", "Please select items (batches) from Search first.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setSelectedBatchIds(ids); // keep state in sync (PricingTable refresh uses this)
+    const res = await axios.get(
+      `${baseUrl}/invoices/v1/browsing/by-item-batches/${selectedCustomerId}`,
+      { params: { itemBatchIds: ids } }
+    );
+    setPricingGroups(res.data);
+    setShowOnlyCenter(true);
+  } catch (err) {
+    console.error(err);
+    showNotification(
+      "error",
+      `Failed to fetch pricing. ${err.response?.data?.message || err.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+// put this once near your other hooks
+useEffect(() => {
+  const ids = Array.from(
+    new Set(tableData.map(r => r.batchId).filter(id => id !== undefined && id !== null))
+  );
+  setSelectedBatchIds(ids);
+}, [tableData]);
+
 
   const handlePricingLoadMore = async (groupKey, currentPage) => {
     try {
@@ -334,16 +350,17 @@ const handleInputChange = (index, field, value) => {
     setContextMenu(null);
   };
 
-  const handleDeleteRow = () => {
-    if (selectedRowIndex !== null) {
-      const updatedTable = tableData.filter(
-        (_, index) => index !== selectedRowIndex
-      );
-      setTableData(updatedTable);
-      setContextMenu(null);
-      setSelectedRowIndex(null);
-    }
-  };
+const handleDeleteRow = () => {
+  if (selectedRowIndex !== null) {
+    setTableData((prev) => {
+      const updated = prev.filter((_, index) => index !== selectedRowIndex);
+      syncSelectedBatchIdsFromTable(updated);
+      return updated;
+    });
+    setContextMenu(null);
+    setSelectedRowIndex(null);
+  }
+};
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
@@ -841,6 +858,8 @@ const quantity =
     presetGroups={Array.isArray(pricingGroups) ? pricingGroups : undefined}
     onRequestLoadMore={handlePricingLoadMore}
     customerName={selectedCustomerName} 
+    onRefreshPreset={handleGetPriceClick}
+     customerId={selectedCustomerId}
   />
 )}
 

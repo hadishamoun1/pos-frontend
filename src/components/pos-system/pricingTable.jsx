@@ -1,12 +1,48 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./pricingTable.css";
 
 const pageSize = 5;
 
-const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) => {
+// --- BIDI helpers ---
+const ARABIC_RE = /[\u0600-\u06FF]/; // Arabic & Persian letters
+const ARABIC_INDIC_DIGITS = /[\u0660-\u0669]/g; // ٠١٢٣٤٥٦٧٨٩
+const EXT_ARABIC_INDIC_DIGITS = /[\u06F0-\u06F9]/g; // ۰۱۲۳۴۵۶۷۸۹
+
+const arabicIndicToAscii = (str = "") =>
+  str
+    .replace(ARABIC_INDIC_DIGITS, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(EXT_ARABIC_INDIC_DIGITS, (d) => String(d.charCodeAt(0) - 0x06F0));
+
+const normalizeSymbols = (str = "") =>
+  str
+    .replace(/[×xX✕✖︎]/g, "*")  // mult
+    .replace(/[–—-−ـ]/g, "-")   // dashes
+    .replace(/[﹡＊]/g, "*");   // odd asterisks
+
+const normalizeSpaces = (str = "") => str.replace(/\s+/g, " ").trim();
+
+const normalizeQuery = (str = "") =>
+  normalizeSpaces(normalizeSymbols(arabicIndicToAscii(str)));
+
+const getDirForText = (str = "") => (ARABIC_RE.test(str) ? "rtl" : "ltr");
+
+// --- Tag bubbles to inject into the search ---
+const TAGS = ["ابيض", "برونز", "اسود", "تريبلكس", "مشرط", "عاكس","محجر","مرايا","جامبو","ديكور"];
+
+const PricingTable = ({
+  presetGroups = null,
+  onRequestLoadMore,
+  customerName,
+  onRefreshPreset,
+  customerId, // POS-selected customer id (for All / searches)
+}) => {
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchDir, setSearchDir] = useState("ltr"); // visual direction of the search input
+
+  // chips (tags) selection state
+  const [selectedTags, setSelectedTags] = useState([]);
 
   // customer search/suggest state (always visible)
   const [customerInput, setCustomerInput] = useState("");
@@ -14,10 +50,46 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
-  // view mode: 'preset' (use presetGroups) or 'customer' (browse by selected customer)
+  // 'preset' (use presetGroups) or 'customer' (browse by selected customer)
   const [viewMode, setViewMode] = useState(presetGroups != null ? "preset" : "customer");
 
+  // track if we’re showing server-search results
+  const [isServerSearch, setIsServerSearch] = useState(false);
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
+  const effectiveCustomerId = useMemo(
+    () => customerId ?? selectedCustomerId,
+    [customerId, selectedCustomerId]
+  );
+
+  // helpers for tags -> query string
+  const addTagToQuery = (q, tag) => {
+    const parts = normalizeSpaces(q).split(" ").filter(Boolean);
+    if (!parts.includes(tag)) parts.push(tag);
+    return normalizeSpaces(parts.join(" "));
+  };
+
+  const removeTagFromQuery = (q, tag) => {
+    const parts = normalizeSpaces(q).split(" ").filter(Boolean);
+    const next = parts.filter((p) => p !== tag);
+    return normalizeSpaces(next.join(" "));
+  };
+
+  const toggleTag = (tag) => {
+    setSelectedTags((prev) => {
+      const has = prev.includes(tag);
+      const nextTags = has ? prev.filter((t) => t !== tag) : [...prev, tag];
+
+      // Reflect in searchTerm
+      setSearchTerm((prevQ) => {
+        const updated = has ? removeTagFromQuery(prevQ, tag) : addTagToQuery(prevQ, tag);
+        setSearchDir(getDirForText(updated));
+        return updated;
+      });
+
+      return nextTags;
+    });
+  };
 
   // When presetGroups change, move into preset mode & load them
   useEffect(() => {
@@ -25,9 +97,13 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
       setViewMode("preset");
       setGroups(Array.isArray(presetGroups) ? presetGroups : []);
       setSearchTerm("");
+      setSelectedTags([]);
+      setIsServerSearch(false);
+      setSearchDir("ltr");
     }
   }, [presetGroups]);
-   useEffect(() => {
+
+  useEffect(() => {
     if (viewMode === "preset" && customerName) {
       setCustomerInput(customerName);
     }
@@ -35,7 +111,7 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
 
   // If in customer mode and a customer is selected, load their browsing data
   useEffect(() => {
-    if (viewMode === "customer" && selectedCustomerId) {
+    if (viewMode === "customer" && selectedCustomerId && !isServerSearch) {
       loadInitialData(selectedCustomerId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -62,11 +138,14 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
   };
 
   const handleCustomerSelect = (customer) => {
-    // Switch to customer mode explicitly
     setViewMode("customer");
     setSelectedCustomerId(customer.id);
     setCustomerInput(customer.customerName);
     setCustomerSuggestions([]);
+    setIsServerSearch(false);
+    setSearchTerm("");
+    setSelectedTags([]);
+    setSearchDir("ltr");
   };
 
   const handleKeyDown = (e) => {
@@ -84,51 +163,170 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
   };
 
   // --- Data loaders ---
-  const loadInitialData = async (customerId) => {
+  const loadInitialData = async (custId) => {
     try {
-      const res = await axios.get(`${baseUrl}/invoices/v1/browsing/${customerId}`);
+      const res = await axios.get(`${baseUrl}/invoices/v1/browsing/${custId}`);
       setGroups(res.data || []);
     } catch (err) {
       console.error("Error loading pricing data:", err);
     }
   };
 
+  // 🔎 SERVER SEARCH (debounced by 300ms)
+  useEffect(() => {
+    const qRaw = (searchTerm || "").trim();
+    if (!effectiveCustomerId) return;
+
+    const doWork = async () => {
+      // If query is empty: exit search mode and show normal data
+      if (!qRaw) {
+        setIsServerSearch(false);
+        if (viewMode === "preset") {
+          setGroups(Array.isArray(presetGroups) ? presetGroups : []);
+        } else {
+          await loadInitialData(effectiveCustomerId);
+        }
+        return;
+      }
+
+      const q = normalizeQuery(qRaw); // normalize digits/symbols
+
+      try {
+        const res = await axios.get(
+          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
+          { params: { q, limitPerGroup: pageSize } }
+        );
+        setGroups(res.data || []);
+        setIsServerSearch(true);
+      } catch (err) {
+        console.error("Server search failed:", err);
+      }
+    };
+
+    const t = setTimeout(doWork, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, effectiveCustomerId, viewMode]);
+
   const loadMore = async (groupKey, currentPage) => {
     try {
       const nextPage = (currentPage || 1) + 1;
 
-      if (viewMode === "preset") {
-        // Delegate to parent’s by-item-batches loader
+      // preset (by-item-batches)
+      if (viewMode === "preset" && !isServerSearch) {
         if (typeof onRequestLoadMore === "function") {
           await onRequestLoadMore(groupKey, currentPage || 1);
         }
         return;
       }
 
-      // Customer mode: use the classic browsing endpoint
-      const res = await axios.get(
-        `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`,
-        { params: { groupKey, page: nextPage, limit: pageSize } }
-      );
+      // server-search mode
+      if (isServerSearch && effectiveCustomerId) {
+        const q = normalizeQuery(searchTerm || "");
+        const res = await axios.get(
+          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
+          { params: { q, groupKey, pagePerGroup: nextPage, limitPerGroup: pageSize } }
+        );
 
-      setGroups((prev) =>
-        prev.map((grp) =>
-          grp.groupKey === groupKey
-            ? {
-                ...grp,
-                page: nextPage,
-                items: [...grp.items, ...(res.data?.items || [])],
-                total: res.data?.total ?? grp.total,
-              }
-            : grp
-        )
-      );
+        setGroups((prev) =>
+          prev.map((grp) =>
+            grp.groupKey === groupKey
+              ? {
+                  ...grp,
+                  page: nextPage,
+                  items: [...grp.items, ...(res.data?.items || [])],
+                  total: res.data?.total ?? grp.total,
+                  totalPages: res.data?.totalPages ?? grp.totalPages,
+                }
+              : grp
+          )
+        );
+        return;
+      }
+
+      // customer-browsing (non-search)
+      if (viewMode === "customer" && selectedCustomerId) {
+        const res = await axios.get(
+          `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`,
+          { params: { groupKey, page: nextPage, limit: pageSize } }
+        );
+
+        setGroups((prev) =>
+          prev.map((grp) =>
+            grp.groupKey === groupKey
+              ? {
+                  ...grp,
+                  page: nextPage,
+                  items: [...grp.items, ...(res.data?.items || [])],
+                  total: res.data?.total ?? grp.total,
+                }
+              : grp
+          )
+        );
+      }
     } catch (err) {
       console.error("Error loading more:", err);
     }
   };
 
-  // --- cell helpers ---
+  // --- Clear + Refresh + ALL handlers ---
+  const handleClearAll = () => {
+    setGroups([]);
+    setSearchTerm("");
+    setSelectedTags([]);
+    setCustomerInput("");
+    setCustomerSuggestions([]);
+    setSelectedCustomerId(null);
+    setHighlightedIndex(-1);
+    setIsServerSearch(false);
+    setViewMode(presetGroups != null ? "preset" : "customer");
+    setSearchDir("ltr");
+  };
+
+  const handleRefresh = async () => {
+    try {
+      if (isServerSearch && effectiveCustomerId) {
+        const q = normalizeQuery(searchTerm || "");
+        const res = await axios.get(
+          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
+          { params: { q, limitPerGroup: pageSize } }
+        );
+        setGroups(res.data || []);
+        return;
+      }
+
+      if (viewMode === "preset") {
+        if (typeof onRefreshPreset === "function") {
+          await onRefreshPreset();
+        } else {
+          setGroups(Array.isArray(presetGroups) ? presetGroups : []);
+          console.warn("[PricingTable] onRefreshPreset not provided; reapplied current presetGroups.");
+        }
+      } else if (viewMode === "customer" && selectedCustomerId) {
+        await loadInitialData(selectedCustomerId);
+      }
+    } catch (e) {
+      console.error("Refresh failed:", e);
+    }
+  };
+
+  const handleShowAllForCustomer = async () => {
+    const id = customerId ?? selectedCustomerId;
+    if (!id) {
+      console.warn("[PricingTable] No customer id to fetch ALL.");
+      return;
+    }
+    setIsServerSearch(false);
+    setSearchTerm("");
+    setSelectedTags([]);
+    setViewMode("customer");
+    setSelectedCustomerId(id);
+    if (customerName) setCustomerInput(customerName);
+    setSearchDir("ltr");
+    await loadInitialData(id);
+  };
+
+  // --- render helpers ---
   const toInt = (v) => (v === 0 || v ? parseInt(v, 10) : null);
   const pad3 = (n) => String(n ?? "").padStart(3, "0");
   const LRM = "\u200E";
@@ -151,7 +349,6 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
     return item.box ?? item.sheet ?? item.sqm ?? 0;
   };
 
-  // --- render ---
   const rows = (groups || []).flatMap((grp) => {
     const body = (grp.items || []).map((item, idx) => {
       const parts = getDimsParts(item);
@@ -207,36 +404,19 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
     return body;
   });
 
-  const filteredRows = rows.filter((row) => {
-    if (typeof row.key === "string" && row.key.includes("loadmore")) return true;
-    return (
-      !searchTerm ||
-      (typeof row.props?.children === "object" &&
-        row.props.children.some((cell) =>
-          (Array.isArray(cell.props?.children)
-            ? cell.props.children.join(" ")
-            : cell.props?.children
-          )
-            ?.toString()
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-        ))
-    );
-  });
-
   return (
     <div className="price-browsing-container">
       <div className="price-browsing-content">
-        {/* 🔎 Customer search is ALWAYS visible now */}
-        <div className="price-browsing-customer-name-row">
-          <div className="price-browsing-customer-search-container">
+        {/* Top bar: compact customer input + buttons */}
+        <div className="price-browsing-topbar">
+          <div className="price-browsing-customer-search-container compact">
             <input
               type="text"
               value={customerInput}
               onChange={handleCustomerInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Search Customer Name"
-              className="price-browsing-customer-name-input"
+              className="price-browsing-customer-name-input compact"
             />
             {customerSuggestions.length > 0 && (
               <ul className="price-browsing-suggestions-dropdown">
@@ -256,15 +436,68 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
               </ul>
             )}
           </div>
+
+          <div className="price-browsing-topbar-buttons">
+            <button
+              className="price-browsing-clear-btn"
+              title="Clear all"
+              onClick={handleClearAll}
+            >
+              C
+            </button>
+            <button
+              className="price-browsing-refresh-btn"
+              title="Refresh"
+              onClick={handleRefresh}
+            >
+              Refresh
+            </button>
+            <button
+              className="price-browsing-all-btn"
+              title="Show ALL items for this customer"
+              onClick={handleShowAllForCustomer}
+            >
+              All
+            </button>
+          </div>
         </div>
 
-        <input
-          type="text"
-          placeholder="Search by any field"
-          className="price-browsing-search-input"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        {/* Server-side search for browsing */}
+        <div className="price-browsing-search-row">
+          <input
+            type="text"
+            inputMode="search"
+            autoComplete="off"
+            dir={searchDir}
+            className="price-browsing-search-input bidi"
+            placeholder="ابحث مثل: 5.5ملم ابيض 225*321-025"
+            value={searchTerm}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSearchTerm(v);
+              setSearchDir(getDirForText(v));
+            }}
+            disabled={!effectiveCustomerId && viewMode !== "preset"}
+          />
+        </div>
+
+        {/* 🔵 Tag chips row (between search bar and table) */}
+        <div className="price-browsing-tag-row" dir="rtl">
+          {TAGS.map((tag) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                className={`tag-chip ${active ? "active" : ""}`}
+                onClick={() => toggleTag(tag)}
+                title={active ? "إزالة الوسم من البحث" : "إضافة الوسم للبحث"}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="price-browsing-table-wrapper">
           <table className="price-browsing-table">
@@ -281,7 +514,7 @@ const PricingTable = ({ presetGroups = null, onRequestLoadMore ,customerName }) 
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>{filteredRows}</tbody>
+            <tbody>{rows}</tbody>
           </table>
         </div>
       </div>
