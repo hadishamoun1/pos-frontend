@@ -74,10 +74,11 @@
 }
 
 /* ✅ Invoice Details */
-.invoice-details {
+.invoice-list-details {
   display: flex;
   justify-content: space-between;
   font-size: 20px;
+  margin-top: 7px;
  
 }
 

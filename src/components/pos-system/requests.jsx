@@ -103,7 +103,7 @@ const RequestCard = ({ onSelectRequest }) => {
 
               <div className="request-details">
                 <span className="request-total">
-                  Total: ${Number(request.grandTotal || 0).toFixed(2)}
+                  ${Number(request.grandTotal || 0).toFixed(2)}
                 </span>
                <span className="request-date">{request.requestDate}</span>
 

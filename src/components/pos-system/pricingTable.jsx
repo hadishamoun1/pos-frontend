@@ -39,7 +39,7 @@ const PricingTable = ({
 }) => {
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchDir, setSearchDir] = useState("ltr"); // visual direction of the search input
+  const [searchDir, setSearchDir] = useState("ltr"); 
 
   // chips (tags) selection state
   const [selectedTags, setSelectedTags] = useState([]);
