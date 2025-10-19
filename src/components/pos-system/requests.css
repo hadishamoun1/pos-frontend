@@ -1,4 +1,4 @@
-/* ✅ Request List Container */
+/* ---------- Scroller ---------- */
 .requests-list {
   list-style: none;
   padding: 0;
@@ -7,50 +7,50 @@
   flex-direction: column;
   gap: 12px;
 
-  /* ✅ Enable scrolling */
-  max-height: 750px; /* Adjust based on UI */
+  max-height: 750px;
   overflow-y: auto;
   overflow-x: hidden;
-  position: relative; /* Needed for proper positioning */
+  position: relative;
 }
 
-/* ✅ Request Card */
+/* ---------- Card ---------- */
 .request-item {
   display: flex;
   flex-direction: column;
   background: white;
   padding: 14px 18px;
   border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0,0,0,.08);
+  transition: all .3s ease-in-out;
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+
+  /* important so tooltip isn't clipped */
+  overflow: visible;
+
   min-height: 70px;
   background-color: #fffd91;
 }
 
 .request-item:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 12px rgba(0,0,0,.15);
   background-color: #e7f3ff;
 }
 
-/* ✅ Gradient Line on the Left */
+/* Left gradient strip */
 .request-item::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   height: 100%;
   width: 5px;
-background: linear-gradient(135deg, #007bff, #0056b3);
-  
+  background: linear-gradient(135deg, #007bff, #0056b3);
   border-top-left-radius: 10px;
   border-bottom-left-radius: 10px;
 }
 
-/* ✅ Request Header */
+/* ---------- Header ---------- */
 .request-header {
   display: flex;
   justify-content: space-between;
@@ -68,87 +68,111 @@ background: linear-gradient(135deg, #007bff, #0056b3);
   color: #666;
 }
 
-/* ✅ Request Details */
+/* ---------- Total + Date Row ---------- */
 .request-details {
   display: flex;
   justify-content: space-between;
   font-size: 20px;
 }
 
-/* ✅ Customer Name Container */
+/* ---------- Customer + Tooltip (match invoice styles) ---------- */
 .request-customer-container {
   position: relative;
   display: inline-block;
-  max-width: 140px;
-  cursor: pointer;
-  overflow: visible;
+  max-width: 220px; /* same as invoice */
+  cursor: default;
 }
 
-/* ✅ Truncated Customer Name */
+/* Truncated name (LTR & RTL friendly) */
 .request-customer {
-  color: #333;
-  font-weight: 500;
-  font-size: 20px;
-  display: block;
-  max-width: 140px;
+  display: inline-block;
+  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  color: #333;
+  font-weight: 700;
+  font-size: 20px;
+
+  letter-spacing: 0;
+  line-height: 1.2;
+  font-kerning: normal;
+  font-feature-settings: "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ✅ Tooltip - Now Wraps Long Names */
+/* Auto-RTL for Arabic */
+.request-customer.rtl-ar {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  font-family: var(--arabic-font);
+}
+
+/* Tooltip (shows above the name) */
 .request-tooltip {
   position: absolute;
-  bottom: 120%;
-  left: 100%;
-  transform: translateX(-50%);
-  background: rgba(20, 20, 20, 0.95);
-  color: white;
+  bottom: calc(100% + 8px); /* sit fully above */
+  left: 0;
+  transform: none;
+
+  background: rgba(20,20,20,0.95);
+  color: #fff;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
   white-space: normal;
-  width: 270px;
-  text-align: center;
+  min-width: 240px;
+  max-width: 320px;
+  text-align: left;
   word-wrap: break-word;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 5px 15px rgba(0,0,0,.25);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity .2s ease-in-out, visibility .2s ease-in-out;
   z-index: 9999;
   pointer-events: none;
 }
 
-/* ✅ Adjust Tooltip if Near Left Edge */
-.request-customer-container .request-tooltip.left-adjust {
-  left: 0;
-  transform: none;
+/* flip direction for Arabic tooltip too */
+.request-tooltip.rtl-ar {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  font-family: var(--arabic-font);
 }
 
-/* ✅ Tooltip Arrow */
+/* Tooltip arrow */
 .request-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 12px;
   border-width: 6px;
   border-style: solid;
-  border-color: rgba(20, 20, 20, 0.95) transparent transparent transparent;
+  border-color: rgba(20,20,20,0.95) transparent transparent transparent;
 }
 
-/* ✅ Show Tooltip on Hover */
+/* Show tooltip on hover of the container */
 .request-customer-container:hover .request-tooltip {
   opacity: 1;
-  visibility: visible;
+  visibility:visible;
 }
 
-/* ✅ Request Total */
+/* If card is very close to top, nudge tooltip down a bit to keep it visible */
+.request-item:first-child .request-tooltip {
+  bottom: calc(100% + 12px);
+}
+
+/* ---------- Totals ---------- */
 .request-total {
   font-weight: 600;
   color: #333;
 }
+
+/* ---------- Button ---------- */
 .request-load-more-button {
   display: block;
   width: 100%;
@@ -163,30 +187,27 @@ background: linear-gradient(135deg, #007bff, #0056b3);
   margin-top: 10px;
 }
 
-/* ✅ Button Hover Effect */
 .request-load-more-button:hover {
   background-color: #0056b3;
 }
 
-/* ✅ Disabled Button */
 .request-load-more-button:disabled {
   background-color: #aaa;
   cursor: not-allowed;
 }
-/* ✅ Make new request blink for 36 seconds */
-/* ✅ Make new request blink for 36 seconds */
+
+/* ---------- Blink effect ---------- */
 @keyframes blink-effect {
-  0% {
-    background-color: #ffd700;
-  } /* Gold */
-  50% {
-    background-color: transparent;
-  } /* Normal */
-  100% {
-    background-color: #ffd700;
-  } /* Gold */
+  0% { background-color: #ffd700; }
+  50% { background-color: transparent; }
+  100% { background-color: #ffd700; }
+}
+.blink {
+  animation: blink-effect 2s ease-in-out 5;
 }
 
-.blink {
-  animation: blink-effect 2s ease-in-out 5; /* 2s per cycle, repeats 18 times (36 seconds) */
+/* ---------- Arabic-friendly font stack ---------- */
+:root {
+  --arabic-font: "Cairo", "Tajawal", "Noto Naskh Arabic", "Amiri",
+                 "Segoe UI", "Arial", sans-serif;
 }

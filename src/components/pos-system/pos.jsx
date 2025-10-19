@@ -40,6 +40,10 @@ const POSSystemPage = () => {
  const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [pricingGroups, setPricingGroups] = useState(null);
 const [invoiceSearch, setInvoiceSearch] = useState("");
+const [requestSearch, setRequestSearch] = useState("");
+
+
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const handleSearchClick = () => {
@@ -755,12 +759,16 @@ const quantity =
             <FaClipboardList className="pos-page-header-icon" />
             <span className="pos-page-header-text">Requests</span>
           </div>
-          <input
-            type="text"
-            placeholder="Search Requests"
-            className="pos-page-search-input"
-          />
-          <RequestCard onSelectRequest={handleSelectRequest} />
+        <input
+  type="text"
+  placeholder="Search Requests"
+  className="pos-page-search-input"
+  value={requestSearch}
+  onChange={(e) => setRequestSearch(e.target.value)}
+/>
+
+<RequestCard onSelectRequest={handleSelectRequest} searchTerm={requestSearch} />
+
         </div>
       )}
 
