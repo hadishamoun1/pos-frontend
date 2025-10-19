@@ -39,7 +39,7 @@ const POSSystemPage = () => {
   const [showStatement, setShowStatement] = useState(false);
  const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [pricingGroups, setPricingGroups] = useState(null);
-
+const [invoiceSearch, setInvoiceSearch] = useState("");
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const handleSearchClick = () => {
@@ -871,12 +871,14 @@ const quantity =
             <span className="pos-page-header-text">Invoices</span>
           </div>
 
-          <input
+        <input
             type="text"
             placeholder="Search Invoices"
             className="pos-page-search-input"
+            value={invoiceSearch}
+            onChange={(e) => setInvoiceSearch(e.target.value)}
           />
-          <InvoicesList onSelectInvoice={handleSelectInvoice} />
+          <InvoicesList onSelectInvoice={handleSelectInvoice}  searchTerm={invoiceSearch} />
         </div>
       )}
 
