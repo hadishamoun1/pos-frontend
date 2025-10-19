@@ -1,6 +1,4 @@
-
-
-/* ✅ Invoice List Container */
+/* ---------- Scroller ---------- */
 .invoices-list {
   list-style: none;
   padding: 0;
@@ -8,45 +6,46 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-    -ms-overflow-style: none;      /* IE/Edge legacy */
-  scrollbar-width: none;         /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge legacy */
+  scrollbar-width: none;          /* Firefox */
   overscroll-behavior: contain;
-  
-  /* ✅ Enable scrolling */
-  max-height: 740px; /* Adjust based on UI */
+
+  max-height: 740px;
   overflow-y: auto;
   overflow-x: hidden;
-  position: relative; /* Needed for proper positioning */
+  position: relative;
 }
 
-/* ✅ Invoice Card */
+/* ---------- Card ---------- */
 .invoice-item {
   display: flex;
   flex-direction: column;
   background: white;
   padding: 14px 18px;
   border-radius: 5px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 8px rgba(0,0,0,.08);
+  transition: all .3s ease-in-out;
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+
+  /* important so tooltip isn't clipped */
+  overflow: visible;
+
   min-height: 70px;
-   background-color:rgb(255, 168, 168);
+  background-color: rgb(255, 168, 168);
 }
 
 .invoice-item:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 12px rgba(0,0,0,.15);
   background-color: #ffe7e7;
 }
 
-/* ✅ Gradient Line on the Left */
+/* Left gradient strip */
 .invoice-item::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   height: 100%;
   width: 5px;
   background: linear-gradient(135deg, #ff6161, #ff0202);
@@ -54,7 +53,7 @@
   border-bottom-left-radius: 10px;
 }
 
-/* ✅ Invoice Header */
+/* ---------- Header ---------- */
 .invoice-list-header {
   display: flex;
   justify-content: space-between;
@@ -64,100 +63,120 @@
   margin-bottom: 10px;
 }
 
-.invoice-list-invoice-number{
+.invoice-list-invoice-number {
   color: #007bff;
+}
 
+/* ---------- Total + Date Row ---------- */
+.invoice-list-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 20px;
+  margin-top: 7px;
+}
+
+.invoice-total {
+  font-weight: 600;
+  color: #333;
 }
 
 .invoice-date {
   color: #666;
 }
 
-/* ✅ Invoice Details */
-.invoice-list-details {
-  display: flex;
-  justify-content: space-between;
-  font-size: 20px;
-  margin-top: 7px;
- 
-}
-
-/* ✅ Customer Name Container */
+/* ---------- Customer + Tooltip ---------- */
 .invoice-customer-container {
   position: relative;
   display: inline-block;
-  max-width: 140px;
-  cursor: pointer;
-  overflow: visible;
+  max-width: 220px;    /* a bit wider to reduce truncation */
+  cursor: default;
 }
 
-/* ✅ Truncated Customer Name */
+/* Truncated name (works LTR & RTL) */
 .invoice-customer {
-  color: #333;
-  font-weight: 700;
-  font-size: 20px;
-  display: block;
-  max-width: 140px;
+  display: inline-block;
+  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  color: #333;
+  font-weight: 700;
+  font-size: 20px;
+
+  letter-spacing: 0;
+  line-height: 1.2;
+  font-kerning: normal;
+  font-feature-settings: "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ✅ Tooltip - Now Wraps Long Names */
+/* Auto-RTL for Arabic */
+.invoice-customer.rtl-ar {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  font-family: var(--arabic-font);
+}
+
+/* Tooltip (shows above the name) */
 .invoice-tooltip {
   position: absolute;
-  bottom: 120%;
-  left: 100%;
-  transform: translateX(-50%);
-  background: rgba(20, 20, 20, 0.95);
-  color: white;
+  bottom: calc(100% + 8px); /* sit fully above */
+  left: 0;
+  transform: none;
+
+  background: rgba(20,20,20,0.95);
+  color: #fff;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
   white-space: normal;
-  width: 270px;
-  text-align: center;
+  min-width: 240px;
+  max-width: 320px;
+  text-align: left;
   word-wrap: break-word;
-  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 5px 15px rgba(0,0,0,.25);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease-in-out;
+  transition: opacity .2s ease-in-out, visibility .2s ease-in-out;
   z-index: 9999;
   pointer-events: none;
 }
 
-/* ✅ Adjust Tooltip if Near Left Edge */
-.invoice-customer-container .invoice-tooltip.left-adjust {
-  left: 0;
-  transform: none;
+/* flip direction for Arabic tooltip too */
+.invoice-tooltip.rtl-ar {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  font-family: var(--arabic-font);
 }
 
-/* ✅ Tooltip Arrow */
+/* Tooltip arrow */
 .invoice-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 12px;
   border-width: 6px;
   border-style: solid;
-  border-color: rgba(20, 20, 20, 0.95) transparent transparent transparent;
+  border-color: rgba(20,20,20,0.95) transparent transparent transparent;
 }
 
-/* ✅ Show Tooltip on Hover */
+/* Show tooltip on hover of the container */
 .invoice-customer-container:hover .invoice-tooltip {
   opacity: 1;
   visibility: visible;
 }
 
-/* ✅ Invoice Total */
-.invoice-total {
-  font-weight: 600;
-  color: #333;
+/* If card is very close to top, nudge tooltip down a bit to keep it visible */
+.invoice-item:first-child .invoice-tooltip {
+  bottom: calc(100% + 12px); /* a little extra spacing */
 }
 
-/* ✅ Load More Button */
+/* ---------- Button ---------- */
 .invoice-load-more-button {
   display: block;
   width: 100%;
@@ -172,35 +191,27 @@
   margin-top: 10px;
 }
 
-/* ✅ Button Hover Effect */
 .invoice-load-more-button:hover {
   background-color: #0056b3;
 }
 
-/* ✅ Disabled Button */
 .invoice-load-more-button:disabled {
   background-color: #aaa;
   cursor: not-allowed;
 }
 
-
-
-
-
-
-/* CSS for blinking effect */
+/* ---------- Blink effect ---------- */
 @keyframes blink-effect {
-  0% {
-    background-color: #ffd700;
-  } /* Gold */
-  50% {
-    background-color: transparent;
-  } /* Normal */
-  100% {
-    background-color: #ffd700;
-  } /* Gold */
+  0% { background-color: #ffd700; }
+  50% { background-color: transparent; }
+  100% { background-color: #ffd700; }
+}
+.blink {
+  animation: blink-effect 2s ease-in-out 5;
 }
 
-.blink {
-  animation: blink-effect 2s ease-in-out 5; /* 2s per cycle, repeats 5 times */
+/* ---------- Arabic-friendly font stack ---------- */
+:root {
+  --arabic-font: "Cairo", "Tajawal", "Noto Naskh Arabic", "Amiri",
+                 "Segoe UI", "Arial", sans-serif;
 }

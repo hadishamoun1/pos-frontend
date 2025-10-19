@@ -10,7 +10,7 @@ const PAGE_SIZE = 100;
 const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   const [invoices, setInvoices] = useState([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false); // start false; only true after a response
+  const [hasMore, setHasMore] = useState(false); // only true after we know from API
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,13 +24,16 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
 
   const isSearching = (searchTerm || "").trim().length > 0;
 
+  // utils
+  const isArabicText = (s) => /[\u0600-\u06FF]/.test(s || "");
+
   // initial load + socket
   useEffect(() => {
     isSearching ? fetchSearch(1, searchTerm) : fetchInvoices(1);
 
     socketRef.current = io(`${baseUrl}`);
     socketRef.current.on("newInvoice", (invoice) => {
-      if (isSearching) return; // ignore while searching
+      if (isSearching) return; // ignore while user is searching
       addItemToBlink(invoice.id);
       setInvoices((prev) => {
         if (prev.some((p) => p.id === invoice.id)) return prev;
@@ -47,10 +50,9 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      // reset list state FIRST so we don't render Load More optimistically
       setPage(1);
       setInvoices([]);
-      setHasMore(false);
+      setHasMore(false); // don’t flash Load More between keystrokes
 
       if ((searchTerm || "").trim() === "") {
         fetchInvoices(1);
@@ -97,7 +99,6 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
       );
 
       setPage(pageNum);
-      // only set from the real response
       setHasMore(pageNum < Number(data?.totalPages || 1));
     } catch {
       setError("Failed to fetch invoices");
@@ -125,7 +126,6 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
       );
 
       setPage(pageNum);
-      // only set from the real response
       setHasMore(pageNum < Number(data?.totalPages || 1));
     } catch {
       setError("Search failed");
@@ -152,43 +152,62 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
         {invoices.length === 0 && !loading ? (
           <p className="no-invoices">No Invoices Found</p>
         ) : (
-          invoices.map((invoice) => (
-            <li
-              key={`invoice-${invoice.id}`}
-              className={`invoice-item ${isItemBlinking(invoice.id) ? "blink" : ""}`}
-              onClick={() => handleInvoiceClick(invoice)}
-            >
-              <div className="invoice-list-header">
-                <span className="invoice-customer">
-                  {invoice.customerName?.length > 15
-                    ? invoice.customerName.slice(0, 15) + "..."
-                    : invoice.customerName || "Unknown"}
-                </span>
-                {invoice.customerName?.length > 15 && (
-                  <span className="invoice-tooltip">{invoice.customerName}</span>
-                )}
-                <span className="invoice-list-invoice-number">
-                  {invoice.invoiceNumber}
-                </span>
-              </div>
+          invoices.map((invoice) => {
+            const name = invoice.customerName || "Unknown";
+            const arabic = isArabicText(name);
 
-              <div className="invoice-list-details">
-                <span className="invoice-total">
-                  ${Number(invoice.grandTotal).toFixed(2)}
-                </span>
-                <span className="invoice-date">{invoice.date}</span>
-              </div>
-            </li>
-          ))
+            return (
+              <li
+                key={`invoice-${invoice.id}`}
+                className={`invoice-item ${
+                  isItemBlinking(invoice.id) ? "blink" : ""
+                }`}
+                onClick={() => handleInvoiceClick(invoice)}
+              >
+                <div className="invoice-list-header">
+                  <span className="invoice-customer-container">
+                    <span
+                      className={`invoice-customer ${arabic ? "rtl-ar" : ""}`}
+                      dir="auto"
+                      title={name}
+                    >
+                      {name.length > 15 ? name.slice(0, 15) + "..." : name}
+                    </span>
+                    {name.length > 15 && (
+                      <span
+                        className={`invoice-tooltip ${
+                          arabic ? "rtl-ar" : ""
+                        }`}
+                      >
+                        {name}
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="invoice-list-invoice-number">
+                    {invoice.invoiceNumber}
+                  </span>
+                </div>
+
+                {/* total + date in one row */}
+                <div className="invoice-list-details">
+                  <span className="invoice-total">
+                    ${Number(invoice.grandTotal).toFixed(2)}
+                  </span>
+                  <span className="invoice-date">{invoice.date}</span>
+                </div>
+              </li>
+            );
+          })
         )}
 
-        {/* Render only when we actually have more (from the response)
-            and we’re not currently loading */}
         {hasMore && !loading && (
           <button
             className="invoice-load-more-button"
             onClick={() =>
-              isSearching ? fetchSearch(page + 1, searchTerm) : fetchInvoices(page + 1)
+              isSearching
+                ? fetchSearch(page + 1, searchTerm)
+                : fetchInvoices(page + 1)
             }
           >
             Load More
