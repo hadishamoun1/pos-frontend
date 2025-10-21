@@ -56,6 +56,9 @@ const PricingTable = ({
   // track if we’re showing server-search results
   const [isServerSearch, setIsServerSearch] = useState(false);
 
+  // 🔹 NEW: prevent auto reloads right after Clear
+  const [cleared, setCleared] = useState(false);
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
   const effectiveCustomerId = useMemo(
     () => customerId ?? selectedCustomerId,
@@ -87,6 +90,10 @@ const PricingTable = ({
         return updated;
       });
 
+      // exit cleared if user interacts
+      if (cleared) setCleared(false);
+      if (viewMode === "empty") setViewMode(presetGroups != null ? "preset" : "customer");
+
       return nextTags;
     });
   };
@@ -94,6 +101,8 @@ const PricingTable = ({
   // When presetGroups change, move into preset mode & load them
   useEffect(() => {
     if (presetGroups != null) {
+      // 🔸 guard: don't auto-load into a cleared screen
+      if (cleared) return;
       setViewMode("preset");
       setGroups(Array.isArray(presetGroups) ? presetGroups : []);
       setSearchTerm("");
@@ -101,21 +110,21 @@ const PricingTable = ({
       setIsServerSearch(false);
       setSearchDir("ltr");
     }
-  }, [presetGroups]);
+  }, [presetGroups, cleared]);
 
   useEffect(() => {
-    if (viewMode === "preset" && customerName) {
+    if (viewMode === "preset" && customerName && !cleared) {
       setCustomerInput(customerName);
     }
-  }, [viewMode, customerName]);
+  }, [viewMode, customerName, cleared]);
 
   // If in customer mode and a customer is selected, load their browsing data
   useEffect(() => {
-    if (viewMode === "customer" && selectedCustomerId && !isServerSearch) {
+    if (viewMode === "customer" && selectedCustomerId && !isServerSearch && !cleared) {
       loadInitialData(selectedCustomerId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, selectedCustomerId]);
+  }, [viewMode, selectedCustomerId, isServerSearch, cleared]);
 
   // --- Customer search / suggestions ---
   const fetchCustomers = async (query) => {
@@ -146,6 +155,8 @@ const PricingTable = ({
     setSearchTerm("");
     setSelectedTags([]);
     setSearchDir("ltr");
+    // 🔹 exit cleared if user picks a customer
+    setCleared(false);
   };
 
   const handleKeyDown = (e) => {
@@ -174,8 +185,11 @@ const PricingTable = ({
 
   // 🔎 SERVER SEARCH (debounced by 300ms)
   useEffect(() => {
+    // 🔸 guard: if cleared, don't auto-reload anything
+    if (cleared) return;
+
     const qRaw = (searchTerm || "").trim();
-    if (!effectiveCustomerId) return;
+    if (!effectiveCustomerId && viewMode !== "preset") return;
 
     const doWork = async () => {
       // If query is empty: exit search mode and show normal data
@@ -183,7 +197,7 @@ const PricingTable = ({
         setIsServerSearch(false);
         if (viewMode === "preset") {
           setGroups(Array.isArray(presetGroups) ? presetGroups : []);
-        } else {
+        } else if (effectiveCustomerId) {
           await loadInitialData(effectiveCustomerId);
         }
         return;
@@ -206,14 +220,14 @@ const PricingTable = ({
     const t = setTimeout(doWork, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, effectiveCustomerId, viewMode]);
+  }, [searchTerm, effectiveCustomerId, viewMode, cleared]);
 
   const loadMore = async (groupKey, currentPage) => {
     try {
       const nextPage = (currentPage || 1) + 1;
 
       // preset (by-item-batches)
-      if (viewMode === "preset" && !isServerSearch) {
+      if (viewMode === "preset" && !isServerSearch && !cleared) {
         if (typeof onRequestLoadMore === "function") {
           await onRequestLoadMore(groupKey, currentPage || 1);
         }
@@ -221,7 +235,7 @@ const PricingTable = ({
       }
 
       // server-search mode
-      if (isServerSearch && effectiveCustomerId) {
+      if (isServerSearch && effectiveCustomerId && !cleared) {
         const q = normalizeQuery(searchTerm || "");
         const res = await axios.get(
           `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
@@ -245,7 +259,7 @@ const PricingTable = ({
       }
 
       // customer-browsing (non-search)
-      if (viewMode === "customer" && selectedCustomerId) {
+      if (viewMode === "customer" && selectedCustomerId && !cleared) {
         const res = await axios.get(
           `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`,
           { params: { groupKey, page: nextPage, limit: pageSize } }
@@ -279,11 +293,16 @@ const PricingTable = ({
     setSelectedCustomerId(null);
     setHighlightedIndex(-1);
     setIsServerSearch(false);
-    setViewMode(presetGroups != null ? "preset" : "customer");
+    // 🔹 switch to a neutral mode that doesn't trigger effects
+    setViewMode("empty");
     setSearchDir("ltr");
+    setCleared(true); // 🔹 block auto reloads until the user acts
   };
 
   const handleRefresh = async () => {
+    // if cleared, don't refresh anything
+    if (cleared || viewMode === "empty") return;
+
     try {
       if (isServerSearch && effectiveCustomerId) {
         const q = normalizeQuery(searchTerm || "");
@@ -323,6 +342,7 @@ const PricingTable = ({
     setSelectedCustomerId(id);
     if (customerName) setCustomerInput(customerName);
     setSearchDir("ltr");
+    setCleared(false); // exit cleared state
     await loadInitialData(id);
   };
 
@@ -476,6 +496,9 @@ const PricingTable = ({
               const v = e.target.value;
               setSearchTerm(v);
               setSearchDir(getDirForText(v));
+              // typing means: exit cleared & leave "empty" mode
+              if (cleared) setCleared(false);
+              if (viewMode === "empty") setViewMode(presetGroups != null ? "preset" : "customer");
             }}
             disabled={!effectiveCustomerId && viewMode !== "preset"}
           />
@@ -514,7 +537,17 @@ const PricingTable = ({
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>{rows}</tbody>
+            <tbody>
+              {viewMode === "empty" && groups.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: "center", opacity: 0.7 }}>
+                    Cleared. Select a customer or start typing to search.
+                  </td>
+                </tr>
+              ) : (
+                rows
+              )}
+            </tbody>
           </table>
         </div>
       </div>

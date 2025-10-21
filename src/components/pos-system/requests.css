@@ -163,7 +163,7 @@
 
 /* If card is very close to top, nudge tooltip down a bit to keep it visible */
 .request-item:first-child .request-tooltip {
-  bottom: calc(100% + 12px);
+  bottom: calc(-50% + 12px);
 }
 
 /* ---------- Totals ---------- */

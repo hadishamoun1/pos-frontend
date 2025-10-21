@@ -41,7 +41,14 @@ const POSSystemPage = () => {
   const [pricingGroups, setPricingGroups] = useState(null);
 const [invoiceSearch, setInvoiceSearch] = useState("");
 const [requestSearch, setRequestSearch] = useState("");
-
+const [customerPreview, setCustomerPreview] = useState({
+  customerName: "",
+  customerAddress: "",
+  customerPhone: "",
+  customerAccountNumber: "",
+  customerTaxNumber: "",
+  currencyCode: "USD",
+});
 
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
@@ -401,28 +408,45 @@ const handleDeleteRow = () => {
     }
   };
 
-  const handleCustomerSelect = async (customer) => {
-    setSelectedCustomerId(customer.id);
-    setSelectedCustomerName(customer.customerName);
-    setCustomerInput(customer.customerName);
-    setCustomerSuggestions([]); // Hide suggestions
+ const handleCustomerSelect = async (customer) => {
+   setSelectedCustomerId(customer.id);
+   setSelectedCustomerName(customer.customerName);
+   setCustomerInput(customer.customerName);
+   setCustomerSuggestions([]); // Hide suggestions
 
-    try {
-      const response = await axios.get(
-        `${baseUrl}/customers/${customer.id}`
-      );
-      const customerData = response.data;
+   try {
+     const response = await axios.get(
+       `${baseUrl}/customers/${customer.id}`
+     );
+     const customerData = response.data;
 
-      if (customerData.invoiceType) {
-        setSelectedInvoiceType(customerData.invoiceType || "Both"); // Set invoice type (S, G, or Both)
-      } else {
-        setSelectedInvoiceType("Both"); // Default to 'Both' if missing
-      }
-    } catch (error) {
-      console.error("Error fetching customer details:", error);
-      setSelectedInvoiceType("Both"); // Default fallback
-    }
-  };
+     if (customerData.invoiceType) {
+       setSelectedInvoiceType(customerData.invoiceType || "Both");
+     } else {
+       setSelectedInvoiceType("Both");
+     }
+
+    // 🔹 Map useful fields for the preview modal
+    setCustomerPreview({
+      customerName: customerData.customerName || "",
+     customerAddress: customerData.address || "",
+      customerPhone: customerData.phoneNumber || "",
+      customerAccountNumber: customerData.customerAccountNumber || "",
+      customerTaxNumber: customerData.financialNumber || "",
+      currencyCode: customerData.currency?.currencyCode || "USD",
+    });
+   } catch (error) {
+     console.error("Error fetching customer details:", error);
+     setSelectedInvoiceType("Both"); // Default fallback
+
+    // Keep at least the selected name so preview shows something
+    setCustomerPreview((prev) => ({
+        ...prev,
+      customerName: customer.customerName || prev.customerName,
+    }));
+   }
+ };
+
 
   const handleKeyDown = (e) => {
     if (customerSuggestions.length === 0) return;
@@ -521,56 +545,87 @@ const quantity =
   };
 
   const handleSelectInvoice = (invoice) => {
-    console.log("Selected Invoice:", invoice);
+  console.log("Selected Invoice:", invoice);
+  if (!invoice) return;
 
-    if (!invoice) return;
+  setSelectedInvoiceId(invoice.invoiceId || null);
+  setSelectedRequestId(null);
 
-    setSelectedInvoiceId(invoice.invoiceId || null);
-    setSelectedRequestId(null);
+  const vatPercentage = invoice.vatPercentage
+    ? parseFloat(invoice.vatPercentage).toString()
+    : "11";
 
-    const vatPercentage = invoice.vatPercentage
-      ? parseFloat(invoice.vatPercentage).toString()
-      : "11";
+  const currencyRateValue = invoice.currencyRate
+    ? parseFloat(invoice.currencyRate).toString()
+    : "89000";
 
-    const currencyRateValue = invoice.currencyRate
-      ? parseFloat(invoice.currencyRate).toString()
-      : "89000";
+  // 🔹 Fill regular POS fields
+  setCustomerInput(invoice.customerName);
+  setSelectedCustomerId(invoice.customerId);
+  setSelectedCustomerName(invoice.customerName || "");
+  setCurrencyRate(currencyRateValue);
+  setIsEditable(false);
+  setVat(vatPercentage);
 
-    setCustomerInput(invoice.customerName);
-    setSelectedCustomerId(invoice.customerId);
-    setSelectedCustomerName(invoice.customerName || "");
-    setCurrencyRate(currencyRateValue);
-    setIsEditable(false);
-    setVat(vatPercentage);
+  // 🔹 NEW: pass customer details into preview (works with your updated backend payload)
+  // Prefer flat fields on the invoice; fall back to nested invoice.customer if needed.
+  setCustomerPreview({
+    customerName:
+      invoice.customerName ??
+      invoice.customer?.customerName ??
+      "",
+    customerAddress:
+      invoice.customerAddress ??
+      invoice.customer?.address ??
+      "",
+    customerPhone:
+      invoice.customerPhone ??
+      invoice.customer?.phoneNumber ??
+      "",
+    customerAccountNumber:
+      invoice.customerAccountNumber ??
+      invoice.customer?.customerAccountNumber ??
+      "",
+    customerTaxNumber:
+      invoice.customerTaxNumber ??
+      invoice.customer?.financialNumber ??
+      "",
+    currencyCode:
+      invoice.currencyCode ??
+      invoice.customer?.currency?.currencyCode ??
+      "USD",
+  });
 
-    const updatedTableData = invoice.items
-      .map((item) => {
-        if (!item.itemVariantId || !item.itemName) {
-          console.warn("Skipping invalid item:", item);
-          return null;
-        }
+  // Build items table rows for center grid
+  const updatedTableData = (invoice.items || [])
+    .map((item) => {
+      if (!item.itemVariantId || !item.itemName) {
+        console.warn("Skipping invalid item:", item);
+        return null;
+      }
+      return {
+        origin: item.origin || "",
+        item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
+        type: item.itemType || "",
+        length: item.length || "",
+        width: item.width || "",
+        sqm: item.sqm || "",
+        price: item.unitPrice || "",
+        total: item.totalAmount || "0.00",
+        box: item.itemType === "box" ? item.quantity : "",
+        sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
+        itemVariantId: item.itemVariantId,
+      };
+    })
+    .filter(Boolean);
 
-        return {
-          origin: item.origin || "",
-          item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
-          type: item.itemType || "",
-          length: item.length || "",
-          width: item.width || "",
-          sqm: item.sqm || "",
-          price: item.unitPrice || "",
-          total: item.totalAmount || "0.00",
-          box: item.itemType === "box" ? item.quantity : "",
-          sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
-          itemVariantId: item.itemVariantId,
-        };
-      })
-      .filter(Boolean);
+  console.log("Updated Table Data:", updatedTableData);
+  setTableData(updatedTableData);
 
-    console.log("Updated Table Data:", updatedTableData);
+  // Keep whole invoice for the modal (numbers, items, etc.)
+  setInvoiceData(invoice);
+};
 
-    setTableData(updatedTableData);
-    setInvoiceData(invoice);
-  };
 
   useEffect(() => {
     console.log("Updated selected invoice id:", selectedInvoiceId);
@@ -800,10 +855,23 @@ const quantity =
           />
           
  {showPreview && (
-  <InvoiceModal
-    isOpen={showPreview}
-    onClose={() => setShowPreview(false)}
-    invoiceData={invoiceData}           // <-- the object you already set in handleSelectInvoice
+<InvoiceModal
+  isOpen={showPreview}
+  onClose={() => setShowPreview(false)}
+  invoiceData={{
+    // put preview fallbacks first…
+    ...customerPreview,
+    // …then let the selected invoice’s own fields win
+    ...(invoiceData || {}),
+    // finally, only fall back to UI state if the invoice didn’t have a value
+    date: (invoiceData?.date ?? date),
+    vatPercentage: (invoiceData?.vatPercentage ?? (Number(vat) || 0)),
+    currencyRate: (invoiceData?.currencyRate ?? (Number(currencyRate) || 1)),
+    currencyCode: (invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD"),
+    invoiceType: (invoiceData?.invoiceType ?? selectedInvoiceType ?? "S"),
+  }}
+
+
        cssHref="/invoicePreview.css"       // put this CSS in /public
   />
 )}
