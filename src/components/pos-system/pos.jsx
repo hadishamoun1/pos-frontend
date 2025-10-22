@@ -82,15 +82,15 @@ const handleReorder = (newRows) => {
     onConfirm: null,
   });
 
-// Helper: recompute unique batch IDs from current rows
-const syncSelectedBatchIdsFromTable = (rows) => {
+
+  const syncSelectedBatchIdsFromTable = (rows) => {
   const ids = Array.from(
     new Set(rows.map(r => r.batchId).filter(id => id !== undefined && id !== null))
   );
   setSelectedBatchIds(ids);
 };
 
-// Replace your handleSelectItems with this:
+
 const handleSelectItems = (selectedItems) => {
   const newRows = selectedItems.map((item) => {
     const length = parseFloat(item.length);
@@ -113,7 +113,7 @@ const handleSelectItems = (selectedItems) => {
 
     return {
       itemVariantId: item.itemVariantId,
-      batchId: item.batchId,           // <-- key for dedupe
+      batchId: item.batchId,          
       origin: item.origin || "",
       item: `${parseFloat(item.thickness)} ملم ${item.itemName}` || "",
       type: item.type || "",
@@ -129,9 +129,9 @@ const handleSelectItems = (selectedItems) => {
   });
 
   setTableData((prev) => {
-    // merge without duplicating same batchId
+ 
     const byId = new Map(prev.map(r => [r.batchId, r]));
-    newRows.forEach(r => byId.set(r.batchId, r)); // replace/insert
+    newRows.forEach(r => byId.set(r.batchId, r)); 
     return Array.from(byId.values());
   });
 };
@@ -189,9 +189,9 @@ const handleSelectItems = (selectedItems) => {
 
 
   // ====================== PRICING (Get Price) ======================
-  // ✅ When user presses "Get Price": call the new API with customer + batch IDs and show in PricingTable
+
 const handleGetPriceClick = async () => {
-  // derive the fresh list of batch IDs from the current table
+
   const ids = Array.from(
     new Set(tableData.map((r) => r.batchId).filter((id) => id !== undefined && id !== null))
   );
@@ -207,7 +207,7 @@ const handleGetPriceClick = async () => {
 
   try {
     setLoading(true);
-    setSelectedBatchIds(ids); // keep state in sync (PricingTable refresh uses this)
+    setSelectedBatchIds(ids); 
     const res = await axios.get(
       `${baseUrl}/invoices/v1/browsing/by-item-batches/${selectedCustomerId}`,
       { params: { itemBatchIds: ids } }
@@ -252,7 +252,7 @@ useEffect(() => {
 
       setPricingGroups((prev) => {
         if (!Array.isArray(prev)) return prev;
-        const pageObj = res.data; // { groupKey, items, total, totalPages, page }
+        const pageObj = res.data; 
         return prev.map((g) =>
           g.groupKey === groupKey
             ? {
@@ -320,7 +320,7 @@ const handleInputChange = (index, field, value) => {
   // 👉 If this row is "sqm", keep whatever the user types in sqm
   if (row.type === "sqm") {
     const price = parseFloat(row.price) || 0;
-    const sqm = parseFloat(row.sqm) || 0;   // user-entered
+    const sqm = parseFloat(row.sqm) || 0;  
     row.total = (sqm * price).toFixed(2);
     setTableData(newData);
     return;
@@ -402,9 +402,9 @@ const handleDeleteRow = () => {
     setCustomerInput(query);
 
     if (query.length > 1) {
-      fetchCustomers(query); // Fetch only if input length > 1
+      fetchCustomers(query); 
     } else {
-      setCustomerSuggestions([]); // Clear suggestions if input is too short
+      setCustomerSuggestions([]); 
     }
   };
 
@@ -412,7 +412,7 @@ const handleDeleteRow = () => {
    setSelectedCustomerId(customer.id);
    setSelectedCustomerName(customer.customerName);
    setCustomerInput(customer.customerName);
-   setCustomerSuggestions([]); // Hide suggestions
+   setCustomerSuggestions([]); 
 
    try {
      const response = await axios.get(
@@ -426,7 +426,7 @@ const handleDeleteRow = () => {
        setSelectedInvoiceType("Both");
      }
 
-    // 🔹 Map useful fields for the preview modal
+  
     setCustomerPreview({
       customerName: customerData.customerName || "",
      customerAddress: customerData.address || "",
@@ -437,9 +437,9 @@ const handleDeleteRow = () => {
     });
    } catch (error) {
      console.error("Error fetching customer details:", error);
-     setSelectedInvoiceType("Both"); // Default fallback
+     setSelectedInvoiceType("Both"); 
 
-    // Keep at least the selected name so preview shows something
+   
     setCustomerPreview((prev) => ({
         ...prev,
       customerName: customer.customerName || prev.customerName,
@@ -508,8 +508,8 @@ const quantity =
       customerId: selectedCustomerId,
       date,
       invoiceType, // should be "S"
-      documentNumber: "DOC-0001", // Can be replaced with actual document number if needed
-      currencyId: 1, // You can make this dynamic later
+      documentNumber: "DOC-0001", 
+      currencyId: 1, 
       totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
       totalVAT: Number(totalVAT.toFixed(2)),
       grandTotal: Number(grandTotal.toFixed(2)),
@@ -567,8 +567,7 @@ const quantity =
   setIsEditable(false);
   setVat(vatPercentage);
 
-  // 🔹 NEW: pass customer details into preview (works with your updated backend payload)
-  // Prefer flat fields on the invoice; fall back to nested invoice.customer if needed.
+
   setCustomerPreview({
     customerName:
       invoice.customerName ??
@@ -859,11 +858,8 @@ const quantity =
   isOpen={showPreview}
   onClose={() => setShowPreview(false)}
   invoiceData={{
-    // put preview fallbacks first…
     ...customerPreview,
-    // …then let the selected invoice’s own fields win
     ...(invoiceData || {}),
-    // finally, only fall back to UI state if the invoice didn’t have a value
     date: (invoiceData?.date ?? date),
     vatPercentage: (invoiceData?.vatPercentage ?? (Number(vat) || 0)),
     currencyRate: (invoiceData?.currencyRate ?? (Number(currencyRate) || 1)),
@@ -872,7 +868,7 @@ const quantity =
   }}
 
 
-       cssHref="/invoicePreview.css"       // put this CSS in /public
+       cssHref="/invoicePreview.css"       
   />
 )}
 
@@ -929,8 +925,7 @@ const quantity =
 {/* Always show PricingTable when toggle is ON */}
 {showOnlyCenter && (
   <PricingTable
-    // If we have API data from "Get Price", show it (controlled mode).
-    // If not, omit presetGroups to let the table work in its normal mode.
+
     presetGroups={Array.isArray(pricingGroups) ? pricingGroups : undefined}
     onRequestLoadMore={handlePricingLoadMore}
     customerName={selectedCustomerName} 
