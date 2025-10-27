@@ -41,6 +41,7 @@ const POSSystemPage = () => {
   const [pricingGroups, setPricingGroups] = useState(null);
 const [invoiceSearch, setInvoiceSearch] = useState("");
 const [requestSearch, setRequestSearch] = useState("");
+const [editingInvoiceType, setEditingInvoiceType] = useState(null);
 const [customerPreview, setCustomerPreview] = useState({
   customerName: "",
   customerAddress: "",
@@ -309,6 +310,7 @@ useEffect(() => {
     setIsEditable(true);
         setSelectedBatchIds([]);
     setPricingGroups(null);
+    setEditingInvoiceType(null);
   };
 
 const handleInputChange = (index, field, value) => {
@@ -420,11 +422,13 @@ const handleDeleteRow = () => {
      );
      const customerData = response.data;
 
-     if (customerData.invoiceType) {
-       setSelectedInvoiceType(customerData.invoiceType || "Both");
-     } else {
-       setSelectedInvoiceType("Both");
-     }
+   if (!selectedInvoiceId) {
+   if (customerData.invoiceType) {
+     setSelectedInvoiceType(customerData.invoiceType || "Both");
+   } else {
+     setSelectedInvoiceType("Both");
+   }
+ }
 
   
     setCustomerPreview({
@@ -550,6 +554,7 @@ const quantity =
 
   setSelectedInvoiceId(invoice.invoiceId || null);
   setSelectedRequestId(null);
+  setEditingInvoiceType(invoice.invoiceType || 'S'); 
 
   const vatPercentage = invoice.vatPercentage
     ? parseFloat(invoice.vatPercentage).toString()
@@ -614,6 +619,7 @@ const quantity =
         box: item.itemType === "box" ? item.quantity : "",
         sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
         itemVariantId: item.itemVariantId,
+         batchId: item.itemBatchId ?? null,
       };
     })
     .filter(Boolean);
@@ -705,50 +711,90 @@ const quantity =
   const handleEditInvoice = async () => {
     setIsEditable(true);
   };
+const handleSaveInvoice = async () => {
+  if (!selectedInvoiceId) {
+    console.error("Invoice ID is missing.");
+    return;
+  }
 
-  const handleSaveInvoice = async () => {
-    if (!selectedInvoiceId) {
-      console.error("Invoice ID is missing.");
-      return;
+  setLoading(true);
+
+  // Build line items with required IDs and numbers
+  const formattedItems = tableData.map((row, idx) => {
+    const unitPrice = Number(row.price) || 0;
+    const sqm = Number(row.sqm) || 0;
+
+    // quantity by type
+    const quantity =
+      row.type === "box"  ? Number(row.box)  :
+      row.type === "sheet"? Number(row.sheet):
+      row.type === "sqm"  ? Number(row.sqm)  : 0;
+
+    const totalAmount = Number((sqm * unitPrice).toFixed(2));
+    const vatNum = Number(row.vat) || 0;
+
+    if (row.batchId == null) {
+      console.warn(`Row ${idx} missing batchId`, row);
     }
 
-    setLoading(true);
-
-    // Ensure that the data is formatted to match backend expectations
-    const formattedItems = tableData.map((item) => ({
-      itemVariantId: item.itemVariantId,
-      sqm: parseFloat(item.sqm) || 0,
-      unitPrice: parseFloat(item.price) || 0,
-      vat: parseFloat(item.vat) || 0,
-      quantity: parseInt(item.box || item.sheet, 10),
-    }));
-
-    const invoiceData = {
-      id: selectedInvoiceId,
-      customerId: selectedCustomerId,
-      invoiceType: selectedInvoiceType,
-      date,
-      currencyRate: parseFloat(currencyRate) || 1,
-      vatPercentage: parseFloat(vat) || 0,
-      items: formattedItems,
+    return {
+      // existing line id (if present)
+      id: row.invoiceItemId ?? undefined,
+      // REQUIRED for backend math
+      itemBatchId: Number(row.batchId),
+      itemVariantId: Number(row.itemVariantId),
+      sqm,
+      unitPrice,
+      totalAmount,
+      vat: vatNum,
+      quantity,
+       invoiceId: Number(selectedInvoiceId),
     };
+  });
 
-    console.log("📤 Sending Invoice Data:", invoiceData);
+  // Header totals (like create payload)
+  const vatPct = Number(vat) || 0;
+  const vatRate = vatPct / 100;
+  const totalWithoutVAT = formattedItems.reduce((a, it) => a + it.totalAmount, 0);
+  const totalVAT = formattedItems.reduce((a, it) => a + (it.totalAmount * vatRate), 0);
+  const grandTotal = totalWithoutVAT + totalVAT;
 
-    try {
-      const response = await axios.put(
-        `${baseUrl}/invoices/${selectedInvoiceId}`,
-        invoiceData
-      );
-      console.log("Invoice Updated:", response.data);
-      showNotification("success", "Invoice updated successfully!");
-    } catch (err) {
-      console.error("Error saving invoice:", err);
-      showNotification("error", `Failed to save invoice: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  // ✅ Use the locked type if we’re editing an invoice; otherwise fall back
+  const typeToSave = editingInvoiceType ?? selectedInvoiceType;
+
+  const invoiceData = {
+    id: selectedInvoiceId,
+    customerId: selectedCustomerId,
+    invoiceType: typeToSave,                // 'S' | 'G' | 'RVR' (never "Both")
+    date,
+    currencyRate: Number(currencyRate) || 1,
+    vatPercentage: vatPct,
+    totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
+    totalVAT: Number(totalVAT.toFixed(2)),
+    grandTotal: Number(grandTotal.toFixed(2)),
+    items: formattedItems,
   };
+
+  console.log("📤 Sending Invoice Update Payload:", invoiceData);
+
+  try {
+    const response = await axios.put(
+      `${baseUrl}/invoices/${selectedInvoiceId}`,
+      invoiceData
+    );
+    console.log("✅ Invoice Updated:", response.data);
+    showNotification("success", "Invoice updated successfully!");
+  } catch (err) {
+    console.error("❌ Error saving invoice:", err);
+    showNotification(
+      "error",
+      `Failed to save invoice: ${err.response?.data?.message || err.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleCreateRequest = async () => {
     if (!selectedCustomerId || tableData.length === 0) {

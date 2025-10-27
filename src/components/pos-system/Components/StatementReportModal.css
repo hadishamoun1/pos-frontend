@@ -8,7 +8,6 @@
   justify-content: center;
   z-index: 5000;
 }
-
 .statement-report-modal {
   width: min(980px, 96vw);
   max-height: 98vh;
@@ -28,123 +27,52 @@
   padding: 8px 12px;
   border-bottom: 1px solid #d9d9d9;
 }
-
-.statement-report-modal-toolbar h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-}
-
+.statement-report-modal-toolbar h3 { margin: 0; font-size: 16px; font-weight: 700; }
 .statement-report-modal-toolbar .btn {
-  padding: 8px 14px;
-  border: none;
-  border-radius: 8px;
-  background: #2563eb;
-  color: #fff;
-  cursor: pointer;
+  padding: 8px 14px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer;
 }
-.statement-report-modal-toolbar .btn.btn-secondary {
-  background: #e5e7eb;
-  color: #111827;
-}
+.statement-report-modal-toolbar .btn.btn-secondary { background: #e5e7eb; color: #111827; }
 
-.statement-report-modal-body {
-  padding: 8px;
-  overflow: auto; /* scrolls the A4 page when needed */
-  background: #f8fafc;
-}
+.statement-report-modal-body { padding: 8px; overflow: auto; background: #f8fafc; }
 
-/* A4 page wrapper shown inside the modal body */
+/* A4 page wrapper shown inside the modal body (screen only) */
 .statement-report-modal-a4 {
-  width: 794px;          /* A4 width at 96dpi */
-  min-height: 1120px;    /* A4 height */
+  width: 794px;            /* A4 width at 96dpi (screen preview only) */
+  min-height: 1120px;      /* A4 height */
   margin: 0 auto;
   background: #fff;
   box-shadow: 0 0 0 1px #e5e7eb inset;
   padding-bottom: 8px;
 }
 
-/* ====== HEADER — FIXED LAYOUT ====== */
+/* ====== HEADER ====== */
 .statement-report-modal-header {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* right (AR) | left (EN) */
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
   padding: 8px 10px;
   border: 1px solid #000;
   margin: 8px;
-  min-height: 138px; /* can grow with content */
+  min-height: 138px;
   align-items: start;
   box-sizing: border-box;
   direction: rtl;
   font-family: "Times New Roman", Times, serif;
 }
-
 .statement-report-modal-header-right,
-.statement-report-modal-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* Arabic (right) */
-.statement-report-modal-header-right {
-  text-align: right;
-  direction: rtl;
-  font-size: 15px;
-  line-height: 1.25;
-}
-.statement-report-modal-company-arabic-title {
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0;
-  font-family: Arial, sans-serif;
-  line-height: 1.1;
-}
-.statement-report-modal-company-arabic-subtitle {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0;
-  font-family: Arial, sans-serif;
-  line-height: 1.1;
-}
+.statement-report-modal-header-left { display: flex; flex-direction: column; gap: 4px; }
+.statement-report-modal-header-right { text-align: right; direction: rtl; font-size: 15px; line-height: 1.25; }
+.statement-report-modal-company-arabic-title { font-size: 24px; font-weight: 700; margin: 0; font-family: Arial, sans-serif; line-height: 1.1; }
+.statement-report-modal-company-arabic-subtitle { font-size: 22px; font-weight: 700; margin: 0; font-family: Arial, sans-serif; line-height: 1.1; }
 .statement-report-modal-small-subtitle { margin: 0; font-weight: 400; }
-
-.statement-report-modal-arabic-contact {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
-}
-.statement-report-modal-arabic-line {
-  display: grid;
-  grid-template-columns: 90px 12px 1fr; /* label | : | value */
-  align-items: center;
-}
+.statement-report-modal-arabic-contact { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.statement-report-modal-arabic-line { display: grid; grid-template-columns: 90px 12px 1fr; align-items: center; }
 .statement-report-modal-arabic-label { text-align: right; }
 .statement-report-modal-arabic-colon { text-align: center; }
 .statement-report-modal-arabic-value { direction: ltr; }
-
-/* English (left) */
-.statement-report-modal-header-left {
-  direction: ltr;
-  text-align: left;
-  font-size: 15px;
-  line-height: 1.25;
-}
-.statement-report-modal-company-title {
-  font-size: 24px;
-  font-weight: 400;
-  margin: 0;
-  font-family: Arial, sans-serif;
-  line-height: 1.1;
-}
-.statement-report-modal-company-subtitle {
-  font-size: 22px;
-  font-weight: 400;
-  margin: 0;
-  font-family: Arial, sans-serif;
-  line-height: 1.1;
-}
+.statement-report-modal-header-left { direction: ltr; text-align: left; font-size: 15px; line-height: 1.25; }
+.statement-report-modal-company-title { font-size: 24px; font-weight: 400; margin: 0; font-family: Arial, sans-serif; line-height: 1.1; }
+.statement-report-modal-company-subtitle { font-size: 22px; font-weight: 400; margin: 0; font-family: Arial, sans-serif; line-height: 1.1; }
 .statement-report-modal-header-left p { margin: 0; }
 
 @media (max-width: 820px) {
@@ -154,269 +82,111 @@
   .statement-report-modal-company-arabic-subtitle { font-size: 19px; }
 }
 
-/* ====== CENTERED TITLE ====== */
+/* ====== TITLE / CLIENT / INFO ====== */
 .statement-report-modal-titlebar {
   margin: 0 8px 6px 8px;
   padding: 6px 10px;
- 
-  box-sizing: border-box;
   text-align: center;
   font-weight: 700;
   font-size: 23px;
   background: #fff;
 }
-
-/* ====== CLIENT LINE ====== */
 .statement-report-modal-clientline {
-  display: grid;
-  grid-template-columns: 80px 12px 1fr; /* label | : | value */
-  align-items: center;
-  padding: 6px 10px;
-  margin: 0 8px 6px 8px;
-  border: 1px solid #000;
-  box-sizing: border-box;
-  direction: rtl;
-  font-family: Arial, sans-serif;
-  font-size: 15px;
+  display: grid; grid-template-columns: 80px 12px 1fr;
+  align-items: center; padding: 6px 10px; margin: 0 8px 6px 8px;
+  border: 1px solid #000; box-sizing: border-box; direction: rtl;
+  font-family: Arial, sans-serif; font-size: 15px;
 }
-.statement-report-modal-clientline-label {
-  text-align: right;
-  font-weight: 700;
-}
+.statement-report-modal-clientline-label { text-align: right; font-weight: 700; }
 .statement-report-modal-clientline-colon { text-align: center; }
-.statement-report-modal-clientline-value {
-  text-align: right;
-  direction: rtl;
-  font-size: 18px;
-  font-weight: bold;
-}
+.statement-report-modal-clientline-value { text-align: right; direction: rtl; font-size: 18px; font-weight: bold; }
 
-/* ====== TWO-ROW INFO TABLE ====== */
 .statement-report-modal-info {
   width: 80%;
-  /*          T   R    B    L  */
-  margin: 0 8px 6px auto;  /* right = 8px, left = auto → stick to right */
-
-  box-sizing: border-box;
-  background: #fff;
+  margin: 0 8px 6px auto;
+  box-sizing: border-box; background: #fff;
 }
+.statement-report-modal-info-table { width: 100%; border-collapse: separate; border-spacing: 4px 4px; font-family: Arial, sans-serif; font-size: 15px; direction: rtl; }
 .statement-report-modal-info-table th,
-.statement-report-modal-info-table td {
-  border: 1px solid #000 !important;
-}
+.statement-report-modal-info-table td { border: 1px solid #000 !important; }
+.statement-report-modal-info-table thead th { background: #f9fafb; padding: 6px 8px; text-align: center; white-space: nowrap; }
+.statement-report-modal-info-table tbody td { padding: 6px 8px; text-align: center; direction: ltr; }
 
-.statement-report-modal-info-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-family: Arial, sans-serif;
-  font-size: 15px;
-  direction: rtl;
-   border-spacing: 4px 4px;  
-}
-.statement-report-modal-info-table thead th {
-  background: #f9fafb;
-  padding: 6px 8px;
-  text-align: center;
-  white-space: nowrap;
-}
-.statement-report-modal-info-table tbody td {
-  padding: 6px 8px;
-  text-align: center;
-  direction: ltr; /* numbers & dates */
-}
-.statement-report-modal-info-table th,
-.statement-report-modal-info-table td {
-  border-left: 1px solid #000;
-}
-
-
-/* ====== TRANSACTIONS TABLE WRAP & TABLE ====== */
+/* ====== TABLE ====== */
 .statement-report-modal-table-wrap {
-  max-height: none;
-  overflow: visible;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  margin: 8px;
-  background: #fff;
+  max-height: none; overflow: visible; border: 1px solid #eee; border-radius: 8px; margin: 8px; background: #fff;
 }
-
-.statement-report-modal-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-spacing: 0;
-  font-family: Arial, sans-serif;
-  font-size: 15px;
-  direction: rtl;
-}
-
+.statement-report-modal-table { width: 100%; border-collapse: collapse; border-spacing: 0; font-family: Arial, sans-serif; font-size: 15px; direction: rtl; }
 .statement-report-modal-table thead th {
-  position: sticky;
-  top: 0;
-  background: rgb(230, 230, 230);
-  z-index: 1;
-  padding: 8px;
-  text-align: center;
-  border-top: 1px solid #bdbdbd;
-  border-bottom:  2px solid #707070;
-  border-left:  1px solid #bdbdbd;
-  border-right:  1px solid #bdbdbd;
+  position: sticky; top: 0; background: rgb(230, 230, 230); z-index: 1;
+  padding: 8px; text-align: center;
+  border-top: 1px solid #bdbdbd; border-bottom: 2px solid #707070;
+  border-left: 1px solid #bdbdbd; border-right: 1px solid #bdbdbd;
   white-space: nowrap;
-
-
 }
-.statement-report-modal-table td {
-  padding: 8px;
-  border: 1px solid #bcbcbc;
-  text-align: center;
-}
+.statement-report-modal-table td { padding: 8px; border: 1px solid #bcbcbc; text-align: center; }
 
-
-/* small gap between THEAD and first TBODY row */
-.statement-report-thead-gap td {
-  height: 3px;              /* ← gap size */
-  padding: 0;
-  border: none !important;
-  background: transparent;
-  line-height: 0;
-}
-
+.statement-report-thead-gap td { height: 3px; padding: 0; border: none !important; background: transparent; line-height: 0; }
 
 .statement-report-modal-table tbody tr:hover { background: rgb(207,241,255); }
 .statement-report-modal-table tbody tr:nth-child(even) { background: #fafafa; }
 
-/* Column alignment — order: Date, Doc No, Desc, Debit, Credit, Balance */
+/* per-column alignments */
 .statement-report-modal-table th:nth-child(1),
-.statement-report-modal-table td:nth-child(1) {
-  direction: ltr;
-  text-align: center;
-  white-space: nowrap;
-
-}
+.statement-report-modal-table td:nth-child(1) { direction: ltr; text-align: center; white-space: nowrap; }
 .statement-report-modal-table th:nth-child(2),
-.statement-report-modal-table td:nth-child(2) {
-  direction: ltr;
-  text-align: left;
- 
-}
+.statement-report-modal-table td:nth-child(2) { direction: ltr; text-align: left; }
 .statement-report-modal-table th:nth-child(3),
-.statement-report-modal-table td:nth-child(3) {
-  direction: rtl;
-  text-align: right;
-  white-space: normal;
-  word-break: break-word;
-}
+.statement-report-modal-table td:nth-child(3) { direction: rtl; text-align: right; white-space: normal; word-break: break-word; }
 .statement-report-modal-table th:nth-child(4),
 .statement-report-modal-table td:nth-child(4),
 .statement-report-modal-table th:nth-child(5),
 .statement-report-modal-table td:nth-child(5),
 .statement-report-modal-table th:nth-child(6),
-.statement-report-modal-table td:nth-child(6) {
-  direction: ltr;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.statement-report-modal-table td:nth-child(6) { direction: ltr; text-align: right; font-variant-numeric: tabular-nums; }
+
+.statement-report-modal-summary-row td:nth-child(5) { font-weight: bold; text-align: right; }
+.statement-report-modal-summary-row td:nth-child(6) { font-weight: bold; }
+
+.statement-report-modal-opening-row td { font-weight: 600; background: #f7fbff; }
+
+/* Screen-only: keep sticky and avoid awkward breaks in preview */
+@media screen {
+  .statement-report-modal-table tr { break-inside: avoid; page-break-inside: avoid; }
 }
 
-
-.statement-report-modal-summary-row td:nth-child(5) {
-  font-weight: bold;
-  text-align: right;
-  
-}
-.statement-report-modal-summary-row td:nth-child(6) {
-  font-weight: bold;
-}
-
-
-/* Opening row emphasis (optional) */
-.statement-report-modal-opening-row td {
-  font-weight: 600;
-  background: #f7fbff;
-}
-
-
-/* ---- PRINT EXACTLY THE A4 REPORT, FULL WIDTH ---- */
-
-/* Use a realistic printable margin so the browser doesn't shrink further */
-@page {
-  size: A4 portrait;
-  margin: 10mm;               /* adjust to your printer if needed */
-}
-
+/* PRINT */
+@page { size: A4 portrait; margin: 10mm; }
 @media print {
+  .statement-report-modal-overlay { position: static !important; inset: auto !important; background: transparent !important; display: block !important; width: 100% !important; height: auto !important; }
+  .statement-report-modal { width: 100% !important; max-width: none !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; margin: 0 !important; }
+  .statement-report-modal-toolbar { display: none !important; }
+  .statement-report-modal-body { padding: 0 !important; overflow: visible !important; background: transparent !important; }
+
+  .statement-report-modal-a4 { width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
+
+.statement-report-modal-table thead { display: table-header-group; }
+.statement-report-modal-table tfoot { display: table-row-group; }  /* print once at end */
+.statement-report-modal-summary-row { 
+  page-break-inside: avoid; 
+  break-inside: avoid; 
+}
 
 
-  /* Turn overlay into normal page content */
-  .statement-report-modal-overlay {
-    position: static !important;
-    inset: auto !important;
-    background: transparent !important;
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
-  }
+/* Print the footer ONLY once at the end (don’t repeat on each page) */
+.statement-report-modal-table tfoot { 
+  display: table-row-group;     /* becomes part of the body */
+}
+.statement-report-modal-summary-row {
+  page-break-inside: avoid;     /* keep total row intact */
+  break-inside: avoid;
+}
 
-  /* Remove modal sizing that causes shrinking */
-  .statement-report-modal {
-    width: 100% !important;         /* ignore min(980px, 96vw) */
-    max-width: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-    margin: 0 !important;
-  }
 
-  /* Hide the toolbar entirely */
-  .statement-report-modal-toolbar {
-    display: none !important;
-  }
+  .print-page-counter::after { content: counter(page) " / " counter(pages); }
 
-  /* No inner padding/scroll in print */
-  .statement-report-modal-body {
-    padding: 0 !important;
-    overflow: visible !important;
-    background: transparent !important;
-  }
-
-  /* Make the A4 wrapper fill the page content box (not fixed 794px) */
-  .statement-report-modal-a4 {
-    width: 100% !important;         /* expands to @page width minus margins */
-    min-height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    break-after: page;
-    page-break-after: always;       /* legacy fallback */
-  }
-  .statement-report-modal-a4:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  /* Remove margins that waste space in print */
-  .statement-report-modal-header,
-  .statement-report-modal-titlebar,
-  .statement-report-modal-clientline,
-  .statement-report-modal-info,
-  .statement-report-modal-table-wrap {
-    margin: 1 !important;
-  }
-
-  /* Disable sticky and avoid splitting rows */
-  .statement-report-modal-table thead th { position: static !important; }
-  .statement-report-modal-table tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  /* Keep colors solid in print */
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
 /* small gap above the summary row at the bottom */
-.statement-report-tfoot-gap td {
-  height: 5px;             /* gap size */
-  padding: 0;
-  border: none !important;
-  background: transparent;
-  line-height: 0;
-}
+.statement-report-tfoot-gap td { height: 5px; padding: 0; border: none !important; background: transparent; line-height: 0; }

@@ -22,9 +22,9 @@ const JournalVoucherPage = () => {
   });
   const [entries, setEntries] = useState([
     {
-   accountId: null,
+      accountId: null,
       customerId: null,
-  supplierId: null,
+      supplierId: null,
       accountNumber: "",
       accountName: "",
       currency: "",
@@ -74,9 +74,9 @@ const JournalVoucherPage = () => {
     setEntries((e) => [
       ...e,
       {
-          accountId: null,
-      customerId: null,
-  supplierId: null,
+        accountId: null,
+        customerId: null,
+        supplierId: null,
         accountNumber: "",
         accountName: "",
         currency: "",
@@ -119,64 +119,59 @@ const JournalVoucherPage = () => {
     entry.debitExOFR = "0";
     entry.creditExOFR = "0";
 
-   // TYPE S
-if (type === "S") {
-  if (entry.currency === "USD") {
-    entry.debitUSD  = toS(d);
-    entry.creditUSD = toS(c);
+    // TYPE S
+    if (type === "S") {
+      if (entry.currency === "USD") {
+        entry.debitUSD = toS(d);
+        entry.creditUSD = toS(c);
 
-    // Keep OFR base equal to base for S-USD
-    entry.debitOFR  = toS(d);
-    entry.creditOFR = toS(c);
+        // Keep OFR base equal to base for S-USD
+        entry.debitOFR = toS(d);
+        entry.creditOFR = toS(c);
 
-    // LL = base * rate
-    entry.debitEx   = toS(d * r);          // ✅ Dr LL = Dr * rate
-    entry.creditEx  = toS(c * r);          // ✅ Cr LL = Cr * rate
+        // LL = base * rate
+        entry.debitEx = toS(d * r);
+        entry.creditEx = toS(c * r);
 
-    // LL OFR = OFR * rate  (use ofrD/ofrC, not d/c)
-    entry.debitExOFR  = toS(ofrD * r);     // ✅ Dr LL OFR = Dr OFR * rate
-    entry.creditExOFR = toS(ofrC * r);     // ✅ Cr LL OFR = Cr OFR * rate
+        // LL OFR = OFR * rate
+        entry.debitExOFR = toS(ofrD * r);
+        entry.creditExOFR = toS(ofrC * r);
 
-    // USD OFR mirrors OFR amounts for S-USD
-    entry.debitUSDOFR  = toS(ofrD);        // equals d, but keep the intent explicit
-    entry.creditUSDOFR = toS(ofrC);
-  } else if (entry.currency === "LL") {
-    // (unchanged)
-    entry.debitEx     = toS(d);
-    entry.creditEx    = toS(c);
-    entry.debitExOFR  = toS(ofrD);
-    entry.creditExOFR = toS(ofrC);
-    entry.debitUSD    = toS(d / r);
-    entry.creditUSD   = toS(c / r);
-    entry.debitUSDOFR = toS(ofrD / r);
-    entry.creditUSDOFR= toS(ofrC / r);
-    entry.debit       = entry.debitEx;
-    entry.credit      = entry.creditEx;
-    entry.debitOFR    = entry.debitExOFR;
-    entry.creditOFR   = entry.creditExOFR;
-  }
-}
+        // USD OFR mirrors OFR amounts for S-USD
+        entry.debitUSDOFR = toS(ofrD);
+        entry.creditUSDOFR = toS(ofrC);
+      } else if (entry.currency === "LL") {
+        entry.debitEx = toS(d);
+        entry.creditEx = toS(c);
+        entry.debitExOFR = toS(ofrD);
+        entry.creditExOFR = toS(ofrC);
+        entry.debitUSD = toS(d / r);
+        entry.creditUSD = toS(c / r);
+        entry.debitUSDOFR = toS(ofrD / r);
+        entry.creditUSDOFR = toS(ofrC / r);
+        entry.debit = entry.debitEx;
+        entry.credit = entry.creditEx;
+        entry.debitOFR = entry.debitExOFR;
+        entry.creditOFR = entry.creditExOFR;
+      }
+    }
 
-      // (add EUR same pattern if needed)
-    
     // TYPE G
     else if (type === "G") {
       if (entry.currency === "USD") {
-        // base = zero
-        // OFR stays editable
+        // base = zero; OFR stays editable
         entry.debitUSDOFR = toS(ofrD);
         entry.creditUSDOFR = toS(ofrC);
         entry.debitExOFR = toS(ofrD * r);
         entry.creditExOFR = toS(ofrC * r);
-      }
-      // (LL)
-      else if (entry.currency === "LL") {
+      } else if (entry.currency === "LL") {
         entry.debitExOFR = toS(ofrD);
         entry.debitUSDOFR = toS(ofrD / r);
         entry.creditExOFR = toS(ofrC);
         entry.creditUSDOFR = toS(ofrC / r);
       }
     }
+
     // TYPE SR
     else if (type === "SR") {
       if (entry.currency === "USD") {
@@ -201,6 +196,7 @@ if (type === "S") {
       // (EUR if needed)
     }
   };
+
   const handleInputChange = (index, field, value) => {
     const updated = [...entries];
     const entry = updated[index];
@@ -208,14 +204,7 @@ if (type === "S") {
 
     if (
       !viewMode &&
-      [
-        "debit",
-        "credit",
-        "debitOFR",
-        "creditOFR",
-        "exchangeRate",
-        "currency",
-      ].includes(field)
+      ["debit", "credit", "debitOFR", "creditOFR", "exchangeRate", "currency"].includes(field)
     ) {
       recalcEntry(entry);
     }
@@ -230,33 +219,32 @@ if (type === "S") {
     setEntries(updated);
   };
 
-const handleAccountSelection = (entity) => {
-  if (currentRowIndex === null) {
-    alert("Please select a row to assign an account.");
-    return;
-  }
+  const handleAccountSelection = (entity) => {
+    if (currentRowIndex === null) {
+      alert("Please select a row to assign an account.");
+      return;
+    }
 
-  const updatedEntries = [...entries];
-  const row = updatedEntries[currentRowIndex];
+    const updatedEntries = [...entries];
+    const row = updatedEntries[currentRowIndex];
 
-  // clear previous FKs
-  row.accountId = null;
-  row.customerId = null;
-  row.supplierId = null;
+    // clear previous FKs
+    row.accountId = null;
+    row.customerId = null;
+    row.supplierId = null;
 
-  // set the correct FK based on what was chosen
-  if (entity.entityType === "account")  row.accountId  = entity.id;
-  if (entity.entityType === "customer") row.customerId = entity.id;
-  if (entity.entityType === "supplier") row.supplierId = entity.id;
+    // set the correct FK based on what was chosen
+    if (entity.entityType === "account") row.accountId = entity.id;
+    if (entity.entityType === "customer") row.customerId = entity.id;
+    if (entity.entityType === "supplier") row.supplierId = entity.id;
 
-  // display number/name in the grid
-  row.accountNumber = entity.accountNumber;
-  row.accountName   = entity.accountName;
+    // display number/name in the grid
+    row.accountNumber = entity.accountNumber;
+    row.accountName = entity.accountName;
 
-  setEntries(updatedEntries);
-  setIsModalOpen(false);
-};
-
+    setEntries(updatedEntries);
+    setIsModalOpen(false);
+  };
 
   const handleAccountNumberClick = (index) => {
     setCurrentRowIndex(index);
@@ -284,12 +272,24 @@ const handleAccountSelection = (entity) => {
     setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   };
 
-  const totalDebit = parseNumber(
+  // ===== Totals =====
+  // Base totals (used for S/SR)
+  const totalDebitBase = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0)
   );
-  const totalCredit = parseNumber(
+  const totalCreditBase = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0)
   );
+
+  // OFR totals (used for G)
+  const totalDebitOFR = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.debitOFR), 0)
+  );
+  const totalCreditOFR = parseNumber(
+    entries.reduce((sum, entry) => sum + parseNumber(entry.creditOFR), 0)
+  );
+
+  // Other totals you already had
   const totalDebitUSD = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0)
   );
@@ -303,46 +303,63 @@ const handleAccountSelection = (entity) => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
+  // Equality flags used for UI
+  const isEqualBase = totalDebitBase === totalCreditBase && totalDebitBase !== 0;
+  const isEqualOFR = totalDebitOFR === totalCreditOFR && totalDebitOFR !== 0;
+  const isUSDEqual = totalDebitUSD === totalCreditUSD;
+  const isLLEqual = totalDebitLL === totalCreditLL;
+
+  // Use the right equality rule depending on type
+  const submitBlocked =
+    !type ||
+    !date ||
+    (type === "G" ? !isEqualOFR : !isEqualBase);
+
   const handleSubmit = async () => {
     console.log("Current entries state:", entries);
 
     // helper: treat "", null, "0", "0.00" as zero
-const isZero = (v) => {
-  const n = parseNumber(v);
-  return !n || n === 0;
-};
+    const isZero = (v) => {
+      const n = parseNumber(v);
+      return !n || n === 0;
+    };
 
-// helper: a row is "empty" if it has no FK and no amounts
-const isEmptyRow = (e) =>
-  !e.accountId && !e.customerId && !e.supplierId &&
-  isZero(e.debit) && isZero(e.credit) &&
-  isZero(e.debitOFR) && isZero(e.creditOFR);
+    // helper: a row is "empty" if it has no FK and no amounts
+    const isEmptyRow = (e) =>
+      !e.accountId &&
+      !e.customerId &&
+      !e.supplierId &&
+      isZero(e.debit) &&
+      isZero(e.credit) &&
+      isZero(e.debitOFR) &&
+      isZero(e.creditOFR);
 
-// ignore totally empty rows
-const effectiveEntries = entries.filter((e) => !isEmptyRow(e));
+    // ignore totally empty rows
+    const effectiveEntries = entries.filter((e) => !isEmptyRow(e));
 
     try {
-      // Validate that every entry has an accountId
- if (effectiveEntries.length === 0) {
-  setNotification({
-    visible: true,
-    type: "error",
-    message: "Please add at least one non-empty entry.",
-  });
-  return;
-}
-// VALIDATION: allow account OR customer OR supplier
-const invalidEntries = effectiveEntries.filter(
-  (e) => !e.accountId && !e.customerId && !e.supplierId
-);
-if (invalidEntries.length > 0) {
-  setNotification({
-    visible: true,
-    type: "error",
-    message: "Each row must pick an Account, Customer, or Supplier.",
-  });
-  return;
-}
+      if (effectiveEntries.length === 0) {
+        setNotification({
+          visible: true,
+          type: "error",
+          message: "Please add at least one non-empty entry.",
+        });
+        return;
+      }
+
+      // VALIDATION: allow account OR customer OR supplier
+      const invalidEntries = effectiveEntries.filter(
+        (e) => !e.accountId && !e.customerId && !e.supplierId
+      );
+      if (invalidEntries.length > 0) {
+        setNotification({
+          visible: true,
+          type: "error",
+          message: "Each row must pick an Account, Customer, or Supplier.",
+        });
+        return;
+      }
+
       if (!type) {
         setNotification({
           type: "error",
@@ -364,34 +381,30 @@ if (invalidEntries.length > 0) {
       const removeCommas = (value) =>
         typeof value === "string" ? value.replace(/,/g, "") : value;
 
-  const payload = {
-  date,
-  jvType: type,
-  details: effectiveEntries.map((entry) => ({
-    accountId:  entry.accountId  || undefined,
-    customerId: entry.customerId || undefined,
-    supplierId: entry.supplierId || undefined,
-    description: entry.description,
-    debit: removeCommas(entry.debit),
-    debitUSD: removeCommas(entry.debitUSD),
-    debitLL: removeCommas(entry.debitEx),
-    credit: removeCommas(entry.credit),
-    creditUSD: removeCommas(entry.creditUSD),
-    creditLL: removeCommas(entry.creditEx),
-    currency: entry.currency,
-    exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
-    exchangeRate: removeCommas(entry.exchangeRate),
-    docNbr: entry.documentNbr,
-  })),
-};
+      const payload = {
+        date,
+        jvType: type,
+        details: effectiveEntries.map((entry) => ({
+          accountId: entry.accountId || undefined,
+          customerId: entry.customerId || undefined,
+          supplierId: entry.supplierId || undefined,
+          description: entry.description,
+          debit: removeCommas(entry.debit),
+          debitUSD: removeCommas(entry.debitUSD),
+          debitLL: removeCommas(entry.debitEx),
+          credit: removeCommas(entry.credit),
+          creditUSD: removeCommas(entry.creditUSD),
+          creditLL: removeCommas(entry.creditEx),
+          currency: entry.currency,
+          exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
+          exchangeRate: removeCommas(entry.exchangeRate),
+          docNbr: entry.documentNbr,
+        })),
+      };
 
       console.log("Payload to be sent:", JSON.stringify(payload, null, 2));
 
-      // Make the API call
-      const response = await axios.post(
-        `${baseUrl}/journal-vouchers`,
-        payload
-      );
+      const response = await axios.post(`${baseUrl}/journal-vouchers`, payload);
 
       if (response.status === 201) {
         setNotification({
@@ -436,18 +449,12 @@ if (invalidEntries.length > 0) {
     }
   };
 
-  const isEqual = totalDebit === totalCredit;
-  const isUSDEqual = totalDebitUSD === totalCreditUSD;
-  const isLLEqual = totalDebitLL === totalCreditLL;
-
   // Fetch journal data from API
   const fetchJournalData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        `${baseUrl}/journal-vouchers/v1/list`
-      );
-      setJournalData(response.data); // Update the journalData state
+      const response = await axios.get(`${baseUrl}/journal-vouchers/v1/list`);
+      setJournalData(response.data);
     } catch (error) {
       console.error("Error fetching journal data:", error);
     } finally {
@@ -464,21 +471,18 @@ if (invalidEntries.length > 0) {
   // Fetch a single journal voucher by ID
   const fetchJournalVoucherById = async (id) => {
     try {
-      const { data: jv } = await axios.get(
-        `${baseUrl}/journal-vouchers/${id}`
-      );
+      const { data: jv } = await axios.get(`${baseUrl}/journal-vouchers/${id}`);
 
       setDate(jv.date);
       setType(jv.jvType);
 
       setEntries(
         jv.details.map((d) => {
-          // Unified ID and Number from account/supplier/customer
           const entityId = d.accountId || d.supplierId || d.customerId || null;
           const entityNumber =
             d.account?.accountNumber ||
             d.supplier?.supplierAccountNumber ||
-            d.customer?.customerAccountNumber || 
+            d.customer?.customerAccountNumber ||
             "";
           const entityName =
             d.account?.accountName ||
@@ -487,9 +491,9 @@ if (invalidEntries.length > 0) {
             "";
 
           return {
-            accountId:  d.accountId  ?? null,
-  customerId: d.customerId ?? null,
-    supplierId: d.supplierId ?? null,
+            accountId: d.accountId ?? null,
+            customerId: d.customerId ?? null,
+            supplierId: d.supplierId ?? null,
             accountNumber: entityNumber,
             accountName: entityName,
             type: d.jvType,
@@ -523,45 +527,44 @@ if (invalidEntries.length > 0) {
     }
   };
 
-  // Handle the "View" button click
   const handleView = (journal) => {
     console.log("View journal:", journal);
-    setIsJournalListOpen(false); // Close the journal list modal
-    fetchJournalVoucherById(journal.id); // Fetch and fill the form with details
+    setIsJournalListOpen(false);
+    fetchJournalVoucherById(journal.id);
     setViewMode(true);
   };
 
   const handleReset = () => {
-    setDate(""); // Clear date
-    setType(""); // Clear type
+    setDate("");
+    setType("");
     setEntries([
-  {
-    accountId: null,
-    customerId: null,
-    supplierId: null,
-    accountNumber: "",
-    accountName: "",
-    currency: "",
-    debit: "",
-    debitOFR: "",
-    credit: "",
-    creditOFR: "",
-    exchangeRate: "1",
-    exchangeRateEURtoUSD: "",
-    debitUSD: "",
-    debitUSDOFR: "",
-    creditUSD: "",
-    creditUSDOFR: "",
-    debitEx: "",
-    debitExOFR: "",
-    creditEx: "",
-    creditExOFR: "",
-    description: "",
-    documentNbr: "",
-  },
-]);
+      {
+        accountId: null,
+        customerId: null,
+        supplierId: null,
+        accountNumber: "",
+        accountName: "",
+        currency: "",
+        debit: "",
+        debitOFR: "",
+        credit: "",
+        creditOFR: "",
+        exchangeRate: "1",
+        exchangeRateEURtoUSD: "",
+        debitUSD: "",
+        debitUSDOFR: "",
+        creditUSD: "",
+        creditUSDOFR: "",
+        debitEx: "",
+        debitExOFR: "",
+        creditEx: "",
+        creditExOFR: "",
+        description: "",
+        documentNbr: "",
+      },
+    ]);
 
-    setViewMode(false); // Disable view mode to allow editing
+    setViewMode(false);
   };
 
   return (
@@ -606,7 +609,6 @@ if (invalidEntries.length > 0) {
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="SR">SR</option>
-                {/* Add other types if necessary */}
               </select>
             </label>
           </div>
@@ -630,12 +632,13 @@ if (invalidEntries.length > 0) {
             <button
               className="general-vouchers-submit-btn"
               onClick={handleSubmit}
-              disabled={totalDebit !== totalCredit || totalDebit === 0}
+              disabled={submitBlocked}
             >
               Submit
             </button>
           </div>
         </div>
+
         <div className="general-vouchers-table-container">
           <table className="general-vouchers-table">
             <thead>
@@ -644,41 +647,27 @@ if (invalidEntries.length > 0) {
                 <th className="column-account-name">Account Name</th>
                 <th className="column-currency">Currency</th>
 
-                {/* Base Debit */}
                 <th className="column-debit">Debit</th>
-                {/* OFR Debit */}
                 <th className="column-debit-ofr">Dr OFR</th>
 
-                {/* Exchange (EUR→USD) */}
                 <th className="column-exchange-rate-eur-usd">
                   Exc (EUR to USD)
                 </th>
-                {/* Base Exchange Rate */}
                 <th className="column-exchange-rate">Exc Rate</th>
 
-                {/* Base Debit USD */}
                 <th className="column-debit-usd">Dr USD</th>
-                {/* OFR Debit USD */}
                 <th className="column-debit-usd-ofr">Dr USD OFR</th>
 
-                {/* Base Debit LL */}
                 <th className="column-debit-ex">Dr LL</th>
-                {/* OFR Debit LL */}
                 <th className="column-debit-ex-ofr">Dr LL OFR</th>
 
-                {/* Base Credit */}
                 <th className="column-credit">Credit</th>
-                {/* OFR Credit */}
                 <th className="column-credit-ofr">Cr OFR</th>
 
-                {/* Base Credit USD */}
                 <th className="column-credit-usd">Cr USD</th>
-                {/* OFR Credit USD */}
                 <th className="column-credit-usd-ofr">Cr USD OFR</th>
 
-                {/* Base Credit LL */}
                 <th className="column-credit-ex">Cr LL</th>
-                {/* OFR Credit LL */}
                 <th className="column-credit-ex-ofr">Cr LL OFR</th>
 
                 <th className="column-description">Description</th>
@@ -688,11 +677,7 @@ if (invalidEntries.length > 0) {
 
             <tbody>
               {entries.map((entry, index) => (
-                <tr
-                  key={index}
-                  onContextMenu={(e) => handleRightClick(e, index)}
-                >
-                  {/* Acc Nb */}
+                <tr key={index} onContextMenu={(e) => handleRightClick(e, index)}>
                   <td onClick={() => handleAccountNumberClick(index)}>
                     <input
                       type="text"
@@ -703,7 +688,6 @@ if (invalidEntries.length > 0) {
                       className="general-vouchers-input column-account-number"
                     />
                   </td>
-                  {/* Account Name */}
                   <td>
                     <input
                       type="text"
@@ -714,7 +698,6 @@ if (invalidEntries.length > 0) {
                       className="general-vouchers-input column-account-name"
                     />
                   </td>
-                  {/* Currency */}
                   <td>
                     <select
                       value={entry.currency}
@@ -733,7 +716,6 @@ if (invalidEntries.length > 0) {
                     </select>
                   </td>
 
-                  {/* Base Debit */}
                   <td>
                     <input
                       type="text"
@@ -748,7 +730,6 @@ if (invalidEntries.length > 0) {
                       disabled={viewMode || type === "G"}
                     />
                   </td>
-                  {/* OFR Debit */}
                   <td>
                     <input
                       type="text"
@@ -764,7 +745,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Exc (EUR→USD) */}
                   <td className="column-exchange-rate-eur-usd">
                     {entry.currency === "EUR" ? (
                       <input
@@ -789,7 +769,6 @@ if (invalidEntries.length > 0) {
                       <div className="disabled-placeholder"></div>
                     )}
                   </td>
-                  {/* Base Exchange Rate */}
                   <td>
                     <input
                       type="text"
@@ -803,7 +782,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Base Debit USD */}
                   <td>
                     <input
                       type="text"
@@ -818,21 +796,22 @@ if (invalidEntries.length > 0) {
                       disabled={viewMode || type === "G"}
                     />
                   </td>
-                  {/* OFR Debit USD */}
-              <td>
-  <input
-    type="text"
-    value={entry.debitOFR}
-    placeholder="Dr OFR"
-    onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
-    onBlur={() => handleInputBlur(index, "debitOFR")}
-    className="general-vouchers-input column-debit-ofr"  
-    readOnly={viewMode || type === "S"}                
-    disabled={viewMode || type === "S"}
-  />
-</td>
 
-                  {/* Base Debit LL */}
+                  {/* NOTE: This column was bound to debitOFR in your code.
+                      Keeping it as-is to preserve behavior. */}
+                  <td>
+                    <input
+                      type="text"
+                      value={entry.debitOFR}
+                      placeholder="Dr OFR"
+                      onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
+                      onBlur={() => handleInputBlur(index, "debitOFR")}
+                      className="general-vouchers-input column-debit-ofr"
+                      readOnly={viewMode || type === "S"}
+                      disabled={viewMode || type === "S"}
+                    />
+                  </td>
+
                   <td>
                     <input
                       type="text"
@@ -843,7 +822,6 @@ if (invalidEntries.length > 0) {
                       disabled
                     />
                   </td>
-                  {/* OFR Debit LL */}
                   <td>
                     <input
                       type="text"
@@ -855,7 +833,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Base Credit */}
                   <td>
                     <input
                       type="text"
@@ -870,7 +847,6 @@ if (invalidEntries.length > 0) {
                       disabled={viewMode || type === "G"}
                     />
                   </td>
-                  {/* OFR Credit */}
                   <td>
                     <input
                       type="text"
@@ -886,7 +862,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Base Credit USD */}
                   <td>
                     <input
                       type="text"
@@ -897,7 +872,6 @@ if (invalidEntries.length > 0) {
                       disabled
                     />
                   </td>
-                  {/* OFR Credit USD */}
                   <td>
                     <input
                       type="text"
@@ -909,7 +883,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Base Credit LL */}
                   <td>
                     <input
                       type="text"
@@ -920,7 +893,6 @@ if (invalidEntries.length > 0) {
                       disabled
                     />
                   </td>
-                  {/* OFR Credit LL */}
                   <td>
                     <input
                       type="text"
@@ -932,7 +904,6 @@ if (invalidEntries.length > 0) {
                     />
                   </td>
 
-                  {/* Description */}
                   <td>
                     <input
                       type="text"
@@ -945,7 +916,6 @@ if (invalidEntries.length > 0) {
                       disabled={viewMode}
                     />
                   </td>
-                  {/* Doc Nbr */}
                   <td>
                     <input
                       type="text"
@@ -963,26 +933,47 @@ if (invalidEntries.length > 0) {
             </tbody>
           </table>
         </div>
+
         <div className="general-vouchers-add-row-container">
           <button className="general-vouchers-new-btn" onClick={handleAddRow}>
             Add Row
           </button>
         </div>
+
         <div className="general-vouchers-summary">
+          {/* Base totals row (used for S/SR) */}
           <div className="summary-row">
             <span className="summary-total-txt">
-              Total Debit:{" "}
-              <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-                {formatNumber(totalDebit)}
+              Total Debit (Base):{" "}
+              <span className={`number ${type === "G" ? "" : isEqualBase ? "equal" : "not-equal"}`}>
+                {formatNumber(totalDebitBase)}
               </span>
             </span>
             <span className="summary-total-txt">
-              Total Credit:{" "}
-              <span className={`number ${isEqual ? "equal" : "not-equal"}`}>
-                {formatNumber(totalCredit)}
+              Total Credit (Base):{" "}
+              <span className={`number ${type === "G" ? "" : isEqualBase ? "equal" : "not-equal"}`}>
+                {formatNumber(totalCreditBase)}
               </span>
             </span>
           </div>
+
+          {/* OFR totals row (used for G) */}
+          <div className="summary-row">
+            <span className="summary-total-txt">
+              Total Debit OFR:{" "}
+              <span className={`number ${type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
+                {formatNumber(totalDebitOFR)}
+              </span>
+            </span>
+            <span className="summary-total-txt">
+              Total Credit OFR:{" "}
+              <span className={`number ${type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
+                {formatNumber(totalCreditOFR)}
+              </span>
+            </span>
+          </div>
+
+          {/* Your existing extra summaries */}
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit USD:{" "}

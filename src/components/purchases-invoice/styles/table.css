@@ -25,7 +25,7 @@
   padding: 12px;
   border: 1px solid #ddd;
   text-align: left;
-  font-size: 0.96rem;
+  font-size: 1.1rem;
   white-space: nowrap;
 }
 
@@ -42,7 +42,7 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: #333;
   height: 20px;
 }
@@ -115,17 +115,16 @@ input[type="checkbox"]:checked::after {
   flex-direction: row;
   justify-content: space-between;
 }
-/* Make disabled inputs look like normal read-only fields */
+
 input:disabled,
 select:disabled,
 textarea:disabled {
   background-color: #f5f5f5;
   color: #333;
   cursor: not-allowed;
-  opacity: 1; /* cancel any browser opacity */
+  opacity: 1; 
 }
 
-/* Context Menu Styling */
 .context-menu-purchases {
   position: absolute;
   background: #ffffff;
@@ -138,7 +137,6 @@ textarea:disabled {
   animation: fadeIn 0.2s ease-in-out;
 }
 
-/* Buttons in Context Menu */
 .context-menu-purchases button {
   display: block;
   width: 100%;
@@ -154,13 +152,43 @@ textarea:disabled {
   border-bottom: 1px solid #f1f1f1;
 }
 
-/* Last Button Styling */
 .context-menu-purchases button:last-child {
   border-bottom: none;
 }
 
-/* Hover Effects */
 .context-menu-purchases button:hover {
   background-color: #e9ecef;
   color: #007bff;
+}
+
+/* ─────────────────────────────────────────────
+   ✅ ADDED: Per-column widths (percentages)
+   Tweak these %s to your liking. They’re applied
+   to <col> elements defined in the JSX colgroup.
+   Note: Because some columns are conditional,
+   totals may exceed 100%—browsers will still
+   distribute widths proportionally.
+   ───────────────────────────────────────────── */
+
+.items-table table col.col-itemname   { width: 16%;font-size: 1.6rem!important ;}  /* Item Name */
+.items-table table col.col-type       { width: 7%;  }  /* Type */
+.items-table table col.col-origin     { width: 7%;  }  /* Origin */
+.items-table table col.col-length     { width: 6%;  }  /* Length */
+.items-table table col.col-width      { width: 6%;  }  /* Width */
+.items-table table col.col-qty        { width: 7%;  }  /* Quantity */
+.items-table table col.col-spb        { width: 7%;  }  /* Sheets/Box */
+.items-table table col.col-sqm        { width: 7%;  }  /* SQM */
+.items-table table col.col-euro       { width: 7%;  }  /* Euro Price (conditional) */
+.items-table table col.col-unit       { width: 7%;  }  /* Unit Price (conditional) */
+.items-table table col.col-euro-ofr   { width: 7%;  }  /* Euro Offer Price (conditional) */
+.items-table table col.col-ofr        { width: 7%;  }  /* Price OFR (conditional) */
+.items-table table col.col-total      { width: 7%;  }  /* Total */
+.items-table table col.col-total-ofr  { width: 7%;  }  /* Total OFR */
+.items-table table col.col-containers { width: 5%;  }  /* Number of Containers */
+
+/* Optional: prevent cell overflow from breaking the layout */
+.items-table td,
+.items-table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

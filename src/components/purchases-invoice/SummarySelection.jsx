@@ -16,6 +16,7 @@ const SummarySection = ({
   invoiceType,
   status,
   shippingCostComputed,
+  computedCostPercentageForDisplay,
 
   // ← new props:
   selectedItems,
@@ -24,6 +25,32 @@ const SummarySection = ({
   calculatePriceCFROFR,
   calculateFinalCostOFR,
 }) => {
+
+  // ✅ Helper: pick the best thickness on the row
+  const getThickness = (it) => {
+    const nums = [
+      it?.thickness,
+      it?.payloadVariant?.thickness,
+      it?.variant?.thickness,
+      it?.dimension?.thickness,
+    ]
+      .map((v) => (v == null ? v : Number(v)))
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    return nums.length ? nums[0] : null;
+  };
+
+  // ✅ Helper: label with thickness if available
+  const displayItemLabel = (it) => {
+    // if the parent already passed a combined label, honor it
+    if (typeof it?.itemNameCombined === "string" && it.itemNameCombined.trim()) {
+      return it.itemNameCombined;
+    }
+    const base = it?.itemName || "-";
+    const th = getThickness(it);
+    return th != null ? `${th} ملم ${base}` : base;
+  };
+
   return (
     <div className="summary-section">
       {/* ─── INPUTS ─── */}
@@ -33,10 +60,15 @@ const SummarySection = ({
             Potential Cost
             <input
               type="number"
-              value={potentialCost}
+              value={
+                status === "Recieved" && typeof computedCostPercentageForDisplay === "number"
+                  ? computedCostPercentageForDisplay
+                  : potentialCost
+              }
               onChange={(e) => setPotentialCost(Number(e.target.value))}
-              disabled={!isEditable}
-            />
+              // lock it when Recieved
+              disabled={!isEditable || status === "Recieved"}
+             />
           </label>
           <label className="important-field">
             Final Cost
@@ -139,7 +171,10 @@ const SummarySection = ({
 
               return (
                 <tr key={idx}>
-                  <td>{item.itemName || "-"}</td>
+                  {/* ✅ show “thickness ملم itemName” */}
+                  <td style={{ direction: "rtl", textAlign: "right" }}>
+                    {displayItemLabel(item)}
+                  </td>
 
                   {invoiceType === "S" && (
                     <>

@@ -15,7 +15,7 @@ import "./styles/invoiceModel.css";
 import axios from "axios";
 import AlternativeSummarySection from "./AlternativeSummarySection";
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const fetchSuppliersByQuery = async (query) => {
   const response = await fetch(
@@ -23,7 +23,6 @@ const fetchSuppliersByQuery = async (query) => {
   );
   return response.json();
 };
-
 
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
@@ -43,7 +42,7 @@ const PurchasesInvoicePage = () => {
   const [totalChargesOFR, setTotalChargesOFR] = useState(0);
 
   const [numberOfContainers, setNumberOfContainers] = useState(0);
-  const [vat, setVat] = useState(11);
+  const [vatRate, setVatRate] = useState(11);
   const [finalCost, setFinalCost] = useState(0);
   const [showUnitPriceModal, setShowUnitPriceModal] = useState(false);
   const [status, setStatus] = useState("Pending");
@@ -78,7 +77,7 @@ const PurchasesInvoicePage = () => {
 
     setShippingCostInput(0);
     setNumberOfContainers(0);
-    setVat(0);
+    setVatRate(0);
     setStatus("Pending");
     setSearchQuery("");
     setSelectedItems([]);
@@ -89,6 +88,8 @@ const PurchasesInvoicePage = () => {
     setInvoiceType("S");
     setPoDate(new Date().toISOString().slice(0, 10));
   };
+
+  const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
 
   const handleCurrencyChange = (e) => {
     const selectedCurrency = e.target.value;
@@ -109,39 +110,54 @@ const PurchasesInvoicePage = () => {
     0
   );
 
+const handleCheckboxChange = (item, dimension) => {
+  const isSelected = selectedItems.some(
+    (selectedItem) =>
+      selectedItem.itemName === item.itemName &&
+      selectedItem.dimensionId === dimension.dimensionId
+  );
 
-  const handleCheckboxChange = (item, dimension) => {
-    const isSelected = selectedItems.some(
-      (selectedItem) =>
-        selectedItem.itemName === item.itemName &&
-        selectedItem.dimensionId === dimension.dimensionId
+  if (isSelected) {
+    setSelectedItems(
+      selectedItems.filter(
+        (selectedItem) =>
+          !(
+            selectedItem.itemName === item.itemName &&
+            selectedItem.dimensionId === dimension.dimensionId
+          )
+      )
     );
+  } else {
 
-    if (isSelected) {
-      setSelectedItems(
-        selectedItems.filter(
-          (selectedItem) =>
-            !(
-              selectedItem.itemName === item.itemName &&
-              selectedItem.dimensionId === dimension.dimensionId
-            )
-        )
-      );
-    } else {
-      setSelectedItems([
-        ...selectedItems,
-        {
-          itemName: item.itemName,
-          dimensionId: dimension.dimensionId,
-          origin: dimension.origin,
-          length: dimension.length,
-          width: dimension.width,
-          type: item.type,
-          sheetsPerBox: dimension.sheetsPerBox || 1,
-        },
-      ]);
-    }
-  };
+    const th = Number(dimension?.thickness);
+    const itemNameCombined =
+      item?.combinedName ??
+      (Number.isFinite(th) && th > 0
+        ? `${th} ملم ${item?.itemName || ""}`.trim()
+        : item?.itemName || "");
+
+    const variantId = dimension?.id ?? dimension?.dimensionId;
+
+    setSelectedItems([
+      ...selectedItems,
+      {
+        itemName: item.itemName,
+        dimensionId: dimension.dimensionId,
+        origin: dimension.origin,
+        length: dimension.length,
+        width: dimension.width,
+        type: item.type,
+        sheetsPerBox: dimension.sheetsPerBox || 1,
+
+        
+        itemNameCombined,     
+        thickness: Number.isFinite(th) ? th : undefined,
+        variantId,           
+        payloadVariant: dimension, 
+      },
+    ]);
+  }
+};
 
   const closeItemModal = () => {
     const newSelectedItems = selectedItems.map((item) => ({
@@ -187,7 +203,7 @@ const PurchasesInvoicePage = () => {
     try {
       const supplierId = selectedSupplierId;
       const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-      const calculatedVatAmount = totalAmount * (vat / 100);
+      const calculatedVatAmount = totalAmount * (vatRate / 100);
       const grandTotal = totalAmount + calculatedVatAmount;
 
       // ⬇️ build enrichedItems with the four computed fields ⬇️
@@ -217,7 +233,8 @@ const PurchasesInvoicePage = () => {
         poDate: poDate,
         type,
         supplierId,
-        vatAmount: calculatedVatAmount,
+        vatAmount: calculatedVatAmount.toFixed(2),
+        vatPercent: vatRate,
         grandAmount: grandTotal,
         exchangeRate,
         status,
@@ -342,12 +359,24 @@ const PurchasesInvoicePage = () => {
     setSelectedSupplierId(fullInvoice.supplier.id);
     // 2) invoice & dates
     setInvoiceNumber(fullInvoice.invoiceNumber);
-    setinputedDate(fullInvoice.date);
+    setinputedDate(toYMD(fullInvoice.date));
     setInvoiceDate(fullInvoice.expectedArrivalDate?.slice(0, 10) || "");
     // 3) status, currency, etc…
     setStatus(fullInvoice.status);
     setExchangeRate(Number(fullInvoice.exchangeRate));
-    setVat(Number(fullInvoice.vatAmount));
+    // Prefer stored percent; otherwise infer below (outside the setItems mapper)
+    if (fullInvoice.vatPercent != null) {
+      setVatRate(Number(fullInvoice.vatPercent));
+    } else {
+      const itemsSumForVat = (fullInvoice.items ?? []).reduce(
+        (s, i) => s + Number(i.totalAmount || 0),
+        0
+      );
+      const inferred = itemsSumForVat > 0
+        ? (Number(fullInvoice.vatAmount || 0) / itemsSumForVat) * 100
+        : 0;
+      setVatRate(Number.isFinite(inferred) ? +inferred.toFixed(2) : 0);
+    }
     setShippingLine(fullInvoice.shippingLine);
     setEtd(fullInvoice.etd);
     setAltContainers(fullInvoice.numberOfContainers);
@@ -359,12 +388,18 @@ const PurchasesInvoicePage = () => {
     setPoDate(fullInvoice.poDate?.slice(0, 10) || "");
 
     // 4) items
-    // AFTER
     setItems(
       fullInvoice.items.map((i) => {
-        const variant = i.itemVariant;
-        const thickness = variant.thickness;
-        const item = thickness.item;
+       const variant = i.itemVariant;
+    const t = variant?.thickness;
+    const item = t?.item;
+    const thNum = Number(t?.thickness);
+    const thickness = Number.isFinite(thNum) ? thNum : undefined;
+
+    const baseName = item?.itemName || "";
+    const itemNameCombined =
+      thickness != null ? `${thickness} ملم ${baseName}` : baseName;
+
         return {
           id: i.id,
           dimensionId: i.itemVariantId,
@@ -385,6 +420,9 @@ const PurchasesInvoicePage = () => {
           priceOFR: Number(i.priceOFR),
           totalOFR: Number(i.totalOFR),
           numberOfContainers: Number(i.numberOfContainers),
+            itemName: baseName,
+      itemNameCombined,      
+      thickness,        
         };
       })
     );
@@ -413,11 +451,22 @@ const PurchasesInvoicePage = () => {
     setSupplierName(inv.supplier.supplierName);
     setSelectedSupplierId(inv.supplier.id);
     setInvoiceNumber(inv.invoiceNumber);
-    setinputedDate(inv.date);
+    setinputedDate(toYMD(inv.date));
     setInvoiceDate(inv.expectedArrivalDate?.slice(0, 10) || "");
     setStatus(inv.status);
     setExchangeRate(Number(inv.exchangeRate));
-    setVat(Number(inv.vatAmount));
+    // Prefer a stored percent; otherwise infer it from amount/total
+    const itemsSum = (inv.items ?? []).reduce(
+      (s, i) => s + Number(i.totalAmount || 0),
+      0
+    );
+    const inferredRate =
+      itemsSum > 0 ? (Number(inv.vatAmount || 0) / itemsSum) * 100 : 0;
+    setVatRate(
+      inv.vatPercent != null
+        ? Number(inv.vatPercent)
+        : Number.isFinite(inferredRate) ? +inferredRate.toFixed(2) : 0
+    );
     setShippingLine(inv.shippingLine);
     setEtd(inv.etd);
     setAltContainers(inv.numberOfContainers);
@@ -428,13 +477,21 @@ const PurchasesInvoicePage = () => {
     setInvoiceType(inv.type);
     setItems(
       inv.items.map((i) => {
-        const v = i.itemVariant,
-          t = v.thickness,
-          it = t.item;
+         const v = i.itemVariant;
+    const t = v?.thickness;
+    const it = t?.item;
+
+    const thNum = Number(t?.thickness);
+    const thickness = Number.isFinite(thNum) ? thNum : undefined;
+    const baseName = it?.itemName || "";
+    const itemNameCombined =
+      thickness != null ? `${thickness} ملم ${baseName}` : baseName;
         return {
           id: i.id,
           dimensionId: i.itemVariantId,
           itemName: it.itemName,
+              itemNameCombined,    
+      thickness,    
           type: it.type,
           origin: v.origin,
           length: Number(v.length),
@@ -573,12 +630,14 @@ const PurchasesInvoicePage = () => {
 
   // 4️⃣ Compute your cost percentage once per render:
   const getCostPercentage = () => {
-    const poAmount = itemsTotalAmount || 0;
-    if (poAmount === 0) return 0;
-
-    let final = totalCharges / poAmount;
-    console.log("Final Cost Percentage:", final);
-    return final;
+    const base =
+      (itemsTotalAmount || 0) +
+      (shippingCostComputed || 0);
+    if (base <= 0) return 0;
+    const ratio = totalCharges / base;
+    // Optional debug:
+    // console.log("ATC total:", totalCharges, "Base:", base, "Ratio:", ratio);
+    return ratio;
   };
 
   // 5️⃣ Finally, your “real” final cost:
@@ -597,9 +656,11 @@ const PurchasesInvoicePage = () => {
 
   // 4️⃣ Compute your cost percentage once per render:
   const getCostPercentageOFR = () => {
-    const poAmount = totalOfferAmount || 0;
-    if (poAmount === 0) return 0;
-    return totalChargesOFR / poAmount;
+    const base =
+      (totalOfferAmount || 0) +
+      (shippingCostOFR || 0);
+    if (base <= 0) return 0;
+    return totalChargesOFR / base;
   };
 
   // 5️⃣ Finally, your “real” final cost:
@@ -608,6 +669,22 @@ const PurchasesInvoicePage = () => {
     const cp = getCostPercentageOFR();
     return cfr * (1 + cp);
   };
+
+  const computedCostPercentageForDisplay = React.useMemo(() => {
+    if (status !== "Recieved") return null;
+
+    const ratio =
+      invoiceType === "G" ? getCostPercentageOFR() : getCostPercentage();
+    if (!isFinite(ratio)) return 0;
+    return +(ratio * 100).toFixed(2);
+  }, [
+    status,
+    invoiceType,
+    totalCharges,
+    itemsTotalAmount,
+    totalChargesOFR,
+    totalOfferAmount,
+  ]);
 
   // choose the right CFR / final‐cost functions for S, G, SR when Recieved
   let normalCfrFn = calculatePriceCFR;
@@ -691,6 +768,7 @@ const PurchasesInvoicePage = () => {
                 resetFields();
                 setSelectedInvoiceId(null);
                 setIsEditMode(false);
+                setUnitPriceRows([]);
               }}
             >
               New
@@ -807,7 +885,19 @@ const PurchasesInvoicePage = () => {
                 <option value="SR">SR</option>
                 <option value="RVR">RVR</option>
               </select>
+
+           
             </label>
+              <label>
+            VAT Percentage
+               <input
+                type="number"
+                step="0.01"
+                value={vatRate}
+                onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                disabled={!canEdit}
+              />
+              </label>
           </div>
         </div>
 
@@ -823,7 +913,6 @@ const PurchasesInvoicePage = () => {
 
         {showItemModal && (
           <ItemModal
-        
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             selectedItems={selectedItems}
@@ -902,6 +991,7 @@ const PurchasesInvoicePage = () => {
             invoiceType={invoiceType}
             status={status}
             shippingCostComputed={getCorrectShippingCost()}
+            computedCostPercentageForDisplay={computedCostPercentageForDisplay}
           />
         ) : (
           <AlternativeSummarySection
@@ -925,6 +1015,8 @@ const PurchasesInvoicePage = () => {
             onSave={handleModalSave}
             isEditable={canEdit}
             invoiceId={isInvoiceSelected ? selectedInvoiceId : null}
+            rows={unitPriceRows}
+            onRowsChange={setUnitPriceRows}
           />
         )}
       </div>

@@ -1,5 +1,5 @@
 // UnitPriceModal.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./styles/unitPriceModel.css";
 
@@ -8,12 +8,14 @@ export default function UnitPriceModal({
   onClose,
   onSave,
   isEditable,
-  invoiceId, // ← optional for edit
+  invoiceId,        
+  rows,               
+  onRowsChange,     
 }) {
-  const [rows, setRows] = useState([]);
+  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   const [suppliers, setSuppliers] = useState([]);
   const [accounts, setAccounts] = useState([]);
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // delete‐menu state
   const [deleteMenu, setDeleteMenu] = useState({
@@ -22,6 +24,18 @@ export default function UnitPriceModal({
     y: 0,
     rowIndex: null,
   });
+
+  const safeRows = rows ?? [];
+
+  // ───────────────────────────── helpers ─────────────────────────────
+  const setRows = (updater) => {
+    // allow both functional and value usage
+    if (typeof updater === "function") {
+      onRowsChange((prev) => updater(prev ?? []));
+    } else {
+      onRowsChange(updater ?? []);
+    }
+  };
 
   // Close delete menu
   const closeDeleteMenu = () =>
@@ -42,14 +56,14 @@ export default function UnitPriceModal({
   // Delete one row
   const handleDeleteRow = () => {
     if (deleteMenu.rowIndex == null) return;
-    setRows(rows.filter((_, i) => i !== deleteMenu.rowIndex));
+    setRows((prev) => prev.filter((_, i) => i !== deleteMenu.rowIndex));
     closeDeleteMenu();
   };
 
   // Add a blank row
   const handleAddRow = () => {
-    setRows([
-      ...rows,
+    setRows((prev) => [
+      ...prev,
       {
         id: undefined,
         purchaseInvoiceSettingId: null,
@@ -72,7 +86,7 @@ export default function UnitPriceModal({
     ]);
   };
 
-  // Fetch suppliers, accounts, and rows on open
+  // ─────────────────────── data loading on open ───────────────────────
   useEffect(() => {
     if (!isVisible) return;
 
@@ -87,87 +101,137 @@ export default function UnitPriceModal({
       .get(`${baseUrl}/accounts/v1/acc-flat-arranged`)
       .then((res) => setAccounts(res.data))
       .catch(console.error);
+  }, [isVisible, baseUrl]);
 
-    if (invoiceId) {
-      // editing → load existing rows
-      axios
-        .get(`${baseUrl}/purchase-invoices/${invoiceId}`)
-        .then((res) => {
-          setRows(
-            res.data.unitPriceRows.map((r) => ({
-              id: r.id,
-              purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
-              chargeName: r.chargeName,
-              accountId: r.accountId,
-              accountNumber: r.account?.accountNumber || "",
-              chargeType: r.chargeType,
-              value: Number(r.value),
-              valueOFR: Number(r.valueOFR),
-              currency: r.currency,
-              valueExch: Number(r.valueExch),
-              valueExchOFR: Number(r.valueExchOFR),
-              addToItemCost: r.addToItemCost,
-              invoiceNbTax: r.invoiceNbTax,
-              supplierId: r.supplierId,
-              supplierOfTax: r.supplier?.supplierName || "",
-              accNbOfSupplier: r.supplier?.account?.accountNumber || "",
-              shipping: r.shipping,
-            }))
-          );
-        })
-        .catch(console.error);
-    } else {
-      // new → load default settings
-      axios
-        .get(`${baseUrl}/purchase-invoice-setting`)
-        .then((res) => {
-          setRows(
-            res.data.map((row) => ({
-              id: undefined,
-              purchaseInvoiceSettingId: row.id,
-              chargeName: row.chargeName || "",
-              accountId: row.accountId ?? null,
-              accountNumber: row.accountNumber ?? "",
-              chargeType: row.type || "amount",
-              value: row.value || 0,
-              valueOFR: 0,
-              currency: (row.currency || "USD").toLowerCase(),
-              valueExch: row.valueEx || 0,
-              valueExchOFR: 0,
-              addToItemCost: row.atc || false,
-              invoiceNbTax: "",
-              supplierId: null,
-              supplierOfTax: "",
-              accNbOfSupplier: "",
-              shipping: row.shipping || false,
-            }))
-          );
-        })
-        .catch(console.error);
-    }
-  }, [isVisible, invoiceId]);
-
-  // once suppliers or accounts load, fill in derived fields
+  // Prefer already-typed rows from parent; only fetch rows if none exist
   useEffect(() => {
-    if (suppliers.length) {
-      setRows((rs) =>
-        rs.map((r) => {
-          if (r.supplierId) {
-            const sup = suppliers.find((s) => s.id === r.supplierId);
-            return {
-              ...r,
-              accNbOfSupplier: sup?.supplierAccountNumber || "",
-            };
-          }
-          return r;
-        })
-      );
-    }
+    if (!isVisible) return;
+    if (safeRows.length > 0) return;
+
+    const loadExisting = async () => {
+      try {
+        const { data } = await axios.get(
+          `${baseUrl}/purchase-invoices/${invoiceId}`
+        );
+        const mapped = (data.unitPriceRows || []).map((r) => ({
+          id: r.id,
+          purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
+          chargeName: r.chargeName,
+          accountId: r.accountId,
+          accountNumber: r.account?.accountNumber || "",
+          chargeType: r.chargeType,
+          value: Number(r.value),
+          valueOFR: Number(r.valueOFR),
+          currency: (r.currency || "USD").toLowerCase(),
+          valueExch: Number(r.valueExch),
+          valueExchOFR: Number(r.valueExchOFR),
+          addToItemCost: !!r.addToItemCost,
+          invoiceNbTax: r.invoiceNbTax,
+          supplierId: r.supplierId,
+          supplierOfTax: r.supplier?.supplierName || "",
+          accNbOfSupplier: r.supplier?.account?.accountNumber || "",
+          shipping: !!r.shipping,
+        }));
+        setRows(mapped);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    const loadDefaults = async () => {
+      try {
+        const { data } = await axios.get(`${baseUrl}/purchase-invoice-setting`);
+        const mapped = (data || []).map((row) => ({
+          id: undefined,
+          purchaseInvoiceSettingId: row.id,
+          chargeName: row.chargeName || "",
+          accountId: row.accountId ?? null,
+          accountNumber: row.accountNumber ?? "",
+          chargeType: row.type || "amount",
+          value: row.value || 0,
+          valueOFR: 0,
+          currency: (row.currency || "USD").toLowerCase(),
+          valueExch: row.valueEx || 0,
+          valueExchOFR: 0,
+          addToItemCost: !!row.atc,
+          invoiceNbTax: "",
+          supplierId: null,
+          supplierOfTax: "",
+          accNbOfSupplier: "",
+          shipping: !!row.shipping,
+        }));
+        setRows(mapped);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    if (invoiceId) loadExisting();
+    else loadDefaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, invoiceId, baseUrl, safeRows.length]);
+
+  // once suppliers load, fill in derived fields (accNbOfSupplier) for selected supplier rows
+  useEffect(() => {
+    if (!suppliers.length) return;
+    setRows((prev) =>
+      (prev || []).map((r) => {
+        if (r.supplierId) {
+          const sup = suppliers.find((s) => s.id === r.supplierId);
+          return {
+            ...r,
+            accNbOfSupplier: sup?.supplierAccountNumber || "",
+          };
+        }
+        return r;
+      })
+    );
   }, [suppliers]);
 
-  // recursively render nested account options
+  // ───────────────────────── inputs & toggles ─────────────────────────
+  const handleInput = (i, field, val) => {
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      copy[i] = { ...copy[i] };
+      copy[i][field] = field === "chargeType" ? val : +val || val;
+      return copy;
+    });
+  };
+
+  const handleToggle = (i, field) => {
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      copy[i] = { ...copy[i], [field]: !copy[i][field] };
+      return copy;
+    });
+  };
+
+  const handleSupplierChange = (i, supId) => {
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      copy[i] = { ...copy[i] };
+      copy[i].supplierId = +supId || null;
+      const sup = suppliers.find((s) => s.id === +supId);
+      copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
+      copy[i].supplierOfTax = sup?.supplierName || "";
+      return copy;
+    });
+  };
+
+  const handleAccountChange = (i, acctId, e) => {
+    const acctNumber =
+      e.target.selectedOptions[0]?.getAttribute("data-account-number") || "";
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      copy[i] = { ...copy[i], accountId: +acctId || null, accountNumber: acctNumber };
+      return copy;
+    });
+  };
+
+  const save = () => onSave(safeRows);
+
   const renderAccountOptions = (list, level = 0) =>
-    list.map((acc) => (
+    (list || []).map((acc) => (
       <React.Fragment key={acc.id}>
         <option value={acc.id} data-account-number={acc.accountNumber}>
           {`${"  ".repeat(level)}${acc.accountNumber} – ${acc.accountName}`}
@@ -177,37 +241,11 @@ export default function UnitPriceModal({
       </React.Fragment>
     ));
 
-  // handle inputs
-  const handleInput = (i, field, val) => {
-    const copy = [...rows];
-    copy[i][field] = field === "chargeType" ? val : +val || val;
-    setRows(copy);
-  };
-  const handleToggle = (i, field) => {
-    const copy = [...rows];
-    copy[i][field] = !copy[i][field];
-    setRows(copy);
-  };
-  const handleSupplierChange = (i, supId) => {
-    const copy = [...rows];
-    copy[i].supplierId = +supId;
-    const sup = suppliers.find((s) => s.id === +supId);
-    copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
-    setRows(copy);
-  };
-  const handleAccountChange = (i, acctId, e) => {
-    const copy = [...rows];
-    copy[i].accountId = +acctId;
-    const acctNumber = e.target.selectedOptions[0].getAttribute(
-      "data-account-number"
-    );
-    copy[i].accountNumber = acctNumber || "";
-    setRows(copy);
-  };
-
-  const save = () => onSave(rows);
+  // Small perf: memoize suppliers map for select
+  const supplierOptions = useMemo(() => suppliers || [], [suppliers]);
 
   if (!isVisible) return null;
+
   return (
     <div className="unit-price-modal-overlay" onClick={closeDeleteMenu}>
       <div
@@ -226,7 +264,7 @@ export default function UnitPriceModal({
             <thead>
               <tr>
                 <th>Charge Name</th>
-                <th>Charge Account</th> {/* ← new column */}
+                <th>Charge Account</th>
                 <th>Type</th>
                 <th>Value</th>
                 <th>Value OFR</th>
@@ -241,26 +279,22 @@ export default function UnitPriceModal({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {safeRows.map((r, i) => (
                 <tr key={i} onContextMenu={(e) => handleRowContext(e, i)}>
                   <td>
                     <input
                       disabled={!isEditable}
-                      value={r.chargeName}
-                      onChange={(e) =>
-                        handleInput(i, "chargeName", e.target.value)
-                      }
+                      value={r.chargeName || ""}
+                      onChange={(e) => handleInput(i, "chargeName", e.target.value)}
                     />
                   </td>
 
-                  {/* ——— Charge Account dropdown ——— */}
+                  {/* Charge Account */}
                   <td>
                     <select
                       disabled={!isEditable}
                       value={r.accountId || ""}
-                      onChange={(e) =>
-                        handleAccountChange(i, e.target.value, e)
-                      }
+                      onChange={(e) => handleAccountChange(i, e.target.value, e)}
                     >
                       <option value="">Select Account</option>
                       {renderAccountOptions(accounts)}
@@ -270,83 +304,79 @@ export default function UnitPriceModal({
                   <td>
                     <select
                       disabled={!isEditable}
-                      value={r.chargeType}
-                      onChange={(e) =>
-                        handleInput(i, "chargeType", e.target.value)
-                      }
+                      value={r.chargeType || "amount"}
+                      onChange={(e) => handleInput(i, "chargeType", e.target.value)}
                     >
                       <option value="amount">Amount</option>
                       <option value="percent">Percent</option>
                     </select>
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="number"
-                      value={r.value}
+                      value={r.value ?? 0}
                       onChange={(e) => handleInput(i, "value", e.target.value)}
                     />
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="number"
-                      value={r.valueOFR}
-                      onChange={(e) =>
-                        handleInput(i, "valueOFR", e.target.value)
-                      }
+                      value={r.valueOFR ?? 0}
+                      onChange={(e) => handleInput(i, "valueOFR", e.target.value)}
                     />
                   </td>
+
                   <td>
                     <select
                       disabled={!isEditable}
-                      value={r.currency}
-                      onChange={(e) =>
-                        handleInput(i, "currency", e.target.value)
-                      }
+                      value={(r.currency || "usd").toLowerCase()}
+                      onChange={(e) => handleInput(i, "currency", e.target.value)}
                     >
                       <option value="usd">USD</option>
                       <option value="euro">Euro</option>
                       <option value="ll">LL</option>
                     </select>
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="number"
-                      value={r.valueExch}
-                      onChange={(e) =>
-                        handleInput(i, "valueExch", e.target.value)
-                      }
+                      value={r.valueExch ?? 0}
+                      onChange={(e) => handleInput(i, "valueExch", e.target.value)}
                     />
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="number"
-                      value={r.valueExchOFR}
-                      onChange={(e) =>
-                        handleInput(i, "valueExchOFR", e.target.value)
-                      }
+                      value={r.valueExchOFR ?? 0}
+                      onChange={(e) => handleInput(i, "valueExchOFR", e.target.value)}
                     />
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="checkbox"
-                      checked={r.addToItemCost}
+                      checked={!!r.addToItemCost}
                       onChange={() => handleToggle(i, "addToItemCost")}
                     />
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
-                      value={r.invoiceNbTax}
-                      onChange={(e) =>
-                        handleInput(i, "invoiceNbTax", e.target.value)
-                      }
+                      value={r.invoiceNbTax || ""}
+                      onChange={(e) => handleInput(i, "invoiceNbTax", e.target.value)}
                     />
                   </td>
+
                   <td>
                     <select
                       disabled={!isEditable}
@@ -354,25 +384,23 @@ export default function UnitPriceModal({
                       onChange={(e) => handleSupplierChange(i, e.target.value)}
                     >
                       <option value="">-- select --</option>
-                      {suppliers.map((s) => (
+                      {supplierOptions.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.supplierName}
                         </option>
                       ))}
                     </select>
                   </td>
+
                   <td>
-                    <input
-                      readOnly
-                      value={r.accNbOfSupplier}
-                      placeholder="Acct #"
-                    />
+                    <input readOnly value={r.accNbOfSupplier || ""} placeholder="Acct #" />
                   </td>
+
                   <td>
                     <input
                       disabled={!isEditable}
                       type="checkbox"
-                      checked={r.shipping}
+                      checked={!!r.shipping}
                       onChange={() => handleToggle(i, "shipping")}
                     />
                   </td>

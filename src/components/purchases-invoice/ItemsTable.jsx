@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function ItemsTable({
   items,
@@ -71,6 +71,57 @@ export default function ItemsTable({
     closeDeleteMenu();
   };
 
+  // ✅ NEW: one-time backfill so each row has a top-level `thickness`
+  useEffect(() => {
+    if (!Array.isArray(items) || items.length === 0) return;
+
+    let changed = false;
+    const patched = items.map((it) => {
+      // If thickness is already a finite number > 0, keep as is
+      const hasTopLevel =
+        it != null && Number.isFinite(Number(it.thickness)) && Number(it.thickness) > 0;
+
+      if (hasTopLevel) return it;
+
+      // Try common places where thickness might live
+      const candidates = [
+        it?.payloadVariant?.thickness,
+        it?.variant?.thickness,
+        it?.dimension?.thickness,
+        it?.th,                 // sometimes teams name it "th"
+        it?.thk,                // or "thk"
+        it?.thickness_mm,       // or "thickness_mm"
+      ].map((v) => (v == null ? v : Number(v)));
+
+      const found = candidates.find((n) => Number.isFinite(n) && n > 0);
+
+      if (found != null) {
+        changed = true;
+        return { ...it, thickness: found };
+      }
+      return it;
+    });
+
+    if (changed) setItems(patched);
+  }, [items, setItems]);
+
+  // ✅ helper: format “thickness ملم itemName”
+  const displayItemName = (item) => {
+    const name = item?.itemName || "";
+
+    // Prefer the now-backfilled top-level thickness
+    const thicknesses = [
+      item?.thickness,
+      item?.payloadVariant?.thickness,
+      item?.variant?.thickness,
+      item?.dimension?.thickness,
+    ].map((v) => (v == null ? v : Number(v)));
+
+    const th = thicknesses.find((n) => Number.isFinite(n) && n > 0);
+
+    return th != null ? `${th} ملم ${name}` : name;
+  };
+
   return (
     <div className="items-table" onClick={closeDeleteMenu}>
       <div className="separator">
@@ -85,6 +136,25 @@ export default function ItemsTable({
       </div>
 
       <table>
+        {/* ✅ ADDED: per-column width control via percentages */}
+        <colgroup>
+          <col className="col-itemname" />
+          <col className="col-type" />
+          <col className="col-origin" />
+          <col className="col-length" />
+          <col className="col-width" />
+          <col className="col-qty" />
+          <col className="col-spb" />
+          <col className="col-sqm" />
+          {currency === "EURO" && <col className="col-euro" />}
+          {invoiceType !== "G" && <col className="col-unit" />}
+          {currency === "EURO" && <col className="col-euro-ofr" />}
+          {invoiceType !== "S" && invoiceType !== "RVR" && <col className="col-ofr" />}
+          <col className="col-total" />
+          <col className="col-total-ofr" />
+          <col className="col-containers" />
+        </colgroup>
+
         <thead>
           <tr>
             <th>Item Name</th>
@@ -101,7 +171,7 @@ export default function ItemsTable({
             {invoiceType !== "S" && invoiceType !== "RVR" && <th>Price OFR</th>}
             <th>Total</th>
             <th>Total OFR</th>
-            <th>Number of Containers</th>
+            <th>Nb of Cont</th>
           </tr>
         </thead>
         <tbody>
@@ -110,7 +180,11 @@ export default function ItemsTable({
               key={item.id || index}
               onContextMenu={(e) => handleRowContext(e, index)}
             >
-              <td>{item.itemName}</td>
+              {/* show “thickness ملم name” while preserving RTL */}
+              <td style={{ direction: "rtl", textAlign: "right" }}>
+                {displayItemName(item)}
+              </td>
+
               <td>{item.type}</td>
               <td>{item.origin}</td>
               <td>{item.length || 0}</td>
@@ -175,7 +249,7 @@ export default function ItemsTable({
                   />
                 </td>
               )}
-              {invoiceType !== "S" && invoiceType !== "RVR"  && (
+              {invoiceType !== "S" && invoiceType !== "RVR" && (
                 <td>
                   <input
                     type="number"

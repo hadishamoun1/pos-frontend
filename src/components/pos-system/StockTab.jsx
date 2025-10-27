@@ -19,13 +19,13 @@ const StockTab = forwardRef(function StockTab(
   // ---- state
   // default list (v2/filtered-items) comes FLAT + already ordered by backend
   const [flatRows, setFlatRows] = useState([]);
-  // search list (pos/search-modal) comes NESTED from the API
+  // search list (pos/search-modal-instock) comes NESTED from the API
   const [nestedItems, setNestedItems] = useState([]);
 
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
-  const [dimsChip, setDimsChip] = useState("");
+  const [dimsChip, setDimsChip] = useState(""); // can be dims string OR plain number
 
   // pagination (default list only)
   const [page, setPage] = useState(1);
@@ -46,10 +46,17 @@ const StockTab = forwardRef(function StockTab(
     return next.signal;
   };
 
+  // Map Arabic digits → Latin, normalize punctuation
   const normalizeDigits = useCallback((s = "") => {
     return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
   }, []);
 
+  // Fold Alif forms for tolerant Arabic name matching
+  const normalizeArabic = useCallback((s = "") => {
+    return s.replace(/أ|إ|آ/g, "ا").trim();
+  }, []);
+
+  // 225*321-012 or 200*300
   const looksLikeDims = useCallback((s) => {
     if (!s) return false;
     const t = normalizeDigits(s).trim();
@@ -61,6 +68,13 @@ const StockTab = forwardRef(function StockTab(
     if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
     if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
     return true;
+  }, [normalizeDigits]);
+
+  // NEW: plain number -> treat as LENGTH
+  const isPlainNumber = useCallback((s) => {
+    if (!s) return false;
+    const t = normalizeDigits(String(s)).trim();
+    return /^\d{1,5}(\.\d+)?$/.test(t);
   }, [normalizeDigits]);
 
   // normalize any API result to { data: [], hasMore: boolean }
@@ -86,8 +100,7 @@ const StockTab = forwardRef(function StockTab(
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/v2/filtered-items`;
-      // Backend already filters zero-stock; no includeEmpty
-      const params = { page: targetPage, limit };
+      const params = { page: targetPage, limit }; // zero-stock filtered by backend
       const res = await axios.get(url, { params, signal });
       const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
@@ -98,7 +111,7 @@ const StockTab = forwardRef(function StockTab(
       setPage(targetPage);
       setHasMore(Boolean(hm));
     } catch (err) {
-      if (axios.isCancel && axios.isCancel(err)) return;
+      if (axios.isCancel?.(err)) return;
       console.error("Error fetching default page:", err);
       setHasMore(false);
     } finally {
@@ -114,13 +127,24 @@ const StockTab = forwardRef(function StockTab(
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/pos/search-modal-instock`;
-      // This endpoint returns nested data; keep it nested. No includeEmpty.
+      // Build params for in-stock nested search:
+      // - q: Arabic-normalized name if provided
+      // - dims: "225*321-012" if user entered dims
+      // - length: 225 if user entered just a number
       const params = { page: 1, limit: 200 };
-      if (nameChip) params.q = nameChip.trim();
-      if (dimsChip) params.dims = normalizeDigits(dimsChip.trim());
+
+      if (nameChip) params.q = normalizeArabic(nameChip);
+
+      const rawDims = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      if (rawDims) {
+        if (looksLikeDims(rawDims)) {
+          params.dims = rawDims;
+        } else if (isPlainNumber(rawDims)) {
+          params.length = Number(rawDims); // plain "225" → length filter
+        }
+      }
 
       const res = await axios.get(url, { params, signal });
-      // Server already filters zero-stock in your new API; keep as is
       const nested = Array.isArray(res.data) ? res.data : [];
 
       setNestedItems(nested);
@@ -128,14 +152,14 @@ const StockTab = forwardRef(function StockTab(
       setHasMore(false);  // search: no "Load more"
       setPage(1);
     } catch (err) {
-      if (axios.isCancel && axios.isCancel(err)) return;
+      if (axios.isCancel?.(err)) return;
       console.error("Error fetching search:", err);
       setNestedItems([]);
       setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, nameChip, dimsChip, normalizeDigits]);
+  }, [baseUrl, nameChip, dimsChip, normalizeArabic, normalizeDigits, looksLikeDims, isPlainNumber]);
 
   // ---------- effects ----------
   useEffect(() => {
@@ -144,7 +168,7 @@ const StockTab = forwardRef(function StockTab(
     setInputValue("");
     setNameChip("");
     setDimsChip("");
-    if (onSelectionCountChange) onSelectionCountChange(0);
+    onSelectionCountChange?.(0);
     setPage(1);
     setHasMore(false);
     setFlatRows([]);
@@ -175,9 +199,24 @@ const StockTab = forwardRef(function StockTab(
     if (e.key !== "Enter") return;
     const raw = inputValue.trim();
     if (!raw) return;
-    const text = normalizeDigits(raw);
-    if (looksLikeDims(text)) setDimsChip(text);
-    else setNameChip(text);
+    const withDigits = normalizeDigits(raw);
+
+    // If it looks like dims → pin as dims
+    if (looksLikeDims(withDigits)) {
+      setDimsChip(withDigits);
+      setInputValue("");
+      return;
+    }
+
+    // If it's a plain number → pin as numeric (length)
+    if (isPlainNumber(withDigits)) {
+      setDimsChip(withDigits); // fetchSearch will treat this as length
+      setInputValue("");
+      return;
+    }
+
+    // Otherwise treat as NAME (Arabic-normalized for nicer matching)
+    setNameChip(normalizeArabic(withDigits));
     setInputValue("");
   };
 
@@ -190,43 +229,42 @@ const StockTab = forwardRef(function StockTab(
       const next = new Set(prev);
       if (next.has(uniqueId)) next.delete(uniqueId);
       else next.add(uniqueId);
-      if (onSelectionCountChange) onSelectionCountChange(next.size);
+      onSelectionCountChange?.(next.size);
       return next;
     });
   };
 
   // ---------- build rows for render ----------
-  // Default (flat) mode: expand only batch rows (no empty variants)
-// Default (flat) mode: API already returns one row per batch — just map it.
-const rowsFromFlat = useMemo(() => {
-  if (!flatRows.length) return [];
-  return flatRows.map((r) => {
-    const hasRealVariantId = Number.isFinite(Number(r.variantId));
-    return {
-      uniqueId: `${r.variantId}-${r.batchId ?? "n"}`, // stable key
-      selectable: hasRealVariantId,
-      itemName: r.itemName,
-      type: r.type,
-      thickness: r.thickness,
-      length: Math.floor(Number(r.length || 0)),
-      width: Math.floor(Number(r.width || 0)),
-      sheetsPerBox: Number(r.sheetsPerBox || 0),
-      origin: r.origin || "",
-      condition: r.condition ?? "",
-      dateReceived: r.dateReceived ?? "",
-      balanceOFR: r.balanceOFR ?? "",
-    };
-  });
-}, [flatRows]);
+  // Default (flat) mode: API already returns one row per batch — just map it.
+  const rowsFromFlat = useMemo(() => {
+    if (!flatRows.length) return [];
+    return flatRows.map((r) => {
+      const hasRealVariantId = Number.isFinite(Number(r.variantId));
+      return {
+        uniqueId: `${r.variantId}-${r.batchId ?? "n"}`,
+        selectable: hasRealVariantId,
+        itemName: r.itemName,
+        type: r.type,
+        thickness: r.thickness,
+        length: Math.floor(Number(r.length || 0)),
+        width: Math.floor(Number(r.width || 0)),
+        sheetsPerBox: Number(r.sheetsPerBox || 0),
+        origin: r.origin || "",
+        condition: r.condition ?? "",
+        dateReceived: r.dateReceived ?? "",
+        balanceOFR: r.balanceOFR ?? "",
+      };
+    });
+  }, [flatRows]);
 
-  // Search (nested) mode: only variants that have batches
+  // Search (nested) mode: variants that have batches (in-stock)
   const rowsFromNested = useMemo(() => {
     if (!nestedItems.length) return [];
     const out = [];
     (nestedItems || []).forEach((item) => {
       (item.thicknesses || []).forEach((th) => {
         (th.variants || []).forEach((v) => {
-          if (!Array.isArray(v.batches) || v.batches.length === 0) return; // skip no-stock variants
+          if (!Array.isArray(v.batches) || v.batches.length === 0) return;
           const hasRealVariantId = Number.isFinite(Number(v.id));
           v.batches.forEach((b) =>
             out.push({
@@ -286,8 +324,8 @@ const rowsFromFlat = useMemo(() => {
       <div className="search-modal-item-input-row">
         <input
           type="text"
-          placeholder="مثال: 5.5ملم ابيض   ثم Enter — وبعدها 225*321-012 ثم Enter"
-        className="search-modal-items-input"
+          placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225"
+          className="search-modal-items-input"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleEnter}
@@ -307,7 +345,7 @@ const rowsFromFlat = useMemo(() => {
               <span className="search-chip-label search-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button className="search-chip-x" onClick={clearDimsChip} aria-label="Remove dims filter">×</button>
+              <button className="search-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">×</button>
             </span>
           )}
         </div>

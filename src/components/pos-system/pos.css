@@ -711,6 +711,10 @@ input:disabled {
   background: linear-gradient(to bottom, #fff387, #ffff34);
   
 }
+.pos-page-inventory-table .pos-empty-row td {
+  background: #fafafa;
+  font-style: italic;
+}
 
 /* default (≥ 1280px): 3 columns — your current flex works fine */
 

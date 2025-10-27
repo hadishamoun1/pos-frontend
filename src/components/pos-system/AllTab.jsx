@@ -26,6 +26,8 @@ const AllTab = forwardRef(function AllTab(
 
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [inputValue, setInputValue] = useState("");
+
+  // Two pinned chips: name OR dims/number
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
 
@@ -48,10 +50,34 @@ const AllTab = forwardRef(function AllTab(
     return next.signal;
   };
 
+  // Map Arabic digits → Latin, normalize punctuation
   const normalizeDigits = useCallback((s = "") => {
     return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
   }, []);
 
+  // ✅ Robust Arabic normalization to match DB values like "ابيض"
+  const normalizeArabic = useCallback((s = "") => {
+    return s
+      // remove diacritics
+      .replace(/[\u064B-\u065F]/g, "")
+      // remove tatweel
+      .replace(/\u0640/g, "")
+      // Alif variants -> ا
+      .replace(/[أإآ]/g, "ا")
+      // ى -> ي
+      .replace(/ى/g, "ي")
+      // ة -> ه
+      .replace(/ة/g, "ه")
+      // ئ -> ي
+      .replace(/ئ/g, "ي")
+      // ؤ -> و
+      .replace(/ؤ/g, "و")
+      // collapse spaces
+      .replace(/\s+/g, " ")
+      .trim();
+  }, []);
+
+  // Should be treated as dims like 225*321-025 or 200*300
   const looksLikeDims = useCallback((s) => {
     if (!s) return false;
     const t = normalizeDigits(s).trim();
@@ -63,6 +89,13 @@ const AllTab = forwardRef(function AllTab(
     if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
     if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
     return true;
+  }, [normalizeDigits]);
+
+  // plain number (Arabic or Latin digits) → treat as LENGTH
+  const isPlainNumber = useCallback((s) => {
+    if (!s) return false;
+    const t = normalizeDigits(String(s)).trim();
+    return /^\d{1,5}(\.\d+)?$/.test(t);
   }, [normalizeDigits]);
 
   // normalize any API result to { data: [], hasMore: boolean }
@@ -88,14 +121,14 @@ const AllTab = forwardRef(function AllTab(
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/v2/filtered-items-all-batches`;
-      const params = { page: targetPage, limit }; // includes ALL batches (even 0/negative)
+      const params = { page: targetPage, limit };
       const res = await axios.get(url, { params, signal });
       const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
       if (targetPage === 1) setFlatRows(flat || []);
-      else setFlatRows((prev) => [...prev, ...(flat || [])]); // append to preserve backend order
+      else setFlatRows((prev) => [...prev, ...(flat || [])]);
 
-      setNestedItems([]); // clear search data
+      setNestedItems([]);
       setPage(targetPage);
       setHasMore(Boolean(hm));
     } catch (err) {
@@ -115,17 +148,33 @@ const AllTab = forwardRef(function AllTab(
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/pos/search-modal`;
-      // includeEmpty=1 ensures batches/variants with 0/negative balances are included in search
+
+      // Build params:
+      // - includeEmpty=1 to show everything (even 0/negative) in search mode
+      // - q: normalized Arabic for names
+      // - dims: "225*321-025" (if user typed dims)
+      // - length: 225 (if user typed a plain number)
       const params = { page: 1, limit: 200, includeEmpty: 1 };
-      if (nameChip) params.q = nameChip.trim();
-      if (dimsChip) params.dims = normalizeDigits(dimsChip.trim());
+
+      // name (normalize Arabic)
+      if (nameChip) params.q = normalizeArabic(nameChip);
+
+      // dims or numeric
+      let dimsOrNumber = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      if (dimsOrNumber) {
+        if (looksLikeDims(dimsOrNumber)) {
+          params.dims = dimsOrNumber; // e.g. 225*321-025
+        } else if (isPlainNumber(dimsOrNumber)) {
+          params.length = Number(dimsOrNumber); // plain "225" → length filter
+        }
+      }
 
       const res = await axios.get(url, { params, signal });
       const nested = Array.isArray(res.data) ? res.data : [];
 
       setNestedItems(nested);
-      setFlatRows([]);    // clear flat rows in search mode
-      setHasMore(false);  // search: no "Load more"
+      setFlatRows([]);
+      setHasMore(false);
       setPage(1);
     } catch (err) {
       if (axios.isCancel?.(err)) return;
@@ -135,7 +184,7 @@ const AllTab = forwardRef(function AllTab(
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, nameChip, dimsChip, normalizeDigits]);
+  }, [baseUrl, nameChip, dimsChip, normalizeArabic, normalizeDigits, looksLikeDims, isPlainNumber]);
 
   // ---------- effects ----------
   useEffect(() => {
@@ -175,9 +224,27 @@ const AllTab = forwardRef(function AllTab(
     if (e.key !== "Enter") return;
     const raw = inputValue.trim();
     if (!raw) return;
-    const text = normalizeDigits(raw);
-    if (looksLikeDims(text)) setDimsChip(text);
-    else setNameChip(text);
+
+    // Normalize digits first
+    const withDigits = normalizeDigits(raw);
+
+    // If it looks like dims → pin as dims
+    if (looksLikeDims(withDigits)) {
+      setDimsChip(withDigits);
+      setInputValue("");
+      return;
+    }
+
+    // If it's a plain number → pin as numeric (length)
+    if (isPlainNumber(withDigits)) {
+      setDimsChip(withDigits); // treated as length in fetchSearch
+      setInputValue("");
+      return;
+    }
+
+    // Otherwise treat as NAME (normalize Arabic)
+    const nm = normalizeArabic(withDigits);
+    setNameChip(nm);
     setInputValue("");
   };
 
@@ -196,7 +263,6 @@ const AllTab = forwardRef(function AllTab(
   };
 
   // ---------- build rows for render ----------
-  // Default (flat): backend returns one row per batch → map directly
   const rowsFromFlat = useMemo(() => {
     if (!flatRows.length) return [];
     return flatRows.map((r) => {
@@ -218,7 +284,6 @@ const AllTab = forwardRef(function AllTab(
     });
   }, [flatRows]);
 
-  // Search (nested): include ALL batches (even 0/negative) because includeEmpty=1
   const rowsFromNested = useMemo(() => {
     if (!nestedItems.length) return [];
     const out = [];
@@ -284,7 +349,7 @@ const AllTab = forwardRef(function AllTab(
       <div className="all-tab-item-input-row">
         <input
           type="text"
-          placeholder="مثال: 5.5ملم ابيض   ثم Enter — وبعدها 225*321-012 ثم Enter"
+          placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225"
           className="all-tab-items-input"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
@@ -305,7 +370,7 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims filter">×</button>
+              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">×</button>
             </span>
           )}
         </div>
