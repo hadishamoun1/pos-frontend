@@ -160,8 +160,8 @@ export default function ItemsTable({
             <th>Item Name</th>
             <th>Type</th>
             <th>Origin</th>
-            <th>Length (cm)</th>
-            <th>Width (cm)</th>
+            <th>Length</th>
+            <th>Width</th>
             <th>Quantity</th>
             <th>Sheets/Box</th>
             <th>SQM</th>

@@ -97,3 +97,30 @@
   align-items: center;
   line-height: 1;
 }
+.journal-list-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.journal-list-search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.journal-list-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.journal-list-pager .pager-info {
+  white-space: nowrap;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.journal-list-pager .pager-limit {
+  padding: 6px 8px;
+}

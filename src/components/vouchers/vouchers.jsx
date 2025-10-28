@@ -14,6 +14,12 @@ const JournalVoucherPage = () => {
   const [viewMode, setViewMode] = useState(false);
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
+  // ✅ NEW: pagination state for the journal list
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [hasMoreSummary, setHasMoreSummary] = useState(true);
+  const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
+  // (optional future) const [summaryQuery, setSummaryQuery] = useState("");
+
   const [notification, setNotification] = useState({
     visible: false,
     type: "",
@@ -449,24 +455,50 @@ const JournalVoucherPage = () => {
     }
   };
 
-  // Fetch journal data from API
-  const fetchJournalData = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${baseUrl}/journal-vouchers/v1/list`);
-      setJournalData(response.data);
-    } catch (error) {
-      console.error("Error fetching journal data:", error);
-    } finally {
-      setLoading(false);
-    }
+  // ====== PAGINATED fetch for the modal list ======
+  const fetchJournalData = async (pageArg = 1 /* , qArg = "" */) => {
+    // The backend forces 100 per page and returns { data, page, limit, total, totalPages, hasMore }
+    const url = `${baseUrl}/journal-vouchers/v1/list?page=${pageArg}`;
+    // if you add search later: + `&q=${encodeURIComponent(qArg)}`
+    const response = await axios.get(url);
+    return response.data;
   };
 
   useEffect(() => {
     if (isJournalListOpen) {
-      fetchJournalData();
+      (async () => {
+        try {
+          setLoading(true);
+          setSummaryPage(1);
+          const res = await fetchJournalData(1 /* , summaryQuery */);
+          setJournalData(res.data || []);
+          setHasMoreSummary(Boolean(res.hasMore));
+        } catch (error) {
+          console.error("Error fetching journal data:", error);
+          setJournalData([]);
+          setHasMoreSummary(false);
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
-  }, [isJournalListOpen]);
+  }, [isJournalListOpen /* , summaryQuery */]);
+
+  const handleLoadMore = async () => {
+    if (!hasMoreSummary || loadingMoreSummary) return;
+    try {
+      setLoadingMoreSummary(true);
+      const next = summaryPage + 1;
+      const res = await fetchJournalData(next /* , summaryQuery */);
+      setJournalData((prev) => [...prev, ...(res.data || [])]);
+      setSummaryPage(next);
+      setHasMoreSummary(Boolean(res.hasMore));
+    } catch (e) {
+      console.error("Error loading more:", e);
+    } finally {
+      setLoadingMoreSummary(false);
+    }
+  };
 
   // Fetch a single journal voucher by ID
   const fetchJournalVoucherById = async (id) => {
@@ -485,7 +517,7 @@ const JournalVoucherPage = () => {
             d.customer?.customerAccountNumber ||
             "";
           const entityName =
-            d.account?.accountName ||
+            d.account?.arabicAccountName ||
             d.supplier?.supplierName ||
             d.customer?.customerName ||
             "";
@@ -627,6 +659,10 @@ const JournalVoucherPage = () => {
               onClose={() => setIsJournalListOpen(false)}
               journalData={journalData}
               onView={handleView}
+              // ✅ NEW: pagination props
+              onLoadMore={handleLoadMore}
+              hasMore={hasMoreSummary}
+              loadingMore={loadingMoreSummary}
             />
 
             <button
@@ -695,7 +731,9 @@ const JournalVoucherPage = () => {
                       readOnly
                       disabled={viewMode}
                       placeholder="Account Name"
-                      className="general-vouchers-input column-account-name"
+                        className={`general-vouchers-input column-account-name ${
+    /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
+  }`}
                     />
                   </td>
                   <td>

@@ -384,6 +384,28 @@
   box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
 }
 
+  /* Arabic text helper */
+.is-arabic {
+  direction: rtl;          
+  unicode-bidi: plaintext;     
+  text-align: right;           
+  letter-spacing: normal;
+  font-family: "Noto Naskh Arabic", "Amiri", "Tahoma", "Arial", sans-serif;
+  font-size: 1.2rem;
+}
+
+/* Optional: make the input’s placeholder look OK in Arabic too */
+.is-arabic::placeholder {
+  direction: rtl;
+  text-align: right;
+}
+
+/* If your table cells need a bit more height for Arabic script */
+.column-account-name .is-arabic {
+  line-height: 1.4;
+}
+
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .general-vouchers-container {
@@ -410,4 +432,8 @@
   .general-vouchers-summary span {
     margin-top: 0.8rem;
   }
+
+
+
+
 }
