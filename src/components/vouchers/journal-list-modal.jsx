@@ -6,10 +6,13 @@ const JournalListsModal = ({
   onClose,
   journalData,
   onView,
-  // ✅ NEW props for pagination
+  // pagination
   onLoadMore,
   hasMore,
   loadingMore,
+  // ✅ NEW: search props
+  searchSeq,             // string
+  onSearchSeqChange,     // (val: string) => void
 }) => {
   return (
     isOpen && (
@@ -17,16 +20,19 @@ const JournalListsModal = ({
         <div className="journal-list-modal">
           <div className="journal-list-header">
             <h2>Journal Lists</h2>
-            <button className="close-btn" onClick={onClose}>
-              &times;
-            </button>
+            <button className="close-btn" onClick={onClose}>&times;</button>
           </div>
+
           <div className="journal-list-body">
             <input
               type="text"
-              placeholder="Search..."
+              value={searchSeq}
+              onChange={(e) => onSearchSeqChange(e.target.value)}
+              placeholder="Search by trailing number… e.g. 3 or 003 or 25"
               className="journal-list-search"
+              inputMode="numeric"
             />
+
             <table className="journal-list-table">
               <thead>
                 <tr>
@@ -46,10 +52,7 @@ const JournalListsModal = ({
                       <td>{item.description}</td>
                       <td>{item.jvType}</td>
                       <td>
-                        <button
-                          className="view-btn"
-                          onClick={() => onView(item)}
-                        >
+                        <button className="view-btn" onClick={() => onView(item)}>
                           View
                         </button>
                       </td>
@@ -63,7 +66,6 @@ const JournalListsModal = ({
               </tbody>
             </table>
 
-            {/* ✅ NEW: Load more control */}
             <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
               <button
                 className="view-btn"

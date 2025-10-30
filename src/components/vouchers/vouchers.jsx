@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
 import axios from "axios";
@@ -11,14 +11,23 @@ const JournalVoucherPage = () => {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState("");
   const [type, setType] = useState("");
-  const [viewMode, setViewMode] = useState(false);
+  const [viewMode, setViewMode] = useState(false); // kept for compatibility
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
+  const [summarySeq, setSummarySeq] = useState("");
+  const [searchActive, setSearchActive] = useState(false);
+  const searchDebounceRef = useRef();
 
-  // ✅ NEW: pagination state for the journal list
+  // Edit / saved state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [isSaved, setIsSaved] = useState(false); // true if JV exists in DB
+
+  const [originalDetailIds, setOriginalDetailIds] = useState([]);
+
+  // Journal list pagination
   const [summaryPage, setSummaryPage] = useState(1);
   const [hasMoreSummary, setHasMoreSummary] = useState(true);
   const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
-  // (optional future) const [summaryQuery, setSummaryQuery] = useState("");
 
   const [notification, setNotification] = useState({
     visible: false,
@@ -26,8 +35,18 @@ const JournalVoucherPage = () => {
     message: "",
     onConfirm: null,
   });
+
+  const makeRid = () =>
+    `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
   const [entries, setEntries] = useState([
     {
+      rid: makeRid(),
+      detailId: null,
+      originalAccountId: null,
+      originalCustomerId: null,
+      originalSupplierId: null,
+
       accountId: null,
       customerId: null,
       supplierId: null,
@@ -55,31 +74,91 @@ const JournalVoucherPage = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
+  const [currentRowRid, setCurrentRowRid] = useState(null);
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
     y: 0,
     rowIndex: null,
+    rowRid: null,
   });
 
+  // ---------- READ-ONLY MODE (lock UI when saved & not editing) ----------
+  const readOnlyMode = isSaved && !isEditing;
+
+  // ===== Number helpers =====
   const parseNumber = (value) => {
     if (value === "" || value === null || value === undefined) return 0;
-    const stringValue = value.toString().replace(/,/g, "");
-    return isNaN(stringValue) ? 0 : parseFloat(stringValue);
+    const s = String(value).replace(/,/g, "");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
   };
 
   const formatNumber = (value) => {
-    if (value === null || value === undefined || value === "") return "";
-    return parseFloat(value).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    const n = parseNumber(value);
+    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // allow user to type freely (digits + single dot)
+  const cleanNumericInput = (s = "") =>
+    s.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+
+  // For payload safety (kept)
+  const nzNumStr = (v) => {
+    if (v === null || v === undefined) return "0";
+    const s = String(v).trim();
+    if (s === "" || s === "NaN") return "0";
+    const n = parseFloat(s.replace(/,/g, ""));
+    return Number.isFinite(n) ? String(n) : "0";
+  };
+  const nzOfr = (v) => nzNumStr(v);
+  const nzBase = (v) => nzNumStr(v);
+
+  const normalizeEntity = (entity) => {
+    const id =
+      entity?.id ??
+      entity?.accountId ??
+      entity?.customerId ??
+      entity?.supplierId ??
+      null;
+
+    const typ =
+      entity?.entityType ||
+      (entity?.supplierId ? "supplier" : entity?.customerId ? "customer" : "account");
+
+    const number =
+      entity?.accountNumber ??
+      entity?.supplierAccountNumber ??
+      entity?.customerAccountNumber ??
+      entity?.number ??
+      "";
+
+    const name =
+      entity?.accountName ??
+      entity?.arabicAccountName ??
+      entity?.supplierName ??
+      entity?.customerName ??
+      "";
+
+    const numericId =
+      id !== null && id !== undefined && !Number.isNaN(Number(id))
+        ? Number(id)
+        : id;
+
+    return { id: numericId, type: typ, number, name };
   };
 
   const handleAddRow = () => {
+    if (readOnlyMode) return;
     setEntries((e) => [
       ...e,
       {
+        rid: makeRid(),
+        detailId: null,
+        originalAccountId: null,
+        originalCustomerId: null,
+        originalSupplierId: null,
+
         accountId: null,
         customerId: null,
         supplierId: null,
@@ -106,112 +185,134 @@ const JournalVoucherPage = () => {
     ]);
   };
 
+  // ======= CORE: recalcEntry (S+USD mirrors; do NOT format while typing) =======
   const recalcEntry = (entry) => {
-    // called whenever any of the 6 driving fields changes
     const d = parseNumber(entry.debit);
     const c = parseNumber(entry.credit);
-    const ofrD = parseNumber(entry.debitOFR);
-    const ofrC = parseNumber(entry.creditOFR);
-    const r = parseNumber(entry.exchangeRate);
-    const toS = (n) => n.toString();
+    const r = Math.max(1, parseNumber(entry.exchangeRate || 1)); // guard
 
-    // reset everything
-    entry.debitUSD = "0";
-    entry.creditUSD = "0";
-    entry.debitEx = "0";
-    entry.creditEx = "0";
-    entry.debitUSDOFR = "0";
-    entry.creditUSDOFR = "0";
-    entry.debitExOFR = "0";
-    entry.creditExOFR = "0";
+    // reset computed fields (keep as numbers internally)
+    entry.debitUSD = 0;
+    entry.creditUSD = 0;
+    entry.debitEx = 0;
+    entry.creditEx = 0;
+    entry.debitUSDOFR = 0;
+    entry.creditUSDOFR = 0;
+    entry.debitExOFR = 0;
+    entry.creditExOFR = 0;
 
-    // TYPE S
     if (type === "S") {
       if (entry.currency === "USD") {
-        entry.debitUSD = toS(d);
-        entry.creditUSD = toS(c);
+        // user types only DR/CR; mirror to everything
+        entry.debit = String(entry.debit);   // keep raw the user typed
+        entry.credit = String(entry.credit); // keep raw
+        // derived values:
+        entry.debitUSD = d;
+        entry.debitEx = d * r;
+        entry.debitOFR = String(entry.debit); // mirror raw so on blur it formats
+        entry.debitUSDOFR = d;
+        entry.debitExOFR = d * r;
 
-        // Keep OFR base equal to base for S-USD
-        entry.debitOFR = toS(d);
-        entry.creditOFR = toS(c);
+        entry.creditUSD = c;
+        entry.creditEx = c * r;
+        entry.creditOFR = String(entry.credit);
+        entry.creditUSDOFR = c;
+        entry.creditExOFR = c * r;
+        return;
+      }
 
-        // LL = base * rate
-        entry.debitEx = toS(d * r);
-        entry.creditEx = toS(c * r);
+      if (entry.currency === "LL") {
+        entry.debit = String(entry.debit);
+        entry.credit = String(entry.credit);
 
-        // LL OFR = OFR * rate
-        entry.debitExOFR = toS(ofrD * r);
-        entry.creditExOFR = toS(ofrC * r);
+        entry.debitEx = d;
+        entry.debitUSD = d / r;
+        entry.debitOFR = String(entry.debit);
+        entry.debitExOFR = d;
+        entry.debitUSDOFR = d / r;
 
-        // USD OFR mirrors OFR amounts for S-USD
-        entry.debitUSDOFR = toS(ofrD);
-        entry.creditUSDOFR = toS(ofrC);
-      } else if (entry.currency === "LL") {
-        entry.debitEx = toS(d);
-        entry.creditEx = toS(c);
-        entry.debitExOFR = toS(ofrD);
-        entry.creditExOFR = toS(ofrC);
-        entry.debitUSD = toS(d / r);
-        entry.creditUSD = toS(c / r);
-        entry.debitUSDOFR = toS(ofrD / r);
-        entry.creditUSDOFR = toS(ofrC / r);
-        entry.debit = entry.debitEx;
-        entry.credit = entry.creditEx;
-        entry.debitOFR = entry.debitExOFR;
-        entry.creditOFR = entry.creditExOFR;
+        entry.creditEx = c;
+        entry.creditUSD = c / r;
+        entry.creditOFR = String(entry.credit);
+        entry.creditExOFR = c;
+        entry.creditUSDOFR = c / r;
+        return;
       }
     }
 
-    // TYPE G
-    else if (type === "G") {
+    if (type === "G") {
+      const ofrD = parseNumber(entry.debitOFR);
+      const ofrC = parseNumber(entry.creditOFR);
+
       if (entry.currency === "USD") {
-        // base = zero; OFR stays editable
-        entry.debitUSDOFR = toS(ofrD);
-        entry.creditUSDOFR = toS(ofrC);
-        entry.debitExOFR = toS(ofrD * r);
-        entry.creditExOFR = toS(ofrC * r);
+        entry.debitUSDOFR = ofrD;
+        entry.creditUSDOFR = ofrC;
+        entry.debitExOFR = ofrD * r;
+        entry.creditExOFR = ofrC * r;
       } else if (entry.currency === "LL") {
-        entry.debitExOFR = toS(ofrD);
-        entry.debitUSDOFR = toS(ofrD / r);
-        entry.creditExOFR = toS(ofrC);
-        entry.creditUSDOFR = toS(ofrC / r);
+        entry.debitExOFR = ofrD;
+        entry.creditExOFR = ofrC;
+        entry.debitUSDOFR = ofrD / r;
+        entry.creditUSDOFR = ofrC / r;
       }
+      return;
     }
 
-    // TYPE SR
-    else if (type === "SR") {
+    if (type === "SR") {
+      const ofrD = d;
+      const ofrC = c;
+
       if (entry.currency === "USD") {
-        entry.debitUSD = toS(d);
-        entry.creditUSD = toS(c);
-        entry.debitEx = toS(d * r);
-        entry.creditEx = toS(c * r);
-        entry.debitUSDOFR = toS(ofrD);
-        entry.creditUSDOFR = toS(ofrC);
-        entry.debitExOFR = toS(ofrD * r);
-        entry.creditExOFR = toS(ofrC * r);
+        entry.debitUSD = d;
+        entry.creditUSD = c;
+        entry.debitEx = d * r;
+        entry.creditEx = c * r;
+
+        entry.debitUSDOFR = ofrD;
+        entry.creditUSDOFR = ofrC;
+        entry.debitExOFR = ofrD * r;
+        entry.creditExOFR = ofrC * r;
       } else if (entry.currency === "LL") {
-        entry.debitEx = toS(d);
-        entry.creditEx = toS(c);
-        entry.debitExOFR = toS(ofrD);
-        entry.creditExOFR = toS(ofrC);
-        entry.debitUSD = toS(d / r);
-        entry.creditUSD = toS(c / r);
-        entry.debitUSDOFR = toS(ofrD / r);
-        entry.creditUSDOFR = toS(ofrC / r);
+        entry.debitEx = d;
+        entry.creditEx = c;
+        entry.debitUSD = d / r;
+        entry.creditUSD = c / r;
+
+        entry.debitExOFR = ofrD;
+        entry.creditExOFR = ofrC;
+        entry.debitUSDOFR = ofrD / r;
+        entry.creditUSDOFR = ofrC / r;
       }
-      // (EUR if needed)
     }
   };
 
+  // ====== Input handling ======
+  const NUM_FIELDS = new Set([
+    "debit", "credit", "debitOFR", "creditOFR",
+    "exchangeRate", "exchangeRateEURtoUSD",
+    "debitUSD", "creditUSD",
+    "debitUSDOFR", "creditUSDOFR",
+    "debitEx", "creditEx",
+    "debitExOFR", "creditExOFR",
+  ]);
+
+  const EDITABLE_NUM_FIELDS = new Set([
+    "debit", "credit", "debitOFR", "creditOFR", "exchangeRate", "exchangeRateEURtoUSD"
+  ]);
+
   const handleInputChange = (index, field, value) => {
+    if (readOnlyMode) return;
     const updated = [...entries];
     const entry = updated[index];
-    entry[field] = value;
 
-    if (
-      !viewMode &&
-      ["debit", "credit", "debitOFR", "creditOFR", "exchangeRate", "currency"].includes(field)
-    ) {
+    // let the user type normally (raw) for editable numeric fields
+    const next =
+      EDITABLE_NUM_FIELDS.has(field) ? cleanNumericInput(value) : value;
+
+    entry[field] = next;
+
+    // Recalculate when numbers or currency change (without formatting)
+    if (NUM_FIELDS.has(field) || field === "currency") {
       recalcEntry(entry);
     }
 
@@ -219,67 +320,85 @@ const JournalVoucherPage = () => {
   };
 
   const handleInputBlur = (index, field) => {
+    if (readOnlyMode) return;
     const updated = [...entries];
-    const value = parseNumber(updated[index][field]);
-    updated[index][field] = formatNumber(value);
+    const entry = updated[index];
+
+    if (EDITABLE_NUM_FIELDS.has(field)) {
+      entry[field] = formatNumber(entry[field]); // format only on blur
+    }
     setEntries(updated);
   };
 
   const handleAccountSelection = (entity) => {
-    if (currentRowIndex === null) {
+    if (readOnlyMode) return;
+    if (currentRowRid === null) {
       alert("Please select a row to assign an account.");
       return;
     }
+    const { id, type: entType, number, name } = normalizeEntity(entity);
 
-    const updatedEntries = [...entries];
-    const row = updatedEntries[currentRowIndex];
+    setEntries((prev) =>
+      prev.map((row) => {
+        if (row.rid !== currentRowRid) return row;
+        const next = { ...row };
+        next.accountId = null;
+        next.customerId = null;
+        next.supplierId = null;
+        if (entType === "account") next.accountId = id;
+        else if (entType === "customer") next.customerId = id;
+        else if (entType === "supplier") next.supplierId = id;
+        next.accountNumber = number;
+        next.accountName = name;
+        return next;
+      })
+    );
 
-    // clear previous FKs
-    row.accountId = null;
-    row.customerId = null;
-    row.supplierId = null;
-
-    // set the correct FK based on what was chosen
-    if (entity.entityType === "account") row.accountId = entity.id;
-    if (entity.entityType === "customer") row.customerId = entity.id;
-    if (entity.entityType === "supplier") row.supplierId = entity.id;
-
-    // display number/name in the grid
-    row.accountNumber = entity.accountNumber;
-    row.accountName = entity.accountName;
-
-    setEntries(updatedEntries);
     setIsModalOpen(false);
   };
 
-  const handleAccountNumberClick = (index) => {
-    setCurrentRowIndex(index);
+  const handleAccountNumberClick = (indexOrRid) => {
+    if (readOnlyMode) return;
+    const rid =
+      typeof indexOrRid === "string"
+        ? indexOrRid
+        : entries[indexOrRid]?.rid ?? null;
+
+    setCurrentRowIndex(typeof indexOrRid === "number" ? indexOrRid : null);
+    setCurrentRowRid(rid);
     setIsModalOpen(true);
   };
 
-  const handleRightClick = (event, rowIndex) => {
+  const handleRightClick = (event, rowIndex, rowRid) => {
+    if (readOnlyMode) return;
     event.preventDefault();
     setContextMenu({
       visible: true,
       x: event.clientX,
       y: event.clientY,
       rowIndex,
+      rowRid,
     });
   };
 
   const handleDeleteRow = () => {
+    if (readOnlyMode) return;
+    if (contextMenu.rowRid) {
+      setEntries((prev) => prev.filter((r) => r.rid !== contextMenu.rowRid));
+      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
+      return;
+    }
     if (contextMenu.rowIndex !== null) {
-      setEntries(entries.filter((_, index) => index !== contextMenu.rowIndex));
-      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+      setEntries((prev) => prev.filter((_, i) => i !== contextMenu.rowIndex));
+      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
     }
   };
 
   const handleCloseContextMenu = () => {
-    setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null });
+    setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
   };
 
   // ===== Totals =====
-  // Base totals (used for S/SR)
   const totalDebitBase = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0)
   );
@@ -287,7 +406,6 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0)
   );
 
-  // OFR totals (used for G)
   const totalDebitOFR = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.debitOFR), 0)
   );
@@ -295,7 +413,6 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditOFR), 0)
   );
 
-  // Other totals you already had
   const totalDebitUSD = parseNumber(
     entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0)
   );
@@ -309,28 +426,155 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
-  // Equality flags used for UI
   const isEqualBase = totalDebitBase === totalCreditBase && totalDebitBase !== 0;
   const isEqualOFR = totalDebitOFR === totalCreditOFR && totalDebitOFR !== 0;
   const isUSDEqual = totalDebitUSD === totalCreditUSD;
   const isLLEqual = totalDebitLL === totalCreditLL;
 
-  // Use the right equality rule depending on type
   const submitBlocked =
     !type ||
     !date ||
     (type === "G" ? !isEqualOFR : !isEqualBase);
 
-  const handleSubmit = async () => {
-    console.log("Current entries state:", entries);
+  // ---------- payload builders ----------
+  const buildCreatePayload = () => {
+    const removeCommas = (value) =>
+      typeof value === "string" ? value.replace(/,/g, "") : value;
 
-    // helper: treat "", null, "0", "0.00" as zero
+    return {
+      date,
+      jvType: type,
+      details: entries
+        .filter((e) => {
+          const isZero = (v) => {
+            const n = parseNumber(v);
+            return !n || n === 0;
+          };
+          const isEmptyRow =
+            !e.accountId &&
+            !e.customerId &&
+            !e.supplierId &&
+            isZero(e.debit) &&
+            isZero(e.credit) &&
+            isZero(e.debitOFR) &&
+            isZero(e.creditOFR);
+          return !isEmptyRow;
+        })
+        .map((entry) => {
+          const base = {
+            accountId: entry.accountId || undefined,
+            customerId: entry.customerId || undefined,
+            supplierId: entry.supplierId || undefined,
+            description: entry.description,
+            currency: entry.currency,
+            exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
+            exchangeRate: removeCommas(entry.exchangeRate),
+            docNbr: entry.documentNbr,
+
+            // Always send OFR
+            debitOFR: removeCommas(entry.debitOFR),
+            debitUSDOFR: removeCommas(entry.debitUSDOFR),
+            debitLLOFR: removeCommas(entry.debitExOFR),
+            creditOFR: removeCommas(entry.creditOFR),
+            creditUSDOFR: removeCommas(entry.creditUSDOFR),
+            creditLLOFR: removeCommas(entry.creditExOFR),
+          };
+
+          if (type === "G") {
+            return {
+              ...base,
+              debit: "0",
+              debitUSD: "0",
+              debitLL: "0",
+              credit: "0",
+              creditUSD: "0",
+              creditLL: "0",
+            };
+          }
+
+          return {
+            ...base,
+            debit: removeCommas(entry.debit),
+            debitUSD: removeCommas(entry.debitUSD),
+            debitLL: removeCommas(entry.debitEx),
+            credit: removeCommas(entry.credit),
+            creditUSD: removeCommas(entry.creditUSD),
+            creditLL: removeCommas(entry.creditEx),
+          };
+        }),
+    };
+  };
+
+  // PUT mirrors create — no detail ids
+  const buildEditPayload = () => {
+    const details = entries
+      .filter((e) => {
+        const isZero = (v) => {
+          const n = parseNumber(v);
+          return !n || n === 0;
+        };
+        const isEmptyRow =
+          !e.accountId &&
+          !e.customerId &&
+          !e.supplierId &&
+          isZero(e.debit) &&
+          isZero(e.credit) &&
+          isZero(e.debitOFR) &&
+          isZero(e.creditOFR);
+        return !isEmptyRow;
+      })
+      .map((entry) => {
+        const common = {
+          accountId: entry.accountId || undefined,
+          customerId: entry.customerId || undefined,
+          supplierId: entry.supplierId || undefined,
+          description: entry.description ?? "",
+          currency: entry.currency ?? "",
+          exchangeRateEURtoUSD: nzNumStr(entry.exchangeRateEURtoUSD),
+          exchangeRate: nzNumStr(entry.exchangeRate),
+          docNbr: entry.documentNbr ?? "",
+          // OFR
+          debitOFR: nzOfr(entry.debitOFR),
+          debitUSDOFR: nzOfr(entry.debitUSDOFR),
+          debitLLOFR: nzOfr(entry.debitExOFR),
+          creditOFR: nzOfr(entry.creditOFR),
+          creditUSDOFR: nzOfr(entry.creditUSDOFR),
+          creditLLOFR: nzOfr(entry.creditExOFR),
+        };
+
+        const baseFields =
+          type === "G"
+            ? {
+                debit: "0",
+                debitUSD: "0",
+                debitLL: "0",
+                credit: "0",
+                creditUSD: "0",
+                creditLL: "0",
+              }
+            : {
+                debit: nzBase(entry.debit),
+                debitUSD: nzBase(entry.debitUSD),
+                debitLL: nzBase(entry.debitEx),
+                credit: nzBase(entry.credit),
+                creditUSD: nzBase(entry.creditUSD),
+                creditLL: nzBase(entry.creditEx),
+              };
+
+        return { ...common, ...baseFields };
+      });
+
+    const payload = { date, jvType: type, details };
+    return payload;
+  };
+
+  // -------- CREATE (POST) --------
+  const handleSubmit = async () => {
     const isZero = (v) => {
       const n = parseNumber(v);
       return !n || n === 0;
     };
 
-    // helper: a row is "empty" if it has no FK and no amounts
     const isEmptyRow = (e) =>
       !e.accountId &&
       !e.customerId &&
@@ -340,7 +584,6 @@ const JournalVoucherPage = () => {
       isZero(e.debitOFR) &&
       isZero(e.creditOFR);
 
-    // ignore totally empty rows
     const effectiveEntries = entries.filter((e) => !isEmptyRow(e));
 
     try {
@@ -349,11 +592,11 @@ const JournalVoucherPage = () => {
           visible: true,
           type: "error",
           message: "Please add at least one non-empty entry.",
+          onConfirm: null,
         });
         return;
       }
 
-      // VALIDATION: allow account OR customer OR supplier
       const invalidEntries = effectiveEntries.filter(
         (e) => !e.accountId && !e.customerId && !e.supplierId
       );
@@ -362,6 +605,7 @@ const JournalVoucherPage = () => {
           visible: true,
           type: "error",
           message: "Each row must pick an Account, Customer, or Supplier.",
+          onConfirm: null,
         });
         return;
       }
@@ -371,6 +615,7 @@ const JournalVoucherPage = () => {
           type: "error",
           message: "Please select a type for the Journal Voucher.",
           visible: true,
+          onConfirm: null,
         });
         return;
       }
@@ -379,87 +624,100 @@ const JournalVoucherPage = () => {
           type: "error",
           message: "Please select a date for the Journal Voucher.",
           visible: true,
+          onConfirm: null,
         });
         return;
       }
 
-      // Prepare the payload
-      const removeCommas = (value) =>
-        typeof value === "string" ? value.replace(/,/g, "") : value;
-
-      const payload = {
-        date,
-        jvType: type,
-        details: effectiveEntries.map((entry) => ({
-          accountId: entry.accountId || undefined,
-          customerId: entry.customerId || undefined,
-          supplierId: entry.supplierId || undefined,
-          description: entry.description,
-          debit: removeCommas(entry.debit),
-          debitUSD: removeCommas(entry.debitUSD),
-          debitLL: removeCommas(entry.debitEx),
-          credit: removeCommas(entry.credit),
-          creditUSD: removeCommas(entry.creditUSD),
-          creditLL: removeCommas(entry.creditEx),
-          currency: entry.currency,
-          exchangeRateEURtoUSD: removeCommas(entry.exchangeRateEURtoUSD),
-          exchangeRate: removeCommas(entry.exchangeRate),
-          docNbr: entry.documentNbr,
-        })),
-      };
-
-      console.log("Payload to be sent:", JSON.stringify(payload, null, 2));
-
+      const payload = buildCreatePayload();
       const response = await axios.post(`${baseUrl}/journal-vouchers`, payload);
 
       if (response.status === 201) {
+        const created = response.data;
         setNotification({
           visible: true,
           type: "success",
-          message: "Journal Voucher submitted successfully!",
+          message: "Journal Voucher saved.",
+          onConfirm: null,
         });
 
-        console.log("Response:", response.data);
-
-        // Reset the form
-        setDate("");
-        setEntries([
-          {
-            accountId: null,
-            accountNumber: "",
-            accountName: "",
-            currency: "",
-            debit: "",
-            credit: "",
-            exchangeRate: "1",
-            exchangeRateEURtoUSD: "",
-            debitUSD: "",
-            creditUSD: "",
-            debitEx: "",
-            creditEx: "",
-            description: "",
-            documentNbr: "",
-          },
-        ]);
+        // Stay on the saved JV in read-only mode
+        if (created && created.id) {
+          setEditingId(created.id);
+          setIsSaved(true);
+          setIsEditing(false);
+          setViewMode(true);
+          await fetchJournalVoucherById(created.id); // DB truth
+        } else {
+          setIsSaved(true);
+          setIsEditing(false);
+          setViewMode(true);
+        }
       }
     } catch (error) {
-      console.error(
-        "Error submitting journal voucher:",
-        error.response || error.message
-      );
       setNotification({
         visible: true,
         type: "error",
-        message: "Failed to submit the journal voucher. Please try again.",
+        message:
+          error?.response?.data?.message ||
+          "Failed to submit the journal voucher. Please try again.",
+        onConfirm: null,
+      });
+    }
+  };
+
+  // -------- UPDATE (PUT) --------
+  const handleSaveEdit = async () => {
+    if (!editingId) {
+      setNotification({
+        visible: true,
+        type: "error",
+        message: "No voucher selected to edit.",
+        onConfirm: null,
+      });
+      return;
+    }
+
+    try {
+      const payload = buildEditPayload();
+      const response = await axios.put(
+        `${baseUrl}/journal-vouchers/${editingId}`,
+        payload
+      );
+
+      if (response.status === 200) {
+        setNotification({
+          visible: true,
+          type: "success",
+          message: "Journal Voucher updated successfully!",
+          onConfirm: null,
+        });
+
+        setIsEditing(false);
+        setViewMode(true);
+        setIsSaved(true);
+
+        await fetchJournalVoucherById(editingId);
+      }
+    } catch (error) {
+      setNotification({
+        visible: true,
+        type: "error",
+        message:
+          error?.response?.data?.message ||
+          "Failed to update the journal voucher. Please try again.",
+        onConfirm: null,
       });
     }
   };
 
   // ====== PAGINATED fetch for the modal list ======
-  const fetchJournalData = async (pageArg = 1 /* , qArg = "" */) => {
-    // The backend forces 100 per page and returns { data, page, limit, total, totalPages, hasMore }
-    const url = `${baseUrl}/journal-vouchers/v1/list?page=${pageArg}`;
-    // if you add search later: + `&q=${encodeURIComponent(qArg)}`
+  const fetchJournalData = async (pageArg = 1, seqArg = "") => {
+    const base = `${baseUrl}/journal-vouchers/v1`;
+    const url =
+      seqArg && seqArg.trim()
+        ? `${base}/search-by-seq?seq=${encodeURIComponent(seqArg)}&page=${pageArg}`
+        : `${base}/list?page=${pageArg}`;
     const response = await axios.get(url);
     return response.data;
   };
@@ -470,11 +728,11 @@ const JournalVoucherPage = () => {
         try {
           setLoading(true);
           setSummaryPage(1);
-          const res = await fetchJournalData(1 /* , summaryQuery */);
+          const res = await fetchJournalData(1, summarySeq);
           setJournalData(res.data || []);
           setHasMoreSummary(Boolean(res.hasMore));
+          setSearchActive(Boolean(summarySeq && summarySeq.trim()));
         } catch (error) {
-          console.error("Error fetching journal data:", error);
           setJournalData([]);
           setHasMoreSummary(false);
         } finally {
@@ -482,19 +740,44 @@ const JournalVoucherPage = () => {
         }
       })();
     }
-  }, [isJournalListOpen /* , summaryQuery */]);
+  }, [isJournalListOpen]); // eslint-disable-line
+
+  const handleSearchSeqChange = (val) => {
+    const digits = (val || "").replace(/\D+/g, "");
+    setSummarySeq(val);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        setLoading(true);
+        setSummaryPage(1);
+        const res = await fetchJournalData(1, digits);
+        setJournalData(res.data || []);
+        setHasMoreSummary(Boolean(res.hasMore));
+        setSearchActive(Boolean(digits));
+      } catch (e) {
+        setJournalData([]);
+        setHasMoreSummary(false);
+        setSearchActive(Boolean(digits));
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  };
 
   const handleLoadMore = async () => {
     if (!hasMoreSummary || loadingMoreSummary) return;
     try {
       setLoadingMoreSummary(true);
       const next = summaryPage + 1;
-      const res = await fetchJournalData(next /* , summaryQuery */);
+
+      const digits = (summarySeq || "").replace(/\D+/g, "");
+      const res = await fetchJournalData(next, digits);
       setJournalData((prev) => [...prev, ...(res.data || [])]);
       setSummaryPage(next);
       setHasMoreSummary(Boolean(res.hasMore));
     } catch (e) {
-      console.error("Error loading more:", e);
+      // ignore
     } finally {
       setLoadingMoreSummary(false);
     }
@@ -507,63 +790,75 @@ const JournalVoucherPage = () => {
 
       setDate(jv.date);
       setType(jv.jvType);
+      setEditingId(jv.id);
+      setIsSaved(true);
+      setIsEditing(false);
+      setViewMode(true);
 
-      setEntries(
-        jv.details.map((d) => {
-          const entityId = d.accountId || d.supplierId || d.customerId || null;
-          const entityNumber =
-            d.account?.accountNumber ||
-            d.supplier?.supplierAccountNumber ||
-            d.customer?.customerAccountNumber ||
-            "";
-          const entityName =
-            d.account?.arabicAccountName ||
-            d.supplier?.supplierName ||
-            d.customer?.customerName ||
-            "";
+      const rows = (jv.details || []).map((d) => {
+        const entityNumber =
+          d.account?.accountNumber ||
+          d.supplier?.supplierAccountNumber ||
+          d.customer?.customerAccountNumber ||
+          "";
+        const entityName =
+          d.account?.arabicAccountName ||
+          d.supplier?.supplierName ||
+          d.customer?.customerName ||
+          "";
 
-          return {
-            accountId: d.accountId ?? null,
-            customerId: d.customerId ?? null,
-            supplierId: d.supplierId ?? null,
-            accountNumber: entityNumber,
-            accountName: entityName,
-            type: d.jvType,
-            currency: d.currency || "",
-            debit: d.dr.toString(),
-            credit: d.cr.toString(),
-            debitOFR: d.drOFR.toString(),
-            creditOFR: d.crOFR.toString(),
-            exchangeRate: d.exRateUSD.toString(),
-            exchangeRateEURtoUSD: d.exRateEUROToUSD.toString(),
-            debitUSD: d.drUSD.toString(),
-            creditUSD: d.crUSD.toString(),
-            debitEx: d.drLL.toString(),
-            creditEx: d.crLL.toString(),
-            debitUSDOFR: d.drUSDOFR.toString(),
-            creditUSDOFR: d.crUSDOFR.toString(),
-            debitExOFR: d.drLLOFR.toString(),
-            creditExOFR: d.crLLOFR.toString(),
-            description: d.description || "",
-            documentNbr: d.docNbr || "",
-          };
-        })
-      );
+        return {
+          rid: makeRid(),
+          detailId: d.id ?? null,
+
+          originalAccountId: d.accountId ?? null,
+          originalCustomerId: d.customerId ?? null,
+          originalSupplierId: d.supplierId ?? null,
+
+          accountId: d.accountId ?? null,
+          customerId: d.customerId ?? null,
+          supplierId: d.supplierId ?? null,
+          accountNumber: entityNumber,
+          accountName: entityName,
+          type: d.jvType,
+          currency: d.currency || "",
+          debit: d.dr.toString(),
+          credit: d.cr.toString(),
+          debitOFR: d.drOFR.toString(),
+          creditOFR: d.crOFR.toString(),
+          exchangeRate: d.exRateUSD.toString(),
+          exchangeRateEURtoUSD: d.exRateEUROToUSD.toString(),
+          debitUSD: d.drUSD.toString(),
+          creditUSD: d.crUSD.toString(),
+          debitEx: d.drLL.toString(),
+          creditEx: d.crLL.toString(),
+          debitUSDOFR: d.drUSDOFR.toString(),
+          creditUSDOFR: d.crUSDOFR.toString(),
+          debitExOFR: d.drLLOFR.toString(),
+          creditExOFR: d.crLLOFR.toString(),
+          description: d.description || "",
+          documentNbr: d.docNbr || "",
+        };
+      });
+
+      setEntries(rows);
+      setOriginalDetailIds(rows.filter((r) => r.detailId).map((r) => r.detailId));
     } catch (error) {
-      console.error("Error fetching journal voucher by ID:", error);
       setNotification({
         visible: true,
         type: "error",
         message: "Failed to fetch journal voucher details. Please try again.",
+        onConfirm: null,
       });
     }
   };
 
   const handleView = (journal) => {
-    console.log("View journal:", journal);
     setIsJournalListOpen(false);
     fetchJournalVoucherById(journal.id);
     setViewMode(true);
+    setIsEditing(false);
+    setIsSaved(true);
   };
 
   const handleReset = () => {
@@ -571,6 +866,12 @@ const JournalVoucherPage = () => {
     setType("");
     setEntries([
       {
+        rid: makeRid(),
+        detailId: null,
+        originalAccountId: null,
+        originalCustomerId: null,
+        originalSupplierId: null,
+
         accountId: null,
         customerId: null,
         supplierId: null,
@@ -596,8 +897,45 @@ const JournalVoucherPage = () => {
       },
     ]);
 
+    setOriginalDetailIds([]);
+    setViewMode(false);
+    setIsEditing(false);
+    setEditingId(null);
+    setCurrentRowRid(null);
+    setCurrentRowIndex(null);
+    setIsSaved(false); // new JV (unsaved)
+  };
+
+  // start edit
+  const handleStartEdit = () => {
+    if (!isSaved || !editingId) {
+      setNotification({
+        visible: true,
+        type: "warning",
+        message: "Open or save a journal voucher first, then click Edit.",
+        onConfirm: null,
+      });
+      return;
+    }
+    setIsEditing(true);
     setViewMode(false);
   };
+
+  // cancel edit (re-lock)
+  const handleCancelEdit = () => {
+    if (!editingId) {
+      setIsEditing(false);
+      setViewMode(false);
+      return;
+    }
+    setIsEditing(false);
+    setViewMode(true);
+    setIsSaved(true);
+    fetchJournalVoucherById(editingId);
+  };
+
+  // Edit button disabled logic
+  const editDisabled = !isSaved || isEditing;
 
   return (
     <div>
@@ -622,7 +960,7 @@ const JournalVoucherPage = () => {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                disabled={viewMode}
+                disabled={readOnlyMode}
                 className="general-vouchers-input"
               />
             </label>
@@ -632,7 +970,7 @@ const JournalVoucherPage = () => {
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 required
-                disabled={viewMode}
+                disabled={readOnlyMode}
                 className="general-vouchers-input"
               >
                 <option value="" disabled hidden>
@@ -648,6 +986,24 @@ const JournalVoucherPage = () => {
             <button className="new-btn" onClick={handleReset}>
               New
             </button>
+
+            {/* Edit */}
+            <button
+              className="edit-journal-voucher"
+              onClick={handleStartEdit}
+              disabled={editDisabled}
+              title={!isSaved ? "Open or save a voucher first" : ""}
+            >
+              Edit
+            </button>
+
+            {/* Cancel Edit */}
+            {isEditing && (
+              <button className="edit-journal-voucher" onClick={handleCancelEdit}>
+                Cancel Edit
+              </button>
+            )}
+
             <button
               className="open-journal-list-btn"
               onClick={() => setIsJournalListOpen(true)}
@@ -659,19 +1015,33 @@ const JournalVoucherPage = () => {
               onClose={() => setIsJournalListOpen(false)}
               journalData={journalData}
               onView={handleView}
-              // ✅ NEW: pagination props
               onLoadMore={handleLoadMore}
               hasMore={hasMoreSummary}
-              loadingMore={loadingMoreSummary}
+              loadingMoreSummary={loadingMoreSummary}
+              searchSeq={summarySeq}
+              onSearchSeqChange={handleSearchSeqChange}
             />
 
-            <button
-              className="general-vouchers-submit-btn"
-              onClick={handleSubmit}
-              disabled={submitBlocked}
-            >
-              Submit
-            </button>
+            {/* Submit vs Save Edit */}
+            {!isSaved && !isEditing ? (
+              <button
+                className="general-vouchers-submit-btn"
+                onClick={handleSubmit}
+                disabled={submitBlocked}
+              >
+                Submit
+              </button>
+            ) : null}
+
+            {isEditing && (
+              <button
+                className="general-vouchers-submit-btn"
+                onClick={handleSaveEdit}
+                disabled={submitBlocked}
+              >
+                Save Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -682,28 +1052,23 @@ const JournalVoucherPage = () => {
                 <th className="column-account-number">Acc Nb</th>
                 <th className="column-account-name">Account Name</th>
                 <th className="column-currency">Currency</th>
-
-                <th className="column-debit">Debit</th>
-                <th className="column-debit-ofr">Dr OFR</th>
-
-                <th className="column-exchange-rate-eur-usd">
-                  Exc (EUR to USD)
-                </th>
                 <th className="column-exchange-rate">Exc Rate</th>
 
+                <th className="column-debit">Debit</th>
                 <th className="column-debit-usd">Dr USD</th>
-                <th className="column-debit-usd-ofr">Dr USD OFR</th>
-
                 <th className="column-debit-ex">Dr LL</th>
+
+                <th className="column-debit-ofr">Dr OFR</th>
+                <th className="column-debit-usd-ofr">Dr USD OFR</th>
                 <th className="column-debit-ex-ofr">Dr LL OFR</th>
 
+                <th className="column-exchange-rate-eur-usd">Exc (EUR to USD)</th>
+
                 <th className="column-credit">Credit</th>
-                <th className="column-credit-ofr">Cr OFR</th>
-
                 <th className="column-credit-usd">Cr USD</th>
-                <th className="column-credit-usd-ofr">Cr USD OFR</th>
-
                 <th className="column-credit-ex">Cr LL</th>
+                <th className="column-credit-ofr">Cr OFR</th>
+                <th className="column-credit-usd-ofr">Cr USD OFR</th>
                 <th className="column-credit-ex-ofr">Cr LL OFR</th>
 
                 <th className="column-description">Description</th>
@@ -713,14 +1078,17 @@ const JournalVoucherPage = () => {
 
             <tbody>
               {entries.map((entry, index) => (
-                <tr key={index} onContextMenu={(e) => handleRightClick(e, index)}>
-                  <td onClick={() => handleAccountNumberClick(index)}>
+                <tr
+                  key={entry.rid}
+                  onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
+                >
+                  <td onClick={() => handleAccountNumberClick(entry.rid)}>
                     <input
                       type="text"
                       value={entry.accountNumber}
                       placeholder="Acc Nb"
                       readOnly
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                       className="general-vouchers-input column-account-number"
                     />
                   </td>
@@ -729,11 +1097,11 @@ const JournalVoucherPage = () => {
                       type="text"
                       value={entry.accountName}
                       readOnly
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                       placeholder="Account Name"
-                        className={`general-vouchers-input column-account-name ${
-    /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
-  }`}
+                      className={`general-vouchers-input column-account-name ${
+                        /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
+                      }`}
                     />
                   </td>
                   <td>
@@ -742,7 +1110,7 @@ const JournalVoucherPage = () => {
                       onChange={(e) =>
                         handleInputChange(index, "currency", e.target.value)
                       }
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                       className="general-vouchers-input column-currency"
                     >
                       <option value="" disabled hidden>
@@ -754,40 +1122,110 @@ const JournalVoucherPage = () => {
                     </select>
                   </td>
 
+                  {/* Exc Rate */}
                   <td>
                     <input
                       type="text"
-                      value={entry.debit}
+                      value={readOnlyMode ? formatNumber(entry.exchangeRate) : entry.exchangeRate}
+                      placeholder="Exc Rate"
+                      onChange={(e) =>
+                        handleInputChange(index, "exchangeRate", e.target.value)
+                      }
+                      onBlur={() => handleInputBlur(index, "exchangeRate")}
+                      className="general-vouchers-input column-exchange-rate"
+                      readOnly={readOnlyMode}
+                      disabled={readOnlyMode}
+                    />
+                  </td>
+
+                  {/* Debit */}
+                  <td>
+                    <input
+                      type="text"
+                      value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
                       placeholder="Debit"
                       onChange={(e) =>
                         handleInputChange(index, "debit", e.target.value)
                       }
                       onBlur={() => handleInputBlur(index, "debit")}
                       className="general-vouchers-input column-debit"
-                      readOnly={viewMode || type === "G"}
-                      disabled={viewMode || type === "G"}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.debitOFR}
-                      placeholder="Dr OFR"
-                      onChange={(e) =>
-                        handleInputChange(index, "debitOFR", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "creditOFR")}
-                      className="general-vouchers-input column-credit-ofr"
-                      readOnly={viewMode || type === "S"}
-                      disabled={viewMode || type === "S"}
+                      readOnly={readOnlyMode || type === "G"}
+                      disabled={readOnlyMode || type === "G"}
                     />
                   </td>
 
+                  {/* Dr USD (derived; formatted) */}
+                  <td>
+                    <input
+                      type="text"
+                      value={formatNumber(entry.debitUSD)}
+                      placeholder="Debit USD"
+                      readOnly
+                      disabled
+                      className="general-vouchers-input column-debit-usd"
+                    />
+                  </td>
+
+                  {/* Dr LL (derived; formatted) */}
+                  <td>
+                    <input
+                      type="text"
+                      value={formatNumber(entry.debitEx)}
+                      placeholder="Debit LL"
+                      className="general-vouchers-input column-debit-ex"
+                      readOnly
+                      disabled
+                    />
+                  </td>
+
+                  {/* Dr OFR */}
+                  <td>
+                    <input
+                      type="text"
+                      value={readOnlyMode ? formatNumber(entry.debitOFR) : entry.debitOFR}
+                      placeholder="Dr OFR"
+                      onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
+                      onBlur={() => handleInputBlur(index, "debitOFR")}
+                      className="general-vouchers-input column-debit-ofr"
+                      readOnly={readOnlyMode || type === "S"}
+                      disabled={readOnlyMode || type === "S"}
+                    />
+                  </td>
+
+                  {/* Dr USD OFR (derived; formatted) */}
+                  <td>
+                    <input
+                      type="text"
+                      value={formatNumber(entry.debitUSDOFR)}
+                      placeholder="Dr USD OFR"
+                      readOnly
+                      disabled={readOnlyMode}
+                      className="general-vouchers-input column-debit-usd-ofr"
+                    />
+                  </td>
+
+                  {/* Dr LL OFR (derived; formatted) */}
+                  <td>
+                    <input
+                      type="text"
+                      value={formatNumber(entry.debitExOFR)}
+                      placeholder="Dr LL OFR"
+                      readOnly
+                      disabled={readOnlyMode}
+                      className="general-vouchers-input column-debit-ex-ofr"
+                    />
+                  </td>
+
+                  {/* Exc (EUR→USD) */}
                   <td className="column-exchange-rate-eur-usd">
                     {entry.currency === "EUR" ? (
                       <input
                         type="text"
-                        value={entry.exchangeRateEURtoUSD}
+                        value={
+                          readOnlyMode
+                            ? formatNumber(entry.exchangeRateEURtoUSD)
+                            : entry.exchangeRateEURtoUSD
+                        }
                         placeholder="Exc (EUR→USD)"
                         onChange={(e) =>
                           handleInputChange(
@@ -800,127 +1238,43 @@ const JournalVoucherPage = () => {
                           handleInputBlur(index, "exchangeRateEURtoUSD")
                         }
                         className="general-vouchers-input"
-                        readOnly={viewMode}
-                        disabled={viewMode}
+                        readOnly={readOnlyMode}
+                        disabled={readOnlyMode}
                       />
                     ) : (
                       <div className="disabled-placeholder"></div>
                     )}
                   </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.exchangeRate}
-                      placeholder="Exc Rate"
-                      onChange={(e) =>
-                        handleInputChange(index, "exchangeRate", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "exchangeRate")}
-                      className="general-vouchers-input column-exchange-rate"
-                    />
-                  </td>
 
+                  {/* Credit */}
                   <td>
                     <input
                       type="text"
-                      value={entry.debitUSD}
-                      placeholder="Debit USD"
-                      onChange={(e) =>
-                        handleInputChange(index, "debitUSD", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "debitUSD")}
-                      className="general-vouchers-input column-debit-usd"
-                      readOnly={viewMode || type === "G"}
-                      disabled={viewMode || type === "G"}
-                    />
-                  </td>
-
-                  {/* NOTE: This column was bound to debitOFR in your code.
-                      Keeping it as-is to preserve behavior. */}
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.debitOFR}
-                      placeholder="Dr OFR"
-                      onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
-                      onBlur={() => handleInputBlur(index, "debitOFR")}
-                      className="general-vouchers-input column-debit-ofr"
-                      readOnly={viewMode || type === "S"}
-                      disabled={viewMode || type === "S"}
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitEx)}
-                      placeholder="Debit LL"
-                      className="general-vouchers-input column-debit-ex"
-                      readOnly
-                      disabled
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitExOFR)}
-                      placeholder="Dr LL OFR"
-                      readOnly
-                      disabled={viewMode}
-                      className="general-vouchers-input column-debit-ex-ofr"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.credit}
+                      value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
                       placeholder="Credit"
                       onChange={(e) =>
                         handleInputChange(index, "credit", e.target.value)
                       }
                       onBlur={() => handleInputBlur(index, "credit")}
                       className="general-vouchers-input column-credit"
-                      readOnly={viewMode || type === "G"}
-                      disabled={viewMode || type === "G"}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.creditOFR}
-                      placeholder="Cr OFR"
-                      onChange={(e) =>
-                        handleInputChange(index, "creditOFR", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "creditOFR")}
-                      className="general-vouchers-input column-credit-ofr"
-                      readOnly={viewMode || type === "S"}
-                      disabled={viewMode || type === "S"}
+                      readOnly={readOnlyMode || type === "G"}
+                      disabled={readOnlyMode || type === "G"}
                     />
                   </td>
 
+                  {/* Cr USD (derived; formatted) */}
                   <td>
                     <input
                       type="text"
-                      value={entry.creditUSD}
+                      value={formatNumber(entry.creditUSD)}
                       placeholder="Credit USD"
                       className="general-vouchers-input column-credit-usd"
                       readOnly
                       disabled
                     />
                   </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.creditUSDOFR}
-                      placeholder="Cr USD OFR"
-                      readOnly
-                      disabled={viewMode}
-                      className="general-vouchers-input column-credit-usd-ofr"
-                    />
-                  </td>
 
+                  {/* Cr LL (derived; formatted) */}
                   <td>
                     <input
                       type="text"
@@ -931,13 +1285,43 @@ const JournalVoucherPage = () => {
                       disabled
                     />
                   </td>
+
+                  {/* Cr OFR */}
+                  <td>
+                    <input
+                      type="text"
+                      value={readOnlyMode ? formatNumber(entry.creditOFR) : entry.creditOFR}
+                      placeholder="Cr OFR"
+                      onChange={(e) =>
+                        handleInputChange(index, "creditOFR", e.target.value)
+                      }
+                      onBlur={() => handleInputBlur(index, "creditOFR")}
+                      className="general-vouchers-input column-credit-ofr"
+                      readOnly={readOnlyMode || type === "S"}
+                      disabled={readOnlyMode || type === "S"}
+                    />
+                  </td>
+
+                  {/* Cr USD OFR (derived; formatted) */}
+                  <td>
+                    <input
+                      type="text"
+                      value={formatNumber(entry.creditUSDOFR)}
+                      placeholder="Cr USD OFR"
+                      readOnly
+                      disabled={readOnlyMode}
+                      className="general-vouchers-input column-credit-usd-ofr"
+                    />
+                  </td>
+
+                  {/* Cr LL OFR (derived; formatted) */}
                   <td>
                     <input
                       type="text"
                       value={formatNumber(entry.creditExOFR)}
                       placeholder="Cr LL OFR"
                       readOnly
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                       className="general-vouchers-input column-credit-ex-ofr"
                     />
                   </td>
@@ -951,7 +1335,7 @@ const JournalVoucherPage = () => {
                         handleInputChange(index, "description", e.target.value)
                       }
                       className="general-vouchers-input column-description"
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                     />
                   </td>
                   <td>
@@ -963,7 +1347,7 @@ const JournalVoucherPage = () => {
                         handleInputChange(index, "documentNbr", e.target.value)
                       }
                       className="general-vouchers-input column-document-nbr"
-                      disabled={viewMode}
+                      disabled={readOnlyMode}
                     />
                   </td>
                 </tr>
@@ -973,7 +1357,12 @@ const JournalVoucherPage = () => {
         </div>
 
         <div className="general-vouchers-add-row-container">
-          <button className="general-vouchers-new-btn" onClick={handleAddRow}>
+          <button
+            className="general-vouchers-new-btn"
+            onClick={handleAddRow}
+            disabled={readOnlyMode}
+            title={readOnlyMode ? "Click Edit to modify rows" : ""}
+          >
             Add Row
           </button>
         </div>
@@ -1011,7 +1400,7 @@ const JournalVoucherPage = () => {
             </span>
           </div>
 
-          {/* Your existing extra summaries */}
+          {/* Extra summaries */}
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit USD:{" "}
@@ -1042,7 +1431,7 @@ const JournalVoucherPage = () => {
           </div>
         </div>
 
-        {contextMenu.visible && (
+        {contextMenu.visible && !readOnlyMode && (
           <div
             className="context-menu"
             style={{ top: contextMenu.y, left: contextMenu.x }}

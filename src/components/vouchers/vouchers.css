@@ -85,7 +85,7 @@
 }
 
 .open-journal-list-btn {
-  background-color: #007bff;
+  background-color: #02c3c3;
   color: white;
   font-weight: bold;
   padding: 1rem 2rem;
@@ -94,9 +94,27 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+  margin-right: 7px;
+}
+
+.edit-journal-voucher{
+    background-color: #c3a302;
+  color: white;
+  font-weight: bold;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+  margin-right: 7px;
+}
+
+.edit-journal-voucher:hover{
+   background-color: #9b8101;
 }
 .open-journal-list-btn:hover {
-  background-color: #0056b3;
+  background-color: #009d9d;
   box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
 }
 .general-vouchers-submit-btn:hover {
@@ -404,6 +422,23 @@
 .column-account-name .is-arabic {
   line-height: 1.4;
 }
+
+/* If you want the same look when it's "logically disabled" via a class */
+.edit-journal-voucher:disabled {
+  background: #94a3b8;
+  color: #e5e7eb;
+  opacity: 0.75;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+  filter: saturate(0.6);
+  border: 1px solid rgba(148,163,184,.5);
+}
+
+/* Accessibility: visible focus ring when *not* disabled */
+
+
 
 
 /* Responsive Design */
