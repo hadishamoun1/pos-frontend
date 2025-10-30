@@ -1,410 +1,255 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 import html2pdf from "html2pdf.js";
 import "./rctPreview.css";
 
-// ✅ Number to Words Function (Supports up to Billions)
+// Number → Words (unchanged)
 const numberToWords = (num) => {
-  const a = [
-    "",
-    "One",
-    "Two",
-    "Three",
-    "Four",
-    "Five",
-    "Six",
-    "Seven",
-    "Eight",
-    "Nine",
-    "Ten",
-    "Eleven",
-    "Twelve",
-    "Thirteen",
-    "Fourteen",
-    "Fifteen",
-    "Sixteen",
-    "Seventeen",
-    "Eighteen",
-    "Nineteen",
-  ];
-  const b = [
-    "",
-    "",
-    "Twenty",
-    "Thirty",
-    "Forty",
-    "Fifty",
-    "Sixty",
-    "Seventy",
-    "Eighty",
-    "Ninety",
-  ];
-
+  const a = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const b = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
   const inWords = (n) => {
     if (n < 20) return a[n];
-    if (n < 100)
-      return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
-    if (n < 1000)
-      return (
-        a[Math.floor(n / 100)] +
-        " Hundred" +
-        (n % 100 !== 0 ? " " + inWords(n % 100) : "")
-      );
-    if (n < 1000000)
-      return (
-        inWords(Math.floor(n / 1000)) +
-        " Thousand" +
-        (n % 1000 !== 0 ? " " + inWords(n % 1000) : "")
-      );
-    if (n < 1000000000)
-      return (
-        inWords(Math.floor(n / 1000000)) +
-        " Million" +
-        (n % 1000000 !== 0 ? " " + inWords(n % 1000000) : "")
-      );
-    return (
-      inWords(Math.floor(n / 1000000000)) +
-      " Billion" +
-      (n % 1000000000 !== 0 ? " " + inWords(n % 1000000000) : "")
-    );
+    if (n < 100) return b[Math.floor(n/10)] + (n%10 ? " " + a[n%10] : "");
+    if (n < 1000) return a[Math.floor(n/100)] + " Hundred" + (n%100 ? " " + inWords(n%100) : "");
+    if (n < 1_000_000) return inWords(Math.floor(n/1000)) + " Thousand" + (n%1000 ? " " + inWords(n%1000) : "");
+    if (n < 1_000_000_000) return inWords(Math.floor(n/1_000_000)) + " Million" + (n%1_000_000 ? " " + inWords(n%1_000_000) : "");
+    return inWords(Math.floor(n/1_000_000_000)) + " Billion" + (n%1_000_000_000 ? " " + inWords(n%1_000_000_000) : "");
   };
-
   return num === 0 ? "Zero" : inWords(num);
 };
 
+const formatNumber = (num) => (num != null ? Number(num).toLocaleString("en-US") : "0");
+
+// Styles INSIDE the iframe (print-safe, A3)
+const iframeStyles = `
+  @media print {
+    @page { size: A3 portrait; margin: 2mm; }
+    html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: white; }
+  }
+  html, body { margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
+  .receipt-paper { width: 297mm; height: 420mm; background: white; padding: 3mm; box-sizing: border-box; }
+  .receipt-header-bar { display: flex; justify-content: flex-end; align-items: center; }
+  .Reciept-Txt { font-size: 30pt; font-weight: bold; }
+  .receipt-info-box { border: 2px solid #000; padding: 2mm; margin-top: 2mm; display: flex; flex-direction: column; gap: 2mm; }
+  .info-box-stacked { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; margin-left: 10px; }
+  .info-row { display: flex; justify-content: flex-start; gap: 10px; font-size: 14pt; margin-right: 7mm; }
+  .receipt-main-box { border: 2px solid #000; padding: 5mm; margin-top: 2mm; display: flex; flex-direction: column; gap: 3mm; height: 350px; }
+  .main-row, .sum-words, .bank-section { font-size: 14pt; }
+  .reciept-customer-name{font-size:25px}
+  .recieved-text-receipt{font-size: 20px}
+  .with-bank { display: flex; justify-content: space-between; margin-bottom: 10mm; }
+  .for-section { font-size: 14pt; }
+  .for-line { border-bottom: 2px solid black; height: 2mm; margin-top: 2mm; }
+  .signature-container-right { display: flex; flex-direction: column; align-items: flex-end; }
+  .signature-text { font-size: 16pt; margin-bottom: 2mm; text-align: center; width: 30%; }
+  .signature-line { border-bottom: 2px solid black; width: 30%; height: 2mm; }
+  .with-usd-value { display: flex; justify-content: flex-start; align-items: center; }
+  .usd-value { font-weight: bold; font-size: 14pt; }
+  .special-container { border: 0.5px solid rgb(97, 97, 97); padding: 2mm; text-align: flex-start; font-weight: normal; height: 150px; }
+`;
+
+function buildReceiptInnerHTML(record) {
+  const showSpecial = record.rct?.startsWith("RV") && !record.rct?.startsWith("RVG");
+  const currencyText = record.currency?.toUpperCase() === "LL" ? "LBP" : "USD";
+  const isLL = record.currency?.toUpperCase() === "LL";
+  return `
+    <div class="receipt-paper">
+      ${showSpecial ? `
+        <div class="special-container">
+          <div style="font-weight:500; font-size:23pt; margin-bottom:10mm;">Shamoun Company For Glass & Mirrors</div>
+          <div style="display:flex; justify-content:space-between; font-size:12pt; margin-top:2mm;">
+            <span>Chweifat - Near Spot Mall</span><span>Registration #: 45446</span>
+          </div>
+          <div style="font-size:12pt; margin-top:1mm;">Tel: 05-810888; 79-100068; Fax: 05814961</div>
+          <div style="display:flex; justify-content:space-between; font-size:12pt; margin-top:1mm;">
+            <span>E-Mail: info@shamounco.com</span><span>Financial #: 10909-601</span>
+          </div>
+        </div>` : ``}
+      <div class="receipt-header-bar"><span class="Reciept-Txt">RECEIPT</span></div>
+      <div class="receipt-info-box">
+        <div class="info-box-stacked">
+          <div class="info-row"><strong>Date:</strong><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${record.date ?? ""}</span></div>
+          <div class="info-row"><strong>Receipt #:</strong><span>&nbsp;&nbsp;&nbsp;${record.rct ?? ""}</span></div>
+        </div>
+      </div>
+      <div class="receipt-main-box">
+        <div class="main-row"><strong>Recieved From:</strong><span class="reciept-customer-name">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${record.customerName ?? ""} </span></div>
+        <div class="main-row with-usd-value">
+          <div><strong>The Sum of:</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${formatNumber(record.cashNumber)} ${currencyText}</div>
+          ${isLL ? `<div class="usd-value">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= ${formatNumber(record.amountExchanged)}&nbsp;&nbsp; USD</div>` : ``}
+        </div>
+        <div class="main-row sum-words">${numberToWords(Number(record.cashNumber))} ${isLL ? "LL Only" : "USD Only"}</div>
+        <div class="main-row"><strong>Recieved As:</strong><span class="recieved-text-receipt">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${
+          (record.pmtType?.toLowerCase() === "cash")
+            ? (record.currency?.toUpperCase() === "USD" ? "$$ دفعة نقدا " : "LL دفعة نقدا ")
+            : (record.pmtType ?? "")
+        }
+        </span>
+        </div>
+        <div class="main-row with-bank">
+          <div><strong>Check/Card #:</strong></div>
+          <div class="bank-section"><strong>Bank Name:</strong> _________________________________</div>
+        </div>
+        <div class="for-signature-row">
+          <div class="for-section"><strong>For:</strong>&nbsp;&nbsp;${record.comments ?? ""}<div class="for-line"></div></div>
+        </div>
+        <div class="signature-container-right">
+          <div class="signature-text"><strong>Signature</strong></div>
+          <div class="signature-line"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 const RctPaper = ({ record, onClose }) => {
-  const receiptRef = useRef();
+  const iframeRef = useRef(null);
+  const [zoom, setZoom] = useState(1); // Preview zoom only
+  const [printing, setPrinting] = useState(false);
+
+  const writeIframe = useCallback(() => {
+    if (!iframeRef.current || !record) return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+
+    const html = `
+      <html>
+        <head><meta charset="utf-8" /><title>Receipt Preview</title><style>${iframeStyles}</style></head>
+        <body>${buildReceiptInnerHTML(record)}</body>
+      </html>`;
+    doc.open(); doc.write(html); doc.close();
+  }, [record]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    return () => (document.body.style.overflow = "auto");
-  }, []);
+    writeIframe();
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "auto";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [writeIframe, onClose]);
 
-  const handleDownloadPDF = () => {
-    const element = receiptRef.current;
-    element.classList.add("printing-mode");
+  useEffect(() => { writeIframe(); }, [record, writeIframe]);
 
-    html2pdf()
-      .from(element)
-      .set({
-        margin: 0,
-        filename: `Receipt-${record.rct}.pdf`,
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: "mm", format: "a3", orientation: "portrait" },
-      })
-      .save()
-      .then(() => element.classList.remove("printing-mode"));
-  };
+const handleDownloadPDF = () => {
+  // 1) Build a hidden offscreen container in the PARENT doc
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-99999px";
+  container.style.top = "0";
+  container.style.width = "297mm"; // match A3 width so layout is identical
+  container.style.zIndex = "-1";
+  container.setAttribute("aria-hidden", "true");
+
+  // 2) Inject styles + receipt HTML (same as iframe content)
+  container.innerHTML = `
+    <style>
+      /* Same styles used inside the iframe */
+      ${iframeStyles}
+    </style>
+    ${buildReceiptInnerHTML(record)}
+  `;
+
+  document.body.appendChild(container);
+
+  // 3) Target the cloned .receipt-paper for html2pdf
+  const element = container.querySelector(".receipt-paper");
+  if (!element) {
+    document.body.removeChild(container);
+    return;
+  }
+
+  html2pdf()
+    .from(element)
+    .set({
+      margin: 0,
+      filename: `Receipt-${record?.rct ?? "Receipt"}.pdf`,
+      html2canvas: {
+        scale: 2,
+        scrollY: 0,
+        useCORS: true,
+      },
+      jsPDF: { unit: "mm", format: "a3", orientation: "portrait" },
+    })
+    .save()
+    .finally(() => {
+      // 4) Clean up
+      document.body.removeChild(container);
+    });
+};
+
 
   const handleDirectPrint = () => {
-    const printContent = receiptRef.current.innerHTML;
-    const printWindow = window.open("", "_blank", "width=1200,height=1600");
-
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Receipt</title>
-            <style>
-              @media print {
-                @page {
-                  size: A3 portrait;
-                  margin: 2mm;
-                }
-  
-                html, body {
-                  margin: 0;
-                  padding: 0;
-                  height: 100%;
-                  width: 100%;
-                  font-family: Arial, sans-serif;
-                  background: white;
-                }
-  
-                .receipt-paper {
-                  width: 100%;
-                  height: auto;
-                  padding: 0; /* or padding: 2mm if you want extra internal space */
-                  box-sizing: border-box;
-                  background: white;
-                }
-              }
-  
-              body {
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: white;
-              }
-  
-              .receipt-paper {
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-                background: white;
-              }
-  
-              .special-container {
-                border: 0.5px solid rgb(97, 97, 97);
-                padding: 2mm;
-                height: 150px;
-              }
-  
-              .receipt-header-bar {
-                display: flex;
-                justify-content: flex-end;
-                align-items: center;
-              }
-  
-              .Reciept-Txt {
-                font-size: 30pt;
-                font-weight: bold;
-              }
-  
-              .receipt-info-box {
-                border: 2px solid #000;
-                padding: 2mm;
-                margin-top: 2mm;
-              }
-  
-              .info-box-stacked {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 5px;
-                margin-left: 10px;
-              }
-  
-              .info-box-stacked .info-row {
-                display: flex;
-                justify-content: flex-start;
-                gap: 10px;
-                font-size: 14pt;
-                margin-right: 7mm;
-              }
-  
-              .receipt-main-box {
-                border: 2px solid #000;
-                padding: 5mm;
-                margin-top: 2mm;
-                display: flex;
-                flex-direction: column;
-                gap: 3mm;
-                min-height: 350px;
-              }
-  
-              .main-row, .sum-words, .bank-section {
-                font-size: 14pt;
-              }
-  
-              .with-bank {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 10mm;
-              }
-  
-              .for-line {
-                border-bottom: 2px solid black;
-                height: 2mm;
-                margin-top: 2mm;
-              }
-  
-              .signature-container-right {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-end;
-              }
-  
-              .signature-text {
-                font-size: 16pt;
-                margin-bottom: 2mm;
-                text-align: center;
-                width: 30%;
-              }
-  
-              .signature-line {
-                border-bottom: 2px solid black;
-                width: 30%;
-                height: 2mm;
-              }
-  
-              .with-usd-value {
-                display: flex;
-                justify-content: flex-start;
-                align-items: center;
-              }
-  
-              .usd-value {
-                font-weight: bold;
-                font-size: 14pt;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="receipt-paper">
-              ${printContent}
-            </div>
-          </body>
-        </html>
-      `);
-
-      printWindow.document.close();
-
-      printWindow.onload = () => {
-        printWindow.focus();
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-      };
-    }
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    setPrinting(true);
+    // Wait a tick so browsers can apply print CSS
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      setPrinting(false);
+    }, 150);
   };
 
-  const formatNumber = (num) => {
-    return num != null ? Number(num).toLocaleString("en-US") : "0";
+  const handleBackdropClick = (e) => {
+    if (e.target.classList.contains("receipt-modal-backdrop")) onClose?.();
+  };
+
+  const changeZoom = (val) => {
+    const z = Math.min(2, Math.max(0.3, val));
+    setZoom(z);
   };
 
   if (!record) return null;
 
   return ReactDOM.createPortal(
-    <div className="receipt-modal-backdrop">
-      <div className="top-right-controls">
-        <button onClick={handleDownloadPDF} className="download-btn-fixed">
-          Download PDF
-        </button>
-        <button onClick={handleDirectPrint} className="download-btn-fixed">
-          Print
-        </button>
-        <button onClick={onClose} className="modal-close-btn-fixed">
-          ×
-        </button>
-      </div>
-
-      <div className="receipt-wrapper">
-        <div className="receipt-preview-wrapper">
-          <div ref={receiptRef} className="receipt-paper">
-            {record.rct?.startsWith("RV") && !record.rct?.startsWith("RVG") && (
-              <div className="special-container">
-                <div
-                  style={{
-                    fontWeight: "500",
-                    fontSize: "23pt",
-                    marginBottom: "10mm",
-                  }}
-                >
-                  Shamoun Company For Glass & Mirrors
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "12pt",
-                    marginTop: "2mm",
-                  }}
-                >
-                  <span>Chweifat - Near Spot Mall</span>
-                  <span>Registration #: 45446</span>
-                </div>
-
-                <div style={{ fontSize: "12pt", marginTop: "1mm" }}>
-                  Tel: 05-810888; 79-100068; Fax: 05814961
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "12pt",
-                    marginTop: "1mm",
-                  }}
-                >
-                  <span>E-Mail: info@shamounco.com</span>
-                  <span>Financial #: 10909-601</span>
-                </div>
-              </div>
-            )}
-
-            <div className="receipt-header-bar">
-              <span className="Reciept-Txt">RECEIPT</span>
+    <div className="receipt-modal-backdrop" onMouseDown={handleBackdropClick}>
+      <div
+        className="receipt-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Receipt Preview"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="receipt-modal-header">
+          <div className="receipt-modal-title">
+            <div className="title">Receipt Preview</div>
+            <div className="meta">
+              <span><strong>No:</strong> {record.rct ?? "-"}</span>
+              <span className="divider">•</span>
+              <span><strong>Date:</strong> {record.date ?? "-"}</span>
+              {record.customerName ? (<><span className="divider">•</span><span>{record.customerName}</span></>) : null}
             </div>
+          </div>
+          <div className="header-actions">
+            <button className="btn ghost" onClick={onClose} aria-label="Close">✕</button>
+          </div>
+        </div>
 
-            <div className="receipt-info-box">
-              <div className="info-box-stacked">
-                <div className="info-row">
-                  <strong>Date:</strong>
-                  <span>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    {record.date}
-                  </span>
-                </div>
-                <div className="info-row">
-                  <strong>Receipt #:</strong>
-                  <span>&nbsp;&nbsp;&nbsp;{record.rct}</span>
-                </div>
-              </div>
-            </div>
+        {/* Toolbar */}
+        <div className="receipt-modal-toolbar">
+          <div className="left">
+            <button className="btn" onClick={() => changeZoom(zoom - 0.1)}>-</button>
+            <div className="zoom-display">{Math.round(zoom * 100)}%</div>
+            <button className="btn" onClick={() => changeZoom(zoom + 0.1)}>+</button>
+            <button className="btn ghost" onClick={() => setZoom(1)}>100%</button>
+            <button className="btn ghost" onClick={() => setZoom(0.6)}>Fit</button>
+          </div>
+          <div className="right">
+            <button className="btn success" onClick={handleDownloadPDF}>Download PDF</button>
+            <button className="btn primary" onClick={handleDirectPrint} disabled={printing}>
+              {printing ? "Printing…" : "Print"}
+            </button>
+          </div>
+        </div>
 
-            <div className="receipt-main-box">
-              <div className="main-row">
-                <strong>Recieved From:</strong>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{" "}
-                {record.customerName}
-              </div>
-
-              <div className="main-row with-usd-value">
-                <div>
-                  <strong>The Sum of:</strong>
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  {formatNumber(record.cashNumber)}&nbsp;
-                  {record.currency?.toUpperCase() === "LL" ? "LBP" : "USD"}
-                </div>
-                {record.currency?.toUpperCase() === "LL" && (
-                  <div className="usd-value">
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;={" "}
-                    {formatNumber(record.amountExchanged)}&nbsp;&nbsp; USD
-                  </div>
-                )}
-              </div>
-
-              <div className="main-row sum-words">
-                {numberToWords(Number(record.cashNumber))}{" "}
-                {record.currency?.toUpperCase() === "LL"
-                  ? "LL Only"
-                  : "USD Only"}
-              </div>
-
-              <div className="main-row">
-                <strong>Recieved As:</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                {record.pmtType?.toLowerCase() === "cash"
-                  ? record.currency?.toUpperCase() === "USD"
-                    ? "$$ دفعة نقدا "
-                    : "LL دفعة نقدا "
-                  : record.pmtType}{" "}
-              </div>
-
-              <div className="main-row with-bank">
-                <div>
-                  <strong>Check/Card #:</strong>
-                </div>
-                <div className="bank-section">
-                  <strong>Bank Name:</strong> _________________________________
-                </div>
-              </div>
-
-              <div className="for-signature-row">
-                <div className="for-section">
-                  <strong>For:</strong>&nbsp;&nbsp;{record.comments}
-                  <div className="for-line"></div>
-                </div>
-              </div>
-
-              <div className="signature-container-right">
-                <div className="signature-text">
-                  <strong>Signature</strong>
-                </div>
-                <div className="signature-line"></div>
-              </div>
-            </div>
+        {/* Body */}
+        <div className="receipt-modal-body">
+          <div className="receipt-preview-viewport" style={{ transform: `scale(${zoom})` }}>
+            <iframe ref={iframeRef} title="Receipt Preview" className="receipt-iframe" />
           </div>
         </div>
       </div>
