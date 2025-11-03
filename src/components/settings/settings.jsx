@@ -3,6 +3,7 @@ import GeneralSettings from "./GeneralSettings";
 import InvoiceSettings from "./InvoiceSettings";
 import PermissionsSettings from "./PermissionsSettings";
 import PurchaseInvoiceSettings from "./PurchaseInvoiceSettings";
+import ItemBatchesSettings from "./ItemBatchesSettings"; // ⬅️ NEW
 
 import "./settings.css";
 
@@ -19,7 +20,8 @@ const SettingsPage = () => {
         return <PermissionsSettings />;
       case "purchase-invoice":
         return <PurchaseInvoiceSettings />;
-
+      case "item-batches": // ⬅️ NEW
+        return <ItemBatchesSettings />;
       default:
         return <GeneralSettings />;
     }
@@ -53,6 +55,12 @@ const SettingsPage = () => {
             onClick={() => setActiveTab("purchase-invoice")}
           >
             Purchase Invoice
+          </li>
+          <li
+            className={activeTab === "item-batches" ? "active" : ""} // ⬅️ NEW
+            onClick={() => setActiveTab("item-batches")}
+          >
+            Item Batches
           </li>
         </ul>
       </aside>

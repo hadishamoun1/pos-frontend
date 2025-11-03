@@ -1,0 +1,184 @@
+
+.items-create-batches {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  --icb-bg: #fff;
+  --icb-card: #ffffff;
+  --icb-border: #e6e9f0;
+  --icb-muted: #6b7280;
+  --icb-text: #1f2937;
+  --icb-accent: #2563eb;
+  --icb-accent-weak: #e8f0ff;
+  --icb-danger: #dc2626;
+}
+
+
+.items-create-batches__title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--icb-text);
+}
+
+.items-create-batches__subtitle {
+  margin: 0;
+  color: var(--icb-muted);
+}
+
+/* Cards */
+.items-create-batches .icb-card {
+  background: var(--icb-card);
+  border: 1px solid var(--icb-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Toolbar */
+.items-create-batches__toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.items-create-batches__pager {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.items-create-batches__page {
+  min-width: 64px;
+  text-align: center;
+  color: var(--icb-text);
+}
+.items-create-batches__grow { flex: 1; }
+.items-create-batches__force {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--icb-muted);
+}
+
+/* Buttons */
+.items-create-batches .icb-btn {
+  border: 1px solid var(--icb-border);
+  background: var(--icb-bg);
+  color: var(--icb-text);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform .05s ease, background .15s ease, border-color .15s ease;
+}
+.items-create-batches .icb-btn:hover { border-color: var(--icb-accent); }
+.items-create-batches .icb-btn:active { transform: translateY(1px); }
+.items-create-batches .icb-btn:disabled {
+  opacity: .6; cursor: not-allowed;
+}
+.items-create-batches .icb-btn--primary {
+  background: var(--icb-accent);
+  color: #fff;
+  border-color: var(--icb-accent);
+}
+.items-create-batches .icb-btn--primary:hover {
+  filter: brightness(1.05);
+}
+
+/* Select bar */
+.items-create-batches__selectbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+/* Table */
+.items-create-batches__tablewrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--icb-border);
+  border-radius: 10px;
+}
+
+.items-create-batches .icb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.items-create-batches .icb-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--icb-bg);
+  color: var(--icb-muted);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--icb-border);
+  padding: 10px;
+  white-space: nowrap;
+}
+.items-create-batches .icb-table td {
+  border-bottom: 1px solid var(--icb-border);
+  padding: 10px;
+  color: var(--icb-text);
+}
+.items-create-batches .icb-table tbody tr:hover {
+  background: var(--icb-accent-weak);
+}
+.items-create-batches .icb-table tbody tr.is-selected {
+  background: var(--icb-accent-weak);
+  outline: 1px solid var(--icb-accent);
+  outline-offset: -1px;
+}
+
+.items-create-batches__desc {
+  max-width: 420px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.items-create-batches__empty {
+  text-align: center;
+  color: var(--icb-muted);
+  padding: 16px;
+}
+
+/* Errors / results */
+.items-create-batches__error {
+  margin-top: 10px;
+  color: var(--icb-danger);
+  white-space: pre-wrap;
+}
+.items-create-batches__result {
+  margin-top: 10px;
+  background: rgba(11,16,32,.06);
+  border: 1px solid var(--icb-border);
+  border-radius: 10px;
+  padding: 10px;
+  color: var(--icb-text);
+}
+
+.items-create-batches__name-rtl {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum","tnum";
+  font-family: "Inter", "Tajawal", "Cairo", "Segoe UI",
+               "Noto Naskh Arabic", system-ui, -apple-system, sans-serif;
+}
+
+
+/* Responsive squeeze */
+@media (max-width: 900px) {
+  .items-create-batches .icb-table thead th:nth-child(8),
+  .items-create-batches .icb-table tbody td:nth-child(8) { /* Desc col */
+    max-width: 240px;
+  }
+}
+@media (max-width: 720px) {
+  .items-create-batches .icb-table thead th:nth-child(6),
+  .items-create-batches .icb-table tbody td:nth-child(6), /* SPB */
+  .items-create-batches .icb-table thead th:nth-child(7),
+  .items-create-batches .icb-table tbody td:nth-child(7)  /* Origin */ {
+    display: none;
+  }
+}

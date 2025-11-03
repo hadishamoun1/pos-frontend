@@ -4,7 +4,11 @@ import "./openingCountModal.css";
 import CountOpeningSearchModal from "./countOpeningSearchModal";
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+// ✅ Defaults
+const DEFAULT_TYPE = "G";
+const DEFAULT_DATE_ISO = "2025-10-31"; // input[type=date] needs YYYY-MM-DD
 
 const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   const [saving, setSaving] = useState(false);
@@ -28,6 +32,18 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
     window.addEventListener("click", onClick);
     return () => window.removeEventListener("click", onClick);
   }, []);
+
+  // ✅ On open, backfill any missing date/type with defaults
+  useEffect(() => {
+    if (!isOpen) return;
+    setRows((prev) =>
+      (prev || []).map((r) => ({
+        ...r,
+        type: r.type || DEFAULT_TYPE,
+        date: r.date || DEFAULT_DATE_ISO,
+      }))
+    );
+  }, [isOpen, setRows]);
 
   const resetAll = () => setRows([]);
 
@@ -70,9 +86,11 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
       name: item.item,
       dimension: `${item.length}x${item.width}`,
       unit: item.type,
-      date: item.dateReceived ?? "",
+      // ✅ Defaults here:
+      date: DEFAULT_DATE_ISO,
+      type: DEFAULT_TYPE,
+
       count: "",
-      type: "S",
       countOFR: "",
       finalCost: "",
       finalCostOfr: "",
@@ -90,10 +108,10 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
       for (const row of rows) {
         const payload = {
           itemVariantId: row.itemVariantId,
-          date: row.date,
+          date: row.date || DEFAULT_DATE_ISO, // fallback just in case
           count: parseFloat(row.count || 0),
           countOFR: parseFloat(row.countOFR || 0),
-          type: row.type,
+          type: row.type || DEFAULT_TYPE, // fallback just in case
           unit: row.unit,
           finalCost: parseFloat(row.finalCost || 0),
           finalCostOfr: parseFloat(row.finalCostOfr || 0),
@@ -228,7 +246,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                         <input
                           type="date"
                           className="opening-count-input"
-                          value={r.date || ""}
+                          value={r.date || DEFAULT_DATE_ISO}
                           onChange={(e) =>
                             updateCell(i, "date", e.target.value)
                           }
@@ -250,7 +268,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                       <td>
                         <select
                           className="opening-count-input"
-                          value={r.type}
+                          value={r.type || DEFAULT_TYPE}
                           onChange={(e) =>
                             updateCell(i, "type", e.target.value)
                           }
@@ -301,7 +319,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                       )}
                       {showFinalCostOfr && (
                         <td>
-                          {["G", "SR"].includes(r.type) ? (
+                          {["G", "SR"].includes(r.type || DEFAULT_TYPE) ? (
                             <input
                               type="number"
                               className="opening-count-input"
