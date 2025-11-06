@@ -55,7 +55,7 @@ const UniqueItemsPage = () => {
   const safe = (v) => (v === 0 || v ? String(v).trim() : "");
   const numOrEmpty = (v) => (v === 0 || v ? String(Number(v)) : "");
 
-  // ✅ Hoisted helper declarations (fixes “Cannot access before initialization”)
+  // ✅ Hoisted helper declarations
   function getVariantIdFromKey(key) {
     if (!key) return "";
     const m = key.match(/(?:^..:|;)\s*vid=([^;]+)/);
@@ -72,23 +72,107 @@ const UniqueItemsPage = () => {
     return m ? m[1] : "";
   }
 
-  const makeKeyFromSearch = (r) => {
-    const d = r?.description || {};
-    const itemId = safe(r?.itemId);
-    const type = safe(r?.type);
-    const th = numOrEmpty(r?.thickness);
-    const len = numOrEmpty(r?.length);
-    const wid = numOrEmpty(r?.width);
-    const sheets = numOrEmpty(r?.sheetsPerBox);
-    const origin = safe(r?.origin);
-    const descId = safe(d?.id) || safe(d?.itemNumber);
-    const vid = safe(r?.variantId);
-    const tid = safe(r?.thicknessId);
-    return `sr:vid=${vid};iid=${itemId};tid=${tid};t=${type};th=${th};l=${len};w=${wid};s=${sheets};o=${origin};d=${descId}`;
-  };
+const makeKeyFromSearch = (r) => {
+  const d = r?.description || {};
+  const itemId = safe(r?.itemId);
+  const type = safe(r?.type);
+  const th = numOrEmpty(r?.thickness);
+  const len = numOrEmpty(r?.length);
+  const wid = numOrEmpty(r?.width);
+  const sheets = numOrEmpty(r?.sheetsPerBox);
+  const origin = safe(r?.origin);
+  const descId = safe(d?.id) || safe(d?.itemNumber);
+  const vid = safe(r?.variantId);
+  const tid = safe(r?.thicknessId);
+  return `sr:vid=${vid};iid=${itemId};tid=${tid};t=${type};th=${th};l=${len};w=${wid};s=${sheets};o=${origin};d=${descId}`;
+};
 
+// 🔁 Flatten non-search items for grouped ("realDescription"+"variants") OR legacy ("thicknesses") payloads
+const flattenedListRows = useMemo(() => {
+  const arr = Array.isArray(items) ? items : [];
+  const out = [];
+
+  for (const entry of arr) {
+    // NEW SHAPE: { realDescription, variants: [...] }
+    if (entry?.realDescription && Array.isArray(entry?.variants)) {
+      const rd = entry.realDescription;
+      // sort variants by thickness asc then length asc (like search)
+      const sortedVars = [...entry.variants].sort((a, b) => {
+        const ta = Number(a?.thickness ?? 0);
+        const tb = Number(b?.thickness ?? 0);
+        if (ta !== tb) return ta - tb;
+        return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+      });
+      for (const v of sortedVars) {
+        out.push({
+          ...v,
+          variantId: Number(v?.variantId ?? v?.id),
+          itemId: Number(v?.itemId),
+          thicknessId: Number(v?.thicknessId),
+          thickness: v?.thickness,
+          itemName: v?.itemName,
+          type: v?.type,
+          length: v?.length,
+          width: v?.width,
+          sheetsPerBox: v?.sheetsPerBox,
+          origin: v?.origin,
+          description: rd, // keep RD on each row
+        });
+      }
+      continue;
+    }
+
+    // LEGACY SHAPE: { itemName, type, thicknesses:[{ id, thickness, variants:[...] }]}
+    const itemName = entry?.itemName ?? "";
+    const type = entry?.type ?? "";
+    const ths = Array.isArray(entry?.thicknesses) ? entry.thicknesses : [];
+    for (const th of ths) {
+      const tval = th?.thickness;
+      const tid = th?.id;
+      const vars = Array.isArray(th?.variants) ? th.variants : [];
+      for (const v of vars) {
+        // use realDescription first, fallback to itemNameDescription
+        const rd = v?.realDescription || v?.itemNameDescription || {};
+        out.push({
+          variantId: Number(v?.id),
+          itemId: Number(entry?.id),
+          thicknessId: Number(tid),
+          thickness: tval,
+          itemName,
+          type,
+          length: v?.length,
+          width: v?.width,
+          sheetsPerBox: v?.sheetsPerBox,
+          origin: v?.origin,
+          description: rd,
+        });
+      }
+    }
+  }
+
+  // sort groups by description.sortIndexRealDescription asc (NULLS LAST)
+  out.sort((a, b) => {
+    const ai = Number(a?.description?.sortIndexRealDescription);
+    const bi = Number(b?.description?.sortIndexRealDescription);
+    const aNull = Number.isNaN(ai);
+    const bNull = Number.isNaN(bi);
+    if (aNull && !bNull) return 1;
+    if (!aNull && bNull) return -1;
+    if (!aNull && !bNull && ai !== bi) return ai - bi;
+
+    // tie-breakers: thickness asc, then length asc
+    const ta = Number(a?.thickness ?? 0);
+    const tb = Number(b?.thickness ?? 0);
+    if (ta !== tb) return ta - tb;
+    return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+  });
+
+  return out;
+}, [items]);
+
+  // 🔧 FIX: prefer realDescription (fallback to legacy itemNameDescription)
   const makeKeyFromLocal = (item, thick, v) => {
-    const d = v?.itemNameDescription || {};
+    const d = v?.realDescription || v?.itemNameDescription || {};
     const itemId = safe(item?.id);
     const type = safe(item?.type);
     const th = numOrEmpty(thick?.thickness);
@@ -130,24 +214,24 @@ const UniqueItemsPage = () => {
   const refSubCategory = useRef(null);
   const refSubmit = useRef(null);
   const [submitting, setSubmitting] = useState(false);
-const idemKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`); // simple idempotency token
+  const idemKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`); // simple idempotency token
 
-// initial state
-const [newItemData, setNewItemData] = useState({
-  itemName: "",
-  type: "box",
-  descriptions: [
-    { itemNumber: "", categoryName: "", subCategory: "", colorName: "", designName: "" },
-  ],
-  thicknesses: [
-    {
-      thickness: "",
-      variants: [
-        { length: "", width: "", sheetsPerBox: "", origin: "", fixBox: false, fixLength: false, fixWidth: false },
-      ],
-    },
-  ],
-});
+  // initial state
+  const [newItemData, setNewItemData] = useState({
+    itemName: "",
+    type: "box",
+    descriptions: [
+      { itemNumber: "", categoryName: "", subCategory: "", colorName: "", designName: "" },
+    ],
+    thicknesses: [
+      {
+        thickness: "",
+        variants: [
+          { length: "", width: "", sheetsPerBox: "", origin: "", fixBox: false, fixLength: false, fixWidth: false },
+        ],
+      },
+    ],
+  });
 
   // ============ Fetch helpers ============
   const normalizeItems = (payload) => {
@@ -350,62 +434,59 @@ const [newItemData, setNewItemData] = useState({
     });
   };
 
-const handleFormSubmit = async (e) => {
-  e.preventDefault();
-  if (submitting) return;        // guard
-  setSubmitting(true);
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;        // guard
+    setSubmitting(true);
 
-  // dedupe variants on the client just in case
-  const rawVariants = newItemData.thicknesses[0].variants || [];
-  const uniq = new Map();
-  for (const v of rawVariants) {
-    const key = [
-      newItemData.type,
-      v.length || 0,
-      v.width || 0,
-      v.sheetsPerBox || 0,
-      (v.origin || "").trim().toLowerCase(),
-    ].join("|");
-    if ((v.origin || "").trim() !== "" && !uniq.has(key)) uniq.set(key, v);
-  }
-
-  const payload = {
-    ...newItemData,
-    thicknesses: [
-      {
-        thickness: newItemData.thicknesses[0].thickness,
-        variants: Array.from(uniq.values()),
-      },
-    ],
-  };
-
-  try {
-    const response = await fetch(`${baseUrl}/items/v1/full`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // If your backend supports it, use this to drop duplicate retries:
-        "Idempotency-Key": idemKeyRef.current,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (response.ok) {
-      await refreshItems();
-      setModalType("success");
-      // rotate the idempotency key after a successful submit
-      idemKeyRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    } else {
-      setModalType("error");
+    // dedupe variants on the client just in case
+    const rawVariants = newItemData.thicknesses[0].variants || [];
+    const uniq = new Map();
+    for (const v of rawVariants) {
+      const key = [
+        newItemData.type,
+        v.length || 0,
+        v.width || 0,
+        v.sheetsPerBox || 0,
+        (v.origin || "").trim().toLowerCase(),
+      ].join("|");
+      if ((v.origin || "").trim() !== "" && !uniq.has(key)) uniq.set(key, v);
     }
-  } catch {
-    setModalType("error");
-  } finally {
-    setModalContent(true);
-    setShowModal(false);
-    setSubmitting(false);
-  }
-};
 
+    const payload = {
+      ...newItemData,
+      thicknesses: [
+        {
+          thickness: newItemData.thicknesses[0].thickness,
+          variants: Array.from(uniq.values()),
+        },
+      ],
+    };
+
+    try {
+      const response = await fetch(`${baseUrl}/items/v1/full`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idemKeyRef.current,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        await refreshItems();
+        setModalType("success");
+        idemKeyRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      } else {
+        setModalType("error");
+      }
+    } catch {
+      setModalType("error");
+    } finally {
+      setModalContent(true);
+      setShowModal(false);
+      setSubmitting(false);
+    }
+  };
 
   const closeModal = () => setModalContent(false);
 
@@ -419,24 +500,75 @@ const handleFormSubmit = async (e) => {
       return next;
     });
   };
+  // 🔁 Flatten grouped search results (realDescription + variants[]) to simple rows,
+// keeping RD on each row and applying the required sort order.
+const flattenedSearchRows = useMemo(() => {
+  const groups = Array.isArray(searchResults) ? searchResults : [];
+  // Build [ { ...variant, description: {...rd} } ] for every variant in every group
+  const rows = [];
+  for (const g of groups) {
+    const rd = g?.realDescription || g?.description || {};
+    const vars = Array.isArray(g?.variants) ? g.variants : [];
+    // sort inside the group by thickness asc, then length asc
+    const sortedVars = [...vars].sort((a, b) => {
+      const ta = Number(a?.thickness ?? 0);
+      const tb = Number(b?.thickness ?? 0);
+      if (ta !== tb) return ta - tb;
+      return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+    });
 
-  const visibleRowKeys = useMemo(() => {
-    if (tokens.length > 0) {
-      const rows = Array.isArray(searchResults) ? searchResults : [];
-      return rows.map(makeKeyFromSearch);
-    } else {
-      const base = Array.isArray(items) ? items : [];
-      const keys = [];
-      for (const item of base) {
-        for (const thick of item?.thicknesses || []) {
-          for (const v of thick?.variants || []) {
-            keys.push(makeKeyFromLocal(item, thick, v));
-          }
-        }
-      }
-      return keys;
+    for (const v of sortedVars) {
+      rows.push({
+        ...v,
+        // normalize names expected by the renderer / key maker
+        variantId: Number(v?.variantId ?? v?.id),
+        itemId: Number(v?.itemId),
+        thicknessId: Number(v?.thicknessId),
+        thickness: v?.thickness,
+        itemName: v?.itemName,
+        type: v?.type,
+        length: v?.length,
+        width: v?.width,
+        sheetsPerBox: v?.sheetsPerBox,
+        origin: v?.origin,
+        // keep RD on each row under .description (your table already reads this)
+        description: rd,
+      });
     }
-  }, [tokens.length, searchResults, items]);
+  }
+
+  // sort groups by sortIndexRealDescription asc (NULLS LAST)
+  rows.sort((a, b) => {
+    const ai = Number(a?.description?.sortIndexRealDescription);
+    const bi = Number(b?.description?.sortIndexRealDescription);
+    const aNull = Number.isNaN(ai);
+    const bNull = Number.isNaN(bi);
+    if (aNull && !bNull) return 1;
+    if (!aNull && bNull) return -1;
+    if (!aNull && !bNull && ai !== bi) return ai - bi;
+
+    // tie-breakers across group boundaries
+    const ta = Number(a?.thickness ?? 0);
+    const tb = Number(b?.thickness ?? 0);
+    if (ta !== tb) return ta - tb;
+    return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+  });
+
+  return rows;
+}, [searchResults]);
+
+
+const visibleRowKeys = useMemo(() => {
+  if (tokens.length > 0) {
+    const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+    return rows.map(makeKeyFromSearch);
+  } else {
+    // ✅ use flattenedListRows instead of walking legacy nesting only
+    const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+    return rows.map(makeKeyFromSearch);
+  }
+}, [tokens.length, flattenedSearchRows, flattenedListRows]);
+
 
   const allVisibleSelected =
     visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
@@ -494,58 +626,86 @@ const handleFormSubmit = async (e) => {
     const iid = getItemIdFromKey(rowKey);
     if (!vid) return null;
 
-    if (tokens.length > 0) {
-      const rows = Array.isArray(searchResults) ? searchResults : [];
-      const found = rows.find((r) => String(r?.variantId) === String(vid));
-      if (!found) return null;
-      const d = found.description || {};
-      return {
-        variantId: Number(found.variantId),
-        itemId: Number(found.itemId ?? iid),
-        thicknessId: Number(found.thicknessId ?? tid),
-        itemName: safe(found.itemName),
-        type: safe(found.type),
-        thickness: numOrEmpty(found.thickness),
-        length: numOrEmpty(found.length),
-        width: numOrEmpty(found.width),
-        sheetsPerBox: numOrEmpty(found.sheetsPerBox),
-        origin: safe(found.origin),
-        descriptionId: d?.id ? Number(d.id) : null,
-        itemNumber: safe(d.itemNumber),
-        categoryName: safe(d.categoryName),
-        subCategory: safe(d.subCategory),
-        colorName: safe(d.colorName),
-        designName: safe(d.designName),
-      };
+if (tokens.length > 0) {
+  const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+  const found = rows.find((r) => String(r?.variantId) === String(vid));
+  if (!found) return null;
+  const d = found.description || {};
+  return {
+    variantId: Number(found.variantId),
+    itemId: Number(found.itemId ?? iid),
+    thicknessId: Number(found.thicknessId ?? tid),
+    itemName: safe(found.itemName),
+    type: safe(found.type),
+    thickness: numOrEmpty(found.thickness),
+    length: numOrEmpty(found.length),
+    width: numOrEmpty(found.width),
+    sheetsPerBox: numOrEmpty(found.sheetsPerBox),
+    origin: safe(found.origin),
+    descriptionId: d?.id ? Number(d.id) : null,
+    itemNumber: safe(d.itemNumber),
+    categoryName: safe(d.categoryName),
+    subCategory: safe(d.subCategory),
+    colorName: safe(d.colorName),
+    designName: safe(d.designName),
+  };
+
+
     } else {
-      for (const item of items || []) {
-        for (const thick of item?.thicknesses || []) {
-          for (const v of thick?.variants || []) {
-            if (String(v?.id) === String(vid)) {
-              const d = v.itemNameDescription || {};
-              return {
-                variantId: Number(v.id),
-                itemId: Number(item.id ?? iid),
-                thicknessId: Number(thick.id ?? tid),
-                itemName: safe(item.itemName),
-                type: safe(item.type),
-                thickness: numOrEmpty(thick.thickness),
-                length: numOrEmpty(v.length),
-                width: numOrEmpty(v.width),
-                sheetsPerBox: numOrEmpty(v.sheetsPerBox),
-                origin: safe(v.origin),
-                descriptionId: d?.id ? Number(d.id) : null,
-                itemNumber: safe(d.itemNumber),
-                categoryName: safe(d.categoryName),
-                subCategory: safe(d.subCategory),
-                colorName: safe(d.colorName),
-                designName: safe(d.designName),
-              };
-            }
-          }
+  // ✅ Use the flattened non-search rows (works for grouped or legacy)
+  const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+  const found = rows.find((r) => String(r?.variantId) === String(vid));
+  if (found) {
+    const d = found.description || {};
+    return {
+      variantId: Number(found.variantId),
+      itemId: Number(found.itemId ?? iid),
+      thicknessId: Number(found.thicknessId ?? tid),
+      itemName: safe(found.itemName),
+      type: safe(found.type),
+      thickness: numOrEmpty(found.thickness),
+      length: numOrEmpty(found.length),
+      width: numOrEmpty(found.width),
+      sheetsPerBox: numOrEmpty(found.sheetsPerBox),
+      origin: safe(found.origin),
+      descriptionId: d?.id ? Number(d.id) : null,
+      itemNumber: safe(d.itemNumber),
+      categoryName: safe(d.categoryName),
+      subCategory: safe(d.subCategory),
+      colorName: safe(d.colorName),
+      designName: safe(d.designName),
+    };
+  }
+
+  // (Optional) ultra-legacy deep walk fallback:
+  for (const item of items || []) {
+    for (const thick of item?.thicknesses || []) {
+      for (const v of thick?.variants || []) {
+        if (String(v?.id) === String(vid)) {
+          const d = v.realDescription || v.itemNameDescription || {};
+          return {
+            variantId: Number(v.id),
+            itemId: Number(item.id ?? iid),
+            thicknessId: Number(thick.id ?? tid),
+            itemName: safe(item.itemName),
+            type: safe(item.type),
+            thickness: numOrEmpty(thick.thickness),
+            length: numOrEmpty(v.length),
+            width: numOrEmpty(v.width),
+            sheetsPerBox: numOrEmpty(v.sheetsPerBox),
+            origin: safe(v.origin),
+            descriptionId: d?.id ? Number(d.id) : null,
+            itemNumber: safe(d.itemNumber),
+            categoryName: safe(d.categoryName),
+            subCategory: safe(d.subCategory),
+            colorName: safe(d.colorName),
+            designName: safe(d.designName),
+          };
         }
       }
     }
+  }
+}
     return null;
   };
 
@@ -691,50 +851,49 @@ const handleFormSubmit = async (e) => {
         </button>
       </div>
 
-      {/* Toolbar */}
-      
-
       {/* Table */}
       <div className="items-creation-table-wrapper">
         {/* 🔽 TOOLBAR */}
-  <div className="items-creation-toolbar">
-    <label className="items-creation-select-all">
-      <input
-        type="checkbox"
-        checked={
-          (inSearchMode ? (searchResults || []).length : items.length) > 0 &&
-          visibleRowKeys.length > 0 &&
-          visibleRowKeys.every((k) => selectedRowKeys.has(k))
-        }
-        ref={(el) => {
-          if (el) {
-            const all = visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
-            const none = visibleRowKeys.every((k) => !selectedRowKeys.has(k));
-            el.indeterminate = !all && !none;
-          }
-        }}
-        onChange={toggleSelectAllVisible}
-      />
-      <span>Select all in view</span>
-    </label>
+        <div className="items-creation-toolbar">
+          <label className="items-creation-select-all">
+            <input
+              type="checkbox"
+            checked={
+  (inSearchMode ? flattenedSearchRows.length : flattenedListRows.length) > 0 &&
+  visibleRowKeys.length > 0 &&
+  visibleRowKeys.every((k) => selectedRowKeys.has(k))
+}
 
-    <button
-      className="items-creation-edit-selected"
-      disabled={selectedVariantIds.length !== 1}
-      onClick={openEditSelected}
-      title={selectedVariantIds.length !== 1 ? "Select exactly one row to edit" : "Edit selected"}
-    >
-      Edit Selected
-    </button>
+              ref={(el) => {
+                if (el) {
+                  const all = visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
+                  const none = visibleRowKeys.every((k) => !selectedRowKeys.has(k));
+                  el.indeterminate = !all && !none;
+                }
+              }}
+              onChange={toggleSelectAllVisible}
+            />
+            <span>Select all in view</span>
+          </label>
 
-    <button
-      className="items-creation-delete-selected"
-      disabled={selectedVariantIds.length === 0}
-      onClick={deleteSelected}
-    >
-      Delete Selected ({selectedVariantIds.length})
-    </button>
-  </div>
+          <button
+            className="items-creation-edit-selected"
+            disabled={selectedVariantIds.length !== 1}
+            onClick={openEditSelected}
+            title={selectedVariantIds.length !== 1 ? "Select exactly one row to edit" : "Edit selected"}
+          >
+            Edit Selected
+          </button>
+
+          <button
+            className="items-creation-delete-selected"
+            disabled={selectedVariantIds.length === 0}
+            onClick={deleteSelected}
+          >
+            Delete Selected ({selectedVariantIds.length})
+          </button>
+        </div>
+
         <table className="items-creation-table">
           <thead>
             <tr>
@@ -753,85 +912,82 @@ const handleFormSubmit = async (e) => {
             </tr>
           </thead>
 
-          <tbody>
-            {inSearchMode
-              ? (searchResults || []).map((r) => {
-                  const d = r.description || {};
-                  const rowKey = makeKeyFromSearch(r);
-                  const checked = selectedRowKeys.has(rowKey);
-                  return (
-                    <tr key={rowKey}>
-                      <td className="items-creation-col-select">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleSelectRow(rowKey)}
-                          aria-label={`select row ${rowKey}`}
-                        />
-                      </td>
-                      <td>{d.itemNumber ?? "—"}</td>
-                      <td className="ar-rtl">{d.categoryName ?? "—"}</td>
-                      <td className="ar-rtl">{d.subCategory ?? "—"}</td>
-                      <td className="ar-rtl">{d.colorName ?? "—"}</td>
-                      <td className="ar-rtl">{d.designName ?? "—"}</td>
-                      <td className="ar-rtl">{(r.thickness ?? "") + " ملم " + (r.itemName ?? "")}</td>
-                      <td>{r.type ?? "—"}</td>
-                      {r.type === "sqm" ? (
-                        <>
-                          <td>—</td><td>—</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="ltr">{r.length ?? "—"}</td>
-                          <td className="ltr">{r.width ?? "—"}</td>
-                        </>
-                      )}
-                      <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
-                      <td className="ar-rtl">{r.origin ?? "—"}</td>
-                    </tr>
-                  );
-                })
-              : (items || []).flatMap((item) =>
-                  (item.thicknesses || []).flatMap((thick) =>
-                    (thick.variants || []).map((v) => {
-                      const d = v.itemNameDescription || {};
-                      const rowKey = makeKeyFromLocal(item, thick, v);
-                      const checked = selectedRowKeys.has(rowKey);
-                      return (
-                        <tr key={rowKey}>
-                          <td className="items-creation-col-select">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleSelectRow(rowKey)}
-                              aria-label={`select row ${rowKey}`}
-                            />
-                          </td>
-                          <td>{d.itemNumber || "—"}</td>
-                          <td className="ar-rtl">{d.categoryName || "—"}</td>
-                          <td className="ar-rtl">{d.subCategory || "—"}</td>
-                          <td className="ar-rtl">{d.colorName || "—"}</td>
-                          <td className="ar-rtl">{d.designName || "—"}</td>
-                          <td className="ar-rtl">{`${thick.thickness ?? ""} ملم ${item.itemName ?? ""}`}</td>
-                          <td>{item.type ?? "—"}</td>
-                          {item.type === "sqm" ? (
-                            <>
-                              <td>—</td><td>—</td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="ltr">{v.length ?? "—"}</td>
-                              <td className="ltr">{v.width ?? "—"}</td>
-                            </>
-                          )}
-                          <td className="ltr">{item.type === "box" ? (v.sheetsPerBox ?? "—") : "—"}</td>
-                          <td className="ar-rtl">{v.origin ?? "—"}</td>
-                        </tr>
-                      );
-                    })
-                  )
-                )}
-          </tbody>
+<tbody>
+  {inSearchMode
+    ? (flattenedSearchRows || []).map((r) => {
+        const d = r.description || {};
+        const rowKey = makeKeyFromSearch(r);
+        const checked = selectedRowKeys.has(rowKey);
+        return (
+          <tr key={rowKey}>
+            <td className="items-creation-col-select">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleSelectRow(rowKey)}
+                aria-label={`select row ${rowKey}`}
+              />
+            </td>
+            <td>{d.itemNumber ?? "—"}</td>
+            <td className="ar-rtl">{d.categoryName ?? "—"}</td>
+            <td className="ar-rtl">{d.subCategory ?? "—"}</td>
+            <td className="ar-rtl">{d.colorName ?? "—"}</td>
+            <td className="ar-rtl">{d.designName ?? "—"}</td>
+            <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+            <td>{r.type ?? "—"}</td>
+            {r.type === "sqm" ? (
+              <>
+                <td>—</td><td>—</td>
+              </>
+            ) : (
+              <>
+                <td className="ltr">{r.length ?? "—"}</td>
+                <td className="ltr">{r.width ?? "—"}</td>
+              </>
+            )}
+            <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+            <td className="ar-rtl">{r.origin ?? "—"}</td>
+          </tr>
+        );
+      })
+    : (flattenedListRows || []).map((r) => {
+        const d = r.description || {};
+        const rowKey = makeKeyFromSearch(r);
+        const checked = selectedRowKeys.has(rowKey);
+        return (
+          <tr key={rowKey}>
+            <td className="items-creation-col-select">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggleSelectRow(rowKey)}
+                aria-label={`select row ${rowKey}`}
+              />
+            </td>
+            <td>{d.itemNumber ?? "—"}</td>
+            <td className="ar-rtl">{d.categoryName ?? "—"}</td>
+            <td className="ar-rtl">{d.subCategory ?? "—"}</td>
+            <td className="ar-rtl">{d.colorName ?? "—"}</td>
+            <td className="ar-rtl">{d.designName ?? "—"}</td>
+            <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+            <td>{r.type ?? "—"}</td>
+            {r.type === "sqm" ? (
+              <>
+                <td>—</td><td>—</td>
+              </>
+            ) : (
+              <>
+                <td className="ltr">{r.length ?? "—"}</td>
+                <td className="ltr">{r.width ?? "—"}</td>
+              </>
+            )}
+            <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+            <td className="ar-rtl">{r.origin ?? "—"}</td>
+          </tr>
+        );
+      })}
+</tbody>
+
         </table>
 
         {/* Search results counter */}
@@ -864,8 +1020,6 @@ const handleFormSubmit = async (e) => {
           </div>
         )}
       </div>
-
-
 
       {/* CREATE MODAL */}
       {showModal && (
@@ -1042,9 +1196,9 @@ const handleFormSubmit = async (e) => {
               </label>
 
               <div className="items-creation-button-row">
-          <button ref={refSubmit} type="submit" disabled={submitting}>
-  {submitting ? "Creating…" : "Create Item"}
-</button>
+                <button ref={refSubmit} type="submit" disabled={submitting}>
+                  {submitting ? "Creating…" : "Create Item"}
+                </button>
                 <button type="button" onClick={handleModalToggle}>
                   Cancel
                 </button>
@@ -1148,7 +1302,7 @@ const handleFormSubmit = async (e) => {
 
       {/* Status modal */}
       {modalContent && (
-         <div className="items-creation-modal">
+        <div className="items-creation-modal">
           <div
             className={`items-creation-modal-status-content ${
               modalType === "success" ? "items-creation-success-modal" : "items-creation-error-modal"

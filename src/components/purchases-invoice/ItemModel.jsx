@@ -8,33 +8,28 @@ const baseUrl = rawBase.replace(/\/+$/, ""); // e.g. http://192.168.68.105:3000
 const DEBOUNCE_MS = 300;
 
 const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
-  const [items, setItems] = useState([]);            // nested items from /filtered-items
-  const [flatRows, setFlatRows] = useState([]);      // flat rows from /variant-search
+  // We now keep ONE unified "rows" array for the table (both list + search fill it)
+  const [rows, setRows] = useState([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-  const abortRef = useRef();
-
-  // 🔎 search UI state
-  const [searchText, setSearchText] = useState("");
   const [mode, setMode] = useState("list"); // "list" | "search"
   const [searchPage, setSearchPage] = useState(1);
+  const abortRef = useRef();
 
-  // 🔖 pinned search terms
-  const [pinnedTerms, setPinnedTerms] = useState([]); // e.g. ["5.5ملم", "ابيض"]
+  // 🔎 search UI
+  const [searchText, setSearchText] = useState("");
+  const [pinnedTerms, setPinnedTerms] = useState([]);
 
-  // Build the query shown/typed
   const combinedQuery = useMemo(() => {
     const live = String(searchText || "").trim();
     return [...pinnedTerms, ...(live ? [live] : [])].join(" ").trim();
   }, [pinnedTerms, searchText]);
 
-  // Heuristic: if user has pinned some non-dims text, treat a plain number as LENGTH
   const preferPlainAsLength = useMemo(() => pinnedTerms.length > 0, [pinnedTerms]);
 
-  // ---------- DIMS parsing helpers ----------
-  // Extract last dims occurrence: 225*321 or 225*321-025, or single-dimension tokens.
+  // ---------- helpers: parse dims ----------
   const extractDimsParts = useCallback((text, preferLengthPlain) => {
     const empty = {
       dims: null,
@@ -43,7 +38,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
       spb: null,
       isBox: false,
       foundSingle: false,
-      tokenToStrip: null, // exact token to remove from q if single match
+      tokenToStrip: null,
     };
     if (!text) return empty;
     const t = String(text);
@@ -67,11 +62,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     }
     if (lastFull) return lastFull;
 
-    // If no full dims, try single dimension tokens (use the LAST one found)
+    // Single tokens
     const tokens = t.split(/\s+/).filter(Boolean);
     let single = null;
     for (const tok of tokens) {
-      // width-only patterns
       const w1 = tok.match(/^\*\s*(\d{2,5})$/);                 // *321
       const w2 = tok.match(/^(?:w|W|عرض)\s*:?(\d{2,5})$/);      // W321 / عرض321 / W:321
       const w3 = tok.match(/^(\d{2,5})(?:w|W)$/);               // 321W
@@ -80,16 +74,12 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         single = { dims: null, length: null, width: W, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
         continue;
       }
-
-      // length-only explicit: "225*"
       const l1 = tok.match(/^(\d{2,5})\*$/);                    // 225*
       if (l1) {
         const L = Number(l1[1]);
         single = { dims: null, length: L, width: null, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
         continue;
       }
-
-      // PLAIN number: treat as LENGTH if preferLengthPlain, otherwise WIDTH
       const plain = tok.match(/^(\d{2,5})$/);                   // 225
       if (plain) {
         const n = Number(plain[1]);
@@ -104,25 +94,17 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     return single || empty;
   }, []);
 
-  // Remove dims tokens from the name part of q
   const stripDims = useCallback((text, tokenToStrip) => {
     if (!text) return "";
-    let out = text
-      // remove any full dims like 225*321 or 225*321-025
-      .replace(/(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g, " ");
-
-    // remove the exact single token we parsed (e.g. "225*", "*321", "225", "W321")
+    let out = text.replace(/(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g, " ");
     if (tokenToStrip) {
-      // use regex that matches the standalone token (start/end or spaces)
       const esc = tokenToStrip.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`(^|\\s)${esc}(?=\\s|$)`, "g");
       out = out.replace(re, " ");
     }
-
     return out.replace(/\s+/g, " ").trim();
   }, []);
 
-  // Parse the combinedQuery into dims/length/width/spb
   const dimsInfo = useMemo(
     () => extractDimsParts(combinedQuery, preferPlainAsLength),
     [combinedQuery, preferPlainAsLength, extractDimsParts]
@@ -133,26 +115,18 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     [combinedQuery, dimsInfo.tokenToStrip, stripDims]
   );
 
-  // Pin/unpin
   const pinTerm = useCallback((term) => {
     const t = String(term || "").trim();
     if (!t) return;
     setPinnedTerms((prev) => (prev.includes(t) ? prev : [...prev, t]));
-    setSearchText(""); // clear input after pinning
+    setSearchText("");
   }, []);
 
   const unpinTerm = useCallback((term) => {
     setPinnedTerms((prev) => prev.filter((x) => x !== term));
   }, []);
 
-  // Cancel in-flight
-  const cancelInFlight = () => {
-    try { abortRef.current?.abort(); } catch {}
-    abortRef.current = new AbortController();
-    return abortRef.current.signal;
-  };
-
-  // ---------- selection lookup by variant id ----------
+  // ---------- selection lookup ----------
   const selectedIdSet = useMemo(() => {
     const s = new Set();
     for (const sel of selectedItems || []) {
@@ -168,24 +142,134 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     [selectedIdSet]
   );
 
-  // ---------- normalize server response ----------
-  const normalizeList = useCallback((json) => {
+  // ---------- request cancel ----------
+  const cancelInFlight = () => {
+    try { abortRef.current?.abort(); } catch {}
+    abortRef.current = new AbortController();
+    return abortRef.current.signal;
+  };
+
+  // ---------- row builders ----------
+  const buildRow = (rec) => {
+    // Unified builder that tolerates both search/list records
+    // (variantId or id) + (itemName, type, thickness, origin, length, width, sheetsPerBox)
+    const variantId = Number(rec.variantId ?? rec.id);
+    const thicknessVal = Number(rec.thickness ?? 0);
+    const itemName = rec.itemName || "";
+    const type = rec.type || "";
+    const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${itemName}`;
+
+    return {
+      key: `${rec.itemId ?? "x"}-${variantId}`,
+      variantId,
+      combinedName,
+      type,
+      origin: rec.origin ?? "",
+      length: Number(rec.length ?? 0),
+      width: Number(rec.width ?? 0),
+      sheetsPerBox: Number(rec.sheetsPerBox ?? 0) || "",
+      payloadItem: { itemName, type, combinedName },
+      payloadVariant: {
+        id: variantId,
+        origin: rec.origin ?? "",
+        length: Number(rec.length ?? 0),
+        width: Number(rec.width ?? 0),
+        sheetsPerBox: Number(rec.sheetsPerBox ?? 0),
+        thickness: thicknessVal,
+        dimensionId: variantId,
+      },
+    };
+  };
+
+  const flattenGrouped = (groups) => {
+    // groups: [{ realDescription: {...}, variants: [ {...} ] }, ...]
+    // We flatten to flat variant records; you can keep rd on each row if you want later
+    const out = [];
+    for (const g of groups || []) {
+      const rd = g?.realDescription || null;
+      for (const v of g?.variants || []) {
+        out.push(buildRow({ ...v, realDescription: rd }));
+      }
+    }
+    return out;
+  };
+
+  const flattenOldNested = (itemsLike) => {
+    // old: items -> thicknesses -> variants
+    const out = [];
+    for (const item of itemsLike || []) {
+      const itemName = item?.itemName ?? "";
+      const type = item?.type ?? "";
+      for (const th of item?.thicknesses || []) {
+        const thicknessVal = Number(th?.thickness ?? 0);
+        for (const v of th?.variants || []) {
+          const rec = {
+            variantId: v?.id,
+            length: Number(v?.length ?? 0),
+            width: Number(v?.width ?? 0),
+            sheetsPerBox: Number(v?.sheetsPerBox ?? 0),
+            origin: v?.origin ?? "",
+            thicknessId: th?.id,
+            thickness: thicknessVal,
+            itemId: item?.id,
+            itemName,
+            type,
+          };
+          out.push(buildRow(rec));
+        }
+      }
+    }
+    return out;
+  };
+
+  // ---------- normalizers ----------
+  const normalizeListToRows = useCallback((json) => {
+    // Accept either:
+    // - old list shape: { data: [ {id,itemName,type, thicknesses:[ {id, thickness, variants:[...] } ] } ] }
+    // - new grouped shape: { data: [ { realDescription:{...}, variants:[...] }, ... ] }
+    let more = false;
+    let flat = [];
+
     if (json && typeof json === "object") {
       const data = Array.isArray(json.data) ? json.data : [];
-      const more = json.hasMore === true ? true : data.length > 0;
-      return { data, hasMore: more };
+      more = Boolean(json.hasMore);
+
+      const looksGrouped =
+        data.length > 0 && typeof data[0] === "object" &&
+        (("realDescription" in data[0]) || ("variants" in data[0] && !("thicknesses" in data[0])));
+
+      if (looksGrouped) {
+        flat = flattenGrouped(data);
+      } else {
+        flat = flattenOldNested(data);
+      }
     }
-    if (Array.isArray(json)) return { data: json, hasMore: json.length > 0 };
-    return { data: [], hasMore: false };
+
+    return { rows: flat, hasMore: more };
   }, []);
 
-  const normalizeSearch = useCallback((json) => {
+  const normalizeSearchToRows = useCallback((json) => {
+    // Accept either flat or grouped search response
+    let more = false;
+    let flat = [];
+
     if (json && typeof json === "object") {
       const data = Array.isArray(json.data) ? json.data : [];
-      const more = Boolean(json.hasMore ?? (json.page * json.limit < (json.totalRows || 0)));
-      return { data, hasMore: more };
+      more = Boolean(json.hasMore ?? (json.page * json.limit < (json.totalRows || 0)));
+
+      const looksGrouped =
+        data.length > 0 && typeof data[0] === "object" &&
+        (("realDescription" in data[0]) || ("variants" in data[0] && !("itemId" in data[0])));
+
+      if (looksGrouped) {
+        flat = flattenGrouped(data);
+      } else {
+        // already flat search results
+        flat = data.map(buildRow);
+      }
     }
-    return { data: [], hasMore: false };
+
+    return { rows: flat, hasMore: more };
   }, []);
 
   // ---------- API calls ----------
@@ -198,9 +282,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const json = await res.json();
-        const { data: pageData, hasMore: more } = normalizeList(json);
-        if (targetPage === 1) setItems(pageData || []);
-        else setItems((prev) => [...prev, ...(pageData || [])]);
+        const { rows: pageRows, hasMore: more } = normalizeListToRows(json);
+        if (targetPage === 1) setRows(pageRows || []);
+        else setRows((prev) => [...prev, ...(pageRows || [])]);
         setHasMore(Boolean(more));
         setPage(targetPage);
       } catch (e) {
@@ -212,10 +296,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         setLoading(false);
       }
     },
-    [limit, normalizeList]
+    [limit, normalizeListToRows]
   );
 
-  // Accept qSansDims + optional dims + optional length/width; append &type=box when dims has -SPB
   const fetchSearchPage = useCallback(
     async (targetPage, qNoDims, dims, isBox, lengthOnly, widthOnly) => {
       setLoading(true);
@@ -235,9 +318,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const json = await res.json();
-        const { data: pageData, hasMore: more } = normalizeSearch(json);
-        if (targetPage === 1) setFlatRows(pageData || []);
-        else setFlatRows((prev) => [...prev, ...(pageData || [])]);
+
+        const { rows: pageRows, hasMore: more } = normalizeSearchToRows(json);
+        if (targetPage === 1) setRows(pageRows || []);
+        else setRows((prev) => [...prev, ...(pageRows || [])]);
         setHasMore(Boolean(more));
         setSearchPage(targetPage);
       } catch (e) {
@@ -249,10 +333,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         setLoading(false);
       }
     },
-    [limit, normalizeSearch]
+    [limit, normalizeSearchToRows]
   );
 
-  // Load first page when the modal opens
+  // initial load
   useEffect(() => {
     fetchListPage(1);
     return () => {
@@ -260,7 +344,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     };
   }, [fetchListPage]);
 
-  // ---------- debounce search ----------
+  // debounce search
   useEffect(() => {
     const hasAny =
       Boolean(qSansDims) ||
@@ -270,9 +354,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
     if (!hasAny) {
       setMode("list");
-      setFlatRows([]);
+      setRows([]);            // will refill from list call
       setSearchPage(1);
-      if (!items?.length) fetchListPage(1);
+      fetchListPage(1);
       return;
     }
 
@@ -288,81 +372,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
       );
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qSansDims, dimsInfo]);
 
-  // ---------- flatten nested items -> rows by variant (list mode) ----------
-  const listRows = useMemo(() => {
-    const out = [];
-    for (const item of items || []) {
-      const itemName = item?.itemName ?? "";
-      const type = item?.type ?? "";
-      const ths = item?.thicknesses || [];
-      for (const th of ths) {
-        const thicknessVal = Number(th?.thickness ?? 0);
-        const vars = th?.variants || [];
-        for (const v of vars) {
-          const id = v?.id;
-          if (id == null) continue;
-          const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${itemName}`;
-          out.push({
-            key: `${item.id}-${id}`,
-            variantId: id,
-            combinedName,
-            type,
-            origin: v?.origin ?? "",
-            length: Number(v?.length ?? 0),
-            width: Number(v?.width ?? 0),
-            sheetsPerBox: Number(v?.sheetsPerBox ?? 0) || "",
-            payloadItem: { itemName, type, combinedName }, // <— include combined
-            payloadVariant: {
-              id,
-              origin: v?.origin ?? "",
-              length: Number(v?.length ?? 0),
-              width: Number(v?.width ?? 0),
-              sheetsPerBox: Number(v?.sheetsPerBox ?? 0),
-              thickness: thicknessVal,
-              dimensionId: id,
-            },
-          });
-        }
-      }
-    }
-    return out;
-  }, [items]);
-
-  // ---------- map flat API rows -> table rows (search mode) ----------
-  const searchRows = useMemo(() => {
-    return (flatRows || []).map((r) => {
-      const thicknessVal = Number(r.thickness ?? 0);
-      const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${r.itemName || ""}`;
-      return {
-        key: `${r.itemId}-${r.variantId}`,
-        variantId: Number(r.variantId),
-        combinedName,
-        type: r.type || "",
-        origin: r.origin ?? "",
-        length: Number(r.length ?? 0),
-        width: Number(r.width ?? 0),
-        sheetsPerBox: Number(r.sheetsPerBox ?? 0) || "",
-        payloadItem: { itemName: r.itemName || "", type: r.type || "", combinedName }, // <— include combined
-        payloadVariant: {
-          id: Number(r.variantId),
-          origin: r.origin ?? "",
-          length: Number(r.length ?? 0),
-          width: Number(r.width ?? 0),
-          sheetsPerBox: Number(r.sheetsPerBox ?? 0),
-          thickness: thicknessVal,
-          dimensionId: Number(r.variantId),
-        },
-      };
-    });
-  }, [flatRows]);
-
-  // Active rows
-  const rows = mode === "search" ? searchRows : listRows;
-
-  // optional client-side filter on list mode (server filters in search mode)
+  // optional client-side filter in list mode (search mode is already server-filtered)
   const filteredRows = useMemo(() => {
     const q = String(combinedQuery || "").trim().toLowerCase();
     if (!q) return rows;
@@ -384,13 +397,11 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     });
   }, [rows, combinedQuery, mode]);
 
-  // ✅ LOG THE EXACT PAYLOAD WE SEND UP
+  // selection payload
   const onToggle = useCallback(
     (r) => {
       const payloadItem = { ...r.payloadItem, combinedName: r.combinedName };
       const payloadVariant = { ...r.payloadVariant };
-      // Clear, readable console output:
-      // (Shows exactly what the Table's parent gets when a user selects/deselects)
       console.log("%c[MODAL->PARENT] handleCheckboxChange payloadItem", "color:#0A84FF;font-weight:bold;", payloadItem);
       console.log("%c[MODAL->PARENT] handleCheckboxChange payloadVariant", "color:#0A84FF;font-weight:bold;", payloadVariant);
       handleCheckboxChange(payloadItem, payloadVariant);
@@ -398,7 +409,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     [handleCheckboxChange]
   );
 
-  // "Load more" – keep passing qSansDims + dims + optional length/width
+  // load more
   const onLoadMore = useCallback(() => {
     if (loading || !hasMore) return;
     if (mode === "search") {
@@ -441,8 +452,6 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
               }
             }}
           />
-
-          {/* 🔖 pinned search chips */}
           {pinnedTerms.length > 0 && (
             <div className="pinned-chips">
               {pinnedTerms.map((term) => (

@@ -152,6 +152,150 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   const showFinalCost = rows.some((r) => ["S", "SR", "RVR"].includes(r.type));
   const showFinalCostOfr = rows.some((r) => ["G", "SR"].includes(r.type));
 
+  // ===== input locking helpers (no wheel, no ArrowUp/Down) + decimal sanitizer =====
+  const normalizeDecimal = (val) => {
+    const s = String(val ?? "");
+    const cleaned = s.replace(/[^\d.]/g, "");
+    const [head, ...rest] = cleaned.split(".");
+    return rest.length ? `${head}.${rest.join("").replace(/\./g, "")}` : head;
+  };
+  const blockWheel = (e) => e.preventDefault();
+  const blockArrowInc = (e) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
+  };
+
+  // =========================
+  // Keyboard Navigation (NEW)
+  // =========================
+  // Stable order of possible fields in one row (superset; some are hidden per row)
+  const ALL_FIELDS = [
+    "date",
+    "count",
+    "type",
+    "countOFR",
+    "finalCost",
+    "finalCostOfr",
+    "dateReceivedInput",
+    "condition",
+  ];
+
+  // Matrix of refs: cellRefs.current[rowIndex][field] = ref
+  const cellRefs = useRef([]);
+
+  const ensureRef = (rowIndex, field) => {
+    if (!cellRefs.current[rowIndex]) cellRefs.current[rowIndex] = {};
+    if (!cellRefs.current[rowIndex][field]) cellRefs.current[rowIndex][field] = React.createRef();
+    return cellRefs.current[rowIndex][field];
+  };
+
+  const focusFieldsForRow = (row) => {
+    if (!row) return [];
+    const fields = ["date", "count", "type"];
+    if (row.type === "SR") fields.push("countOFR");
+    if (["S", "SR", "RVR"].includes(row.type)) fields.push("finalCost");
+    if (["G", "SR"].includes(row.type || DEFAULT_TYPE)) fields.push("finalCostOfr");
+    fields.push("dateReceivedInput", "condition");
+    return fields;
+    };
+
+  const focusCell = (rowIndex, field) => {
+    const ref = cellRefs.current?.[rowIndex]?.[field];
+    if (ref && ref.current) {
+      ref.current.focus();
+      if (ref.current.select) {
+        try { ref.current.select(); } catch {}
+      }
+    }
+  };
+
+  const moveHorizontal = (rowIndex, field, dir) => {
+    // dir: +1 next, -1 previous
+    const fields = focusFieldsForRow(rows[rowIndex]);
+    const idx = fields.indexOf(field);
+    if (idx === -1) return;
+
+    let targetRow = rowIndex;
+    let targetFieldIndex = idx + dir;
+
+    if (targetFieldIndex < 0) {
+      // go to previous row last field
+      targetRow = Math.max(0, rowIndex - 1);
+      if (targetRow !== rowIndex) {
+        const f2 = focusFieldsForRow(rows[targetRow]);
+        return focusCell(targetRow, f2[f2.length - 1]);
+      }
+      targetFieldIndex = 0;
+    } else if (targetFieldIndex >= fields.length) {
+      // go to next row first field
+      targetRow = Math.min(rows.length - 1, rowIndex + 1);
+      if (targetRow !== rowIndex) {
+        const f2 = focusFieldsForRow(rows[targetRow]);
+        return focusCell(targetRow, f2[0]);
+      }
+      targetFieldIndex = fields.length - 1;
+    }
+
+    focusCell(targetRow, fields[targetFieldIndex]);
+  };
+
+  const moveVertical = (rowIndex, field, dir) => {
+    // dir: +1 down, -1 up
+    const targetRow = rowIndex + dir;
+    if (targetRow < 0 || targetRow >= rows.length) return;
+
+    // if field is hidden in target row, pick nearest available to it
+    const fieldsTarget = focusFieldsForRow(rows[targetRow]);
+    if (fieldsTarget.includes(field)) return focusCell(targetRow, field);
+
+    const prefIdx = ALL_FIELDS.indexOf(field);
+    for (let radius = 1; radius <= ALL_FIELDS.length; radius++) {
+      const left = ALL_FIELDS[prefIdx - radius];
+      const right = ALL_FIELDS[prefIdx + radius];
+      if (left && fieldsTarget.includes(left)) return focusCell(targetRow, left);
+      if (right && fieldsTarget.includes(right)) return focusCell(targetRow, right);
+    }
+    // fallback to first
+    focusCell(targetRow, fieldsTarget[0]);
+  };
+
+  const onCellKeyDown = (e, rowIndex, field) => {
+    const key = e.key;
+
+    if (key === "Enter") {
+      e.preventDefault();
+      return moveHorizontal(rowIndex, field, +1);
+    }
+
+    if (key === "ArrowUp") {
+      e.preventDefault();
+      return moveVertical(rowIndex, field, -1);
+    }
+    if (key === "ArrowDown") {
+      e.preventDefault();
+      return moveVertical(rowIndex, field, +1);
+    }
+
+    // Left/Right only when caret at start/end
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      const el = e.currentTarget;
+      const start = el.selectionStart ?? 0;
+      const end = el.selectionEnd ?? 0;
+      const len = String(el.value ?? "").length;
+
+      if (key === "ArrowLeft" && start === end && start === 0) {
+        e.preventDefault();
+        return moveHorizontal(rowIndex, field, -1);
+      }
+      if (key === "ArrowRight" && start === end && start === len) {
+        e.preventDefault();
+        return moveHorizontal(rowIndex, field, +1);
+      }
+    }
+  };
+  // =========================
+  // /Keyboard Navigation
+  // =========================
+
   return (
     <>
       <div className="opening-count-inner">
@@ -202,169 +346,241 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((r, i) => (
-                    <tr
-                      key={r.key}
-                      onContextMenu={(e) => onRowContextMenu(e, i)}
-                    >
-                      <td>
-                        <input
-                          type="text"
-                          className="opening-count-input-name"
-                          value={r.name}
-                          readOnly
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          className="opening-count-input"
-                          value={
-                            r.unit === "box"
-                              ? `${r.dimension}${
-                                  r.sheetsPerBox ? `-0${r.sheetsPerBox}` : ""
-                                }`
-                              : r.dimension
-                          }
-                          readOnly
-                        />
-                      </td>
+                  rows.map((r, i) => {
+                    // per-row conditional visibility (keeps your header logic untouched)
+                    const rowShowCountOfr = r.type === "SR";
+                    const rowShowFinalCost = ["S", "SR", "RVR"].includes(r.type);
+                    const rowShowFinalCostOfr = ["G", "SR"].includes(r.type || DEFAULT_TYPE);
 
-                      <td>
-                        <select
-                          className="opening-count-input"
-                          value={r.unit}
-                          disabled
-                        >
-                          <option value="">Unit</option>
-                          <option value="box">Box</option>
-                          <option value="sheet">Sheet</option>
-                          <option value="sqm">SQM</option>
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          className="opening-count-input"
-                          value={r.date || DEFAULT_DATE_ISO}
-                          onChange={(e) =>
-                            updateCell(i, "date", e.target.value)
-                          }
-                          disabled={saving}
-                        />
-                      </td>
-                      <td className="count-col">
-                        <input
-                          type="number"
-                          className="opening-count-input"
-                          value={r.count}
-                          onChange={(e) =>
-                            updateCell(i, "count", e.target.value)
-                          }
-                          placeholder="0"
-                          disabled={saving}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="opening-count-input"
-                          value={r.type || DEFAULT_TYPE}
-                          onChange={(e) =>
-                            updateCell(i, "type", e.target.value)
-                          }
-                          disabled={saving}
-                        >
-                          {TYPE_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      {showCountOfr && (
+                    // refs per editable cell
+                    const refDate = ensureRef(i, "date");
+                    const refCount = ensureRef(i, "count");
+                    const refType = ensureRef(i, "type");
+                    const refCountOFR = rowShowCountOfr ? ensureRef(i, "countOFR") : null;
+                    const refFinalCost = rowShowFinalCost ? ensureRef(i, "finalCost") : null;
+                    const refFinalCostOfr = rowShowFinalCostOfr ? ensureRef(i, "finalCostOfr") : null;
+                    const refDateReceived = ensureRef(i, "dateReceivedInput");
+                    const refCondition = ensureRef(i, "condition");
+
+                    return (
+                      <tr
+                        key={r.key}
+                        onContextMenu={(e) => onRowContextMenu(e, i)}
+                      >
                         <td>
-                          {r.type === "SR" ? (
-                            <input
-                              type="number"
-                              className="opening-count-input"
-                              value={r.countOFR}
-                              onChange={(e) =>
-                                updateCell(i, "countOFR", e.target.value)
-                              }
-                              placeholder="0"
-                              disabled={saving}
-                            />
-                          ) : (
-                            <span>—</span>
-                          )}
+                          <input
+                            type="text"
+                            className="opening-count-input-name"
+                            value={r.name}
+                            readOnly
+                          />
                         </td>
-                      )}
-                      {showFinalCost && (
                         <td>
-                          {["S", "SR", "RVR"].includes(r.type) ? (
-                            <input
-                              type="number"
-                              className="opening-count-input"
-                              value={r.finalCost}
-                              onChange={(e) =>
-                                updateCell(i, "finalCost", e.target.value)
-                              }
-                              placeholder="0.00"
-                              disabled={saving}
-                            />
-                          ) : (
-                            <span>—</span>
-                          )}
+                          <input
+                            type="text"
+                            className="opening-count-input"
+                            value={
+                              r.unit === "box"
+                                ? `${r.dimension}${
+                                    r.sheetsPerBox ? `-0${r.sheetsPerBox}` : ""
+                                  }`
+                                : r.dimension
+                            }
+                            readOnly
+                          />
                         </td>
-                      )}
-                      {showFinalCostOfr && (
+
                         <td>
-                          {["G", "SR"].includes(r.type || DEFAULT_TYPE) ? (
-                            <input
-                              type="number"
-                              className="opening-count-input"
-                              value={r.finalCostOfr}
-                              onChange={(e) =>
-                                updateCell(i, "finalCostOfr", e.target.value)
-                              }
-                              placeholder="0.00"
-                              disabled={saving}
-                            />
-                          ) : (
-                            <span>—</span>
-                          )}
+                          <select
+                            className="opening-count-input"
+                            value={r.unit}
+                            disabled
+                          >
+                            <option value="">Unit</option>
+                            <option value="box">Box</option>
+                            <option value="sheet">Sheet</option>
+                            <option value="sqm">SQM</option>
+                          </select>
                         </td>
-                      )}
-                      <td>
-                        <input
-                          type="month"
-                          className="opening-count-input"
-                          value={r.dateReceivedInput || ""}
-                          onChange={(e) => {
-                            const [year, month] = e.target.value.split("-");
-                            const formatted = `${parseInt(month, 10)}/${year}`; // e.g., "6/2025"
-                            updateCell(i, "dateReceivedInput", e.target.value); // input shows YYYY-MM
-                            updateCell(i, "dateReceived", formatted); // API gets M/YYYY
-                          }}
-                          disabled={saving}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="opening-count-input"
-                          value={r.condition}
-                          onChange={(e) =>
-                            updateCell(i, "condition", e.target.value)
-                          }
-                          disabled={saving}
-                        >
-                          <option value="Clean">Clean</option>
-                          <option value="Damaged">Damaged</option>
-                          <option value="Used">Used</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))
+
+                        {/* Date */}
+                        <td>
+                          <input
+                            ref={refDate}
+                            type="date"
+                            className="opening-count-input"
+                            value={r.date || DEFAULT_DATE_ISO}
+                            onChange={(e) =>
+                              updateCell(i, "date", e.target.value)
+                            }
+                            onKeyDown={(e) => onCellKeyDown(e, i, "date")}
+                            onWheel={blockWheel}
+                            disabled={saving}
+                          />
+                        </td>
+
+                        {/* Count (no arrows/wheel) */}
+                        <td className="count-col">
+                          <input
+                            ref={refCount}
+                            type="text"
+                            inputMode="decimal"
+                            className="opening-count-input"
+                            value={r.count}
+                            onChange={(e) =>
+                              updateCell(i, "count", normalizeDecimal(e.target.value))
+                            }
+                            onKeyDown={(e) => onCellKeyDown(e, i, "count")}
+                            onWheel={blockWheel}
+                            placeholder="0"
+                            disabled={saving}
+                          />
+                        </td>
+
+                        {/* Type */}
+                        <td>
+                          <select
+                            ref={refType}
+                            className="opening-count-input"
+                            value={r.type || DEFAULT_TYPE}
+                            onChange={(e) =>
+                              updateCell(i, "type", e.target.value)
+                            }
+                            onKeyDown={(e) => onCellKeyDown(e, i, "type")}
+                            disabled={saving}
+                          >
+                            {TYPE_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        {/* Count OFR */}
+                        {showCountOfr && (
+                          <td>
+                            {rowShowCountOfr ? (
+                              <input
+                                ref={refCountOFR}
+                                type="text"
+                                inputMode="decimal"
+                                className="opening-count-input"
+                                value={r.countOFR}
+                                onChange={(e) =>
+                                  updateCell(
+                                    i,
+                                    "countOFR",
+                                    normalizeDecimal(e.target.value)
+                                  )
+                                }
+                                onKeyDown={(e) => onCellKeyDown(e, i, "countOFR")}
+                                onWheel={blockWheel}
+                                placeholder="0"
+                                disabled={saving}
+                              />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Final Cost */}
+                        {showFinalCost && (
+                          <td>
+                            {rowShowFinalCost ? (
+                              <input
+                                ref={refFinalCost}
+                                type="text"
+                                inputMode="decimal"
+                                className="opening-count-input"
+                                value={r.finalCost}
+                                onChange={(e) =>
+                                  updateCell(
+                                    i,
+                                    "finalCost",
+                                    normalizeDecimal(e.target.value)
+                                  )
+                                }
+                                onKeyDown={(e) => onCellKeyDown(e, i, "finalCost")}
+                                onWheel={blockWheel}
+                                placeholder="0.00"
+                                disabled={saving}
+                              />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Final Cost OFR */}
+                        {showFinalCostOfr && (
+                          <td>
+                            {rowShowFinalCostOfr ? (
+                              <input
+                                ref={refFinalCostOfr}
+                                type="text"
+                                inputMode="decimal"
+                                className="opening-count-input"
+                                value={r.finalCostOfr}
+                                onChange={(e) =>
+                                  updateCell(
+                                    i,
+                                    "finalCostOfr",
+                                    normalizeDecimal(e.target.value)
+                                  )
+                                }
+                                onKeyDown={(e) => onCellKeyDown(e, i, "finalCostOfr")}
+                                onWheel={blockWheel}
+                                placeholder="0.00"
+                                disabled={saving}
+                              />
+                            ) : (
+                              <span>—</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Date Received (month) */}
+                        <td>
+                          <input
+                            ref={refDateReceived}
+                            type="month"
+                            className="opening-count-input"
+                            value={r.dateReceivedInput || ""}
+                            onChange={(e) => {
+                              const [year, month] = e.target.value.split("-");
+                              const formatted = `${parseInt(month, 10)}/${year}`; // e.g., "6/2025"
+                              updateCell(i, "dateReceivedInput", e.target.value); // input shows YYYY-MM
+                              updateCell(i, "dateReceived", formatted); // API gets M/YYYY
+                            }}
+                            onKeyDown={(e) => onCellKeyDown(e, i, "dateReceivedInput")}
+                            onWheel={blockWheel}
+                            disabled={saving}
+                          />
+                        </td>
+
+                        {/* Condition */}
+                        <td>
+                          <select
+                            ref={refCondition}
+                            className="opening-count-input"
+                            value={r.condition}
+                            onChange={(e) =>
+                              updateCell(i, "condition", e.target.value)
+                            }
+                            onKeyDown={(e) => onCellKeyDown(e, i, "condition")}
+                            disabled={saving}
+                          >
+                            <option value="Clean">Clean</option>
+                            <option value="Damaged">Damaged</option>
+                            <option value="Used">Used</option>
+                            <option value="Defect">Defect</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

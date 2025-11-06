@@ -1,0 +1,364 @@
+/* Root container */
+.description-setting {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --panel-2: #f2f4f7;
+  --muted: #667085;
+  --border: #e5e7eb;
+  --text: #111827;
+  --accent: #2563eb;
+  --accent-2: #059669;
+  --warn: #b45309;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+}
+
+/* Header */
+.description-setting__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.description-setting__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
+.description-setting__actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Toolbar */
+.description-setting__toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.description-setting__search {
+  display: flex;
+}
+
+.description-setting__search-input {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.description-setting__search-input::placeholder {
+  color: #98a2b3;
+}
+
+.description-setting__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.description-setting__meta {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.description-setting__count {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+
+/* Buttons */
+.description-setting__btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.description-setting__btn:hover {
+  border-color: #cbd5e1;
+  background: #eef2f7;
+}
+
+.description-setting__btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.description-setting__btn--primary {
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  color: #fff;
+  border-color: transparent;
+}
+
+.description-setting__btn--primary.is-dirty {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+}
+
+.description-setting__btn--ghost {
+  background: transparent;
+}
+
+/* List + rows */
+.description-setting__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.description-setting__empty {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.description-setting__row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px dashed #d1d5db; 
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.description-setting__row:hover {
+  border-color: #cbd5e1;
+}
+
+.description-setting__row-handle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 18px;
+  user-select: none;
+  cursor: grab;
+}
+
+.description-setting__row:active .description-setting__row-handle {
+  cursor: grabbing;
+}
+
+.description-setting__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.description-setting__row-title {
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.description-setting__row-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.description-setting__badge {
+  background: #eef2ff;             
+  border: 1px solid #c7d2fe;       
+  color: #3730a3;               
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.description-setting__chip {
+  background: #ecfdf5;              
+  border: 1px solid #a7f3d0;        
+  color: #065f46;                  
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.description-setting__row-side {
+  display: flex;
+  gap: 8px;
+}
+
+/* Error + mark */
+.description-setting__error {
+  background: #fff1f2;             
+  border: 1px solid #fecdd3;        
+  color: #9f1239;                 
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.description-setting__mark {
+  background: rgba(37, 99, 235, 0.18); 
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+
+/* === Viewer (slide-over) === */
+.description-setting__viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+.description-setting__viewer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+.description-setting__viewer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(720px, 92vw);
+  height: 100%;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -12px 0 30px rgba(0,0,0,.12);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  animation: description-setting__slideIn .18s ease-out;
+}
+@keyframes description-setting__slideIn {
+  from { transform: translateX(8%); opacity: .9; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+.description-setting__viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+.description-setting__viewer-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+}
+.description-setting__viewer-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.description-setting__viewer-body {
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.description-setting__viewer-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.description-setting__viewer-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+}
+.description-setting__viewer-group-title {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.description-setting__viewer-th {
+  padding: 10px 14px 14px;
+}
+.description-setting__viewer-th + .description-setting__viewer-th {
+  border-top: 1px dashed #e5e7eb;
+  margin-top: 6px;
+  padding-top: 16px;
+}
+.description-setting__viewer-th-head {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.description-setting__viewer-variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.description-setting__viewer-variant {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fdfdfd;
+}
+.description-setting__viewer-variant-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+.description-setting__viewer-variant-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* Fix stacking so the panel sits above the blurred backdrop */
+.description-setting__viewer-panel {
+  z-index: 2;              /* NEW */
+}
+
+.description-setting__viewer-backdrop {
+  z-index: 1;              /* NEW */
+  /* If the blur feels too strong or GPU-heavy, reduce or remove it: */
+  backdrop-filter: blur(0px);   /* try 0–1px, or remove the line entirely */
+  background: rgba(0,0,0,0.25); /* slightly lighter dim */
+}
+
+/* Optional: ensure the main page doesn't look blurred on some browsers */
+.description-setting {
+  filter: none !important;
+}

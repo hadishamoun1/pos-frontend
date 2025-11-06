@@ -1,9 +1,11 @@
+// src/pages/settings/SettingsPage.jsx
 import React, { useState } from "react";
 import GeneralSettings from "./GeneralSettings";
 import InvoiceSettings from "./InvoiceSettings";
 import PermissionsSettings from "./PermissionsSettings";
 import PurchaseInvoiceSettings from "./PurchaseInvoiceSettings";
-import ItemBatchesSettings from "./ItemBatchesSettings"; // ⬅️ NEW
+import ItemBatchesSettings from "./ItemBatchesSettings";
+import DescriptionsSettings from "./DescriptionSorting"; 
 
 import "./settings.css";
 
@@ -20,8 +22,10 @@ const SettingsPage = () => {
         return <PermissionsSettings />;
       case "purchase-invoice":
         return <PurchaseInvoiceSettings />;
-      case "item-batches": // ⬅️ NEW
+      case "item-batches":
         return <ItemBatchesSettings />;
+      case "descriptions": // ⬅️ NEW
+        return <DescriptionsSettings />;
       default:
         return <GeneralSettings />;
     }
@@ -57,10 +61,16 @@ const SettingsPage = () => {
             Purchase Invoice
           </li>
           <li
-            className={activeTab === "item-batches" ? "active" : ""} // ⬅️ NEW
+            className={activeTab === "item-batches" ? "active" : ""}
             onClick={() => setActiveTab("item-batches")}
           >
             Item Batches
+          </li>
+          <li
+            className={activeTab === "descriptions" ? "active" : ""} // ⬅️ NEW
+            onClick={() => setActiveTab("descriptions")}
+          >
+            Descriptions
           </li>
         </ul>
       </aside>

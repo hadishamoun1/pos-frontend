@@ -1,98 +1,326 @@
-.inventory-page {
-    width: 90%;
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 30px;
-    background-color: #f5f7fa;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    font-family: Arial, sans-serif;
-  }
+/* Container */
+.invb-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invb-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+/* ───── Toolbar ─────────────────────────────────────────── */
+.invb-toolbar { display: grid; gap: 8px; }
+
+.invb-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* NEW: utility variants for row */
+.invb-row--wrap { flex-wrap: wrap; gap: 10px; }
+.invb-row--gap  { gap: 8px; }
+
+.invb-input,
+.invb-select {
+  padding: 8px 10px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+/* Tweak: make the default input a bit smaller so the narrow version rules */
+.invb-input { min-width: 200px; }
+
+.invb-chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .95rem;
+  opacity: .9;
+}
+
+.invb-hint { opacity: .7; }
+
+.invb-pager {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invb-btn {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  cursor: pointer;
+}
+.invb-btn.small { padding: 6px 10px; font-size: .9rem; }
+.invb-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ───── Table wrapper ───────────────────────────────────── */
+.invb-tablewrap {
+  overflow: auto;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* ───── Table readability upgrades ──────────────────────── */
+.invb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+  line-height: 1.35;
+}
+
+.invb-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fafafa;
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 700;
+  color: #333;
+  font-size: .78rem;
+  padding: 9px 10px;
+  border-bottom: 1px solid #ececec;
+}
+
+.invb-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f4f4f4;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.invb-table--compact td { padding: 8px 10px; }
+.invb-table--striped tbody tr:nth-child(odd):not(.invb-row--low) { background: #fcfcfc; }
+
+/* Hover (skip low rows so red stays strong) */
+.invb-table tbody tr:hover:not(.invb-row--low) { background: #f6f9ff; }
+
+.ta-center { text-align: center; }
+.ta-right  { text-align: right; }
+
+.truncate {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ───── LOW STOCK: full-row red highlight ──────────────── */
+.invb-row--low {
+  background: #ffe8e8 !important;              /* soft red background */
+}
+.invb-row--low td {
+  border-bottom-color: #ffd1d1;
+}
+.invb-row--low:hover {
+  background: #ffdcdc !important;
+}
+
+/* Quantity pill */
+.qty-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef3ff;
+  border: 1px solid #dfe7ff;
+  font-weight: 700;
+}
+.qty-pill.low {
+  background: #fff0f0;
+  border-color: #ffc7c7;
+  color: #b71c1c;
+}
+
+.u-muted { opacity: .65; font-weight: 600; }
+
+/* ───── Drawer ──────────────────────────────────────────── */
+.invb-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 5000;
+}
+
+.invb-drawer {
+  width: min(560px, 92vw);
+  height: 100%;
+  background: #fff;
+  box-shadow: -8px 0 24px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.invb-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.invb-drawer-title { font-weight: 800; }
+.invb-drawer-sub   { font-size: .92rem; opacity: .8; }
+.invb-drawer-body  { padding: 12px; overflow: auto; }
+
+/* ───── Batches table inside drawer ────────────────────── */
+.invb-batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .94rem;
+}
+.invb-batch-table th,
+.invb-batch-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+/* ───── Skeleton shimmer ───────────────────────────────── */
+.invb-skel {
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,#eee,#f5f5f5,#eee);
+  background-size: 200% 100%;
+  animation: invbShine 1.2s linear infinite;
+}
+@keyframes invbShine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ───── Totals bar inside drawer ───────────────────────── */
+.invb-totalsbar {
+  display: grid;
+  grid-template-columns: 1fr 12px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 10px;
+  background: #fbfbfd;
+}
+.invb-totalsbar .label {
+  font-size: .8rem;
+  opacity: .7;
+  text-transform: uppercase;
+}
+.invb-totalsbar .value {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.invb-totalsbar .sep {
+  height: 100%;
+  width: 1px;
+  background: #eee;
+}
+
+/* ──────────────────────────────────────────────────────── */
+/* NEW: Chips outside the input, on the RIGHT of the input */
+/* ──────────────────────────────────────────────────────── */
+
+/* Wrapper that holds: [chips] [input] [actions] — in RTL the chips are visually at the right */
+.invb-search-bar {
+  display: flex;
+  align-items:flex-start;
+  gap: 8px;
+  direction: rtl;          /* keep Arabic typing natural & chips at right */
   
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  
-  .header h2 {
-    font-size: 1.8rem;
-    color: #333;
-    font-weight: 600;
-    margin: 0;
-  }
-  
-  .search-container {
-    display: flex;
-    align-items: center;
-  }
-  
-  .search-container input {
-    width: 300px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px 0 0 8px;
-    font-size: 1rem;
-  }
-  
-  .search-button {
-    padding: 10px 15px;
-    border: none;
-    background-color: #007bff;
-    color: #fff;
-    border-radius: 0 8px 8px 0;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  .search-button:hover {
-    background-color: #0056b3;
-  }
-  
-  .table-container {
-    overflow-x: auto;
-    margin-top: 15px;
-  }
-  
-  .inventory-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  
-  .inventory-table th,
-  .inventory-table td {
-    padding: 15px;
-    border: 1px solid #ddd;
-    text-align: left;
-    font-size: 1rem;
-  }
-  
-  .inventory-table th {
-    background-color: #007bff;
-    color: #fff;
-    font-weight: bold;
-  }
-  
-  .inventory-table tr:hover {
-    background-color: #eef2f7;
-    transition: background-color 0.3s;
-  }
-  
-  .inventory-table td {
-    color: #333;
-    font-size: 0.95rem;
-  }
-  
-  @media (max-width: 768px) {
-    .inventory-page {
-      padding: 20px;
-    }
-    .header h2 {
-      font-size: 1.5rem;
-    }
-    .search-container input {
-      width: 200px;
-    }
-  }
-  
+  min-width: 720px;        /* give the whole search bar some width */
+}
+
+/* The chips row — appears to the right side of the input in RTL */
+.invb-chipsline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 10%;          /* chips get most of the space */
+  flex: 1 1 auto;
+  min-height: 38px;
+}
+
+/* Narrower input so chips don’t collide with it */
+.invb-input--narrow {
+  width: 280px;            /* adjust 240–320px to taste */
+  min-width: 220px;
+  flex: 0 0 auto;
+  direction: rtl; 
+  font-size: large;         /* RTL typing inside input */
+}
+
+/* Buttons next to the input */
+.invb-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+/* Chip pill */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid #dbe3ff;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.chip-x {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: #667;
+  padding: 0 2px;
+}
+
+.chip-x:hover { color: #000; }
+
+/* Optional: ghost button style */
+.invb-btn--ghost {
+  background: transparent;
+  border: 1px dashed #c6cbd8;
+}
+
+/* ──────────────────────────────────────────────────────── */
+/* Legacy chips-in-input styles (kept but neutralized)     */
+/* If you had an older layout with chips inside a bordered */
+/* box, these won't be used now but kept for safety.       */
+/* ──────────────────────────────────────────────────────── */
+.invb-search-wrap { display: none; }   /* not used anymore */
+.invb-chips { display: none; }         /* not used */
+.invb-input--chips { min-width: 0 !important; border: none; background: transparent; }
+
+/* Make chips container scrollbars subtle (if overflow occurs) */
+.invb-chipsline::-webkit-scrollbar {
+  height: 8px;
+}
+.invb-chipsline::-webkit-scrollbar-thumb {
+  background: #cfd6e6;
+  border-radius: 6px;
+}
+.invb-chipsline::-webkit-scrollbar-track {
+  background: transparent;
+}
