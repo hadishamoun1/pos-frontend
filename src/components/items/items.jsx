@@ -51,6 +51,32 @@ const UniqueItemsPage = () => {
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
+  // which description mode drives list/edit/create/search APIs
+  const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
+
+  // Endpoints for both modes
+  const endpoints = useMemo(() => {
+    const base = process.env.REACT_APP_API_BASE_URL;
+    return {
+      list: {
+        real: (page, limit) => `${base}/items/v1/filtered-items?page=${page}&limit=${limit}`,
+        name: (page, limit) => `${base}/items/selected-details/by-description?page=${page}&limit=${limit}`,
+      },
+      search: {
+        real: `${base}/items/v1/search-real`, // 👈 real-description search
+        name: `${base}/items/v1/search`,      // item-name-description search
+      },
+      edit: {
+        real: `${base}/items/edit-full/by-real-description`,
+        name: `${base}/items/v1/full`,
+      },
+      create: {
+        real: `${base}/items/v1/full/real`,
+        name: `${base}/items/v1/full`,
+      },
+    };
+  }, []);
+
   // ============ Utilities ============
   const safe = (v) => (v === 0 || v ? String(v).trim() : "");
   const numOrEmpty = (v) => (v === 0 || v ? String(Number(v)) : "");
@@ -72,119 +98,99 @@ const UniqueItemsPage = () => {
     return m ? m[1] : "";
   }
 
-const makeKeyFromSearch = (r) => {
-  const d = r?.description || {};
-  const itemId = safe(r?.itemId);
-  const type = safe(r?.type);
-  const th = numOrEmpty(r?.thickness);
-  const len = numOrEmpty(r?.length);
-  const wid = numOrEmpty(r?.width);
-  const sheets = numOrEmpty(r?.sheetsPerBox);
-  const origin = safe(r?.origin);
-  const descId = safe(d?.id) || safe(d?.itemNumber);
-  const vid = safe(r?.variantId);
-  const tid = safe(r?.thicknessId);
-  return `sr:vid=${vid};iid=${itemId};tid=${tid};t=${type};th=${th};l=${len};w=${wid};s=${sheets};o=${origin};d=${descId}`;
-};
-
-// 🔁 Flatten non-search items for grouped ("realDescription"+"variants") OR legacy ("thicknesses") payloads
-const flattenedListRows = useMemo(() => {
-  const arr = Array.isArray(items) ? items : [];
-  const out = [];
-
-  for (const entry of arr) {
-    // NEW SHAPE: { realDescription, variants: [...] }
-    if (entry?.realDescription && Array.isArray(entry?.variants)) {
-      const rd = entry.realDescription;
-      // sort variants by thickness asc then length asc (like search)
-      const sortedVars = [...entry.variants].sort((a, b) => {
-        const ta = Number(a?.thickness ?? 0);
-        const tb = Number(b?.thickness ?? 0);
-        if (ta !== tb) return ta - tb;
-        return Number(a?.length ?? 0) - Number(b?.length ?? 0);
-      });
-      for (const v of sortedVars) {
-        out.push({
-          ...v,
-          variantId: Number(v?.variantId ?? v?.id),
-          itemId: Number(v?.itemId),
-          thicknessId: Number(v?.thicknessId),
-          thickness: v?.thickness,
-          itemName: v?.itemName,
-          type: v?.type,
-          length: v?.length,
-          width: v?.width,
-          sheetsPerBox: v?.sheetsPerBox,
-          origin: v?.origin,
-          description: rd, // keep RD on each row
-        });
-      }
-      continue;
-    }
-
-    // LEGACY SHAPE: { itemName, type, thicknesses:[{ id, thickness, variants:[...] }]}
-    const itemName = entry?.itemName ?? "";
-    const type = entry?.type ?? "";
-    const ths = Array.isArray(entry?.thicknesses) ? entry.thicknesses : [];
-    for (const th of ths) {
-      const tval = th?.thickness;
-      const tid = th?.id;
-      const vars = Array.isArray(th?.variants) ? th.variants : [];
-      for (const v of vars) {
-        // use realDescription first, fallback to itemNameDescription
-        const rd = v?.realDescription || v?.itemNameDescription || {};
-        out.push({
-          variantId: Number(v?.id),
-          itemId: Number(entry?.id),
-          thicknessId: Number(tid),
-          thickness: tval,
-          itemName,
-          type,
-          length: v?.length,
-          width: v?.width,
-          sheetsPerBox: v?.sheetsPerBox,
-          origin: v?.origin,
-          description: rd,
-        });
-      }
-    }
-  }
-
-  // sort groups by description.sortIndexRealDescription asc (NULLS LAST)
-  out.sort((a, b) => {
-    const ai = Number(a?.description?.sortIndexRealDescription);
-    const bi = Number(b?.description?.sortIndexRealDescription);
-    const aNull = Number.isNaN(ai);
-    const bNull = Number.isNaN(bi);
-    if (aNull && !bNull) return 1;
-    if (!aNull && bNull) return -1;
-    if (!aNull && !bNull && ai !== bi) return ai - bi;
-
-    // tie-breakers: thickness asc, then length asc
-    const ta = Number(a?.thickness ?? 0);
-    const tb = Number(b?.thickness ?? 0);
-    if (ta !== tb) return ta - tb;
-    return Number(a?.length ?? 0) - Number(b?.length ?? 0);
-  });
-
-  return out;
-}, [items]);
-
-  // 🔧 FIX: prefer realDescription (fallback to legacy itemNameDescription)
-  const makeKeyFromLocal = (item, thick, v) => {
-    const d = v?.realDescription || v?.itemNameDescription || {};
-    const itemId = safe(item?.id);
-    const type = safe(item?.type);
-    const th = numOrEmpty(thick?.thickness);
-    const len = numOrEmpty(v?.length);
-    const wid = numOrEmpty(v?.width);
-    const sheets = numOrEmpty(v?.sheetsPerBox);
-    const origin = safe(v?.origin);
+  const makeKeyFromSearch = (r) => {
+    const d = r?.description || {};
+    const itemId = safe(r?.itemId);
+    const type = safe(r?.type);
+    const th = numOrEmpty(r?.thickness);
+    const len = numOrEmpty(r?.length);
+    const wid = numOrEmpty(r?.width);
+    const sheets = numOrEmpty(r?.sheetsPerBox);
+    const origin = safe(r?.origin);
     const descId = safe(d?.id) || safe(d?.itemNumber);
-    const vid = safe(v?.id);
-    const tid = safe(thick?.id);
-    return `lv:vid=${vid};iid=${itemId};tid=${tid};t=${type};th=${th};l=${len};w=${wid};s=${sheets};o=${origin};d=${descId}`;
+    const vid = safe(r?.variantId);
+    const tid = safe(r?.thicknessId);
+    return `sr:vid=${vid};iid=${itemId};tid=${tid};t=${type};th=${th};l=${len};w=${wid};s=${sheets};o=${origin};d=${descId}`;
   };
+
+  // 🔁 Flatten non-search items for grouped ("realDescription" or "itemNameDescription") OR legacy ("thicknesses")
+  const flattenedListRows = useMemo(() => {
+    const arr = Array.isArray(items) ? items : [];
+    const out = [];
+
+    for (const entry of arr) {
+      const groupDesc = entry?.realDescription || entry?.itemNameDescription;
+      if (groupDesc && Array.isArray(entry?.variants)) {
+        const desc = groupDesc;
+        const sortedVars = [...entry.variants].sort((a, b) => {
+          const ta = Number(a?.thickness ?? 0);
+          const tb = Number(b?.thickness ?? 0);
+          if (ta !== tb) return ta - tb;
+          return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+        });
+        for (const v of sortedVars) {
+          out.push({
+            ...v,
+            variantId: Number(v?.variantId ?? v?.id),
+            itemId: Number(v?.itemId),
+            thicknessId: Number(v?.thicknessId),
+            thickness: v?.thickness,
+            itemName: v?.itemName,
+            type: v?.type,
+            length: v?.length,
+            width: v?.width,
+            sheetsPerBox: v?.sheetsPerBox,
+            origin: v?.origin,
+            description: desc,
+          });
+        }
+        continue;
+      }
+
+      // LEGACY SHAPE
+      const itemName = entry?.itemName ?? "";
+      const type = entry?.type ?? "";
+      const ths = Array.isArray(entry?.thicknesses) ? entry.thicknesses : [];
+      for (const th of ths) {
+        const tval = th?.thickness;
+        const tid = th?.id;
+        const vars = Array.isArray(th?.variants) ? th.variants : [];
+        for (const v of vars) {
+          const rdOrName = v?.realDescription || v?.itemNameDescription || {};
+          out.push({
+            variantId: Number(v?.id),
+            itemId: Number(entry?.id),
+            thicknessId: Number(tid),
+            thickness: tval,
+            itemName,
+            type,
+            length: v?.length,
+            width: v?.width,
+            sheetsPerBox: v?.sheetsPerBox,
+            origin: v?.origin,
+            description: rdOrName,
+          });
+        }
+      }
+    }
+
+    out.sort((a, b) => {
+      const ai = Number(a?.description?.sortIndexRealDescription ?? a?.description?.sortIndexDescription);
+      const bi = Number(b?.description?.sortIndexRealDescription ?? b?.description?.sortIndexDescription);
+      const aNull = Number.isNaN(ai);
+      const bNull = Number.isNaN(bi);
+      if (aNull && !bNull) return 1;
+      if (!aNull && bNull) return -1;
+      if (!aNull && !bNull && ai !== bi) return ai - bi;
+
+      const ta = Number(a?.thickness ?? 0);
+      const tb = Number(b?.thickness ?? 0);
+      if (ta !== tb) return ta - tb;
+      return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+    });
+
+    return out;
+  }, [items]);
 
   // ============ Suggestion-aware Enter ============
   const shouldLetBrowserHandleEnter = (e) => {
@@ -214,7 +220,7 @@ const flattenedListRows = useMemo(() => {
   const refSubCategory = useRef(null);
   const refSubmit = useRef(null);
   const [submitting, setSubmitting] = useState(false);
-  const idemKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`); // simple idempotency token
+  const idemKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   // initial state
   const [newItemData, setNewItemData] = useState({
@@ -238,26 +244,26 @@ const flattenedListRows = useMemo(() => {
     if (Array.isArray(payload)) return payload;
     if (payload && Array.isArray(payload.data)) return payload.data;
     if (payload && Array.isArray(payload.items)) return payload.items;
+    if (payload && Array.isArray(payload?.data?.variants)) return payload.data.variants;
     return [];
   };
 
   // get page 1 and REPLACE
   const refreshItems = async () => {
     try {
-      const res = await fetch(`${baseUrl}/items/v1/filtered-items?page=1&limit=${PAGE_SIZE}`);
+      const url = endpoints.list[descMode](1, PAGE_SIZE);
+      const res = await fetch(url);
       const json = await res.json().catch(() => null);
       const arr = normalizeItems(json);
       setItems(arr);
       setItemsPage(1);
 
       setHasMoreItems(Boolean(json?.hasMore));
-      setTotalItems(Number.isFinite(Number(json?.total)) ? Number(json.total) : null);
-
-      console.log("[FN] refreshItems →", {
-        items: arr.length,
-        hasMore: json?.hasMore,
-        total: json?.total
-      });
+      setTotalItems(
+        Number.isFinite(Number(json?.totalGroups ?? json?.total))
+          ? Number(json.totalGroups ?? json.total)
+          : null
+      );
     } catch (error) {
       console.error("Error fetching items:", error);
       setItems([]);
@@ -269,15 +275,13 @@ const flattenedListRows = useMemo(() => {
 
   // get next page and APPEND
   const loadMoreItems = async () => {
-    console.log("[FN] loadMoreItems click", { loadingMore, hasMoreItems, itemsPage });
     if (loadingMore || !hasMoreItems) return;
 
     setLoadingMore(true);
     const nextPage = itemsPage + 1;
     try {
-      const res = await fetch(
-        `${baseUrl}/items/v1/filtered-items?page=${nextPage}&limit=${PAGE_SIZE}`
-      );
+      const url = endpoints.list[descMode](nextPage, PAGE_SIZE);
+      const res = await fetch(url);
       const json = await res.json().catch(() => null);
       const arr = normalizeItems(json);
 
@@ -285,14 +289,11 @@ const flattenedListRows = useMemo(() => {
       setItemsPage(nextPage);
 
       setHasMoreItems(Boolean(json?.hasMore));
-      setTotalItems(Number.isFinite(Number(json?.total)) ? Number(json.total) : totalItems);
-
-      console.log("[FN] loadMoreItems →", {
-        page: nextPage,
-        fetched: arr.length,
-        hasMore: json?.hasMore,
-        total: json?.total
-      });
+      setTotalItems(
+        Number.isFinite(Number(json?.totalGroups ?? json?.total))
+          ? Number(json.totalGroups ?? json.total)
+          : totalItems
+      );
     } catch (error) {
       console.error("Error loading more items:", error);
       setHasMoreItems(false);
@@ -304,7 +305,7 @@ const flattenedListRows = useMemo(() => {
   useEffect(() => {
     refreshItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+  }, [baseUrl, descMode]);
 
   // ============ Tokenized search ============
   const queryString = useMemo(() => tokens.join(" ").trim(), [tokens]);
@@ -316,7 +317,7 @@ const flattenedListRows = useMemo(() => {
     }
     setSearching(true);
     try {
-      const url = new URL(`${baseUrl}/items/v1/search`);
+      const url = new URL(endpoints.search[descMode]);
       url.searchParams.set("q", queryString);
       url.searchParams.set("limit", "200");
       const res = await fetch(url.toString());
@@ -335,7 +336,7 @@ const flattenedListRows = useMemo(() => {
   useEffect(() => {
     runTokenSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, baseUrl]);
+  }, [queryString, baseUrl, descMode]); // 👈 re-run when mode flips
 
   const addToken = (t) => {
     const v = (t || "").trim();
@@ -434,9 +435,10 @@ const flattenedListRows = useMemo(() => {
     });
   };
 
+  // CREATE — choose API based on toggle (descMode)
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;        // guard
+    if (submitting) return;
     setSubmitting(true);
 
     // dedupe variants on the client just in case
@@ -464,7 +466,8 @@ const flattenedListRows = useMemo(() => {
     };
 
     try {
-      const response = await fetch(`${baseUrl}/items/v1/full`, {
+      const url = endpoints.create[descMode];
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -500,75 +503,89 @@ const flattenedListRows = useMemo(() => {
       return next;
     });
   };
-  // 🔁 Flatten grouped search results (realDescription + variants[]) to simple rows,
-// keeping RD on each row and applying the required sort order.
-const flattenedSearchRows = useMemo(() => {
-  const groups = Array.isArray(searchResults) ? searchResults : [];
-  // Build [ { ...variant, description: {...rd} } ] for every variant in every group
-  const rows = [];
-  for (const g of groups) {
-    const rd = g?.realDescription || g?.description || {};
-    const vars = Array.isArray(g?.variants) ? g.variants : [];
-    // sort inside the group by thickness asc, then length asc
-    const sortedVars = [...vars].sort((a, b) => {
+
+  // 🔁 Works with BOTH grouped results and flat row results
+  const flattenedSearchRows = useMemo(() => {
+    const groupsOrRows = Array.isArray(searchResults) ? searchResults : [];
+    const rows = [];
+
+    for (const g of groupsOrRows) {
+      const hasVariantsArray = Array.isArray(g?.variants);
+
+      if (hasVariantsArray) {
+        // GROUPED SHAPE
+        const rd = g?.realDescription || g?.itemNameDescription || g?.description || {};
+        const vars = g.variants || [];
+        const sortedVars = [...vars].sort((a, b) => {
+          const ta = Number(a?.thickness ?? 0);
+          const tb = Number(b?.thickness ?? 0);
+          if (ta !== tb) return ta - tb;
+          return Number(a?.length ?? 0) - Number(b?.length ?? 0);
+        });
+
+        for (const v of sortedVars) {
+          rows.push({
+            ...v,
+            variantId: Number(v?.variantId ?? v?.id),
+            itemId: Number(v?.itemId),
+            thicknessId: Number(v?.thicknessId),
+            thickness: v?.thickness,
+            itemName: v?.itemName,
+            type: v?.type,
+            length: v?.length,
+            width: v?.width,
+            sheetsPerBox: v?.sheetsPerBox,
+            origin: v?.origin,
+            description: rd,
+          });
+        }
+      } else {
+        // FLAT ROW SHAPE (searchSmart / searchSmartReal output)
+        const rd = g?.realDescription || g?.itemNameDescription || g?.description || {};
+        rows.push({
+          variantId: Number(g?.variantId ?? g?.id),
+          itemId: Number(g?.itemId),
+          thicknessId: Number(g?.thicknessId),
+          thickness: Number(g?.thickness),
+          itemName: g?.itemName,
+          type: g?.type,
+          length: Number(g?.length ?? 0),
+          width: Number(g?.width ?? 0),
+          sheetsPerBox: Number(g?.sheetsPerBox ?? 0),
+          origin: g?.origin ?? "",
+          description: rd,
+        });
+      }
+    }
+
+    // Order: by sortIndex (Real or Name) asc, NULLS LAST, then thickness asc, then length asc
+    rows.sort((a, b) => {
+      const ai = Number(a?.description?.sortIndexRealDescription ?? a?.description?.sortIndexDescription);
+      const bi = Number(b?.description?.sortIndexRealDescription ?? b?.description?.sortIndexDescription);
+      const aNull = Number.isNaN(ai);
+      const bNull = Number.isNaN(bi);
+      if (aNull && !bNull) return 1;
+      if (!aNull && bNull) return -1;
+      if (!aNull && !bNull && ai !== bi) return ai - bi;
+
       const ta = Number(a?.thickness ?? 0);
       const tb = Number(b?.thickness ?? 0);
       if (ta !== tb) return ta - tb;
       return Number(a?.length ?? 0) - Number(b?.length ?? 0);
     });
 
-    for (const v of sortedVars) {
-      rows.push({
-        ...v,
-        // normalize names expected by the renderer / key maker
-        variantId: Number(v?.variantId ?? v?.id),
-        itemId: Number(v?.itemId),
-        thicknessId: Number(v?.thicknessId),
-        thickness: v?.thickness,
-        itemName: v?.itemName,
-        type: v?.type,
-        length: v?.length,
-        width: v?.width,
-        sheetsPerBox: v?.sheetsPerBox,
-        origin: v?.origin,
-        // keep RD on each row under .description (your table already reads this)
-        description: rd,
-      });
+    return rows;
+  }, [searchResults]);
+
+  const visibleRowKeys = useMemo(() => {
+    if (tokens.length > 0) {
+      const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+      return rows.map(makeKeyFromSearch);
+    } else {
+      const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+      return rows.map(makeKeyFromSearch);
     }
-  }
-
-  // sort groups by sortIndexRealDescription asc (NULLS LAST)
-  rows.sort((a, b) => {
-    const ai = Number(a?.description?.sortIndexRealDescription);
-    const bi = Number(b?.description?.sortIndexRealDescription);
-    const aNull = Number.isNaN(ai);
-    const bNull = Number.isNaN(bi);
-    if (aNull && !bNull) return 1;
-    if (!aNull && bNull) return -1;
-    if (!aNull && !bNull && ai !== bi) return ai - bi;
-
-    // tie-breakers across group boundaries
-    const ta = Number(a?.thickness ?? 0);
-    const tb = Number(b?.thickness ?? 0);
-    if (ta !== tb) return ta - tb;
-    return Number(a?.length ?? 0) - Number(b?.length ?? 0);
-  });
-
-  return rows;
-}, [searchResults]);
-
-
-const visibleRowKeys = useMemo(() => {
-  if (tokens.length > 0) {
-    const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
-    return rows.map(makeKeyFromSearch);
-  } else {
-    // ✅ use flattenedListRows instead of walking legacy nesting only
-    const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
-    return rows.map(makeKeyFromSearch);
-  }
-}, [tokens.length, flattenedSearchRows, flattenedListRows]);
-
+  }, [tokens.length, flattenedSearchRows, flattenedListRows]);
 
   const allVisibleSelected =
     visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
@@ -609,7 +626,7 @@ const visibleRowKeys = useMemo(() => {
       }
       setSelectedRowKeys(new Set());
       if (tokens.length > 0) await runTokenSearch();
-      else await refreshItems(); // reset to page 1
+      else await refreshItems();
       setModalType("success");
       setModalContent(true);
     } catch (err) {
@@ -626,86 +643,82 @@ const visibleRowKeys = useMemo(() => {
     const iid = getItemIdFromKey(rowKey);
     if (!vid) return null;
 
-if (tokens.length > 0) {
-  const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
-  const found = rows.find((r) => String(r?.variantId) === String(vid));
-  if (!found) return null;
-  const d = found.description || {};
-  return {
-    variantId: Number(found.variantId),
-    itemId: Number(found.itemId ?? iid),
-    thicknessId: Number(found.thicknessId ?? tid),
-    itemName: safe(found.itemName),
-    type: safe(found.type),
-    thickness: numOrEmpty(found.thickness),
-    length: numOrEmpty(found.length),
-    width: numOrEmpty(found.width),
-    sheetsPerBox: numOrEmpty(found.sheetsPerBox),
-    origin: safe(found.origin),
-    descriptionId: d?.id ? Number(d.id) : null,
-    itemNumber: safe(d.itemNumber),
-    categoryName: safe(d.categoryName),
-    subCategory: safe(d.subCategory),
-    colorName: safe(d.colorName),
-    designName: safe(d.designName),
-  };
-
-
+    if (tokens.length > 0) {
+      const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+      const found = rows.find((r) => String(r?.variantId) === String(vid));
+      if (!found) return null;
+      const d = found.description || {};
+      return {
+        variantId: Number(found.variantId),
+        itemId: Number(found.itemId ?? iid),
+        thicknessId: Number(found.thicknessId ?? tid),
+        itemName: safe(found.itemName),
+        type: safe(found.type),
+        thickness: numOrEmpty(found.thickness),
+        length: numOrEmpty(found.length),
+        width: numOrEmpty(found.width),
+        sheetsPerBox: numOrEmpty(found.sheetsPerBox),
+        origin: safe(found.origin),
+        descriptionId: d?.id ? Number(d.id) : null,
+        itemNumber: safe(d.itemNumber),
+        categoryName: safe(d.categoryName),
+        subCategory: safe(d.subCategory),
+        colorName: safe(d.colorName),
+        designName: safe(d.designName),
+      };
     } else {
-  // ✅ Use the flattened non-search rows (works for grouped or legacy)
-  const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
-  const found = rows.find((r) => String(r?.variantId) === String(vid));
-  if (found) {
-    const d = found.description || {};
-    return {
-      variantId: Number(found.variantId),
-      itemId: Number(found.itemId ?? iid),
-      thicknessId: Number(found.thicknessId ?? tid),
-      itemName: safe(found.itemName),
-      type: safe(found.type),
-      thickness: numOrEmpty(found.thickness),
-      length: numOrEmpty(found.length),
-      width: numOrEmpty(found.width),
-      sheetsPerBox: numOrEmpty(found.sheetsPerBox),
-      origin: safe(found.origin),
-      descriptionId: d?.id ? Number(d.id) : null,
-      itemNumber: safe(d.itemNumber),
-      categoryName: safe(d.categoryName),
-      subCategory: safe(d.subCategory),
-      colorName: safe(d.colorName),
-      designName: safe(d.designName),
-    };
-  }
+      const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+      const found = rows.find((r) => String(r?.variantId) === String(vid));
+      if (found) {
+        const d = found.description || {};
+        return {
+          variantId: Number(found.variantId),
+          itemId: Number(found.itemId ?? iid),
+          thicknessId: Number(found.thicknessId ?? tid),
+          itemName: safe(found.itemName),
+          type: safe(found.type),
+          thickness: numOrEmpty(found.thickness),
+          length: numOrEmpty(found.length),
+          width: numOrEmpty(found.width),
+          sheetsPerBox: numOrEmpty(found.sheetsPerBox),
+          origin: safe(found.origin),
+          descriptionId: d?.id ? Number(d.id) : null,
+          itemNumber: safe(d.itemNumber),
+          categoryName: safe(d.categoryName),
+          subCategory: safe(d.subCategory),
+          colorName: safe(d.colorName),
+          designName: safe(d.designName),
+        };
+      }
 
-  // (Optional) ultra-legacy deep walk fallback:
-  for (const item of items || []) {
-    for (const thick of item?.thicknesses || []) {
-      for (const v of thick?.variants || []) {
-        if (String(v?.id) === String(vid)) {
-          const d = v.realDescription || v.itemNameDescription || {};
-          return {
-            variantId: Number(v.id),
-            itemId: Number(item.id ?? iid),
-            thicknessId: Number(thick.id ?? tid),
-            itemName: safe(item.itemName),
-            type: safe(item.type),
-            thickness: numOrEmpty(thick.thickness),
-            length: numOrEmpty(v.length),
-            width: numOrEmpty(v.width),
-            sheetsPerBox: numOrEmpty(v.sheetsPerBox),
-            origin: safe(v.origin),
-            descriptionId: d?.id ? Number(d.id) : null,
-            itemNumber: safe(d.itemNumber),
-            categoryName: safe(d.categoryName),
-            subCategory: safe(d.subCategory),
-            colorName: safe(d.colorName),
-            designName: safe(d.designName),
-          };
+      for (const item of items || []) {
+        for (const thick of item?.thicknesses || []) {
+          for (const v of thick?.variants || []) {
+            if (String(v?.id) === String(vid)) {
+              const d = v.realDescription || v.itemNameDescription || {};
+              return {
+                variantId: Number(v.id),
+                itemId: Number(item.id ?? iid),
+                thicknessId: Number(thick.id ?? tid),
+                itemName: safe(item.itemName),
+                type: safe(item.type),
+                thickness: numOrEmpty(thick.thickness),
+                length: numOrEmpty(v.length),
+                width: numOrEmpty(v.width),
+                sheetsPerBox: numOrEmpty(v.sheetsPerBox),
+                origin: safe(v.origin),
+                descriptionId: d?.id ? Number(d.id) : null,
+                itemNumber: safe(d.itemNumber),
+                categoryName: safe(d.categoryName),
+                subCategory: safe(d.subCategory),
+                colorName: safe(d.colorName),
+                designName: safe(d.designName),
+              };
+            }
+          }
         }
       }
     }
-  }
-}
     return null;
   };
 
@@ -768,9 +781,13 @@ if (tokens.length > 0) {
       }
       if (editForm.origin !== "") v.origin = String(editForm.origin).trim();
     }
+
+    // Re-link by mode
     if (Number.isFinite(Number(editForm.descriptionId))) {
-      v.description = { id: Number(editForm.descriptionId) };
+      if (descMode === "name") v.description = { id: Number(editForm.descriptionId) };     // ItemNameDescription
+      if (descMode === "real") v.realDescription = { id: Number(editForm.descriptionId) }; // RealDescription
     }
+
     const resolvedItemId = resolveItemIdFromThicknessId(editCtx.thicknessId);
     const finalItemId = Number.isFinite(resolvedItemId) ? resolvedItemId : Number(editCtx.itemId);
     return {
@@ -785,7 +802,8 @@ if (tokens.length > 0) {
     const payload = buildEditPayload();
     setLastSentPayload(payload);
     try {
-      const res = await fetch(`${baseUrl}/items/v1/full`, {
+      const url = endpoints.edit[descMode];
+      const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -811,59 +829,85 @@ if (tokens.length > 0) {
 
   return (
     <div className="items-creation-page">
-      <h1>Items</h1>
+      {/* Header */}
+      <div className="items-creation-header">
+        <div className="items-creation-header-row">
+          <h1 className="items-creation-title">Items</h1>
 
-      <div className="items-creation-search-bar-wrapper">
-        <div className="items-creation-search-bar">
-          <input
-            type="text"
-            placeholder="Type query (e.g., 5ملم, 225*321-027, ابيض) and press Enter"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className="ar-rtl"
-          />
-          <button type="button" onClick={() => addToken(searchTerm)}>Add</button>
-        </div>
+          <div className="items-creation-actions">
+            <div className="items-creation-mode-toggle">
+              <label className="toggle-pill" title="Switch grouping mode">
+                <input
+                  type="checkbox"
+                  checked={descMode === "real"}
+                  onChange={(e) => setDescMode(e.target.checked ? "real" : "name")}
+                />
+                <span className="pill">
+                  {descMode === "real" ? "Real Description" : "Item Name Description"}
+                </span>
+              </label>
+            </div>
 
-        <div className="items-creation-token-bar">
-          {tokens.map((t, idx) => (
-            <span key={`tok-${idx}`} className="items-creation-chip">
-              {t}
-              <button
-                className="items-creation-chip-remove"
-                onClick={() => removeToken(idx)}
-                aria-label="remove"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          {tokens.length > 0 && (
-            <button className="items-creation-chip-clear" onClick={clearTokens}>
-              Clear
+            <button className="items-creation-new-item-button" onClick={handleModalToggle}>
+              + New Item
             </button>
-          )}
+          </div>
         </div>
 
-        <button className="items-creation-new-item-button" onClick={handleModalToggle}>
-          New Item
-        </button>
+        {/* Search */}
+        <div className="items-creation-search-wrap">
+          <div className="items-creation-search-bar">
+            <input
+              type="text"
+              placeholder="Search (e.g., 5ملم, 225*321-027, ابيض) • Press Enter to add"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              className="ar-rtl"
+              aria-label="Search items"
+            />
+            <button type="button" onClick={() => addToken(searchTerm)} aria-label="Add search token">
+              Add
+            </button>
+          </div>
+
+          <div className="items-creation-token-row">
+            <div className="items-creation-token-bar">
+              {tokens.map((t, idx) => (
+                <span key={`tok-${idx}`} className="items-creation-chip">
+                  {t}
+                  <button
+                    className="items-creation-chip-remove"
+                    onClick={() => removeToken(idx)}
+                    aria-label={`remove token ${t}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {tokens.length > 0 && (
+              <button className="items-creation-chip-clear" onClick={clearTokens} aria-label="Clear tokens">
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Table */}
       <div className="items-creation-table-wrapper">
-        {/* 🔽 TOOLBAR */}
+        {/* Toolbar */}
         <div className="items-creation-toolbar">
           <label className="items-creation-select-all">
             <input
               type="checkbox"
-            checked={
-  (inSearchMode ? flattenedSearchRows.length : flattenedListRows.length) > 0 &&
-  visibleRowKeys.length > 0 &&
-  visibleRowKeys.every((k) => selectedRowKeys.has(k))
-}
-
+              checked={
+                (inSearchMode ? flattenedSearchRows.length : flattenedListRows.length) > 0 &&
+                visibleRowKeys.length > 0 &&
+                visibleRowKeys.every((k) => selectedRowKeys.has(k))
+              }
               ref={(el) => {
                 if (el) {
                   const all = visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
@@ -892,6 +936,10 @@ if (tokens.length > 0) {
           >
             Delete Selected ({selectedVariantIds.length})
           </button>
+
+          <div style={{ marginLeft: "auto", fontSize: 12, opacity: 0.75 }}>
+            Mode: {descMode === "real" ? "Real Description" : "Item Name Description"}
+          </div>
         </div>
 
         <table className="items-creation-table">
@@ -912,82 +960,81 @@ if (tokens.length > 0) {
             </tr>
           </thead>
 
-<tbody>
-  {inSearchMode
-    ? (flattenedSearchRows || []).map((r) => {
-        const d = r.description || {};
-        const rowKey = makeKeyFromSearch(r);
-        const checked = selectedRowKeys.has(rowKey);
-        return (
-          <tr key={rowKey}>
-            <td className="items-creation-col-select">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggleSelectRow(rowKey)}
-                aria-label={`select row ${rowKey}`}
-              />
-            </td>
-            <td>{d.itemNumber ?? "—"}</td>
-            <td className="ar-rtl">{d.categoryName ?? "—"}</td>
-            <td className="ar-rtl">{d.subCategory ?? "—"}</td>
-            <td className="ar-rtl">{d.colorName ?? "—"}</td>
-            <td className="ar-rtl">{d.designName ?? "—"}</td>
-            <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
-            <td>{r.type ?? "—"}</td>
-            {r.type === "sqm" ? (
-              <>
-                <td>—</td><td>—</td>
-              </>
-            ) : (
-              <>
-                <td className="ltr">{r.length ?? "—"}</td>
-                <td className="ltr">{r.width ?? "—"}</td>
-              </>
-            )}
-            <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
-            <td className="ar-rtl">{r.origin ?? "—"}</td>
-          </tr>
-        );
-      })
-    : (flattenedListRows || []).map((r) => {
-        const d = r.description || {};
-        const rowKey = makeKeyFromSearch(r);
-        const checked = selectedRowKeys.has(rowKey);
-        return (
-          <tr key={rowKey}>
-            <td className="items-creation-col-select">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => toggleSelectRow(rowKey)}
-                aria-label={`select row ${rowKey}`}
-              />
-            </td>
-            <td>{d.itemNumber ?? "—"}</td>
-            <td className="ar-rtl">{d.categoryName ?? "—"}</td>
-            <td className="ar-rtl">{d.subCategory ?? "—"}</td>
-            <td className="ar-rtl">{d.colorName ?? "—"}</td>
-            <td className="ar-rtl">{d.designName ?? "—"}</td>
-            <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
-            <td>{r.type ?? "—"}</td>
-            {r.type === "sqm" ? (
-              <>
-                <td>—</td><td>—</td>
-              </>
-            ) : (
-              <>
-                <td className="ltr">{r.length ?? "—"}</td>
-                <td className="ltr">{r.width ?? "—"}</td>
-              </>
-            )}
-            <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
-            <td className="ar-rtl">{r.origin ?? "—"}</td>
-          </tr>
-        );
-      })}
-</tbody>
-
+        <tbody>
+            {inSearchMode
+              ? (flattenedSearchRows || []).map((r) => {
+                  const d = r.description || {};
+                  const rowKey = makeKeyFromSearch(r);
+                  const checked = selectedRowKeys.has(rowKey);
+                  return (
+                    <tr key={rowKey}>
+                      <td className="items-creation-col-select">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelectRow(rowKey)}
+                          aria-label={`select row ${rowKey}`}
+                        />
+                      </td>
+                      <td>{d.itemNumber ?? "—"}</td>
+                      <td className="ar-rtl">{d.categoryName ?? "—"}</td>
+                      <td className="ar-rtl">{d.subCategory ?? "—"}</td>
+                      <td className="ar-rtl">{d.colorName ?? "—"}</td>
+                      <td className="ar-rtl">{d.designName ?? "—"}</td>
+                      <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+                      <td>{r.type ?? "—"}</td>
+                      {r.type === "sqm" ? (
+                        <>
+                          <td>—</td><td>—</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="ltr">{r.length ?? "—"}</td>
+                          <td className="ltr">{r.width ?? "—"}</td>
+                        </>
+                      )}
+                      <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+                      <td className="ar-rtl">{r.origin ?? "—"}</td>
+                    </tr>
+                  );
+                })
+              : (flattenedListRows || []).map((r) => {
+                  const d = r.description || {};
+                  const rowKey = makeKeyFromSearch(r);
+                  const checked = selectedRowKeys.has(rowKey);
+                  return (
+                    <tr key={rowKey}>
+                      <td className="items-creation-col-select">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelectRow(rowKey)}
+                          aria-label={`select row ${rowKey}`}
+                        />
+                      </td>
+                      <td>{d.itemNumber ?? "—"}</td>
+                      <td className="ar-rtl">{d.categoryName ?? "—"}</td>
+                      <td className="ar-rtl">{d.subCategory ?? "—"}</td>
+                      <td className="ar-rtl">{d.colorName ?? "—"}</td>
+                      <td className="ar-rtl">{d.designName ?? "—"}</td>
+                      <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+                      <td>{r.type ?? "—"}</td>
+                      {r.type === "sqm" ? (
+                        <>
+                          <td>—</td><td>—</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="ltr">{r.length ?? "—"}</td>
+                          <td className="ltr">{r.width ?? "—"}</td>
+                        </>
+                      )}
+                      <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+                      <td className="ar-rtl">{r.origin ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+          </tbody>
         </table>
 
         {/* Search results counter */}
@@ -1004,10 +1051,7 @@ if (tokens.length > 0) {
               <button
                 type="button"
                 className="items-creation-loadmore-btn"
-                onClick={() => {
-                  console.log("[UI] Load more clicked");
-                  loadMoreItems();
-                }}
+                onClick={loadMoreItems}
                 disabled={loadingMore}
               >
                 {loadingMore ? "Loading…" : "Load more"}

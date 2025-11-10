@@ -1,5 +1,6 @@
 // src/inventory/InventoryBrowser.jsx
 import React, { useEffect, useRef, useState } from "react";
+import ReportModal from "./inventory-report-modal";
 import "./inventory.css";
 
 const rawBase = process.env.REACT_APP_API_BASE_URL || "";
@@ -18,6 +19,7 @@ const normalizeDigits = (s) => {
 };
 const normalizeArabicAlef = (s) => String(s || "").replace(/[أإآ]/g, "ا");
 const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
+
 
 function useCancelableFetch() {
   const abortRef = useRef();
@@ -104,7 +106,6 @@ export default function InventoryBrowser() {
   const [totalRows, setTotalRows] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-
   // Per-variant totals
   const [qtyMap, setQtyMap] = useState(new Map());
   const [sqmMap, setSqmMap] = useState(new Map());
@@ -122,6 +123,21 @@ export default function InventoryBrowser() {
   // Toggles
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
+
+  // Report (full dataset)
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportRows, setReportRows] = useState([]);
+  const [reportQtyMap, setReportQtyMap] = useState(new Map());
+  const [reportSqmMap, setReportSqmMap] = useState(new Map());
+  const reportAbortRef = useRef();
+
+
+  const newReportSignal = () => {
+    try { reportAbortRef.current?.abort(); } catch {}
+    reportAbortRef.current = new AbortController();
+    return reportAbortRef.current.signal;
+  };
 
   // Debounce (not critical for chips; kept for UX)
   useEffect(() => {
@@ -231,6 +247,97 @@ export default function InventoryBrowser() {
       setLoading(false);
     }
   };
+
+  const fetchAllForReport = async () => {
+    setReportLoading(true);
+    try {
+      const signal = newReportSignal();
+
+      // Build base URL with same filters as the table
+      const base = new URL(`${baseUrl}/items/v1/variant-ledger`);
+      const parsed = parseChipsToParams(chips);
+      if (parsed.itemName) base.searchParams.set("itemName", parsed.itemName);
+      if (parsed.thickness != null) base.searchParams.set("thickness", String(parsed.thickness));
+      if (parsed.length != null) base.searchParams.set("length", String(parsed.length));
+      if (parsed.width != null) base.searchParams.set("width", String(parsed.width));
+      if (parsed.sheetsPerBox != null) base.searchParams.set("sheetsPerBox", String(parsed.sheetsPerBox));
+      const qFinal = buildQ();
+      if (qFinal) base.searchParams.set("q", qFinal);
+      if (type) base.searchParams.set("type", type);
+      base.searchParams.set("includeZeros", String(includeZeros));
+
+      const BIG_LIMIT = 500; // bump to 1000 if your API allows
+      let agg = [];
+      let pg = 1;
+      let hasMoreAll = true;
+
+      while (hasMoreAll) {
+        const url = new URL(base.toString());
+        url.searchParams.set("page", String(pg));
+        url.searchParams.set("limit", String(BIG_LIMIT));
+
+        const res = await fetch(url, { signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+
+        const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        const filtered = includeZeros
+          ? data
+          : data.filter((r) => {
+              const qty = Number(r?.ofrTotalsUnits?.balance ?? NaN);
+              const sqm = Number(r?.ofrTotalsSqm?.balanceOFR ?? NaN);
+              return (qty > 0) || (sqm > 0);
+            });
+
+        agg = agg.concat(filtered); // preserve API order
+
+        const inferredHasMore = json?.hasMore ?? (data.length === BIG_LIMIT);
+        hasMoreAll = Boolean(inferredHasMore);
+        pg += 1;
+      }
+
+      // Build qty/sqm maps for ALL rows (same logic you use for the page)
+      const qMap = new Map();
+      const sMap = new Map();
+      for (const r of agg) {
+        const vid = Number(r.variantId ?? r.id);
+        const sqmVal = Number(
+          r?.ofrTotalsSqm?.balanceOFR != null ? r.ofrTotalsSqm.balanceOFR : r?.totalBalanceOFR ?? 0
+        );
+        let qty = Number(
+          r?.ofrTotalsUnits?.balance != null ? r.ofrTotalsUnits.balance : NaN
+        );
+        if (!Number.isFinite(qty)) {
+          qty = sqmToQty({
+            itemType: r.type,
+            lengthCm: r.length,
+            widthCm: r.width,
+            sheetsPerBox: r.sheetsPerBox,
+            valueSqm: sqmVal,
+          });
+        }
+        if (Number.isFinite(qty)) qMap.set(vid, Number(qty.toFixed(2)));
+        if (Number.isFinite(sqmVal)) sMap.set(vid, Number(sqmVal.toFixed(2)));
+      }
+
+      setReportRows(agg);
+      setReportQtyMap(qMap);
+      setReportSqmMap(sMap);
+      setReportOpen(true);
+    } catch (e) {
+      if (e?.name !== "AbortError") {
+        console.error("Report fetch failed:", e);
+        setReportRows([]);
+        setReportQtyMap(new Map());
+        setReportSqmMap(new Map());
+        setReportOpen(true); // open with "No data" so user can retry
+      }
+    } finally {
+      setReportLoading(false);
+    }
+ };
+
+  
 
   useEffect(() => {
     fetchFromLedger(); // eslint-disable-line react-hooks/exhaustive-deps
@@ -455,6 +562,9 @@ export default function InventoryBrowser() {
         <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
           ⬇ Export CSV (page)
         </button>
+           <button className="invb-btn" onClick={fetchAllForReport}>
+          📝 Report
+        </button>
       </div>
 
       <div className="invb-row">
@@ -640,6 +750,15 @@ export default function InventoryBrowser() {
           </aside>
         </div>
       )}
+<ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        rows={reportRows}
+        qtyMap={reportQtyMap}
+        sqmMap={reportSqmMap}
+        defaultIncludeZeros={includeZeros}
+        loading={reportLoading}
+      />
     </div>
   );
 }

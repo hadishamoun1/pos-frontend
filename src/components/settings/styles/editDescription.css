@@ -1,0 +1,262 @@
+/* =========================
+   Layout
+   ========================= */
+.de-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #1b2430;              /* text */
+  background: #f7f8fb;         /* page bg */
+}
+
+.de-header h1 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.de-sub { color: #778198; margin: 0; }
+
+.de-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* =========================
+   Panels & Cards
+   ========================= */
+.de-panel {
+  background: #ffffff;                 /* card */
+  border: 1px solid #e7e9f0;           /* border */
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 8px 24px rgba(17,24,39,.04);
+}
+
+.de-panel-title {
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #3730a3;                      /* primary-700 */
+}
+
+/* =========================
+   Toolbar & Toggles
+   ========================= */
+.de-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.de-toggle .toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.de-toggle .toggle-pill input {
+  appearance: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #e7e9f0;
+  position: relative;
+  outline: none;
+  transition: background .2s ease, border-color .2s ease;
+  border: 1px solid #e7e9f0;
+}
+.de-toggle .toggle-pill input:checked {
+  background: #4f46e5;                 /* primary */
+  border-color: #4f46e5;
+}
+.de-toggle .toggle-pill input::after {
+  content: "";
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: left .2s ease;
+}
+.de-toggle .toggle-pill input:checked::after {
+  left: 19px;
+}
+.de-toggle .pill {
+  background: #eef2ff;                 /* primary-50 */
+  color: #3730a3;                       /* primary-700 */
+  border: 1px solid #c9d8ff;            /* ring */
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* =========================
+   Search
+   ========================= */
+.de-search {
+  display: flex;
+  gap: 8px;
+}
+.de-search input {
+  flex: 1;
+  border: 1px solid #e7e9f0;
+  background: #ffffff;
+  color: #1b2430;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.de-search input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79,70,229,.2);  /* ring */
+}
+
+/* =========================
+   List
+   ========================= */
+.de-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 240px;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px dashed #e7e9f0;
+  padding: 10px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(79,70,229,0.03), transparent 30%);
+}
+
+.de-row {
+  text-align: left;
+  background: #f3f6ff;                 /* chip-bg */
+  color: #1b2430;
+  border: 1px solid #e7e9f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .05s ease, background .15s ease;
+}
+.de-row:hover {
+  border-color: #4f46e5;
+  background: #ffffff;
+}
+.de-row.active {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+.de-row-main { font-weight: 600; color: #2e3b8f; } /* chip-text */
+.de-row-sub { color: #778198; font-size: 12px; margin-top: 2px; }
+
+.de-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* =========================
+   Selected Card
+   ========================= */
+.de-selected {
+  background: linear-gradient(180deg, #ecfeff, transparent 40%); /* accent-50 */
+  border: 1px solid #e7e9f0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.de-selected-title { font-weight: 700; margin-bottom: 6px; color: #3730a3; }
+.de-selected-body { color: #1b2430; }
+
+/* =========================
+   Form
+   ========================= */
+.de-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+.de-form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #778198; }
+.de-form-grid input {
+  border: 1px solid #e7e9f0;
+  background: #ffffff;
+  color: #1b2430;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.de-form-grid input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79,70,229,.2);
+}
+
+/* =========================
+   Duplicate options
+   ========================= */
+.de-dup {
+  margin-top: 12px;
+  border-top: 1px dashed #e7e9f0;
+  padding-top: 12px;
+}
+.de-dup-title { font-weight: 700; margin-bottom: 8px; color: #3730a3; }
+.de-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 16px;
+  color: #1b2430;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+.de-actions {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.de-btn {
+  border: 1px solid #e7e9f0;
+  background: #ffffff;
+  color: #1b2430;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: transform .05s ease, background .15s ease, border-color .15s ease, color .15s ease;
+}
+.de-btn:hover { background: #ffffff; border-color: #4f46e5; }
+.de-btn:active { transform: translateY(1px); }
+.de-btn-pill { padding: 9px 16px; border-radius: 999px; }
+
+.de-btn-dark {
+  background: #4f46e5;   /* primary */
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+.de-btn-dark:hover { background: #4338ca; border-color: #4338ca; }
+
+/* =========================
+   Empty & Status
+   ========================= */
+.de-empty {
+  padding: 22px;
+  text-align: center;
+  color: #778198;
+  background: linear-gradient(180deg, rgba(6,182,212,0.06), transparent 40%);
+  border-radius: 12px;
+}
+
+.de-status { font-size: 13px; }
+.de-ok { color: #10b981; }  /* success */
+.de-err { color: #ef4444; } /* error */
+
+/* =========================
+   Helpers
+   ========================= */
+.ar-rtl { direction: rtl; text-align: right; }
+.ltr { direction: ltr; text-align: left; }
