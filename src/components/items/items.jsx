@@ -59,15 +59,18 @@ const UniqueItemsPage = () => {
     const base = process.env.REACT_APP_API_BASE_URL;
     return {
       list: {
-        real: (page, limit) => `${base}/items/v1/filtered-items?page=${page}&limit=${limit}`,
-        name: (page, limit) => `${base}/items/selected-details/by-description?page=${page}&limit=${limit}`,
+        real: (page, limit) =>
+          `${base}/items/v1/filtered-items?page=${page}&limit=${limit}`,
+        name: (page, limit) =>
+          `${base}/items/selected-details/by-description?page=${page}&limit=${limit}`,
       },
       search: {
         real: `${base}/items/v1/search-real`, // 👈 real-description search
-        name: `${base}/items/v1/search`,      // item-name-description search
+        name: `${base}/items/v1/search`, // item-name-description search
       },
+      // EDIT NOW USES THE SAME editFullItem API FOR BOTH MODES
       edit: {
-        real: `${base}/items/edit-full/by-real-description`,
+        real: `${base}/items/v1/full`,
         name: `${base}/items/v1/full`,
       },
       create: {
@@ -175,8 +178,14 @@ const UniqueItemsPage = () => {
     }
 
     out.sort((a, b) => {
-      const ai = Number(a?.description?.sortIndexRealDescription ?? a?.description?.sortIndexDescription);
-      const bi = Number(b?.description?.sortIndexRealDescription ?? b?.description?.sortIndexDescription);
+      const ai = Number(
+        a?.description?.sortIndexRealDescription ??
+          a?.description?.sortIndexDescription
+      );
+      const bi = Number(
+        b?.description?.sortIndexRealDescription ??
+          b?.description?.sortIndexDescription
+      );
       const aNull = Number.isNaN(ai);
       const bNull = Number.isNaN(bi);
       if (aNull && !bNull) return 1;
@@ -199,9 +208,20 @@ const UniqueItemsPage = () => {
     if (t && t.tagName === "SELECT") return true;
     if (t instanceof HTMLInputElement && t.getAttribute("list")) return true;
     if (t?.getAttribute?.("aria-activedescendant")) return true;
-    if (document.querySelector('[role="listbox"][aria-expanded="true"]')) return true;
-    if (document.querySelector(".MuiAutocomplete-popper, .autocomplete-popper, .autocomplete-panel")) return true;
-    if (document.querySelector('[data-autocomplete="open"], .typeahead-open, .awesomplete ul[hidden="false"]')) return true;
+    if (document.querySelector('[role="listbox"][aria-expanded="true"]'))
+      return true;
+    if (
+      document.querySelector(
+        ".MuiAutocomplete-popper, .autocomplete-popper, .autocomplete-panel"
+      )
+    )
+      return true;
+    if (
+      document.querySelector(
+        '[data-autocomplete="open"], .typeahead-open, .awesomplete ul[hidden="false"]'
+      )
+    )
+      return true;
     return false;
   };
 
@@ -220,20 +240,36 @@ const UniqueItemsPage = () => {
   const refSubCategory = useRef(null);
   const refSubmit = useRef(null);
   const [submitting, setSubmitting] = useState(false);
-  const idemKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const idemKeyRef = useRef(
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
   // initial state
   const [newItemData, setNewItemData] = useState({
     itemName: "",
     type: "box",
     descriptions: [
-      { itemNumber: "", categoryName: "", subCategory: "", colorName: "", designName: "" },
+      {
+        itemNumber: "",
+        categoryName: "",
+        subCategory: "",
+        colorName: "",
+        designName: "",
+      },
     ],
     thicknesses: [
       {
         thickness: "",
         variants: [
-          { length: "", width: "", sheetsPerBox: "", origin: "", fixBox: false, fixLength: false, fixWidth: false },
+          {
+            length: "",
+            width: "",
+            sheetsPerBox: "",
+            origin: "",
+            fixBox: false,
+            fixLength: false,
+            fixWidth: false,
+          },
         ],
       },
     ],
@@ -244,7 +280,8 @@ const UniqueItemsPage = () => {
     if (Array.isArray(payload)) return payload;
     if (payload && Array.isArray(payload.data)) return payload.data;
     if (payload && Array.isArray(payload.items)) return payload.items;
-    if (payload && Array.isArray(payload?.data?.variants)) return payload.data.variants;
+    if (payload && Array.isArray(payload?.data?.variants))
+      return payload.data.variants;
     return [];
   };
 
@@ -374,7 +411,13 @@ const UniqueItemsPage = () => {
   // ============ Create: modal open/reset ============
   const getVisibleRefsInOrder = () => {
     const t = newItemData.type;
-    const base = [refItemName, refType, refItemNumber, refDesignName, refThickness];
+    const base = [
+      refItemName,
+      refType,
+      refItemNumber,
+      refDesignName,
+      refThickness,
+    ];
     if (t !== "sqm") base.push(refLength, refWidth);
     if (t === "box") base.push(refSheetsPerBox);
     base.push(refOrigin, refColorName, refCategoryName, refSubCategory);
@@ -401,13 +444,37 @@ const UniqueItemsPage = () => {
     setNewItemData({
       itemName: "",
       type: "box",
-      descriptions: [{ itemNumber: "", categoryName: "", subCategory: "", colorName: "", designName: "" }],
+      descriptions: [
+        {
+          itemNumber: "",
+          categoryName: "",
+          subCategory: "",
+          colorName: "",
+          designName: "",
+        },
+      ],
       thicknesses: [
         {
           thickness: "",
           variants: [
-            { length: "", width: "", sheetsPerBox: "", origin: "", fixBox: false, fixLength: false, fixWidth: false },
-            { length: "", width: "", sheetsPerBox: "", origin: "", fixBox: false, fixLength: false, fixWidth: false },
+            {
+              length: "",
+              width: "",
+              sheetsPerBox: "",
+              origin: "",
+              fixBox: false,
+              fixLength: false,
+              fixWidth: false,
+            },
+            {
+              length: "",
+              width: "",
+              sheetsPerBox: "",
+              origin: "",
+              fixBox: false,
+              fixLength: false,
+              fixWidth: false,
+            },
           ],
         },
       ],
@@ -428,7 +495,11 @@ const UniqueItemsPage = () => {
         updated.itemName = value;
       } else if (name === "itemNumber") {
         updated.descriptions[index].itemNumber = value;
-      } else if (["categoryName", "subCategory", "colorName", "designName"].includes(name)) {
+      } else if (
+        ["categoryName", "subCategory", "colorName", "designName"].includes(
+          name
+        )
+      ) {
         updated.descriptions[index][name] = value;
       }
       return updated;
@@ -478,7 +549,9 @@ const UniqueItemsPage = () => {
       if (response.ok) {
         await refreshItems();
         setModalType("success");
-        idemKeyRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        idemKeyRef.current = `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}`;
       } else {
         setModalType("error");
       }
@@ -514,7 +587,8 @@ const UniqueItemsPage = () => {
 
       if (hasVariantsArray) {
         // GROUPED SHAPE
-        const rd = g?.realDescription || g?.itemNameDescription || g?.description || {};
+        const rd =
+          g?.realDescription || g?.itemNameDescription || g?.description || {};
         const vars = g.variants || [];
         const sortedVars = [...vars].sort((a, b) => {
           const ta = Number(a?.thickness ?? 0);
@@ -541,7 +615,8 @@ const UniqueItemsPage = () => {
         }
       } else {
         // FLAT ROW SHAPE (searchSmart / searchSmartReal output)
-        const rd = g?.realDescription || g?.itemNameDescription || g?.description || {};
+        const rd =
+          g?.realDescription || g?.itemNameDescription || g?.description || {};
         rows.push({
           variantId: Number(g?.variantId ?? g?.id),
           itemId: Number(g?.itemId),
@@ -560,8 +635,14 @@ const UniqueItemsPage = () => {
 
     // Order: by sortIndex (Real or Name) asc, NULLS LAST, then thickness asc, then length asc
     rows.sort((a, b) => {
-      const ai = Number(a?.description?.sortIndexRealDescription ?? a?.description?.sortIndexDescription);
-      const bi = Number(b?.description?.sortIndexRealDescription ?? b?.description?.sortIndexDescription);
+      const ai = Number(
+        a?.description?.sortIndexRealDescription ??
+          a?.description?.sortIndexDescription
+      );
+      const bi = Number(
+        b?.description?.sortIndexRealDescription ??
+          b?.description?.sortIndexDescription
+      );
       const aNull = Number.isNaN(ai);
       const bNull = Number.isNaN(bi);
       if (aNull && !bNull) return 1;
@@ -579,16 +660,21 @@ const UniqueItemsPage = () => {
 
   const visibleRowKeys = useMemo(() => {
     if (tokens.length > 0) {
-      const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+      const rows = Array.isArray(flattenedSearchRows)
+        ? flattenedSearchRows
+        : [];
       return rows.map(makeKeyFromSearch);
     } else {
-      const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+      const rows = Array.isArray(flattenedListRows)
+        ? flattenedListRows
+        : [];
       return rows.map(makeKeyFromSearch);
     }
   }, [tokens.length, flattenedSearchRows, flattenedListRows]);
 
   const allVisibleSelected =
-    visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
+    visibleRowKeys.length > 0 &&
+    visibleRowKeys.every((k) => selectedRowKeys.has(k));
 
   const toggleSelectAllVisible = () => {
     setSelectedRowKeys((prev) => {
@@ -606,18 +692,25 @@ const UniqueItemsPage = () => {
   const deleteVariantById = async (variantId) => {
     const key = (variantId ?? "").toString();
     if (!key) throw new Error("Invalid variant id");
-    const res = await fetch(`${baseUrl}/items/variants/${encodeURIComponent(key)}`, { method: "DELETE" });
+    const res = await fetch(
+      `${baseUrl}/items/variants/${encodeURIComponent(key)}`,
+      { method: "DELETE" }
+    );
     if (!res.ok) throw new Error(`Delete failed for variant ${key}`);
   };
 
   const selectedVariantIds = useMemo(() => {
-    const ids = Array.from(selectedRowKeys).map(getVariantIdFromKey).filter(Boolean);
+    const ids = Array.from(selectedRowKeys)
+      .map(getVariantIdFromKey)
+      .filter(Boolean);
     return Array.from(new Set(ids));
   }, [selectedRowKeys]);
 
   const deleteSelected = async () => {
     if (selectedVariantIds.length === 0) return;
-    const confirm = window.confirm(`Delete ${selectedVariantIds.length} selected variant(s)?`);
+    const confirm = window.confirm(
+      `Delete ${selectedVariantIds.length} selected variant(s)?`
+    );
     if (!confirm) return;
 
     try {
@@ -644,7 +737,9 @@ const UniqueItemsPage = () => {
     if (!vid) return null;
 
     if (tokens.length > 0) {
-      const rows = Array.isArray(flattenedSearchRows) ? flattenedSearchRows : [];
+      const rows = Array.isArray(flattenedSearchRows)
+        ? flattenedSearchRows
+        : [];
       const found = rows.find((r) => String(r?.variantId) === String(vid));
       if (!found) return null;
       const d = found.description || {};
@@ -667,7 +762,9 @@ const UniqueItemsPage = () => {
         designName: safe(d.designName),
       };
     } else {
-      const rows = Array.isArray(flattenedListRows) ? flattenedListRows : [];
+      const rows = Array.isArray(flattenedListRows)
+        ? flattenedListRows
+        : [];
       const found = rows.find((r) => String(r?.variantId) === String(vid));
       if (found) {
         const d = found.description || {};
@@ -729,7 +826,10 @@ const UniqueItemsPage = () => {
     if (!snap) return;
 
     setEditVariantId(snap.variantId);
-    setEditCtx({ itemId: Number(snap.itemId), thicknessId: Number(snap.thicknessId) });
+    setEditCtx({
+      itemId: Number(snap.itemId),
+      thicknessId: Number(snap.thicknessId),
+    });
     setEditForm({
       itemName: snap.itemName,
       type: snap.type,
@@ -771,6 +871,7 @@ const UniqueItemsPage = () => {
     return null;
   };
 
+  // Build payload for editFullItem API
   const buildEditPayload = () => {
     const v = { id: Number(editVariantId) };
     if (editForm.type !== "sqm") {
@@ -782,17 +883,29 @@ const UniqueItemsPage = () => {
       if (editForm.origin !== "") v.origin = String(editForm.origin).trim();
     }
 
-    // Re-link by mode
-    if (Number.isFinite(Number(editForm.descriptionId))) {
-      if (descMode === "name") v.description = { id: Number(editForm.descriptionId) };     // ItemNameDescription
-      if (descMode === "real") v.realDescription = { id: Number(editForm.descriptionId) }; // RealDescription
+    // Re-link description ONLY in name-mode (editFullItem uses itemNameDescription)
+    if (
+      descMode === "name" &&
+      Number.isFinite(Number(editForm.descriptionId))
+    ) {
+      v.description = { id: Number(editForm.descriptionId) };
     }
+    // In real-mode we do NOT send realDescription here, because editFullItem
+    // uses itemNameDescriptionRepository internally. In real mode this edit
+    // will only update dimensions/origin.
 
     const resolvedItemId = resolveItemIdFromThicknessId(editCtx.thicknessId);
-    const finalItemId = Number.isFinite(resolvedItemId) ? resolvedItemId : Number(editCtx.itemId);
+    const finalItemId = Number.isFinite(resolvedItemId)
+      ? resolvedItemId
+      : Number(editCtx.itemId);
     return {
       itemId: Number(finalItemId),
-      thicknesses: [{ thicknessId: Number(editCtx.thicknessId), variants: [v] }],
+      thicknesses: [
+        {
+          thicknessId: Number(editCtx.thicknessId),
+          variants: [v],
+        },
+      ],
     };
   };
 
@@ -802,7 +915,7 @@ const UniqueItemsPage = () => {
     const payload = buildEditPayload();
     setLastSentPayload(payload);
     try {
-      const url = endpoints.edit[descMode];
+      const url = endpoints.edit[descMode]; // PUT /items/v1/full
       const res = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -840,15 +953,22 @@ const UniqueItemsPage = () => {
                 <input
                   type="checkbox"
                   checked={descMode === "real"}
-                  onChange={(e) => setDescMode(e.target.checked ? "real" : "name")}
+                  onChange={(e) =>
+                    setDescMode(e.target.checked ? "real" : "name")
+                  }
                 />
                 <span className="pill">
-                  {descMode === "real" ? "Real Description" : "Item Name Description"}
+                  {descMode === "real"
+                    ? "Real Description"
+                    : "Item Name Description"}
                 </span>
               </label>
             </div>
 
-            <button className="items-creation-new-item-button" onClick={handleModalToggle}>
+            <button
+              className="items-creation-new-item-button"
+              onClick={handleModalToggle}
+            >
               + New Item
             </button>
           </div>
@@ -866,7 +986,11 @@ const UniqueItemsPage = () => {
               className="ar-rtl"
               aria-label="Search items"
             />
-            <button type="button" onClick={() => addToken(searchTerm)} aria-label="Add search token">
+            <button
+              type="button"
+              onClick={() => addToken(searchTerm)}
+              aria-label="Add search token"
+            >
               Add
             </button>
           </div>
@@ -888,7 +1012,11 @@ const UniqueItemsPage = () => {
             </div>
 
             {tokens.length > 0 && (
-              <button className="items-creation-chip-clear" onClick={clearTokens} aria-label="Clear tokens">
+              <button
+                className="items-creation-chip-clear"
+                onClick={clearTokens}
+                aria-label="Clear tokens"
+              >
                 Clear
               </button>
             )}
@@ -904,14 +1032,20 @@ const UniqueItemsPage = () => {
             <input
               type="checkbox"
               checked={
-                (inSearchMode ? flattenedSearchRows.length : flattenedListRows.length) > 0 &&
+                (inSearchMode
+                  ? flattenedSearchRows.length
+                  : flattenedListRows.length) > 0 &&
                 visibleRowKeys.length > 0 &&
                 visibleRowKeys.every((k) => selectedRowKeys.has(k))
               }
               ref={(el) => {
                 if (el) {
-                  const all = visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selectedRowKeys.has(k));
-                  const none = visibleRowKeys.every((k) => !selectedRowKeys.has(k));
+                  const all =
+                    visibleRowKeys.length > 0 &&
+                    visibleRowKeys.every((k) => selectedRowKeys.has(k));
+                  const none = visibleRowKeys.every(
+                    (k) => !selectedRowKeys.has(k)
+                  );
                   el.indeterminate = !all && !none;
                 }
               }}
@@ -924,7 +1058,11 @@ const UniqueItemsPage = () => {
             className="items-creation-edit-selected"
             disabled={selectedVariantIds.length !== 1}
             onClick={openEditSelected}
-            title={selectedVariantIds.length !== 1 ? "Select exactly one row to edit" : "Edit selected"}
+            title={
+              selectedVariantIds.length !== 1
+                ? "Select exactly one row to edit"
+                : "Edit selected"
+            }
           >
             Edit Selected
           </button>
@@ -938,7 +1076,10 @@ const UniqueItemsPage = () => {
           </button>
 
           <div style={{ marginLeft: "auto", fontSize: 12, opacity: 0.75 }}>
-            Mode: {descMode === "real" ? "Real Description" : "Item Name Description"}
+            Mode:{" "}
+            {descMode === "real"
+              ? "Real Description"
+              : "Item Name Description"}
           </div>
         </div>
 
@@ -960,7 +1101,7 @@ const UniqueItemsPage = () => {
             </tr>
           </thead>
 
-        <tbody>
+          <tbody>
             {inSearchMode
               ? (flattenedSearchRows || []).map((r) => {
                   const d = r.description || {};
@@ -981,11 +1122,14 @@ const UniqueItemsPage = () => {
                       <td className="ar-rtl">{d.subCategory ?? "—"}</td>
                       <td className="ar-rtl">{d.colorName ?? "—"}</td>
                       <td className="ar-rtl">{d.designName ?? "—"}</td>
-                      <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+                      <td className="ar-rtl">
+                        {`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
+                      </td>
                       <td>{r.type ?? "—"}</td>
                       {r.type === "sqm" ? (
                         <>
-                          <td>—</td><td>—</td>
+                          <td>—</td>
+                          <td>—</td>
                         </>
                       ) : (
                         <>
@@ -993,7 +1137,9 @@ const UniqueItemsPage = () => {
                           <td className="ltr">{r.width ?? "—"}</td>
                         </>
                       )}
-                      <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+                      <td className="ltr">
+                        {r.type === "box" ? r.sheetsPerBox ?? "—" : "—"}
+                      </td>
                       <td className="ar-rtl">{r.origin ?? "—"}</td>
                     </tr>
                   );
@@ -1017,11 +1163,14 @@ const UniqueItemsPage = () => {
                       <td className="ar-rtl">{d.subCategory ?? "—"}</td>
                       <td className="ar-rtl">{d.colorName ?? "—"}</td>
                       <td className="ar-rtl">{d.designName ?? "—"}</td>
-                      <td className="ar-rtl">{`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}</td>
+                      <td className="ar-rtl">
+                        {`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
+                      </td>
                       <td>{r.type ?? "—"}</td>
                       {r.type === "sqm" ? (
                         <>
-                          <td>—</td><td>—</td>
+                          <td>—</td>
+                          <td>—</td>
                         </>
                       ) : (
                         <>
@@ -1029,7 +1178,9 @@ const UniqueItemsPage = () => {
                           <td className="ltr">{r.width ?? "—"}</td>
                         </>
                       )}
-                      <td className="ltr">{r.type === "box" ? (r.sheetsPerBox ?? "—") : "—"}</td>
+                      <td className="ltr">
+                        {r.type === "box" ? r.sheetsPerBox ?? "—" : "—"}
+                      </td>
                       <td className="ar-rtl">{r.origin ?? "—"}</td>
                     </tr>
                   );
@@ -1040,7 +1191,9 @@ const UniqueItemsPage = () => {
         {/* Search results counter */}
         {inSearchMode && (
           <div style={{ padding: "8px 0", fontSize: 12, opacity: 0.75 }}>
-            {searching ? "Searching…" : `Showing ${searchResults?.length ?? 0} results`}
+            {searching
+              ? "Searching…"
+              : `Showing ${searchResults?.length ?? 0} results`}
           </div>
         )}
 
@@ -1057,8 +1210,15 @@ const UniqueItemsPage = () => {
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <button type="button" className="items-creation-loadmore-btn" disabled>
-                All items loaded {Number.isFinite(totalItems) ? `(${items.length}/${totalItems})` : `(${items.length})`}
+              <button
+                type="button"
+                className="items-creation-loadmore-btn"
+                disabled
+              >
+                All items loaded{" "}
+                {Number.isFinite(totalItems)
+                  ? `(${items.length}/${totalItems})`
+                  : `(${items.length})`}
               </button>
             )}
           </div>
@@ -1070,7 +1230,10 @@ const UniqueItemsPage = () => {
         <div className="items-creation-modal">
           <div className="items-creation-modal-content">
             <h2>Create New Item</h2>
-            <form onSubmit={handleFormSubmit} className="items-creation-form-grid">
+            <form
+              onSubmit={handleFormSubmit}
+              className="items-creation-form-grid"
+            >
               <label>
                 Item Name:
                 <input
@@ -1264,7 +1427,8 @@ const UniqueItemsPage = () => {
                 <b>الاسم:</b> {editForm.itemName}
               </div>
               <div>
-                <b>Type:</b> {editForm.type} &nbsp;|&nbsp; <b>Thickness:</b> {editForm.thickness}
+                <b>Type:</b> {editForm.type} &nbsp;|&nbsp;{" "}
+                <b>Thickness:</b> {editForm.thickness}
               </div>
               <div className="ar-rtl">
                 <b>الوصف:</b>{" "}
@@ -1317,7 +1481,9 @@ const UniqueItemsPage = () => {
                   value={editForm.sheetsPerBox}
                   onChange={handleEditChange}
                   className="ltr"
-                  disabled={editForm.type === "sheet" || editForm.type === "sqm"}
+                  disabled={
+                    editForm.type === "sheet" || editForm.type === "sqm"
+                  }
                 />
               </label>
 
@@ -1333,7 +1499,10 @@ const UniqueItemsPage = () => {
                 />
               </label>
 
-              <div className="items-creation-button-row" style={{ gridColumn: "1 / -1" }}>
+              <div
+                className="items-creation-button-row"
+                style={{ gridColumn: "1 / -1" }}
+              >
                 <button type="submit">Save</button>
                 <button type="button" onClick={closeEdit}>
                   Cancel
@@ -1349,21 +1518,30 @@ const UniqueItemsPage = () => {
         <div className="items-creation-modal">
           <div
             className={`items-creation-modal-status-content ${
-              modalType === "success" ? "items-creation-success-modal" : "items-creation-error-modal"
+              modalType === "success"
+                ? "items-creation-success-modal"
+                : "items-creation-error-modal"
             }`}
           >
             {modalType === "success" ? (
               <>
-                <h2 className="items-creation-modal-success-text">Action Completed</h2>
+                <h2 className="items-creation-modal-success-text">
+                  Action Completed
+                </h2>
                 <div className="items-creation-modal-icon">✔</div>
               </>
             ) : (
               <>
-                <h2 className="items-creation-modal-error-text">Action Failed</h2>
+                <h2 className="items-creation-modal-error-text">
+                  Action Failed
+                </h2>
                 <div className="items-creation-modal-icon">✖</div>
               </>
             )}
-            <button className="items-creation-modal-button" onClick={closeModal}>
+            <button
+              className="items-creation-modal-button"
+              onClick={closeModal}
+            >
               OK
             </button>
           </div>

@@ -1,5 +1,5 @@
 // src/inventory/InventoryBrowser.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import ReportModal from "./inventory-report-modal";
 import "./inventory.css";
 
@@ -10,16 +10,15 @@ const LOW_STOCK_THRESHOLD = 5;
 const normalizeDigits = (s) => {
   if (!s) return "";
   const map = {
-    "٠": "0","١":"1","٢":"2","٣":"3","٤":"4",
+    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4",
     "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
     "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4",
-    "۵":"5","۶":"6","۷":"7","۸":"8","۹":"9",
+    "۵":"5","۶":"6","۷":"۷","۸":"8","۹":"9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
-const normalizeArabicAlef = (s) => String(s || "").replace(/[أإآ]/g, "ا");
+const normalizeArabicAlef = (s) => String(s || "").replace(/أ|إ|آ/g, "ا");
 const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
-
 
 function useCancelableFetch() {
   const abortRef = useRef();
@@ -35,7 +34,7 @@ const prettyDims = (L, W, SPB) => {
   const l = Math.floor(Number(L) || 0);
   const w = Math.floor(Number(W) || 0);
   const spb = Number(SPB) || 0;
-  if (l && w) return spb ? `${l}×${w}-${String(spb).padStart(2,"0")}` : `${l}×${w}`;
+  if (l && w) return spb ? `${l}×${w}-${String(spb).padStart(3,"0")}` : `${l}×${w}`;
   return "-";
 };
 const fmt2 = (n) => {
@@ -44,13 +43,15 @@ const fmt2 = (n) => {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 };
 
-// sqm -> quantity (fallback)
+// helpers for sqm ↔ qty conversions (box/sheet <-> sqm)
+const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+const perSheetSqmOf = (lengthCm, widthCm) => {
+  const L = toNum(lengthCm), W = toNum(widthCm);
+  return L > 0 && W > 0 ? (L * W) / 10000 : 0;
+};
 const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
-  const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
-  const L = toNum(lengthCm);
-  const W = toNum(widthCm);
   const SPB = Math.max(1, toNum(sheetsPerBox));
-  const perSheetSqm = L > 0 && W > 0 ? (L * W) / 10000 : 0;
+  const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
   const type = String(itemType || "").toLowerCase();
   if (type === "box") {
     const perBoxSqm = perSheetSqm * SPB;
@@ -61,8 +62,88 @@ const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
   }
   return toNum(valueSqm);
 };
+const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
+  const SPB = Math.max(1, toNum(sheetsPerBox));
+  const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
+  const type = String(itemType || "").toLowerCase();
+  if (type === "box") return toNum(valueQty) * perSheetSqm * SPB;
+  if (type === "sheet") return toNum(valueQty) * perSheetSqm;
+  return toNum(valueQty);
+};
 
-// -------- Search chips → query params parser --------
+/** Mode-aware totals */
+const deriveBalances = (row, mode) => {
+  const typeLower = String(row?.type || "").toLowerCase();
+
+  const nonOfr = row?.ofrTotalsUnits?.balance;
+  const onesBal = row?.ones?.balance;
+  const nonOfrBal = Number.isFinite(Number(nonOfr)) ? Number(nonOfr)
+                   : Number.isFinite(Number(onesBal)) ? Number(onesBal)
+                   : undefined;
+
+  const ofrSqm = row?.ofrTotalsSqm?.balanceOFR;
+  const ofrSqmBal = Number.isFinite(Number(ofrSqm)) ? Number(ofrSqm) : undefined;
+
+  let qty, sqm;
+
+  if (mode === "name") {
+    if (Number.isFinite(nonOfrBal)) {
+      qty = nonOfrBal;
+      sqm = qtyToSqm({
+        itemType: row.type,
+        lengthCm: row.length,
+        widthCm: row.width,
+        sheetsPerBox: row.sheetsPerBox,
+        valueQty: qty,
+      });
+      if (typeLower === "sqm") {
+        qty = qty ?? ofrSqmBal;
+        sqm = ofrSqmBal ?? qty;
+      }
+    } else if (Number.isFinite(ofrSqmBal)) {
+      sqm = ofrSqmBal;
+      qty = typeLower === "sqm"
+        ? ofrSqmBal
+        : sqmToQty({
+            itemType: row.type,
+            lengthCm: row.length,
+            widthCm: row.width,
+            sheetsPerBox: row.sheetsPerBox,
+            valueSqm: ofrSqmBal,
+          });
+    }
+  } else {
+    if (Number.isFinite(ofrSqmBal)) {
+      sqm = ofrSqmBal;
+      qty = typeLower === "sqm"
+        ? ofrSqmBal
+        : sqmToQty({
+            itemType: row.type,
+            lengthCm: row.length,
+            widthCm: row.width,
+            sheetsPerBox: row.sheetsPerBox,
+            valueSqm: ofrSqmBal,
+          });
+    } else if (Number.isFinite(nonOfrBal)) {
+      qty = nonOfrBal;
+      sqm = qtyToSqm({
+        itemType: row.type,
+        lengthCm: row.length,
+        widthCm: row.width,
+        sheetsPerBox: row.sheetsPerBox,
+        valueQty: qty,
+      });
+      if (typeLower === "sqm") sqm = qty;
+    }
+  }
+
+  return {
+    qty: Number.isFinite(qty) ? Number(qty) : undefined,
+    sqm: Number.isFinite(sqm) ? Number(sqm) : undefined,
+  };
+};
+
+// chips -> params
 const parseChipsToParams = (chips) => {
   let q = normalizeDigits(chips.join(" ").trim());
   q = q.replace(/[xX×]/g, "*").replace(/\s+/g, " ");
@@ -106,6 +187,7 @@ export default function InventoryBrowser() {
   const [totalRows, setTotalRows] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+
   // Per-variant totals
   const [qtyMap, setQtyMap] = useState(new Map());
   const [sqmMap, setSqmMap] = useState(new Map());
@@ -116,7 +198,6 @@ export default function InventoryBrowser() {
   const [drawerVariant, setDrawerVariant] = useState(null);
   const [batchesLoading, setBatchesLoading] = useState(false);
   const [batches, setBatches] = useState([]);
- 
   const [drawerVariantTotalQty, setDrawerVariantTotalQty] = useState(0);
   const [drawerVariantTotalSqm, setDrawerVariantTotalSqm] = useState(0);
 
@@ -124,28 +205,45 @@ export default function InventoryBrowser() {
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
 
-  // Report (full dataset)
+  // description source (maps to your endpoints)
+  const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
+  const currentLedgerPath = useMemo(
+    () =>
+      descMode === "real"
+        ? "/items/v1/real-variant-ledger"
+        : "/items/v1/variant-ledger-by-name",
+    [descMode]
+  );
+
+  // Report state (keep raw rows for SPB index)
   const [reportOpen, setReportOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportRows, setReportRows] = useState([]);
-  const [reportQtyMap, setReportQtyMap] = useState(new Map());
-  const [reportSqmMap, setReportSqmMap] = useState(new Map());
+  const [reportSpbRows, setReportSpbRows] = useState([]); // unfiltered source (for SPB)
   const reportAbortRef = useRef();
-
-
   const newReportSignal = () => {
     try { reportAbortRef.current?.abort(); } catch {}
     reportAbortRef.current = new AbortController();
     return reportAbortRef.current.signal;
   };
 
-  // Debounce (not critical for chips; kept for UX)
-  useEffect(() => {
-    const t = setTimeout(() => {}, 250);
-    return () => clearTimeout(t);
-  }, [qInput]);
+  const buildQ = () => {
+    const chipsQ = normalizeDigits(chips.join(" ").trim());
+    if (chipsQ) return chipsQ;
+    const inputQ = normalizeDigits(qInput).trim().replace(/\s+/g, " ");
+    return inputQ;
+  };
 
-  const buildQ = () => normalizeDigits(chips.join(" ").trim());
+  // Optional live re-fetch while typing when NO chips are pinned
+  useEffect(() => {
+    if (chips.length > 0) return;
+    const t = setTimeout(() => {
+      setPage(1);
+      fetchFromLedger();
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qInput, type, includeZeros, descMode]);
 
   const addChipFromInput = () => {
     const raw = normalizeDigits(qInput).trim().replace(/\s+/g, " ");
@@ -164,12 +262,21 @@ export default function InventoryBrowser() {
   };
   const clearChips = () => { setChips([]); setPage(1); };
 
+  // ------- Fetch current page -------
   const fetchFromLedger = async () => {
     setLoading(true);
     setBalancesLoading(true);
+    setRows([]);
+    setQtyMap(new Map());
+    setSqmMap(new Map());
+    setHasMore(false);
+    setTotalRows(0);
+
     try {
       const signal = cancel();
-      const url = new URL(`${baseUrl}/items/v1/variant-ledger`);
+
+      const url = new URL(`${baseUrl}${currentLedgerPath}`);
+      url.searchParams.set("_", String(Date.now()));
       url.searchParams.set("page", String(page));
       url.searchParams.set("limit", String(limit));
 
@@ -185,17 +292,17 @@ export default function InventoryBrowser() {
       if (type) url.searchParams.set("type", type);
       url.searchParams.set("includeZeros", String(includeZeros));
 
-      const res = await fetch(url, { signal });
+      const res = await fetch(url, { signal, cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
       const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+
       const filtered = includeZeros
         ? data
         : data.filter((r) => {
-            const qty = Number(r?.ofrTotalsUnits?.balance ?? NaN);
-            const sqm = Number(r?.ofrTotalsSqm?.balanceOFR ?? NaN);
-            return (qty > 0) || (sqm > 0);
+            const { qty, sqm } = deriveBalances(r, descMode);
+            return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
           });
 
       setRows(filtered);
@@ -204,57 +311,36 @@ export default function InventoryBrowser() {
       const sMap = new Map();
       for (const r of filtered) {
         const vid = Number(r.variantId ?? r.id);
-        const sqmVal = Number(
-          r?.ofrTotalsSqm?.balanceOFR != null ? r.ofrTotalsSqm.balanceOFR : r?.totalBalanceOFR ?? 0
-        );
-
-        let qty = Number(
-          r?.ofrTotalsUnits?.balance != null ? r.ofrTotalsUnits.balance : NaN
-        );
-        if (!Number.isFinite(qty)) {
-          qty = sqmToQty({
-            itemType: r.type,
-            lengthCm: r.length,
-            widthCm: r.width,
-            sheetsPerBox: r.sheetsPerBox,
-            valueSqm: sqmVal,
-          });
-        }
-
+        const { qty, sqm } = deriveBalances(r, descMode);
         if (Number.isFinite(qty)) qMap.set(vid, Number(qty.toFixed(2)));
-        if (Number.isFinite(sqmVal)) sMap.set(vid, Number(sqmVal.toFixed(2)));
+        if (Number.isFinite(sqm)) sMap.set(vid, Number(sqm.toFixed(2)));
       }
       setQtyMap(qMap);
       setSqmMap(sMap);
 
       const reportedTotal = Number(json?.totalRows ?? json?.total);
-      if (Number.isFinite(reportedTotal) && reportedTotal >= 0) {
-        setTotalRows(reportedTotal);
-      } else {
-        setTotalRows((page - 1) * limit + data.length);
-      }
+      setTotalRows(
+        Number.isFinite(reportedTotal) && reportedTotal >= 0
+          ? reportedTotal
+          : (page - 1) * limit + data.length
+      );
       setHasMore(Boolean(json?.hasMore ?? (data.length === limit)));
     } catch (e) {
-      if (e?.name !== "AbortError") {
-        console.error("Fetch ledger failed:", e);
-        setRows([]);
-        setQtyMap(new Map());
-        setSqmMap(new Map());
-        setHasMore(false);
-      }
+      if (e?.name !== "AbortError") console.error("Fetch ledger failed:", e);
     } finally {
       setBalancesLoading(false);
       setLoading(false);
     }
   };
 
+  // ------- Fetch ALL for report (UNFILTERED source + filtered view) -------
   const fetchAllForReport = async () => {
     setReportLoading(true);
     try {
       const signal = newReportSignal();
 
-      // Build base URL with same filters as the table
-      const base = new URL(`${baseUrl}/items/v1/variant-ledger`);
+      const base = new URL(`${baseUrl}${currentLedgerPath}`);
+      base.searchParams.set("_", String(Date.now()));
       const parsed = parseChipsToParams(chips);
       if (parsed.itemName) base.searchParams.set("itemName", parsed.itemName);
       if (parsed.thickness != null) base.searchParams.set("thickness", String(parsed.thickness));
@@ -264,10 +350,10 @@ export default function InventoryBrowser() {
       const qFinal = buildQ();
       if (qFinal) base.searchParams.set("q", qFinal);
       if (type) base.searchParams.set("type", type);
-      base.searchParams.set("includeZeros", String(includeZeros));
+      // NOTE: do NOT pass includeZeros here — we want the raw universe for SPB.
 
-      const BIG_LIMIT = 500; // bump to 1000 if your API allows
-      let agg = [];
+      const BIG_LIMIT = 500;
+      let aggAll = [];
       let pg = 1;
       let hasMoreAll = true;
 
@@ -275,74 +361,49 @@ export default function InventoryBrowser() {
         const url = new URL(base.toString());
         url.searchParams.set("page", String(pg));
         url.searchParams.set("limit", String(BIG_LIMIT));
+        url.searchParams.set("_", String(Date.now()));
 
-        const res = await fetch(url, { signal });
+        const res = await fetch(url, { signal, cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
 
         const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-        const filtered = includeZeros
-          ? data
-          : data.filter((r) => {
-              const qty = Number(r?.ofrTotalsUnits?.balance ?? NaN);
-              const sqm = Number(r?.ofrTotalsSqm?.balanceOFR ?? NaN);
-              return (qty > 0) || (sqm > 0);
-            });
-
-        agg = agg.concat(filtered); // preserve API order
+        aggAll = aggAll.concat(data);
 
         const inferredHasMore = json?.hasMore ?? (data.length === BIG_LIMIT);
         hasMoreAll = Boolean(inferredHasMore);
         pg += 1;
       }
 
-      // Build qty/sqm maps for ALL rows (same logic you use for the page)
-      const qMap = new Map();
-      const sMap = new Map();
-      for (const r of agg) {
-        const vid = Number(r.variantId ?? r.id);
-        const sqmVal = Number(
-          r?.ofrTotalsSqm?.balanceOFR != null ? r.ofrTotalsSqm.balanceOFR : r?.totalBalanceOFR ?? 0
-        );
-        let qty = Number(
-          r?.ofrTotalsUnits?.balance != null ? r.ofrTotalsUnits.balance : NaN
-        );
-        if (!Number.isFinite(qty)) {
-          qty = sqmToQty({
-            itemType: r.type,
-            lengthCm: r.length,
-            widthCm: r.width,
-            sheetsPerBox: r.sheetsPerBox,
-            valueSqm: sqmVal,
+      // Visible set (respect current includeZeros toggle)
+      const aggShown = includeZeros
+        ? aggAll
+        : aggAll.filter((r) => {
+            const { qty, sqm } = deriveBalances(r, descMode);
+            return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
           });
-        }
-        if (Number.isFinite(qty)) qMap.set(vid, Number(qty.toFixed(2)));
-        if (Number.isFinite(sqmVal)) sMap.set(vid, Number(sqmVal.toFixed(2)));
-      }
 
-      setReportRows(agg);
-      setReportQtyMap(qMap);
-      setReportSqmMap(sMap);
+      setReportSpbRows(aggAll);   // source for SPB index (includes 0-qty box)
+      setReportRows(aggShown);    // what we actually display
       setReportOpen(true);
     } catch (e) {
       if (e?.name !== "AbortError") {
         console.error("Report fetch failed:", e);
         setReportRows([]);
-        setReportQtyMap(new Map());
-        setReportSqmMap(new Map());
-        setReportOpen(true); // open with "No data" so user can retry
+        setReportSpbRows([]);
+        setReportOpen(true);
       }
     } finally {
       setReportLoading(false);
     }
- };
+  };
 
-  
-
+  // Re-fetch on these changes
   useEffect(() => {
     fetchFromLedger(); // eslint-disable-line react-hooks/exhaustive-deps
-  }, [chips, type, page, limit, includeZeros]);
+  }, [chips, type, page, limit, includeZeros, currentLedgerPath]);
 
+  // Drawer helpers
   const batchQtyUnits = (batch, header) => {
     if (batch?.balanceOFR !== undefined && batch?.balanceOFR !== null) {
       const n = Number(batch.balanceOFR);
@@ -373,6 +434,8 @@ export default function InventoryBrowser() {
   };
 
   const openBatchesFor = (variantRow) => {
+    if (descMode !== "real") return; // batches only in real mode
+
     setDrawerVariant(variantRow);
     setDrawerOpen(true);
     setBatchesLoading(true);
@@ -380,25 +443,7 @@ export default function InventoryBrowser() {
     setDrawerVariantTotalQty(0);
     setDrawerVariantTotalSqm(0);
 
-    const sqmVal =
-      variantRow?.ofrTotalsSqm?.balanceOFR != null
-        ? Number(variantRow.ofrTotalsSqm.balanceOFR)
-        : Number(variantRow?.totalBalanceOFR ?? 0);
-
-    let totalQty =
-      variantRow?.ofrTotalsUnits?.balance != null
-        ? Number(variantRow.ofrTotalsUnits.balance)
-        : undefined;
-
-    if (totalQty === undefined) {
-      totalQty = sqmToQty({
-        itemType: variantRow.type,
-        lengthCm: variantRow.length,
-        widthCm: variantRow.width,
-        sheetsPerBox: variantRow.sheetsPerBox,
-        valueSqm: sqmVal,
-      });
-    }
+    const { qty: totQty, sqm: totSqm } = deriveBalances(variantRow, descMode);
 
     const rawBatches = Array.isArray(variantRow?.batches) ? variantRow.batches : [];
     const enriched = rawBatches.map((b) => {
@@ -416,8 +461,8 @@ export default function InventoryBrowser() {
         return String(a.condition || "").localeCompare(String(b.condition || ""));
       });
 
-    setDrawerVariantTotalQty(Number.isFinite(totalQty) ? Number(totalQty.toFixed(2)) : 0);
-    setDrawerVariantTotalSqm(Number.isFinite(sqmVal) ? Number(sqmVal.toFixed(2)) : 0);
+    setDrawerVariantTotalQty(Number.isFinite(totQty) ? Number(totQty.toFixed(2)) : 0);
+    setDrawerVariantTotalSqm(Number.isFinite(totSqm) ? Number(totSqm.toFixed(2)) : 0);
     setBatches(filtered);
     setBatchesLoading(false);
   };
@@ -437,21 +482,20 @@ export default function InventoryBrowser() {
     const lines = [headers.join(",")];
 
     rows.forEach((r) => {
-      // For CSV, combine the two fields too
       const itemWithThk = `${fmt2(r.thickness)}ملم ${r.itemName ?? ""}`.trim();
-      const spbForDims = (String(r.type).toLowerCase() === "sheet" || String(r.type).toLowerCase() === "sqm") ? 0 : r.sheetsPerBox;
+      const typeLower = String(r.type).toLowerCase();
+      const spbForDims = (typeLower === "sheet" || typeLower === "sqm") ? 0 : r.sheetsPerBox;
       const dims = prettyDims(r.length, r.width, spbForDims);
+      const { qty, sqm } = deriveBalances(r, descMode);
 
-      const qty = qtyMap.get(Number(r.variantId ?? r.id));
-      const sqm = sqmMap.get(Number(r.variantId ?? r.id));
       const row = [
         itemWithThk.replace(/"/g, '""'),
         dims,
         String(r.type || "").toUpperCase(),
-        (String(r.type).toLowerCase() === "sheet" || String(r.type).toLowerCase() === "sqm") ? "" : (Number(r.sheetsPerBox) || ""),
+        (typeLower === "sheet" || typeLower === "sqm") ? "" : (Number(r.sheetsPerBox) || ""),
         r.origin || "",
-        Number.isFinite(Number(qty)) ? qty : "",
-        Number.isFinite(Number(sqm)) ? sqm : "",
+        Number.isFinite(Number(qty)) ? Number(qty.toFixed(2)) : "",
+        Number.isFinite(Number(sqm)) ? Number(sqm.toFixed(2)) : "",
       ];
       lines.push(
         row.map((cell) =>
@@ -486,12 +530,11 @@ export default function InventoryBrowser() {
     if (e.key === "Enter") { e.preventDefault(); addChipFromInput(); }
   };
 
-  // ---------- HEADER (chips to the right of input) ----------
+  // ---------- Header UI ----------
   const header = (
     <div className="invb-toolbar">
       <div className="invb-row invb-row--wrap invb-row--gap">
         <div className="invb-search-bar" dir="rtl">
-          {/* Chips line (right side) */}
           <div className="invb-chipsline">
             {chips.map((c, idx) => (
               <span key={`${c}-${idx}`} className="chip">
@@ -507,18 +550,14 @@ export default function InventoryBrowser() {
               </span>
             ))}
           </div>
-
-          {/* Search input (narrower) */}
           <input
             className="invb-input invb-input--narrow"
-            placeholder="ابحث… (Enter → pin) مثال: 5.5ملم ابيض 225*321-023"
+            placeholder="ابحث… (Enter → pin) مثال: 5.5ملم ابيض 225*321-023 — أو اكتب مباشرة بدون تثبيت"
             dir="rtl"
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
             onKeyDown={onSearchInputKeyDown}
           />
-
-          {/* Actions */}
           <div className="invb-search-actions">
             <button className="invb-btn" onClick={addChipFromInput}>Add</button>
             {chips.length > 0 && (
@@ -559,10 +598,12 @@ export default function InventoryBrowser() {
           Show SQM column
         </label>
 
+        {/* (toggle moved to title bar) */}
+
         <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
           ⬇ Export CSV (page)
         </button>
-           <button className="invb-btn" onClick={fetchAllForReport}>
+        <button className="invb-btn" onClick={fetchAllForReport}>
           📝 Report
         </button>
       </div>
@@ -573,6 +614,7 @@ export default function InventoryBrowser() {
             ? "Loading…"
             : `Page ${page} • ${hasMore ? `${page * limit}+ variants` : `${totalRows} variants`}${balancesLoading ? " • computing totals…" : ""}`}
         </span>
+
         <div className="invb-pager">
           <button
             className="invb-btn"
@@ -583,7 +625,7 @@ export default function InventoryBrowser() {
           </button>
           <button
             className="invb-btn"
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => setPage((p) => p + 1)}   
             disabled={loading || !hasMore}
           >
             Next ▶
@@ -600,12 +642,53 @@ export default function InventoryBrowser() {
     </div>
   );
 
-  // Number of columns now that we merged Item + Thk:
   const colCount = 7 + (showBoth ? 1 : 0);
+
+  const isNameMode = descMode === "name";
 
   return (
     <div className="invb-container">
-      <h2 className="invb-title">Inventory → Variants</h2>
+      {/* Title row + mode toggle on the right */}
+      <div className="invb-titlebar">
+        <h2 className="invb-title">Inventory → Variants</h2>
+
+        <div className="invb-mode-toggle">
+          <span
+            className={
+              "invb-mode-label" + (descMode === "real" ? " active" : "")
+            }
+            onClick={() => {
+              setDescMode("real");
+              setPage(1);
+            }}
+          >
+            Real description
+          </span>
+          <label className="invb-mode-toggle-switch">
+            <input
+              type="checkbox"
+              checked={isNameMode}
+              onChange={(e) => {
+                setDescMode(e.target.checked ? "name" : "real");
+                setPage(1);
+              }}
+            />
+            <span className="invb-mode-toggle-slider" />
+          </label>
+          <span
+            className={
+              "invb-mode-label" + (descMode === "name" ? " active" : "")
+            }
+            onClick={() => {
+              setDescMode("name");
+              setPage(1);
+            }}
+          >
+            Name description
+          </span>
+        </div>
+      </div>
+
       {header}
 
       <div className="invb-tablewrap">
@@ -613,7 +696,6 @@ export default function InventoryBrowser() {
           <thead>
             <tr>
               <th>Item</th>
-              {/* Removed Thk column; show combined in Item cell */}
               <th className="ta-center">Dimensions</th>
               <th className="ta-center">Type</th>
               <th className="ta-center">SPB</th>
@@ -635,8 +717,7 @@ export default function InventoryBrowser() {
             ) : (
               rows.map((r) => {
                 const vid = Number(r.variantId ?? r.id);
-                const qty = qtyMap.get(vid);
-                const sqm = sqmMap.get(vid);
+                const { qty, sqm } = deriveBalances(r, descMode);
                 const hasQty = qty !== undefined && qty !== null;
                 const lowStock = hasQty && Number(qty) < LOW_STOCK_THRESHOLD;
 
@@ -644,43 +725,42 @@ export default function InventoryBrowser() {
                 const spbForDims = (typeLower === "sheet" || typeLower === "sqm") ? 0 : r.sheetsPerBox;
                 const spbCell =
                   (typeLower === "sheet" || typeLower === "sqm")
-                    ? "" : (typeLower === "sheet" ? 1 : Number(r.sheetsPerBox) || "");
+                    ? ""
+                    : (Number(r.sheetsPerBox) || "");
+
+                const canViewBatches = descMode === "real" && Array.isArray(r?.batches);
 
                 return (
                   <tr key={vid} className={lowStock ? "invb-row--low" : ""}>
-                    {/* Item + Thickness together (RTL so it reads nicely) */}
                     <td style={{ direction: "rtl", textAlign: "right", maxWidth: 360 }} className="truncate">
                       {`${fmt2(r.thickness)}ملم ${r.itemName}`}
                     </td>
-
-                    <td className="ta-center">
-                      {prettyDims(r.length, r.width, spbForDims)}
-                    </td>
-
+                    <td className="ta-center">{prettyDims(r.length, r.width, spbForDims)}</td>
                     <td className="ta-center">{String(r.type || "").toUpperCase()}</td>
-
                     <td className="ta-center">{spbCell}</td>
-
                     <td className="truncate">{r.origin || ""}</td>
-
                     <td className="ta-right">
                       {balancesLoading && qty === undefined ? "…" :
                         qty === undefined ? "—" : (
                           <span className={`qty-pill ${Number(qty) < LOW_STOCK_THRESHOLD ? "low" : ""}`}>
-                            {fmt2(qty)}{" "}
-                            <span className="u-muted">{unitLabelFor(r.type)}</span>
+                            {fmt2(qty)} <span className="u-muted">{unitLabelFor(r.type)}</span>
                           </span>
                         )}
                     </td>
-
                     {showBoth && (
                       <td className="ta-right u-muted">
                         {balancesLoading && sqm === undefined ? "…" : (sqm === undefined ? "—" : fmt2(sqm))}
                       </td>
                     )}
-
                     <td>
-                      <button className="invb-btn small" onClick={() => openBatchesFor(r)}>View</button>
+                      <button
+                        className={`invb-btn small ${canViewBatches ? "" : "invb-btn--ghost"}`}
+                        onClick={() => canViewBatches && openBatchesFor(r)}
+                        disabled={!canViewBatches}
+                        title={canViewBatches ? "View batches" : "Batches are available only in Real Description mode"}
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 );
@@ -690,6 +770,7 @@ export default function InventoryBrowser() {
         </table>
       </div>
 
+      {/* Drawer */}
       {drawerOpen && (
         <div className="invb-drawer-overlay" onClick={closeDrawer}>
           <aside className="invb-drawer" onClick={(e) => e.stopPropagation()}>
@@ -750,14 +831,15 @@ export default function InventoryBrowser() {
           </aside>
         </div>
       )}
-<ReportModal
+
+      {/* Report */}
+      <ReportModal
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         rows={reportRows}
-        qtyMap={reportQtyMap}
-        sqmMap={reportSqmMap}
-        defaultIncludeZeros={includeZeros}
+        spbSourceRows={reportSpbRows}   // ✅ unfiltered rows feed the SPB index
         loading={reportLoading}
+        mode={descMode}
       />
     </div>
   );

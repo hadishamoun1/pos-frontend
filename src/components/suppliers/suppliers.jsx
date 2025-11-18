@@ -285,7 +285,7 @@ const CreatePreviewSuppliers = () => {
       {modalContent && (
         <div className="modal">
           <div
-            className={`modal-content ${
+            className={`suppliers-modal-content ${
               modalType === "success" ? "success-modal" : "error-modal"
             }`}
           >

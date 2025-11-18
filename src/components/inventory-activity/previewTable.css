@@ -1,24 +1,35 @@
-/* previewTable.css */
-
-/* Container around the preview */
-.preview-container {
+/* ===================== */
+/* Container & Scrolling */
+/* ===================== */
+.count-preview-container {
   padding-left: 1rem;
   padding-right: 1rem;
   background: #fff;
   border-radius: 8px;
   max-height: 80vh;
   overflow: auto;
+  box-shadow: 0 6px 20px rgba(0,0,0,.06);
 }
 
-/* Header with back button */
-.preview-header {
+/* Improve sticky header overlap */
+.count-preview-container * {
+  box-sizing: border-box;
+}
+
+/* ======== */
+/* Header   */
+/* ======== */
+.count-preview-header {
   display: flex;
   align-items: center;
+  gap: 12px;
   margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eef0f4;
 }
 
-.preview-close-btn {
+/* Back/close (if you ever show it) */
+.count-preview-close-btn {
   background: none;
   border: none;
   color: #007bff;
@@ -27,89 +38,127 @@
   cursor: pointer;
   transition: color 0.2s;
 }
+.count-preview-close-btn:hover { color: #0056b3; }
 
-.preview-close-btn:hover {
-  color: #0056b3;
-}
-
-/* Table styling */
-.preview-count-table {
+/* =================== */
+/* Search / Chips row  */
+/* =================== */
+/* Main search bar row */
+.count-preview-search-bar {
+  display: flex;
+  grid-template-columns: 300px 1fr auto; /* input | chips | actions */
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  border-collapse: collapse;
-  border-spacing: 0;
-  font-size: 0.95rem;
-  color: #333;
 }
 
-/* Header row */
-.preview-count-table thead th {
-  position: sticky;
-  top: 0;
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: #ffffff;
-  font-weight: 600;
-  padding: 0.75rem 1rem;
-  z-index: 1;
-  text-align: center;
+/* Chips on same row, next to input */
+.count-preview-chipsline {
+  grid-column: 2 / 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
 }
-.count-preview-itemname {
+
+/* Compact input */
+.count-preview-search-input {
+  grid-column: 1 / 2;
+  width: 20%;
+  min-height: 32px;
+  padding: .55rem .6rem;
+  border-radius: 8px;
+  border: 1px solid #dfe3eb;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: #fff;
   direction: rtl;
 }
-
-/* Body rows */
-.preview-count-table tbody tr {
-  transition: background 0.2s;
+.count-preview-search-input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0,123,255,.12);
 }
 
-.preview-count-table tbody tr:nth-child(odd) {
+/* Actions at the far right */
+.count-preview-search-actions {
+  grid-column: 3 / 4;
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Chip */
+.count-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #eef4ff;
+  color: #0b4bb3;
+  border: 1px solid #cfe0ff;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.count-preview-chip .count-preview-chip-x,
+.count-preview-chip-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  opacity: .7;
+  padding: 0 2px;
+  line-height: 1;
+font-size: large;
+}
+.count-preview-chip .count-preview-chip-x:hover,
+.count-preview-chip-x:hover { opacity: 1; }
+
+/* Buttons (Add / Clear) */
+.count-preview-chip-btn {
+  min-height: 32px;
+  padding: .3rem .6rem;
+  border-radius: 6px;
+  border: 1px solid #bcd1ff;
+  background: #f5f9ff;
+  color: #0b4bb3;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.count-preview-chip-btn.ghost {
   background: #fff;
+  color: #445;
+  border-color: #dcdfe6;
+}
+.count-preview-chip-btn:hover { filter: brightness(0.97); }
+
+/* ====== */
+/* Pager  */
+/* ====== */
+.count-preview-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+}
+.count-preview-pager span {
+  font-size: 0.9rem;
+  opacity: 0.75;
 }
 
-.preview-count-table tbody tr:nth-child(even) {
-  background: #f9f9f9;
-}
-
-.preview-count-table tbody tr:hover {
-  background: #e8f4ff;
-}
-
-/* Cells */
-.preview-count-table td {
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid #eee;
-  text-align: center;
-}
-
-/* Make the last row’s bottom border lighter */
-.preview-count-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Scrollbar styling for WebKit */
-.preview-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.preview-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.preview-container::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-
-.preview-container::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
-}
-
-/* Push the Edit button to the far right */
-.preview-edit-btn {
-  width: 5%;
+/* ======= */
+/* Buttons */
+/* ======= */
+.count-preview-edit-btn {
+  min-width: 96px;
   min-height: 35px;
-  margin-left: auto;
-  margin-top: 0.5rem;
+  margin-left: auto; /* push to the right in header */
   padding: 0.4rem 0.8rem;
   font-size: 0.9rem;
   font-weight: 600;
@@ -118,23 +167,137 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: background-color 0.2s, transform 0.1s, opacity .2s;
 }
-.preview-edit-btn:hover {
+.count-preview-edit-btn:hover { 
   background: linear-gradient(135deg, #0056b3, #003f7f);
   transform: translateY(-2px);
 }
+.count-preview-edit-btn:active { transform: scale(0.98); }
+.count-preview-edit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Hover / active states */
-.preview-edit-btn:hover:not(:disabled) {
-  background-color: #0056b3;
+/* Ghost variant (if needed) */
+.count-preview-edit-btn--ghost {
+  background: transparent;
+  color: #0b59d0;
+  border: 1px solid #d6e6ff;
 }
-.preview-edit-btn:active:not(:disabled) {
-  transform: scale(0.98);
+.count-preview-edit-btn--ghost:hover {
+  background: #f0f6ff;
+  transform: none;
 }
 
-/* Disable state styling */
-.preview-edit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+/* ============== */
+/* Table Styling  */
+/* ============== */
+.count-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Header row */
+.count-preview-table thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  z-index: 2; /* above row content */
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Body rows */
+.count-preview-table tbody tr {
+  transition: background 0.2s;
+}
+.count-preview-table tbody tr:nth-child(odd) { background: #fff; }
+.count-preview-table tbody tr:nth-child(even){ background: #f9f9f9; }
+.count-preview-table tbody tr:hover { background: #e8f4ff; }
+
+/* Cells */
+.count-preview-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+  vertical-align: middle;
+}
+.count-preview-table tbody tr:last-child td { border-bottom: none; }
+
+/* RTL item name column */
+.count-preview-itemname { direction: rtl; text-align: right; }
+
+/* Truncation helper (optional) */
+.count-preview-truncate {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Width hints for certain columns */
+.count-preview-table td:nth-child(1),
+.count-preview-table th:nth-child(1) { width: 70px; }   /* Select */
+.count-preview-table td:nth-child(2),
+.count-preview-table th:nth-child(2) { min-width: 220px; } /* Item Name */
+.count-preview-table td:nth-child(3),
+.count-preview-table th:nth-child(3) { min-width: 150px; } /* Dimensions */
+.count-preview-table td:nth-child(4),
+.count-preview-table th:nth-child(4) { min-width: 120px; } /* Origin */
+.count-preview-table td:nth-child(6),
+.count-preview-table th:nth-child(6) { min-width: 110px; } /* Date */
+.count-preview-table td:nth-child(12),
+.count-preview-table th:nth-child(12){ min-width: 120px; } /* Condition */
+.count-preview-table td:nth-child(13),
+.count-preview-table th:nth-child(13){ min-width: 130px; } /* Date Received */
+
+/* ============ */
+/* States UI    */
+/* ============ */
+.count-preview-loading,
+.count-preview-error {
+  margin: 14px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.count-preview-loading {
+  color: #0b59d0;
+  background: #f0f6ff;
+  border: 1px solid #d6e6ff;
+}
+.count-preview-error {
+  color: #b00020;
+  background: #ffeff1;
+  border: 1px solid #ffd6dc;
+}
+
+/* ============== */
+/* Scrollbar (WK) */
+/* ============== */
+.count-preview-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.count-preview-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.count-preview-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+.count-preview-container::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+/* ============== */
+/* Small Screens  */
+/* ============== */
+@media (max-width: 720px) {
+  .count-preview-search-bar {
+    grid-template-columns: 1fr auto; /* input | actions */
+    grid-template-rows: auto auto;   /* chips below */
+  }
+  .count-preview-search-input { grid-column: 1 / 2; max-width: 100%; }
+  .count-preview-search-actions { grid-column: 2 / 3; }
+  .count-preview-chipsline {
+    grid-column: 1 / -1;   /* take full width under input/actions */
+    margin-top: 6px;
+  }
+  .count-preview-edit-btn { margin-left: 0; }
+  .count-preview-header { flex-wrap: wrap; }
 }

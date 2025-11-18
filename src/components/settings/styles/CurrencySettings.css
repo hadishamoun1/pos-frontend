@@ -1,0 +1,202 @@
+.setting-currency-container {
+  padding: 1.5rem 2rem;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #222;
+}
+
+.setting-currency-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+}
+
+.setting-currency-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr);
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.setting-currency-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.setting-currency-card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #111827;
+}
+
+.setting-currency-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.setting-currency-label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: #4b5563;
+  gap: 0.25rem;
+}
+
+.setting-currency-input {
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.setting-currency-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+}
+
+.setting-currency-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.setting-currency-button {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  transition: transform 0.1s ease, box-shadow 0.1s ease,
+    background-color 0.1s ease;
+}
+
+.setting-currency-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+.setting-currency-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+  box-shadow: none;
+}
+
+.setting-currency-button-secondary {
+  background: #6b7280;
+  box-shadow: 0 4px 10px rgba(55, 65, 81, 0.25);
+}
+
+.setting-currency-button-secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+/* Table */
+.setting-currency-table-wrapper {
+  max-height: 420px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.setting-currency-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.setting-currency-table thead {
+  position: sticky;
+  top: 0;
+  background: #f3f4f6;
+  z-index: 1;
+}
+
+.setting-currency-table th,
+.setting-currency-table td {
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.setting-currency-table th {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.85rem;
+}
+
+.setting-currency-table tr:nth-child(even) td {
+  background-color: #f9fafb;
+}
+
+.setting-currency-empty {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Action buttons */
+.setting-currency-action-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-right: 0.3rem;
+  background: #e5e7eb;
+  color: #111827;
+  transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+.setting-currency-action-btn:hover:not(:disabled) {
+  background: #d1d5db;
+  transform: translateY(-0.5px);
+}
+
+.setting-currency-action-btn-danger {
+  background: #f97373;
+  color: #111827;
+}
+
+.setting-currency-action-btn-danger:hover:not(:disabled) {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Messages */
+.setting-currency-message {
+  margin-top: 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.setting-currency-message-ok {
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.setting-currency-message-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .setting-currency-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

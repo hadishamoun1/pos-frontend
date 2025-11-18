@@ -1,3 +1,4 @@
+// src/components/accounts/AccountsPage.jsx
 import React, { useState, useEffect } from "react";
 import "./accounts.css";
 
@@ -7,30 +8,50 @@ const AccountsPage = () => {
     accountNumber: "",
     accountName: "",
     arabicAccountName: "",
-    parentNumber: null,
+    parentNumber: "",
     accessible: true,
   });
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-  // Fetch combined data
+
+  const rawBase = process.env.REACT_APP_API_BASE_URL || "";
+  const baseUrl = rawBase.replace(/\/+$/, ""); // remove trailing /
+
+  // ---------- Helpers ----------
+
+  const getParentName = (account, allAccounts) => {
+    if (!account.parentNumber) return "Main Account";
+    const parent = allAccounts.find(
+      (a) => a.accountNumber === account.parentNumber
+    );
+    return parent?.accountName || parent?.arabicAccountName || "N/A";
+  };
+
+  // ---------- Fetch data on mount ----------
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
-        const response = await fetch(
-          `${baseUrl}/accounts/v1/combined`
-        );
+        const response = await fetch(`${baseUrl}/accounts/v1/combined`);
+        // If your working endpoint is /accounts, use:
+        // const response = await fetch(`${baseUrl}/accounts`);
+
+        if (!response.ok) {
+          console.error("Failed to fetch combined accounts", response.status);
+          return;
+        }
+
         const combinedData = await response.json();
-        setData(combinedData);
+        console.log("Combined accounts from API:", combinedData);
+        setData(Array.isArray(combinedData) ? combinedData : []);
       } catch (error) {
         console.error("Error fetching combined data:", error);
       }
     };
 
     fetchCombinedData();
-  }, []);
+  }, [baseUrl]);
 
-  // Handle input changes
+  // ---------- Form handlers ----------
   const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
     setFormData((prevState) => ({
@@ -39,7 +60,6 @@ const AccountsPage = () => {
     }));
   };
 
-  // Handle form submission
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -53,7 +73,11 @@ const AccountsPage = () => {
 
       if (response.ok) {
         const newAccount = await response.json();
-        setData((prevState) => [...prevState, newAccount]);
+        const safeAccount = {
+          ...newAccount,
+          children: newAccount.children || [],
+        };
+        setData((prevState) => [...prevState, safeAccount]);
         setModalType("success");
       } else {
         setModalType("error");
@@ -68,15 +92,27 @@ const AccountsPage = () => {
 
   const closeModal = () => setModalContent(false);
 
-  // Recursive function to render accounts, maintaining order and avoiding duplication
-  const renderAccounts = (accounts, parentNumber = null) => {
+  // ---------- Flat renderer (no hiding by parentNumber) ----------
+  const renderAccounts = (accounts) => {
+    if (!accounts || !accounts.length) {
+      return (
+        <tr>
+          <td colSpan={5} style={{ textAlign: "center", padding: "8px" }}>
+            No accounts returned from API.
+          </td>
+        </tr>
+      );
+    }
+
     return accounts
-      .filter((account) => account.parentNumber === parentNumber)
+      .slice()
+      .sort((a, b) => a.accountNumber.localeCompare(b.accountNumber))
       .map((account) => (
-        <React.Fragment key={account.id}>
+        <React.Fragment key={`acc-${account.id}`}>
+          {/* Main account row */}
           <tr>
             <td>{account.accountNumber}</td>
-            <td>{account.accountName}</td>
+            <td>{account.accountName || "—"}</td>
             <td
               style={{
                 fontFamily: "'Tajawal', sans-serif",
@@ -89,16 +125,19 @@ const AccountsPage = () => {
               {account.arabicAccountName || "N/A"}
             </td>
             <td>{account.parentNumber || "Main Account"}</td>
-            <td>{account.parent?.accountName || "N/A"}</td>
+            <td>{getParentName(account, accounts)}</td>
           </tr>
 
-          {/* Render customer accounts under 4111 */}
+          {/* Customer accounts (if backend added them as children with isCustomer flag) */}
           {account.accountNumber === "4111" &&
-            account.children &&
+            Array.isArray(account.children) &&
             account.children
-              .filter((child) => child.accountNumber.startsWith("4111"))
+              .filter((child) => child.isCustomer)
               .map((customer) => (
-                <tr key={customer.id} className="customer-account-row">
+                <tr
+                  key={`cust-${customer.id}-${customer.accountNumber}`}
+                  className="customer-account-row"
+                >
                   <td>{customer.accountNumber}</td>
                   <td>{customer.accountName}</td>
                   <td
@@ -113,17 +152,20 @@ const AccountsPage = () => {
                     {account.arabicAccountName || "N/A"}
                   </td>
                   <td>{account.accountNumber}</td>
-                  <td>{account.accountName}</td>
+                  <td>{account.accountName || "—"}</td>
                 </tr>
               ))}
 
-          {/* Render supplier accounts under 4011 */}
+          {/* Supplier accounts (if backend added them as children with isSupplier flag) */}
           {account.accountNumber === "4011" &&
-            account.children &&
+            Array.isArray(account.children) &&
             account.children
-              .filter((child) => child.accountNumber.startsWith("4011"))
+              .filter((child) => child.isSupplier)
               .map((supplier) => (
-                <tr key={supplier.id} className="supplier-account-row">
+                <tr
+                  key={`supp-${supplier.id}-${supplier.accountNumber}`}
+                  className="supplier-account-row"
+                >
                   <td>{supplier.accountNumber}</td>
                   <td>{supplier.accountName}</td>
                   <td
@@ -138,12 +180,9 @@ const AccountsPage = () => {
                     {account.arabicAccountName || "N/A"}
                   </td>
                   <td>{account.accountNumber}</td>
-                  <td>{account.accountName}</td>
+                  <td>{account.accountName || "—"}</td>
                 </tr>
               ))}
-
-          {/* Recursively render other children */}
-          {renderAccounts(accounts, account.accountNumber)}
         </React.Fragment>
       ));
   };
@@ -152,6 +191,12 @@ const AccountsPage = () => {
     <div className="accounts-page">
       <h2 className="accounts-heading">Accounts Management</h2>
 
+      {/* Tiny debug: see if data is actually loaded */}
+      <p style={{ fontSize: "0.8rem", color: "#666", marginBottom: "0.5rem" }}>
+        Loaded accounts: {data.length}
+      </p>
+
+      {/* ---------- Create Account Form ---------- */}
       <div className="accounts-form">
         <form onSubmit={handleFormSubmit}>
           <label>
@@ -165,6 +210,7 @@ const AccountsPage = () => {
               required
             />
           </label>
+
           <label>
             Account Name:
             <input
@@ -176,6 +222,7 @@ const AccountsPage = () => {
               required
             />
           </label>
+
           <label>
             Arabic Account Name:
             <input
@@ -186,6 +233,7 @@ const AccountsPage = () => {
               onChange={handleInputChange}
             />
           </label>
+
           <label>
             Parent Account:
             <select
@@ -194,13 +242,20 @@ const AccountsPage = () => {
               onChange={handleInputChange}
             >
               <option value="">Select Parent Account</option>
-              {data.map((account) => (
-                <option key={account.id} value={account.accountNumber}>
-                  {account.accountName}
-                </option>
-              ))}
+              {data
+                .slice()
+                .sort((a, b) => a.accountNumber.localeCompare(b.accountNumber))
+                .map((account) => (
+                  <option key={account.id} value={account.accountNumber}>
+                    {account.accountNumber} -{" "}
+                    {account.accountName ||
+                      account.arabicAccountName ||
+                      "Unnamed"}
+                  </option>
+                ))}
             </select>
           </label>
+
           <div className="accessible-container">
             <label htmlFor="accessible">Accessible:</label>
             <input
@@ -211,10 +266,12 @@ const AccountsPage = () => {
               onChange={handleInputChange}
             />
           </div>
+
           <button type="submit">Create Account</button>
         </form>
       </div>
 
+      {/* ---------- Accounts Preview Table ---------- */}
       <div className="accounts-preview">
         <h3 className="accounts-preview-heading">Accounts Preview</h3>
         <table className="accounts-table">
@@ -231,6 +288,7 @@ const AccountsPage = () => {
         </table>
       </div>
 
+      {/* ---------- Modal ---------- */}
       {modalContent && (
         <div className="modal">
           <div
@@ -256,7 +314,7 @@ const AccountsPage = () => {
             </button>
           </div>
         </div>
-      )} 
+      )}
     </div>
   );
 };

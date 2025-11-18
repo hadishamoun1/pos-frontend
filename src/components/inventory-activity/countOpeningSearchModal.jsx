@@ -20,7 +20,7 @@ const normalizeDigits = (s) => {
 };
 
 const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
-  const [items, setItems] = useState([]);        // nested items from /filtered-items
+  const [items, setItems] = useState([]);        // flat rows for list mode
   const [flatRows, setFlatRows] = useState([]);  // flat rows from /variant-search
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
@@ -35,6 +35,11 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   // 🔖 pinned search terms (always stored with English digits)
   const [pinnedTerms, setPinnedTerms] = useState([]);
+
+  // 🔁 which description-based API to use
+  // "real" → /items/v1/filtered-items         + /items/v1/variant-search
+  // "name" → /items/v1/filtered-items-by-name + /items/v1/variant-search-by-name
+  const [descriptionSource, setDescriptionSource] = useState("name");
 
   // Build the query the API sees (pinned + live)
   const combinedQuery = useMemo(() => {
@@ -151,13 +156,31 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   // ---------- normalize server responses ----------
   const normalizeListResponse = useCallback((json) => {
-    if (json && typeof json === "object") {
-      const data = Array.isArray(json.data) ? json.data : [];
-      const more = json.hasMore === true ? true : data.length > 0;
-      return { data, hasMore: more };
+    if (!json || typeof json !== "object") return { rows: [], hasMore: false };
+    const groups = Array.isArray(json.data) ? json.data : [];
+    const rows = [];
+    for (const g of groups) {
+      const variants = Array.isArray(g?.variants) ? g.variants : [];
+      for (const v of variants) {
+        const thicknessVal = Number(v?.thickness ?? 0);
+        const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${v?.itemName || ""}`;
+        rows.push({
+          key: `${v.itemId}-${v.variantId}`,
+          variantId: Number(v.variantId),
+          combinedName,
+          type: v.type || "",
+          origin: v.origin ?? "",
+          length: Number(v.length ?? 0),
+          width: Number(v.width ?? 0),
+          sheetsPerBox: Number(v.sheetsPerBox ?? 0) || "",
+          // 🆕 optionally present when using "name" APIs
+          itemNumber: v.itemNumber ?? null,
+          subCategory: v.subCategory ?? null,
+        });
+      }
     }
-    if (Array.isArray(json)) return { data: json, hasMore: json.length > 0 };
-    return { data: [], hasMore: false };
+    const hasMore = Boolean(json.hasMore);
+    return { rows, hasMore };
   }, []);
 
   const normalizeSearchResponse = useCallback((json) => {
@@ -175,13 +198,20 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const url = `${baseUrl}/items/v1/filtered-items?page=${targetPage}&limit=${limit}&includeEmpty=0`;
+
+        // 🔁 Choose endpoint based on toggle
+        const endpoint =
+          descriptionSource === "real"
+            ? "/items/v1/filtered-items"
+            : "/items/v1/filtered-items-by-name";
+
+        const url = `${baseUrl}${endpoint}?page=${targetPage}&limit=${limit}&includeEmpty=0`;
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const json = await res.json();
-        const { data: pageData, hasMore: more } = normalizeListResponse(json);
-        if (targetPage === 1) setItems(pageData || []);
-        else setItems((prev) => [...prev, ...(pageData || [])]);
+        const { rows: pageRows, hasMore: more } = normalizeListResponse(json);
+        if (targetPage === 1) setItems(pageRows || []);
+        else setItems((prev) => [...prev, ...(pageRows || [])]);
         setHasMore(Boolean(more));
         setPage(targetPage);
       } catch (e) {
@@ -193,7 +223,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         setLoading(false);
       }
     },
-    [limit, normalizeListResponse]
+    [limit, normalizeListResponse, descriptionSource]
   );
 
   const fetchSearchPage = useCallback(
@@ -211,7 +241,13 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         if (typeof lengthOnly === "number") parts.push(`length=${lengthOnly}`);
         if (typeof widthOnly === "number") parts.push(`width=${widthOnly}`);
 
-        const url = `${baseUrl}/items/v1/variant-search?${parts.join("&")}`;
+        // 🔁 Choose search endpoint based on toggle
+        const searchEndpoint =
+          descriptionSource === "real"
+            ? "/items/v1/variant-search"
+            : "/items/v1/variant-search-by-name";
+
+        const url = `${baseUrl}${searchEndpoint}?${parts.join("&")}`;
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
         const json = await res.json();
@@ -229,10 +265,10 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         setLoading(false);
       }
     },
-    [limit, normalizeSearchResponse]
+    [limit, normalizeSearchResponse, descriptionSource]
   );
 
-  // Load first page when the modal opens
+  // Load first page when the modal opens OR when descriptionSource changes
   useEffect(() => {
     if (!isOpen) return;
     setSearchText("");
@@ -275,40 +311,14 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       );
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qSansDims, dimsInfo]);
 
-  // ---------- flatten nested to rows (list mode) ----------
-  const listRows = useMemo(() => {
-    const out = [];
-    for (const item of items || []) {
-      const itemName = item?.itemName ?? "";
-      const type = item?.type ?? "";
-      const ths = item?.thicknesses || [];
-      for (const th of ths) {
-        const thicknessVal = Number(th?.thickness ?? 0);
-        const vars = th?.variants || [];
-        for (const v of vars) {
-          const id = v?.id;
-          if (id == null) continue;
-          const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${itemName}`;
-          out.push({
-            key: `${item.id}-${id}`,
-            variantId: id,
-            combinedName,
-            type,
-            origin: v?.origin ?? "",
-            length: Number(v?.length ?? 0),
-            width: Number(v?.width ?? 0),
-            sheetsPerBox: Number(v?.sheetsPerBox ?? 0) || "",
-          });
-        }
-      }
-    }
-    return out;
-  }, [items]);
+  // ---------- rows ----------
+  // LIST MODE: items are already flat rows
+  const listRows = useMemo(() => items || [], [items]);
 
-  // ---------- map flat API rows -> table rows (search mode) ----------
+  // SEARCH MODE: map server rows to table rows
   const searchRows = useMemo(() => {
     return (flatRows || []).map((r) => {
       const thicknessVal = Number(r.thickness ?? 0);
@@ -322,6 +332,9 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         length: Number(r.length ?? 0),
         width: Number(r.width ?? 0),
         sheetsPerBox: Number(r.sheetsPerBox ?? 0) || "",
+        // 🆕 also available on variant-search-by-name
+        itemNumber: r.itemNumber ?? null,
+        subCategory: r.subCategory ?? null,
       };
     });
   }, [flatRows]);
@@ -342,6 +355,8 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         r.width,
         r.sheetsPerBox,
         r.variantId,
+        r.itemNumber,
+        r.subCategory,
       ]
         .join(" ")
         .toString()
@@ -378,6 +393,9 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       sheet,
       sqm,
       uniqueId: r.key,
+      // if someday you want them in payload:
+      // itemNumber: r.itemNumber ?? null,
+      // subCategory: r.subCategory ?? null,
     };
   };
 
@@ -468,7 +486,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         </div>
 
-        {/* Sticky input bar — chips BESIDE the input; force RTL for mixed content */}
+        {/* Sticky input bar — chips + toggle in same row */}
         <div className="count-opening-search-modal-inputbar">
           <input
             className="count-opening-search-modal-input rtl-mixed"
@@ -500,6 +518,36 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
               </span>
             ))}
           </div>
+
+          {/* Toggle Real / Name */}
+          <div className="count-opening-search-modal-toggle">
+            <span
+              className={
+                "count-opening-search-modal-toggle-label" +
+                (descriptionSource === "real" ? " active" : "")
+              }
+            >
+              Real
+            </span>
+            <label className="count-opening-search-modal-toggle-switch">
+              <input
+                type="checkbox"
+                checked={descriptionSource === "name"}
+                onChange={(e) =>
+                  setDescriptionSource(e.target.checked ? "name" : "real")
+                }
+              />
+              <span className="count-opening-search-modal-toggle-slider" />
+            </label>
+            <span
+              className={
+                "count-opening-search-modal-toggle-label" +
+                (descriptionSource === "name" ? " active" : "")
+              }
+            >
+              Name
+            </span>
+          </div>
         </div>
 
         {/* Scroll table */}
@@ -508,6 +556,8 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
             <thead>
               <tr>
                 <th>Select</th>
+                {descriptionSource === "name" && <th>Item No.</th>}
+                {descriptionSource === "name" && <th>Subcategory</th>}
                 <th>Origin</th>
                 <th>Item</th>
                 <th>Type</th>
@@ -519,7 +569,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
             <tbody>
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", opacity: 0.7 }}>
+                  <td colSpan={descriptionSource === "name" ? 9 : 7} style={{ textAlign: "center", opacity: 0.7 }}>
                     لا توجد نتائج.
                   </td>
                 </tr>
@@ -534,6 +584,12 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
                         onChange={() => toggleSelect(r.key)}
                       />
                     </td>
+                    {descriptionSource === "name" && (
+                      <td>{r.itemNumber || ""}</td>
+                    )}
+                    {descriptionSource === "name" && (
+                      <td>{r.subCategory || ""}</td>
+                    )}
                     <td>{r.origin}</td>
                     <td style={{ direction: "rtl", textAlign: "right" }}>{r.combinedName}</td>
                     <td>{r.type}</td>

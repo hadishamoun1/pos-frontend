@@ -12,6 +12,14 @@
   font-size: 1.25rem;
 }
 
+/* Title row: Inventory → Variants + toggle on the right */
+.invb-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 /* ───── Toolbar ─────────────────────────────────────────── */
 .invb-toolbar { display: grid; gap: 8px; }
 
@@ -231,16 +239,14 @@
 }
 
 /* ──────────────────────────────────────────────────────── */
-/* NEW: Chips outside the input, on the RIGHT of the input */
+/* Chips + search bar                                      */
 /* ──────────────────────────────────────────────────────── */
 
-/* Wrapper that holds: [chips] [input] [actions] — in RTL the chips are visually at the right */
 .invb-search-bar {
   display: flex;
   align-items:flex-start;
   gap: 8px;
   direction: rtl;          /* keep Arabic typing natural & chips at right */
-  
   min-width: 720px;        /* give the whole search bar some width */
 }
 
@@ -250,7 +256,7 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  min-width: 10%;          /* chips get most of the space */
+  min-width: 10%;
   flex: 1 1 auto;
   min-height: 38px;
 }
@@ -261,7 +267,7 @@
   min-width: 220px;
   flex: 0 0 auto;
   direction: rtl; 
-  font-size: large;         /* RTL typing inside input */
+  font-size: large;
 }
 
 /* Buttons next to the input */
@@ -304,13 +310,9 @@
   border: 1px dashed #c6cbd8;
 }
 
-/* ──────────────────────────────────────────────────────── */
-/* Legacy chips-in-input styles (kept but neutralized)     */
-/* If you had an older layout with chips inside a bordered */
-/* box, these won't be used now but kept for safety.       */
-/* ──────────────────────────────────────────────────────── */
-.invb-search-wrap { display: none; }   /* not used anymore */
-.invb-chips { display: none; }         /* not used */
+/* Legacy chips-in-input styles (hidden now) */
+.invb-search-wrap { display: none; }
+.invb-chips { display: none; }
 .invb-input--chips { min-width: 0 !important; border: none; background: transparent; }
 
 /* Make chips container scrollbars subtle (if overflow occurs) */
@@ -323,4 +325,97 @@
 }
 .invb-chipsline::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ───────────────────────────────────────────── */
+/* Mode toggle (Real / Name) on the title row   */
+/* ───────────────────────────────────────────── */
+
+.invb-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.invb-mode-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0.5;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.invb-mode-label.active {
+  opacity: 1;
+  color: #111827;
+}
+
+/* Switch wrapper */
+.invb-mode-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+/* Hide checkbox */
+.invb-mode-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Track */
+.invb-mode-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: #d1d5db;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* Knob */
+.invb-mode-toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  top: 2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+/* Checked state */
+.invb-mode-toggle-switch input:checked + .invb-mode-toggle-slider {
+  background-color: #2563eb;
+}
+
+.invb-mode-toggle-switch input:checked + .invb-mode-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Responsive: stack title + toggle on small widths */
+@media (max-width: 720px) {
+  .invb-titlebar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* Responsive search bar */
+@media (max-width: 980px) {
+  .invb-search-bar {
+    min-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .invb-input--narrow {
+    width: 100%;
+  }
 }

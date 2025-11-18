@@ -7,8 +7,8 @@ const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 // ✅ Defaults
-const DEFAULT_TYPE = "G";
-const DEFAULT_DATE_ISO = "2025-10-31"; // input[type=date] needs YYYY-MM-DD
+const DEFAULT_TYPE = "RVR";
+const DEFAULT_DATE_ISO = "2025-10-31"; 
 
 const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   const [saving, setSaving] = useState(false);
