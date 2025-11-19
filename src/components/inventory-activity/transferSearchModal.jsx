@@ -18,9 +18,9 @@ const TransferSearchModal = ({
     if (!isOpen) return;
 
     axios
-      .get(`${baseUrl}/items/v1/filtered-items`)
+      .get(`${baseUrl}/items/v2/filtered-items`)
       .then((res) => {
-        // API shape: { page, limit, hasMore, totalGroups, data: [...] }
+        // v2 shape: { page, limit, totalRows, totalPages, hasMore, data: [...] }
         setItems(res.data?.data || []);
       })
       .catch(console.error);
@@ -31,64 +31,39 @@ const TransferSearchModal = ({
 
   if (!isOpen) return null;
 
-  // items: [{ realDescription, variants: [...] }, ...]
-  const rows = (items || []).flatMap((group) =>
-    (group.variants || []).flatMap((variant) => {
-      const realDesc = group.realDescription || {};
+  // v2: each entry in `items` is already a row with variant + batch + realDescription
+  const rows = (items || []).map((item) => {
+    const realDesc = item.realDescription || {};
 
-      // If backend provides batches, create one row per batch
-      if (variant.batches && variant.batches.length > 0) {
-        return variant.batches.map((batch) => {
-          const key = `${variant.variantId}-${batch.id}`;
-          return {
-            key,
-            itemId: variant.itemId,
-            itemName: variant.itemName,
-            thickness: variant.thickness,
-            length: variant.length,
-            width: variant.width,
-            sheetsPerBox: variant.sheetsPerBox,
-            origin: variant.origin,
-            itemVariantType: variant.type,
-            itemNameDescriptionId: realDesc.id,
-            itemNameDescription: realDesc,
-            categoryName: realDesc.categoryName,
-            subCategory: realDesc.subCategory,
-            batchId: batch.id,
-            condition: batch.condition,
-            dateReceived: batch.dateReceived,
-            balance: batch.balance,
-            balanceOFR: batch.balanceOFR,
-          };
-        });
-      }
+    const key = `${item.variantId}-${item.batchId}`;
 
-      // Fallback: no batches → one row per variant with empty batch info
-      const key = `${variant.variantId}`;
-      return [
-        {
-          key,
-          itemId: variant.itemId,
-          itemName: variant.itemName,
-          thickness: variant.thickness,
-          length: variant.length,
-          width: variant.width,
-          sheetsPerBox: variant.sheetsPerBox,
-          origin: variant.origin,
-          itemVariantType: variant.type,
-          itemNameDescriptionId: realDesc.id,
-          itemNameDescription: realDesc,
-          categoryName: realDesc.categoryName,
-          subCategory: realDesc.subCategory,
-          batchId: null,
-          condition: "",
-          dateReceived: "",
-          balance: null,
-          balanceOFR: null,
-        },
-      ];
-    })
-  );
+    return {
+      key,
+      // item / variant info
+      itemId: item.itemId,
+      itemName: item.itemName,
+      thickness: item.thickness,
+      length: item.length,
+      width: item.width,
+      sheetsPerBox: item.sheetsPerBox,
+      origin: item.origin,
+      itemVariantType: item.type,
+      itemVariantId: item.variantId,
+
+      // real description info
+      itemNameDescriptionId: realDesc.id,
+      itemNameDescription: realDesc,
+      categoryName: realDesc.categoryName,
+      subCategory: realDesc.subCategory,
+
+      // batch info
+      batchId: item.batchId,
+      condition: item.condition,
+      dateReceived: item.dateReceived,
+      balance: item.balance ?? null,
+      balanceOFR: item.balanceOFR,
+    };
+  });
 
   const filtered = rows.filter(
     (r) =>

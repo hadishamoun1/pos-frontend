@@ -110,54 +110,70 @@ const PurchasesInvoicePage = () => {
     0
   );
 
-const handleCheckboxChange = (item, dimension) => {
-  const isSelected = selectedItems.some(
-    (selectedItem) =>
-      selectedItem.itemName === item.itemName &&
-      selectedItem.dimensionId === dimension.dimensionId
-  );
-
-  if (isSelected) {
-    setSelectedItems(
-      selectedItems.filter(
-        (selectedItem) =>
-          !(
-            selectedItem.itemName === item.itemName &&
-            selectedItem.dimensionId === dimension.dimensionId
-          )
-      )
+  const handleCheckboxChange = (item, dimension) => {
+    const isSelected = selectedItems.some(
+      (selectedItem) =>
+        selectedItem.itemName === item.itemName &&
+        selectedItem.dimensionId === dimension.dimensionId
     );
-  } else {
 
-    const th = Number(dimension?.thickness);
-    const itemNameCombined =
-      item?.combinedName ??
-      (Number.isFinite(th) && th > 0
-        ? `${th} ملم ${item?.itemName || ""}`.trim()
-        : item?.itemName || "");
+    if (isSelected) {
+      setSelectedItems(
+        selectedItems.filter(
+          (selectedItem) =>
+            !(
+              selectedItem.itemName === item.itemName &&
+              selectedItem.dimensionId === dimension.dimensionId
+            )
+        )
+      );
+    } else {
+      const th = Number(dimension?.thickness);
+      const itemNameCombined =
+        item?.combinedName ??
+        (Number.isFinite(th) && th > 0
+          ? `${th} ملم ${item?.itemName || ""}`.trim()
+          : item?.itemName || "");
 
-    const variantId = dimension?.id ?? dimension?.dimensionId;
+      const variantId = dimension?.id ?? dimension?.dimensionId;
 
-    setSelectedItems([
-      ...selectedItems,
-      {
-        itemName: item.itemName,
-        dimensionId: dimension.dimensionId,
-        origin: dimension.origin,
-        length: dimension.length,
-        width: dimension.width,
-        type: item.type,
-        sheetsPerBox: dimension.sheetsPerBox || 1,
+      setSelectedItems([
+        ...selectedItems,
+        {
+          itemName: item.itemName,
+          dimensionId: dimension.dimensionId,
+          origin: dimension.origin,
+          length: dimension.length,
+          width: dimension.width,
+          type: item.type,
+          sheetsPerBox: dimension.sheetsPerBox || 1,
 
-        
-        itemNameCombined,     
-        thickness: Number.isFinite(th) ? th : undefined,
-        variantId,           
-        payloadVariant: dimension, 
-      },
-    ]);
-  }
-};
+          itemNameCombined,
+          thickness: Number.isFinite(th) ? th : undefined,
+          variantId,
+          payloadVariant: dimension,
+        },
+      ]);
+    }
+  };
+
+  const handleUnitPriceRowsChange = (updater) => {
+    setUnitPriceRows((prev) =>
+      typeof updater === "function" ? updater(prev ?? []) : updater ?? []
+    );
+  };
+
+  // called when you click "Save" inside the UnitPriceModal
+  const handleUnitPriceSave = (rowsFromModal) => {
+    const safe = rowsFromModal ?? [];
+    setUnitPriceRows(safe);
+    const total = safe.reduce(
+      (sum, row) => sum + (parseFloat(row.value) || 0),
+      0
+    );
+    setFinalCost(total);
+    setShowUnitPriceModal(false);
+  };
 
   const closeItemModal = () => {
     const newSelectedItems = selectedItems.map((item) => ({
@@ -191,7 +207,7 @@ const handleCheckboxChange = (item, dimension) => {
       (sum, row) => sum + (parseFloat(row.value) || 0),
       0
     );
-    setFinalCost(total); // optional
+    setFinalCost(total); // update final cost total
     setShowUnitPriceModal(false);
   };
 
@@ -279,10 +295,7 @@ const handleCheckboxChange = (item, dimension) => {
         setIsEditMode(false);
       } else {
         // creating new invoice
-        res = await axios.post(
-          `${baseUrl}/purchase-invoices`,
-          invoiceData
-        );
+        res = await axios.post(`${baseUrl}/purchase-invoices`, invoiceData);
         alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
       }
       resetFields();
@@ -372,9 +385,10 @@ const handleCheckboxChange = (item, dimension) => {
         (s, i) => s + Number(i.totalAmount || 0),
         0
       );
-      const inferred = itemsSumForVat > 0
-        ? (Number(fullInvoice.vatAmount || 0) / itemsSumForVat) * 100
-        : 0;
+      const inferred =
+        itemsSumForVat > 0
+          ? (Number(fullInvoice.vatAmount || 0) / itemsSumForVat) * 100
+          : 0;
       setVatRate(Number.isFinite(inferred) ? +inferred.toFixed(2) : 0);
     }
     setShippingLine(fullInvoice.shippingLine);
@@ -390,15 +404,15 @@ const handleCheckboxChange = (item, dimension) => {
     // 4) items
     setItems(
       fullInvoice.items.map((i) => {
-       const variant = i.itemVariant;
-    const t = variant?.thickness;
-    const item = t?.item;
-    const thNum = Number(t?.thickness);
-    const thickness = Number.isFinite(thNum) ? thNum : undefined;
+        const variant = i.itemVariant;
+        const t = variant?.thickness;
+        const item = t?.item;
+        const thNum = Number(t?.thickness);
+        const thickness = Number.isFinite(thNum) ? thNum : undefined;
 
-    const baseName = item?.itemName || "";
-    const itemNameCombined =
-      thickness != null ? `${thickness} ملم ${baseName}` : baseName;
+        const baseName = item?.itemName || "";
+        const itemNameCombined =
+          thickness != null ? `${thickness} ملم ${baseName}` : baseName;
 
         return {
           id: i.id,
@@ -420,9 +434,9 @@ const handleCheckboxChange = (item, dimension) => {
           priceOFR: Number(i.priceOFR),
           totalOFR: Number(i.totalOFR),
           numberOfContainers: Number(i.numberOfContainers),
-            itemName: baseName,
-      itemNameCombined,      
-      thickness,        
+          itemName: baseName,
+          itemNameCombined,
+          thickness,
         };
       })
     );
@@ -443,6 +457,12 @@ const handleCheckboxChange = (item, dimension) => {
         addToItemCost: r.addToItemCost,
         invoiceNbTax: r.invoiceNbTax,
         shipping: r.shipping,
+         accountId: r.accountId ?? null,
+    accountNumber: r.account?.accountNumber || "",
+
+    supplierId: r.supplierId ?? null,
+    supplierOfTax: r.supplier?.supplierName || "",
+    accNbOfSupplier: r.supplier?.account?.accountNumber || "",
       }))
     );
   }, [fullInvoice]);
@@ -465,7 +485,9 @@ const handleCheckboxChange = (item, dimension) => {
     setVatRate(
       inv.vatPercent != null
         ? Number(inv.vatPercent)
-        : Number.isFinite(inferredRate) ? +inferredRate.toFixed(2) : 0
+        : Number.isFinite(inferredRate)
+        ? +inferredRate.toFixed(2)
+        : 0
     );
     setShippingLine(inv.shippingLine);
     setEtd(inv.etd);
@@ -477,21 +499,21 @@ const handleCheckboxChange = (item, dimension) => {
     setInvoiceType(inv.type);
     setItems(
       inv.items.map((i) => {
-         const v = i.itemVariant;
-    const t = v?.thickness;
-    const it = t?.item;
+        const v = i.itemVariant;
+        const t = v?.thickness;
+        const it = t?.item;
 
-    const thNum = Number(t?.thickness);
-    const thickness = Number.isFinite(thNum) ? thNum : undefined;
-    const baseName = it?.itemName || "";
-    const itemNameCombined =
-      thickness != null ? `${thickness} ملم ${baseName}` : baseName;
+        const thNum = Number(t?.thickness);
+        const thickness = Number.isFinite(thNum) ? thNum : undefined;
+        const baseName = it?.itemName || "";
+        const itemNameCombined =
+          thickness != null ? `${thickness} ملم ${baseName}` : baseName;
         return {
           id: i.id,
           dimensionId: i.itemVariantId,
           itemName: it.itemName,
-              itemNameCombined,    
-      thickness,    
+          itemNameCombined,
+          thickness,
           type: it.type,
           origin: v.origin,
           length: Number(v.length),
@@ -524,6 +546,14 @@ const handleCheckboxChange = (item, dimension) => {
         invoiceNbTax: r.invoiceNbTax,
         supplierId: r.supplierId,
         shipping: r.shipping,
+            // 🔹 account fields (needed for dropdown pre-select)
+    accountId: r.accountId ?? null,
+    accountNumber: r.account?.accountNumber || "",
+
+    // 🔹 supplier fields (for Supplier of Tax + Acc. Nb)
+    supplierId: r.supplierId ?? null,
+    supplierOfTax: r.supplier?.supplierName || "",
+    accNbOfSupplier: r.supplier?.account?.accountNumber || "",
       }))
     );
   };
@@ -885,19 +915,18 @@ const handleCheckboxChange = (item, dimension) => {
                 <option value="SR">SR</option>
                 <option value="RVR">RVR</option>
               </select>
-
-           
             </label>
-              <label>
-            VAT Percentage
-               <input
+
+            <label>
+              VAT Percentage
+              <input
                 type="number"
                 step="0.01"
                 value={vatRate}
                 onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
                 disabled={!canEdit}
               />
-              </label>
+            </label>
           </div>
         </div>
 
@@ -991,7 +1020,9 @@ const handleCheckboxChange = (item, dimension) => {
             invoiceType={invoiceType}
             status={status}
             shippingCostComputed={getCorrectShippingCost()}
-            computedCostPercentageForDisplay={computedCostPercentageForDisplay}
+            computedCostPercentageForDisplay={
+              computedCostPercentageForDisplay
+            }
           />
         ) : (
           <AlternativeSummarySection
@@ -1012,7 +1043,7 @@ const handleCheckboxChange = (item, dimension) => {
           <UnitPriceModal
             isVisible={showUnitPriceModal}
             onClose={() => setShowUnitPriceModal(false)}
-            onSave={handleModalSave}
+            onSave={handleModalSave}     
             isEditable={canEdit}
             invoiceId={isInvoiceSelected ? selectedInvoiceId : null}
             rows={unitPriceRows}

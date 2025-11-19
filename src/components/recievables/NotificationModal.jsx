@@ -39,7 +39,7 @@ const NotificationModal = ({
         <div className="notification-modal-buttons">
           {cancelLabel && (
             <button
-              className="notification-modal-button cancel-button"
+              className="notification-modal-button notification-modal-cancel-button"
               onClick={onClose}
             >
               {cancelLabel}

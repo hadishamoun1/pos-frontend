@@ -94,14 +94,10 @@
   background-color: #0056b3;
 }
 
-.notification-modal-button.cancel-button {
-  background-color: #ccc;
-  color: black;
-  transition: background-color 0.3s ease;
-}
 
-.notification-modal-button.cancel-button:hover {
-  background-color: #999;
+
+.notification-modal-button.notification-modal-cancel-button:hover {
+  background-color:#0056b3;
 }
 
 .notification-warning-modal .notification-modal-icon {
