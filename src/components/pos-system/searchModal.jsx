@@ -7,7 +7,9 @@ import AllTab from "./AllTab";
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all"
   const [selectedCount, setSelectedCount] = useState(0);
+
   const stockRef = useRef(null);
+  const allRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -18,14 +20,15 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   if (!isOpen) return null;
 
   const handleOk = () => {
+    let selectedData = [];
+
     if (activeTab === "stock" && stockRef.current) {
-      const selectedData = stockRef.current.collectSelected();
-      onSelectItems(selectedData);
-      onClose();
-      return;
+      selectedData = stockRef.current.collectSelected();
+    } else if (activeTab === "all" && allRef.current) {
+      selectedData = allRef.current.collectSelected();
     }
-    // Future: collect from "All" tab too
-    onSelectItems([]);
+
+    onSelectItems(selectedData);
     onClose();
   };
 
@@ -36,7 +39,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       aria-controls={`${id}-panel`}
       id={`${id}-tab`}
       className={`search-tab ${isActive ? "is-active" : ""}`}
-      onClick={onClick}
+      onClick={() => {
+        setActiveTab(id);
+        setSelectedCount(0); // reset count when switching tabs
+      }}
       type="button"
     >
       {label}
@@ -55,10 +61,9 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
             <button
               className="search-modal-ok-button"
               onClick={handleOk}
-              disabled={activeTab === "stock" ? selectedCount === 0 : true}
-              title={activeTab === "stock" ? undefined : "Not available on this tab yet"}
+              disabled={selectedCount === 0}
             >
-              OK ({activeTab === "stock" ? selectedCount : 0})
+              OK ({selectedCount})
             </button>
           </div>
         </div>
@@ -69,13 +74,11 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
             id="stock"
             label="Stock Items"
             isActive={activeTab === "stock"}
-            onClick={() => setActiveTab("stock")}
           />
           <TabButton
             id="all"
             label="All"
             isActive={activeTab === "all"}
-            onClick={() => setActiveTab("all")}
           />
         </div>
 
@@ -83,7 +86,6 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           <div id="stock-panel" role="tabpanel" aria-labelledby="stock-tab">
             <StockTab
               ref={stockRef}
-              // ✅ Only “open” when modal is open AND this tab is active
               isOpen={isOpen && activeTab === "stock"}
               onSelectionCountChange={setSelectedCount}
             />
@@ -93,9 +95,9 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
         {activeTab === "all" && (
           <div id="all-panel" role="tabpanel" aria-labelledby="all-tab">
             <AllTab
-              // ✅ Tell AllTab when it’s open so it fetches
+              ref={allRef}
               isOpen={isOpen && activeTab === "all"}
-              // (No selection wiring yet)
+              onSelectionCountChange={setSelectedCount}
             />
           </div>
         )}

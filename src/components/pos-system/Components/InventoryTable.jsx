@@ -9,7 +9,8 @@ const InventoryTable = ({
   isEditable,            // controls editability of inputs
   onReorder,             // (optional) parent callback: (newRows: any[]) => void
   allowReorder = true,   // extra guard to explicitly disable drag even if isEditable=true
-  emptyHint = "No items selected. Click “Search” to add item batches.", // customizable
+  emptyHint = "No items selected. Click “Search” to add item batches.",
+  cutMode = false,       // 🔹 NEW: cut mode flag
 }) => {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -68,7 +69,6 @@ const InventoryTable = ({
   };
 
   const columns = 10; // keep this in sync with the header/inputs
-
   const isEmpty = !Array.isArray(tableData) || tableData.length === 0;
 
   return (
@@ -91,7 +91,10 @@ const InventoryTable = ({
       {isEmpty ? (
         <tbody>
           <tr className="pos-empty-row">
-            <td colSpan={columns} style={{ textAlign: "center", padding: "16px", opacity: 0.7 }}>
+            <td
+              colSpan={columns}
+              style={{ textAlign: "center", padding: "16px", opacity: 0.7 }}
+            >
               {emptyHint}
             </td>
           </tr>
@@ -99,13 +102,55 @@ const InventoryTable = ({
       ) : (
         <tbody>
           {tableData.map((row, index) => {
+            const isSQM = row.type === "sqm";
+
+            // 🔹 CUT MODE rules:
+            const allowCutDims =
+              cutMode && (row.type === "box" || row.type === "sheet");
+            const allowCutSPB = cutMode && row.type === "box";
+
             const canEditBox = isEditable && row.type === "box";
-            const canEditSheet = isEditable && row.type === "sheet";
-            const canEditSQM = isEditable && row.type === "sqm";
+            const canEditSheet =
+              isEditable &&
+              (row.type === "sheet" ||
+                row.type === "sqm" ||
+                allowCutSPB); // 🔹 box sheet-per-box editable in cut mode
+
+            // length/width:
+            // - normal: only sqm
+            // - cutMode: also box & sheet
+            const canEditLength =
+              isEditable && (isSQM || allowCutDims);
+            const canEditWidth =
+              isEditable && (isSQM || allowCutDims);
 
             const isSelected = index === selectedRowIndex;
             const isDragSource = canReorder && index === dragIndex;
             const isDragOver = canReorder && dragOverIndex === index;
+
+            // 🔍 ORIGINAL VALUES (from backend mapping)
+            const originalLen = row.originalLength;
+            const originalWid = row.originalWidth;
+            const originalSpb = row.originalSheetsPerBox;
+
+            const hasOrigDims =
+              originalLen != null &&
+              originalWid != null &&
+              (Number(row.length) !== Number(originalLen) ||
+                Number(row.width) !== Number(originalWid));
+
+            const hasOrigSpb =
+              row.type === "box" &&
+              originalSpb != null &&
+              Number(row.sheet) !== Number(originalSpb);
+
+            const dimsTooltip = hasOrigDims
+              ? `Original: ${originalLen} × ${originalWid}`
+              : "";
+
+            const spbTooltip = hasOrigSpb
+              ? `sheets/box: ${originalSpb}`
+              : "";
 
             return (
               <tr
@@ -122,6 +167,7 @@ const InventoryTable = ({
                   isDragSource ? "row-dragging" : "",
                   isDragOver ? "row-dragover" : "",
                   !canReorder ? "drag-disabled" : "",
+                  hasOrigDims ? "row-has-cut" : "",
                 ]
                   .join(" ")
                   .trim()}
@@ -139,48 +185,110 @@ const InventoryTable = ({
                 <td>
                   <input type="text" value={row.type ?? ""} readOnly />
                 </td>
+
+                {/* LENGTH with tooltip for original dims */}
                 <td>
-                  <input type="text" value={row.length ?? ""} readOnly />
+                  <div
+                    className={
+                      "pos-tooltip-wrapper" +
+                      (hasOrigDims ? " has-tooltip" : "")
+                    }
+                    data-tooltip={dimsTooltip}
+                  >
+                    <input
+                      type="number"
+                      value={row.length ?? ""}
+                      onChange={(e) =>
+                        handleInputChange(index, "length", e.target.value)
+                      }
+                      disabled={!canEditLength}
+                      placeholder={canEditLength ? "Length" : ""}
+                    />
+                  </div>
                 </td>
+
+                {/* WIDTH with same tooltip */}
                 <td>
-                  <input type="text" value={row.width ?? ""} readOnly />
+                  <div
+                    className={
+                      "pos-tooltip-wrapper" +
+                      (hasOrigDims ? " has-tooltip" : "")
+                    }
+                    data-tooltip={dimsTooltip}
+                  >
+                    <input
+                      type="number"
+                      value={row.width ?? ""}
+                      onChange={(e) =>
+                        handleInputChange(index, "width", e.target.value)
+                      }
+                      disabled={!canEditWidth}
+                      placeholder={canEditWidth ? "Width" : ""}
+                    />
+                  </div>
                 </td>
+
                 <td>
                   <input
                     type="number"
                     value={row.box ?? ""}
-                    onChange={(e) => handleInputChange(index, "box", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(index, "box", e.target.value)
+                    }
                     disabled={!canEditBox}
                     placeholder={canEditBox ? "Enter boxes…" : ""}
                   />
                 </td>
+
+                {/* SHEET: quantity for sheet/sqm, sheetsPerBox for box in cut mode */}
                 <td>
-                  <input
-                    type="number"
-                    value={row.sheet ?? ""}
-                    onChange={(e) => handleInputChange(index, "sheet", e.target.value)}
-                    disabled={!canEditSheet}
-                    placeholder={canEditSheet ? "Enter sheets…" : ""}
-                  />
+                  <div
+                    className={
+                      "pos-tooltip-wrapper" +
+                      (hasOrigSpb ? " has-tooltip" : "")
+                    }
+                    data-tooltip={spbTooltip}
+                  >
+                    <input
+                      type="number"
+                      value={row.sheet ?? ""}
+                      onChange={(e) =>
+                        handleInputChange(index, "sheet", e.target.value)
+                      }
+                      disabled={!canEditSheet}
+                      placeholder={
+                        canEditSheet
+                          ? row.type === "box"
+                            ? "Sheets/box…"
+                            : "Enter sheets…"
+                          : ""
+                      }
+                    />
+                  </div>
                 </td>
+
                 <td>
                   <input
                     type="number"
                     value={row.price ?? ""}
-                    onChange={(e) => handleInputChange(index, "price", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange(index, "price", e.target.value)
+                    }
                     disabled={!isEditable}
                     step="0.01"
                   />
                 </td>
+
+                {/* SQM: always auto, never editable */}
                 <td>
                   <input
                     type="number"
                     value={row.sqm ?? ""}
-                    onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
-                    disabled={!canEditSQM}
-                    placeholder={canEditSQM ? " " : ""}
+                    readOnly
+                    placeholder=""
                   />
                 </td>
+
                 <td>
                   <input type="text" value={row.total ?? ""} readOnly />
                 </td>

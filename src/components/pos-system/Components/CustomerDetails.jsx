@@ -13,8 +13,11 @@ const CustomerDetails = ({
   highlightedIndex,
   handleSearchClick,
   setHighlightedIndex,
-  // ✅ new handler for the Get Price button
+  // ✅ handler for the Get Price button
   handleGetPriceClick,
+  // ✅ NEW: cut mode props
+  cutMode,
+  onToggleCutMode,
 }) => {
   return (
     <div>
@@ -139,7 +142,7 @@ const CustomerDetails = ({
             </ul>
           )}
 
-          {/* Buttons (Search + Get Price) */}
+          {/* Buttons (Search + Cut + Get Price) */}
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
             style={{ marginLeft: "auto" }}
@@ -148,7 +151,16 @@ const CustomerDetails = ({
             Search
           </button>
 
-          {/* ✅ New "Get Price" button beside Search */}
+          {/* ✅ NEW Cut button */}
+          <button
+            className="pos-page-toolbar-button pos-page-red-button"
+            style={{ marginLeft: "8px" }}
+            onClick={onToggleCutMode}
+          >
+            {cutMode ? "Cut (ON)" : "Cut"}
+          </button>
+
+          {/* "Get Price" button beside Cut */}
           <button
             className="pos-page-toolbar-button pos-page-orange-button"
             style={{ marginLeft: "8px" }}

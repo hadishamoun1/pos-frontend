@@ -42,6 +42,7 @@ const POSSystemPage = () => {
 const [invoiceSearch, setInvoiceSearch] = useState("");
 const [requestSearch, setRequestSearch] = useState("");
 const [editingInvoiceType, setEditingInvoiceType] = useState(null);
+const [cutMode, setCutMode] = useState(false);
 const [customerPreview, setCustomerPreview] = useState({
   customerName: "",
   customerAddress: "",
@@ -311,6 +312,7 @@ useEffect(() => {
         setSelectedBatchIds([]);
     setPricingGroups(null);
     setEditingInvoiceType(null);
+    setCutMode(false);
   };
 
 const handleInputChange = (index, field, value) => {
@@ -319,15 +321,28 @@ const handleInputChange = (index, field, value) => {
 
   const row = newData[index];
 
-  // 👉 If this row is "sqm", keep whatever the user types in sqm
+  const price = parseFloat(row.price) || 0;
+
+  // ============ SQM ITEMS ============ //
   if (row.type === "sqm") {
-    const price = parseFloat(row.price) || 0;
-    const sqm = parseFloat(row.sqm) || 0;  
-    row.total = (sqm * price).toFixed(2);
+    const lengthNum = parseFloat(row.length) || 0;
+    const widthNum = parseFloat(row.width) || 0;
+    const sheetNum = parseFloat(row.sheet) || 0;
+
+    if (lengthNum && widthNum && sheetNum) {
+      const sqmPerSheet = (lengthNum / 100) * (widthNum / 100);
+      row.sqm = (sqmPerSheet * sheetNum).toFixed(2);
+    } else {
+      row.sqm = "";
+    }
+
+    const sqmNum = parseFloat(row.sqm) || 0;
+    row.total = (sqmNum * price).toFixed(2);
+
+    newData[index] = row;
     setTableData(newData);
     return;
   }
-
   // For box/sheet: auto-calc sqm
   if (row.length && row.width && row.sheet !== "" && row.sheet !== undefined) {
     row.sqm = calculateSQM(
@@ -341,7 +356,7 @@ const handleInputChange = (index, field, value) => {
     row.sqm = "";
   }
 
-  const price = parseFloat(row.price) || 0;
+ 
   const sqm = parseFloat(row.sqm) || 0;
   row.total = (sqm * price).toFixed(2);
 
@@ -478,28 +493,43 @@ const handleDeleteRow = () => {
     const vatPercentageValue = Number(vat);
     const vatRate = vatPercentageValue / 100;
 
-    const items = tableData.map((item) => {
-      const unitPrice = Number(item.price) || 0;
-      const sqm = Number(item.sqm) || 0;
-const quantity =
-  item.type === "box"  ? Number(item.box)  :
-  item.type === "sheet"? Number(item.sheet):
-  item.type === "sqm"  ? Number(item.sqm)  : 0;
+ const items = tableData.map((row) => {
+  const unitPrice = Number(row.price) || 0;
+  const sqm = Number(row.sqm) || 0;
+
+  // these come from:
+  // - variant (fixed) for box/sheet
+  // - user input for sqm (since we allow editing)
+  const length = row.length !== "" && row.length != null ? Number(row.length) : null;
+  const width  = row.width  !== "" && row.width  != null ? Number(row.width)  : null;
+  const sheetsPerBox =
+      row.type === "box" ? Number(row.sheet) || null : null;
+  const quantity =
+    row.type === "box"
+      ? Number(row.box) || 0
+      : row.type === "sheet"
+      ? Number(row.sheet) || 0
+      : row.type === "sqm"
+      ? Number(row.sqm) || 0   // keep as sqm for now
+      : 0;
+
+  const totalAmount = Number((sqm * unitPrice).toFixed(2));
+  const vatAmount   = Number((totalAmount * vatRate).toFixed(2));
 
 
-      const totalAmount = sqm * unitPrice;
-      const vatAmount = totalAmount * vatRate;
-
-      return {
-        itemVariantId: item.itemVariantId,
-        itemBatchId: item.batchId, // ensure batchId is present
-        sqm,
-        unitPrice,
-        totalAmount: Number(totalAmount.toFixed(2)),
-        vat: Number(vatAmount.toFixed(2)),
-        quantity,
-      };
-    });
+  return {
+    itemVariantId: row.itemVariantId,
+    itemBatchId: row.batchId,
+    length,
+    width,
+    sqm,
+    unitPrice,
+    totalAmount,
+    sheetsPerBox,
+    vat: vatAmount,
+    quantity,
+  };
+});
 
     const totalWithoutVAT = items.reduce(
       (acc, item) => acc + item.totalAmount,
@@ -620,6 +650,10 @@ const quantity =
         sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
         itemVariantId: item.itemVariantId,
          batchId: item.itemBatchId ?? null,
+            // 🔍 ORIGINAL INFO (for tooltip)
+      originalLength: item.originalLength ?? null,
+      originalWidth: item.originalWidth ?? null,
+      originalSheetsPerBox: item.originalSheetsPerBox ?? null,
       };
     })
     .filter(Boolean);
@@ -941,6 +975,8 @@ const handleSaveInvoice = async () => {
             handleSearchClick={handleSearchClick}
              setHighlightedIndex={setHighlightedIndex}  
              handleGetPriceClick={handleGetPriceClick}
+               cutMode={cutMode}
+  onToggleCutMode={() => setCutMode((prev) => !prev)}
           />
         </div>
         <div className="pos-page-inventory-table-container">
@@ -953,6 +989,7 @@ const handleSaveInvoice = async () => {
             isEditable={isEditable}
             selectedRequestId={selectedRequestId}
               onReorder={handleReorder}
+               cutMode={cutMode}   
           />
         </div>
       </div>

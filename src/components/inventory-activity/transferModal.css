@@ -113,8 +113,8 @@
 .transfer-submit-btn:hover {
   background: linear-gradient(135deg, #1e7e34, #155724);
 }
-/* ...keep your existing modal styles... */
 
+/* Details row */
 .transfer-details {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -161,10 +161,8 @@
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: #fff;
 }
-/* transferModal.css */
 
-/* …existing styles… */
-
+/* input styling inside details */
 .transfer-details label input,
 .transfer-details label select {
   padding: 0.5rem;
@@ -176,7 +174,6 @@
 }
 
 .transfer-details label input[type="date"] {
-  /* keep the browser’s native picker styling, but match sizing */
   height: 2.2rem;
 }
 
@@ -186,6 +183,7 @@
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
+
 /* right-aligned “Search” button below details */
 .transfer-search-wrapper {
   display: flex;
@@ -208,6 +206,7 @@
   background: linear-gradient(135deg, #1e7e34, #155d27);
   transform: translateY(-2px);
 }
+
 /* Inputs inside the transfer table */
 .transfer-table-wrapper .transfer-input {
   width: 100%;
@@ -225,8 +224,7 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* Make the Box (4th) and Sheet (5th) columns narrower */
-
+/* Column widths */
 .transfer-table th:nth-child(1),
 .transfer-table td:nth-child(1) {
   width: 15rem;
@@ -239,17 +237,16 @@
 .transfer-table th:nth-child(2),
 .transfer-table td:nth-child(2) {
   width: 12rem;
-  max-width:10rem;
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-
 .transfer-table th:nth-child(3),
 .transfer-table td:nth-child(3) {
   width: 10rem;
-  max-width:10rem;
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -257,7 +254,7 @@
 .transfer-table th:nth-child(4),
 .transfer-table td:nth-child(4) {
   width: 5rem;
-  max-width:5rem;
+  max-width: 5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -266,7 +263,7 @@
 .transfer-table th:nth-child(5),
 .transfer-table td:nth-child(5) {
   width: 5rem;
-  max-width:5rem;
+  max-width: 5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -275,7 +272,7 @@
 .transfer-table th:nth-child(6),
 .transfer-table td:nth-child(6) {
   width: 5rem;
-  max-width:5rem;
+  max-width: 5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -283,7 +280,7 @@
 .transfer-table th:nth-child(7),
 .transfer-table td:nth-child(7) {
   width: 5rem;
-  max-width:5rem;
+  max-width: 5rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -293,12 +290,12 @@
   direction: rtl;
 }
 
-
-
-/* transferModal.css */
+/* small quantity column */
 .transfer-col-small {
   width: 4rem;
 }
+
+/* Save / Reset buttons */
 .transfer-save-btn {
   background: linear-gradient(135deg, #007bff, #0056b3);
   padding: 0.5rem 1rem;
@@ -330,7 +327,7 @@
   transform: translateY(-1px);
 }
 
-/* New: Reset/Save row */
+/* Reset/Save row */
 .detail-actions {
   display: flex;
   justify-content: flex-end;
@@ -338,4 +335,35 @@
   padding: 0 1rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+/* ===== FJ Target Box column ===== */
+
+.target-box-col {
+  min-width: 14rem;
+  max-width: 18rem;
+}
+
+.transfer-box-select-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ffc107, #ff9800);
+  color: #222;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+}
+
+.transfer-box-select-btn:hover {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+}
+
+.transfer-box-label {
+  font-size: 0.75rem;
+  color: #333;
+  line-height: 1.2;
+  max-width: 16rem;
+  margin: 0 auto;
 }

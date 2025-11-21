@@ -5,14 +5,13 @@ import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
 
-
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
   "JF",
   "FJ",
-  "SL",
-  "LS",
+  "BOSTS",
+  "STBOS",
   "Breakage",
   "Adjustment +",
   "Adjustment -",
@@ -30,6 +29,11 @@ export default function TransferModal({ isOpen, onClose }) {
   });
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // ✅ Extra modal for FJ target box selection
+  const [boxSearchOpen, setBoxSearchOpen] = useState(false);
+  const [boxTargetRowIndex, setBoxTargetRowIndex] = useState(null);
+
   const [notif, setNotif] = useState({
     open: false,
     type: "",
@@ -57,6 +61,7 @@ export default function TransferModal({ isOpen, onClose }) {
   const handleSelectItems = (items) => {
     const mapped = items.map((i) => ({
       itemBatchId: i.batchId,
+      itemVariantId: i.itemVariantId, // keep in case needed
       name: `${i.thickness} ملم ${i.itemName}`,
       origin: i.origin,
       type: i.itemVariantType,
@@ -69,6 +74,10 @@ export default function TransferModal({ isOpen, onClose }) {
       quantity: 0,
       sqm: 0,
       price: 0,
+      // FJ target box info
+      toItemVariantId: null,
+      toBoxLabel: "",
+      toSheetsPerBox: null,
     }));
     setRows((prev) => [...prev, ...mapped]);
     setSearchOpen(false);
@@ -93,12 +102,24 @@ export default function TransferModal({ isOpen, onClose }) {
       const qty = parseFloat(row.quantity) || 0;
 
       if (field === "quantity") {
-        if (row.type === "box") {
-          row.sqm = (m2 * row.sheetsPerBox * qty).toFixed(2);
-        } else if (row.type === "sheet") {
-          row.sqm = (m2 * qty).toFixed(2);
-        } else if (row.type === "sqm") {
-          row.sqm = qty.toFixed(2);
+        // ✅ Special case for FJ: quantity = number of boxes,
+        // and sqm is based on chosen BOX's sheetsPerBox
+        if (details.location === "FJ" && row.type === "sheet") {
+          if (row.toSheetsPerBox) {
+            row.sqm = (m2 * row.toSheetsPerBox * qty).toFixed(2);
+          } else {
+            // user didn't choose a box yet
+            row.sqm = "";
+          }
+        } else {
+          // normal behavior for all other locations
+          if (row.type === "box") {
+            row.sqm = (m2 * row.sheetsPerBox * qty).toFixed(2);
+          } else if (row.type === "sheet") {
+            row.sqm = (m2 * qty).toFixed(2);
+          } else if (row.type === "sqm") {
+            row.sqm = qty.toFixed(2);
+          }
         }
       }
 
@@ -111,15 +132,106 @@ export default function TransferModal({ isOpen, onClose }) {
     if (notif.type === "success") onClose();
   };
 
+  // 🔹 FJ: open the box-picker for a specific row
+  const handleOpenBoxPicker = (rowIndex) => {
+    setBoxTargetRowIndex(rowIndex);
+    setBoxSearchOpen(true);
+  };
+
+  // 🔹 FJ: when a box is chosen for a row
+  const handleSelectBoxForRow = (items) => {
+    const selected = items && items[0];
+    if (!selected || boxTargetRowIndex == null) {
+      setBoxSearchOpen(false);
+      return;
+    }
+
+    setRows((prev) => {
+      const copy = [...prev];
+      const row = { ...copy[boxTargetRowIndex] };
+
+      const len = parseFloat(row.length) || 0;
+      const wid = parseFloat(row.width) || 0;
+      const m2 = (len / 100) * (wid / 100);
+      const qty = parseFloat(row.quantity) || 0;
+
+      const sheetsPerBox = selected.sheetsPerBox || 0;
+
+      row.toItemVariantId = selected.itemVariantId;
+      row.toSheetsPerBox = sheetsPerBox;
+
+      row.toBoxLabel = `${selected.thickness} ملم ${selected.itemName} - ${Math.floor(
+        selected.length || 0
+      )}x${Math.floor(selected.width || 0)}-${sheetsPerBox}`;
+
+      // recompute sqm if quantity already set
+      if (details.location === "FJ" && row.type === "sheet" && qty > 0) {
+        row.sqm = (m2 * sheetsPerBox * qty).toFixed(2);
+      }
+
+      copy[boxTargetRowIndex] = row;
+      return copy;
+    });
+
+    setBoxSearchOpen(false);
+    setBoxTargetRowIndex(null);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payloadItems = rows.map((r) => ({
-        itemBatchId: r.itemBatchId,
-        quantity: Number(r.quantity),
-        sqm: Number(r.sqm),
-        price: Number(r.price) || 0,
-      }));
+      // ✅ Extra checks for FJ
+      if (details.location === "FJ") {
+        const withQty = rows.filter((r) => Number(r.quantity) > 0);
+
+        // only sheet rows allowed
+        const badTypes = withQty.filter((r) => r.type !== "sheet");
+        if (badTypes.length > 0) {
+          setNotif({
+            open: true,
+            type: "error",
+            message: "FJ transfers only accept sheet items.",
+          });
+          setSaving(false);
+          return;
+        }
+
+        // every row with quantity must have a chosen target box
+        const missingBox = withQty.filter((r) => !r.toItemVariantId);
+        if (missingBox.length > 0) {
+          setNotif({
+            open: true,
+            type: "error",
+            message:
+              "Please choose the target box item for all FJ rows that have quantity.",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      const payloadItems = rows
+        .filter((r) => Number(r.quantity) > 0)
+        .map((r) => ({
+          itemBatchId: r.itemBatchId,
+          quantity: Number(r.quantity),
+          sqm: Number(r.sqm) || 0,
+          price: Number(r.price) || 0,
+          // send target box variant for FJ
+          ...(details.location === "FJ" && r.toItemVariantId
+            ? { toItemVariantId: r.toItemVariantId }
+            : {}),
+        }));
+
+      if (payloadItems.length === 0) {
+        setNotif({
+          open: true,
+          type: "error",
+          message: "No lines with quantity entered.",
+        });
+        setSaving(false);
+        return;
+      }
 
       await axios.post(`${baseUrl}/transfers`, {
         date: details.date,
@@ -281,6 +393,10 @@ export default function TransferModal({ isOpen, onClose }) {
                       <th>Dimension</th>
                       <th>Origin</th>
                       <th>Type</th>
+                      {/* extra col for FJ */}
+                      {details.location === "FJ" && (
+                        <th className="target-box-col">Target Box</th>
+                      )}
                       <th>Quantity</th>
                       <th>SQM</th>
                       <th>Condition</th>
@@ -292,7 +408,7 @@ export default function TransferModal({ isOpen, onClose }) {
                     {rows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={details.location === "FJ" ? 10 : 9}
                           style={{ textAlign: "center", color: "#666" }}
                         >
                           No items added
@@ -329,6 +445,26 @@ export default function TransferModal({ isOpen, onClose }) {
                               readOnly
                             />
                           </td>
+
+                          {/* FJ target box column */}
+                          {details.location === "FJ" && (
+                            <td className="target-box-col">
+                              <button
+                                type="button"
+                                className="transfer-box-select-btn"
+                                onClick={() => handleOpenBoxPicker(i)}
+                                disabled={saving || r.type !== "sheet"}
+                              >
+                                {r.toBoxLabel ? "Change Box" : "Choose Box"}
+                              </button>
+                              {r.toBoxLabel && (
+                                <div className="transfer-box-label">
+                                  {r.toBoxLabel}
+                                </div>
+                              )}
+                            </td>
+                          )}
+
                           <td>
                             <input
                               type="number"
@@ -381,11 +517,21 @@ export default function TransferModal({ isOpen, onClose }) {
             </div>
           )}
 
+          {/* main search (batches to transfer FROM) */}
           <TransferSearchModal
             isOpen={searchOpen}
             onClose={() => setSearchOpen(false)}
             onSelect={handleSelectItems}
             existingKeys={new Set(rows.map((r) => `${r.itemBatchId}`))}
+          />
+
+          {/* FJ box picker (which box to transfer TO) */}
+          <TransferSearchModal
+            isOpen={boxSearchOpen}
+            onClose={() => setBoxSearchOpen(false)}
+            onSelect={handleSelectBoxForRow}
+            existingKeys={new Set()} // allow any
+            singleSelect={true}
           />
         </div>
       </div>

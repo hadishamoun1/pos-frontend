@@ -679,6 +679,80 @@ input:disabled {
   background: #eff6ff;           /* blue-50 */
 }
 
+/* ---------- Tooltip wrapper ---------- */
+.pos-tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Only show tooltip if .has-tooltip is present AND data-tooltip has content */
+.pos-tooltip-wrapper.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%) translateY(0);
+  margin-bottom: 4px;
+
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+
+  background: rgba(15, 23, 42, 0.92); /* dark slate */
+  color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.35);
+
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+}
+
+.pos-tooltip-wrapper.has-tooltip::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin-bottom: -2px;
+
+  border-width: 4px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.92) transparent transparent transparent;
+
+  opacity: 0;
+  pointer-events: none;
+  z-index: 29;
+
+  transition: opacity 0.15s ease-out;
+}
+
+/* On hover → show tooltip */
+.pos-tooltip-wrapper.has-tooltip:hover::after,
+.pos-tooltip-wrapper.has-tooltip:hover::before {
+  opacity: 1;
+}
+
+.pos-tooltip-wrapper.has-tooltip:hover::after {
+  transform: translateX(-50%) translateY(20px);
+}
+
+/* Optional: subtle highlight for rows that have cuts */
+.row-has-cut input[type="number"] {
+  border-color: #f97316; /* soft orange edge */
+}
+.row-has-cut td:nth-child(4),
+.row-has-cut td:nth-child(5) {
+  background: rgba(249, 115, 22, 0.04);
+}
+
+
 
 
 /* Smaller screens → shrink */
@@ -959,6 +1033,8 @@ input:disabled {
   .pos-page-inventory-table-container::-webkit-scrollbar-thumb {
     border-radius: 6px;
   }
+
+  
 }
 
 /* 1920px+ — widen cap a bit, keep text line-length sane */

@@ -18,7 +18,7 @@ import PaymentVoucherTable from "./components/payments/payments";
 import JournalVoucherPage from "./components/vouchers/vouchers";
 import InventoryActivityPage from "./components/inventory-activity/inventory-activity";
 import ReportsPage from "./components/pos-system/Reports";
-
+import SqmPiecesPage from "./components/sqmPiece/sqmPiece"
 // Import the BlinkingRequestsProvider to manage the blinking state
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
 import SettingsPage from "./components/settings/settings";
@@ -53,6 +53,7 @@ function App() {
             <Route path="/transactions" element={<JournalVoucherPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/sqm" element={<SqmPiecesPage />} />
             <Route
               path="/inventory-activity"
               element={<InventoryActivityPage />}

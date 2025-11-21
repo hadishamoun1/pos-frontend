@@ -1,7 +1,7 @@
 // src/components/settings/ItemBatchesSettings.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import NotificationModal from "../recievables/NotificationModal"; 
-import './styles/ItemBatchesSettings.css'
+import "./styles/ItemBatchesSettings.css";
 
 const rawBase = process.env.REACT_APP_API_BASE_URL || "";
 const baseUrl = rawBase.replace(/\/+$/, "");
@@ -21,37 +21,92 @@ async function postJSON(path, body) {
   return res.json();
 }
 
-/** Flatten /items/v1/filtered-items (items → thicknesses → variants) into rows */
+/**
+ * Flatten both possible shapes:
+ *
+ * 1) OLD:
+ *    items[] → thicknesses[] → variants[]
+ *    (what we handled originally)
+ *
+ * 2) NEW (your current response):
+ *    data[] = {
+ *      realDescription: {...},
+ *      variants: [
+ *        { variantId, length, width, sheetsPerBox, origin, thicknessId,
+ *          thickness, itemId, itemName, type }
+ *      ]
+ *    }
+ */
 function flattenItemTree(items) {
   const rows = [];
+
   for (const it of items ?? []) {
-    for (const th of it.thicknesses ?? []) {
-      for (const v of th.variants ?? []) {
+    // ───────── Case 1: NEW shape (realDescription + variants[]) ─────────
+    if (Array.isArray(it.variants)) {
+      const real = it.realDescription ?? null;
+
+      for (const v of it.variants) {
         rows.push({
-          variantId: Number(v.id),
-          itemId: Number(it.id),
-          itemName: String(it.itemName),
-          type: String(it.type),
-          thicknessId: Number(th.id),
-          thickness: Number(th.thickness),
+          variantId: Number(v.variantId ?? v.id),
+          itemId: Number(v.itemId),
+          itemName: String(v.itemName),
+          type: String(v.type),
+
+          thicknessId: Number(v.thicknessId),
+          thickness: Number(v.thickness),
+
           length: Number(v.length ?? 0),
           width: Number(v.width ?? 0),
           sheetsPerBox: Number(v.sheetsPerBox ?? 0),
           origin: v.origin ?? "",
-          description: v.itemNameDescription
+
+          // Description from realDescription group
+          description: real
             ? {
-                id: v.itemNameDescription.id ?? null,
-                itemNumber: v.itemNameDescription.itemNumber ?? null,
-                categoryName: v.itemNameDescription.categoryName ?? null,
-                subCategory: v.itemNameDescription.subCategory ?? null,
-                colorName: v.itemNameDescription.colorName ?? null,
-                designName: v.itemNameDescription.designName ?? null,
+                id: real.id ?? null,
+                itemNumber: real.itemNumber ?? null,
+                categoryName: real.categoryName ?? null,
+                subCategory: real.subCategory ?? null,
+                colorName: real.colorName ?? null,
+                designName: real.designName ?? null,
               }
             : null,
         });
       }
+      continue; // go to next "it"
+    }
+
+    // ───────── Case 2: OLD shape (items → thicknesses → variants) ─────────
+    if (Array.isArray(it.thicknesses)) {
+      for (const th of it.thicknesses ?? []) {
+        for (const v of th.variants ?? []) {
+          rows.push({
+            variantId: Number(v.id),
+            itemId: Number(it.id),
+            itemName: String(it.itemName),
+            type: String(it.type),
+            thicknessId: Number(th.id),
+            thickness: Number(th.thickness),
+            length: Number(v.length ?? 0),
+            width: Number(v.width ?? 0),
+            sheetsPerBox: Number(v.sheetsPerBox ?? 0),
+            origin: v.origin ?? "",
+            description: v.itemNameDescription
+              ? {
+                  id: v.itemNameDescription.id ?? null,
+                  itemNumber: v.itemNameDescription.itemNumber ?? null,
+                  categoryName: v.itemNameDescription.categoryName ?? null,
+                  subCategory: v.itemNameDescription.subCategory ?? null,
+                  colorName: v.itemNameDescription.colorName ?? null,
+                  designName: v.itemNameDescription.designName ?? null,
+                }
+              : null,
+          });
+        }
+      }
     }
   }
+
   return rows;
 }
 
@@ -67,7 +122,11 @@ export default function ItemBatchesSettings() {
   const [force, setForce] = useState(false);
 
   // success/error modal
-  const [modal, setModal] = useState({ open: false, type: "success", message: "" });
+  const [modal, setModal] = useState({
+    open: false,
+    type: "success",
+    message: "",
+  });
 
   // fetch one page
   const fetchPage = async (p) => {
@@ -76,7 +135,10 @@ export default function ItemBatchesSettings() {
       const data = await getJSON(
         `/items/v1/filtered-items?page=${p}&limit=${limit}&includeEmpty=false`
       );
+
+      // NEW API: list is inside data.data
       const rows = flattenItemTree(data?.data || []);
+
       setPages((old) => {
         const next = new Map(old);
         next.set(p, rows);
@@ -134,7 +196,6 @@ export default function ItemBatchesSettings() {
 
   // helpers: build a friendly success message
   const buildSuccessMessage = (result) => {
-    // Expecting shapes like: { created, skipped, results: [...] } from your service
     if (!result || typeof result !== "object") return "Done.";
     const created = Number(result.created ?? 0);
     const skipped = Number(result.skipped ?? 0);
@@ -144,7 +205,9 @@ export default function ItemBatchesSettings() {
     if (Number.isFinite(created)) parts.push(`Created: ${created}`);
     if (Number.isFinite(skipped)) parts.push(`Skipped: ${skipped}`);
     if (!parts.length) return "Done.";
-    return total ? `${parts.join(" · ")} (Total processed: ${total})` : parts.join(" · ");
+    return total
+      ? `${parts.join(" · ")} (Total processed: ${total})`
+      : parts.join(" · ");
   };
 
   // actions
@@ -155,12 +218,18 @@ export default function ItemBatchesSettings() {
       const payload = { variantIds: Array.from(selected.values()) };
       if (force) payload.force = true;
       const data = await postJSON(`/items/batches/seed-clean`, payload);
-      setModal({ open: true, type: "success", message: buildSuccessMessage(data) });
+      setModal({
+        open: true,
+        type: "success",
+        message: buildSuccessMessage(data),
+      });
     } catch (e) {
       setModal({
         open: true,
         type: "error",
-        message: e?.message ? `Operation failed: ${e.message}` : "Operation failed.",
+        message: e?.message
+          ? `Operation failed: ${e.message}`
+          : "Operation failed.",
       });
     } finally {
       setLoading(false);
@@ -172,12 +241,18 @@ export default function ItemBatchesSettings() {
     try {
       const payload = force ? { all: true, force: true } : { all: true };
       const data = await postJSON(`/items/batches/seed-clean`, payload);
-      setModal({ open: true, type: "success", message: buildSuccessMessage(data) });
+      setModal({
+        open: true,
+        type: "success",
+        message: buildSuccessMessage(data),
+      });
     } catch (e) {
       setModal({
         open: true,
         type: "error",
-        message: e?.message ? `Operation failed: ${e.message}` : "Operation failed.",
+        message: e?.message
+          ? `Operation failed: ${e.message}`
+          : "Operation failed.",
       });
     } finally {
       setLoading(false);
@@ -272,7 +347,7 @@ export default function ItemBatchesSettings() {
             <thead>
               <tr>
                 <th style={{ width: 56 }}>Pick</th>
-                <th>Name (Th)</th>{/* merged column: 5.5ملم ابيض */}
+                <th>Name (Th)</th>
                 <th>Type</th>
                 <th>Dims (cm)</th>
                 <th>SPB</th>
@@ -321,7 +396,6 @@ export default function ItemBatchesSettings() {
                       />
                     </td>
 
-                    {/* RTL-friendly thickness + name */}
                     <td className="items-create-batches__name-rtl">
                       {nameWithTh}
                     </td>
@@ -347,10 +421,9 @@ export default function ItemBatchesSettings() {
         </div>
       </div>
 
-      {/* Notification Modal */}
       {modal.open && (
         <NotificationModal
-          type={modal.type}                  // "success" | "error" | "warning"
+          type={modal.type}
           message={modal.message}
           onClose={() => setModal((m) => ({ ...m, open: false }))}
           onConfirm={() => setModal((m) => ({ ...m, open: false }))}
