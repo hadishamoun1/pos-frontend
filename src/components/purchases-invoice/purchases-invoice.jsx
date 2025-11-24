@@ -576,22 +576,24 @@ const PurchasesInvoicePage = () => {
   const calculatePriceCFR = (item) => {
     if (status !== "Recieved") {
       const poAmount = itemsTotalAmount || 0;
-      console.log(itemsTotalAmount);
       const fob = parseFloat(item.unitPrice || 0);
 
       const ccfr = (shippingCostInput / poAmount + 1) * fob;
       return ccfr;
     }
   };
+  
 
   // 2️⃣ Final cost per item:
   const calculateFinalCost = (item) => {
     if (status !== "Recieved") {
       const cfr = calculatePriceCFR(item);
-
-      return cfr * (potentialCost / 100 + 1);
+      const fc = cfr * (potentialCost / 100 + 1);
+      console.log(fc);
+      return fc
     }
   };
+  
 
   const calculatePriceCFROFR = (item) => {
     if (
@@ -658,6 +660,7 @@ const PurchasesInvoicePage = () => {
     return (shippingCostComputed / poAmount + 1) * fob;
   };
 
+
   // 4️⃣ Compute your cost percentage once per render:
   const getCostPercentage = () => {
     const base =
@@ -676,6 +679,7 @@ const PurchasesInvoicePage = () => {
     const cp = getCostPercentage();
     return cfr * (1 + cp);
   };
+
 
   const realCalculatePriceCFROFR = (item) => {
     const poAmount = totalOfferAmount || 0;
