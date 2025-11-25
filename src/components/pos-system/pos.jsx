@@ -101,42 +101,63 @@ const handleSelectItems = (selectedItems) => {
     const sheetsPerBox = parseFloat(item.sheetsPerBox);
     const quantity = 1;
 
+    const isSqmPiece = type === "sqm";
+
     let sqm = "";
-    if (length && width) {
+    let box = "";
+    let sheet = "";
+
+    if (isSqmPiece) {
+      // SQM piece: user will type how many pieces in "sheet"
+      // sqm will be calculated in handleInputChange from L/W * sheet
+      sqm = "";
+      box = "";
+      sheet = "";
+    } else if (length && width) {
       const sqmPerSheet = (length / 100) * (width / 100);
       if (type === "box") {
         sqm = (sqmPerSheet * sheetsPerBox * quantity).toFixed(2);
+        box = quantity;
+        sheet = sheetsPerBox;
       } else if (type === "sheet") {
         sqm = (sqmPerSheet * quantity).toFixed(2);
-      } else if (type === "sqm") {
-        sqm = quantity.toFixed(2);
+        sheet = quantity;
       }
     }
 
     return {
       itemVariantId: item.itemVariantId,
-      batchId: item.batchId,          
+      batchId: item.batchId, // ✅ this will become itemBatchId
+
       origin: item.origin || "",
-      item: `${parseFloat(item.thickness)} ملم ${item.itemName}` || "",
-      type: item.type || "",
+      item:
+        (item.thickness != null
+          ? `${parseFloat(item.thickness)} ملم `
+          : "") + (item.itemName || ""),
+
+      type: type || "",
       length: item.length || "",
       width: item.width || "",
-      box: type === "box" ? quantity : "",
-      sheet: type === "sheet" ? quantity : type === "box" ? sheetsPerBox : "",
+      box,
+      sheet,
       quantity,
       sqm,
       price: "",
       total: "0.00",
+
+      // 🔹 for SQM pieces: extra info
+      sqmPieceId: isSqmPiece ? item.sqmPieceId ?? item.id ?? null : null,
+      maxPieces: isSqmPiece ? item.piecesRemaining ?? null : null,
     };
   });
 
   setTableData((prev) => {
- 
-    const byId = new Map(prev.map(r => [r.batchId, r]));
-    newRows.forEach(r => byId.set(r.batchId, r)); 
+    const byId = new Map(prev.map((r) => [r.batchId, r]));
+    newRows.forEach((r) => byId.set(r.batchId, r));
     return Array.from(byId.values());
   });
 };
+
 
   const handleSelectRequest = async (requestId) => {
     console.log("Fetching request details for ID:", requestId);
@@ -510,7 +531,7 @@ const handleDeleteRow = () => {
       : row.type === "sheet"
       ? Number(row.sheet) || 0
       : row.type === "sqm"
-      ? Number(row.sqm) || 0   // keep as sqm for now
+      ? Number(row.sheet) || 0   // keep as sqm for now
       : 0;
 
   const totalAmount = Number((sqm * unitPrice).toFixed(2));
@@ -528,6 +549,7 @@ const handleDeleteRow = () => {
     sheetsPerBox,
     vat: vatAmount,
     quantity,
+    sqmPieceId: row.sqmPieceId ?? null,
   };
 });
 
@@ -550,6 +572,7 @@ const handleDeleteRow = () => {
       currencyRate: parseFloat(currencyRate) || 1,
       vatPercentage: vatPercentageValue,
       items,
+     
     };
 
     console.log("📤 Invoice Payload:", payload);
@@ -578,13 +601,30 @@ const handleDeleteRow = () => {
     }
   };
 
-  const handleSelectInvoice = (invoice) => {
-  console.log("Selected Invoice:", invoice);
-  if (!invoice) return;
+const handleSelectInvoice = async (invoiceSummary) => {
+  console.log("Selected Invoice:", invoiceSummary);
+  if (!invoiceSummary) return;
 
-  setSelectedInvoiceId(invoice.invoiceId || null);
+  // Resolve the real invoice id
+  const invId = invoiceSummary.invoiceId || invoiceSummary.id;
+  if (!invId) {
+    console.error("❌ No invoice id in selected invoice summary:", invoiceSummary);
+    return;
+  }
+
+  setSelectedInvoiceId(invId);
   setSelectedRequestId(null);
-  setEditingInvoiceType(invoice.invoiceType || 'S'); 
+  setEditingInvoiceType(invoiceSummary.invoiceType || "S");
+
+  // 🔹 Fetch the FULL invoice (so we get sqmpieceId, original sizes, etc.)
+  let invoice = invoiceSummary;
+  try {
+    const res = await axios.get(`${baseUrl}/invoices/${invId}`);
+    invoice = res.data;
+    console.log("📥 Full invoice from API:", invoice);
+  } catch (err) {
+    console.error("❌ Failed to fetch full invoice, using summary only:", err);
+  }
 
   const vatPercentage = invoice.vatPercentage
     ? parseFloat(invoice.vatPercentage).toString()
@@ -594,14 +634,13 @@ const handleDeleteRow = () => {
     ? parseFloat(invoice.currencyRate).toString()
     : "89000";
 
-  // 🔹 Fill regular POS fields
+  // 🔹 Fill customer / header fields
   setCustomerInput(invoice.customerName);
   setSelectedCustomerId(invoice.customerId);
   setSelectedCustomerName(invoice.customerName || "");
   setCurrencyRate(currencyRateValue);
   setIsEditable(false);
   setVat(vatPercentage);
-
 
   setCustomerPreview({
     customerName:
@@ -630,40 +669,65 @@ const handleDeleteRow = () => {
       "USD",
   });
 
-  // Build items table rows for center grid
+  // 🔹 Build items table rows
   const updatedTableData = (invoice.items || [])
     .map((item) => {
       if (!item.itemVariantId || !item.itemName) {
         console.warn("Skipping invalid item:", item);
         return null;
       }
+
+      // IMPORTANT: API returns `sqmpieceId`
+      const sqmPieceId =
+        item.sqmPieceId ??           // if you later rename in API
+        item.sqmpieceId ??           // current key from your DTO
+        (item.sqmPiece && item.sqmPiece.id) ??
+        null;
+
+      const type = item.itemType || (sqmPieceId ? "sqm" : "");
+
       return {
         origin: item.origin || "",
         item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
-        type: item.itemType || "",
+        type,
+
         length: item.length || "",
         width: item.width || "",
         sqm: item.sqm || "",
         price: item.unitPrice || "",
         total: item.totalAmount || "0.00",
-        box: item.itemType === "box" ? item.quantity : "",
-        sheet: item.itemType === "sheet" ? item.quantity : item.sheetsPerBox,
+
+        box: type === "box" ? item.quantity : "",
+        sheet:
+          type === "sheet" || type === "sqm"
+            ? item.quantity            // pieces count for sheet/sqm
+            : item.sheetsPerBox,       // for box rows, sheet column shows sheetsPerBox
+
         itemVariantId: item.itemVariantId,
-         batchId: item.itemBatchId ?? null,
-            // 🔍 ORIGINAL INFO (for tooltip)
-      originalLength: item.originalLength ?? null,
-      originalWidth: item.originalWidth ?? null,
-      originalSheetsPerBox: item.originalSheetsPerBox ?? null,
+        batchId: item.itemBatchId ?? (item.batch && item.batch.id) ?? null,
+
+        // original info for tooltip / restoring
+        originalLength: item.originalLength ?? null,
+        originalWidth: item.originalWidth ?? null,
+        originalSheetsPerBox: item.originalSheetsPerBox ?? null,
+
+        invoiceItemId: item.invoiceItemId ?? item.id,
+
+        // 🔥 This is what update payload will use:
+        sqmPieceId: sqmPieceId,
+
+        sheetsPerBox: item.sheetsPerBox ?? null,
       };
     })
     .filter(Boolean);
 
-  console.log("Updated Table Data:", updatedTableData);
+  console.log("✅ Updated Table Data (with sqmPieceId):", updatedTableData);
   setTableData(updatedTableData);
 
-  // Keep whole invoice for the modal (numbers, items, etc.)
+  // For preview modal
   setInvoiceData(invoice);
 };
+
 
 
   useEffect(() => {
@@ -745,6 +809,8 @@ const handleDeleteRow = () => {
   const handleEditInvoice = async () => {
     setIsEditable(true);
   };
+
+
 const handleSaveInvoice = async () => {
   if (!selectedInvoiceId) {
     console.error("Invoice ID is missing.");
@@ -753,53 +819,96 @@ const handleSaveInvoice = async () => {
 
   setLoading(true);
 
-  // Build line items with required IDs and numbers
+  const vatPct = Number(vat) || 0;
+  const vatRate = vatPct / 100;
+
   const formattedItems = tableData.map((row, idx) => {
     const unitPrice = Number(row.price) || 0;
     const sqm = Number(row.sqm) || 0;
 
-    // quantity by type
+    const type = row.type;
+
+    const length =
+      row.length !== "" && row.length != null ? Number(row.length) : null;
+    const width =
+      row.width !== "" && row.width != null ? Number(row.width) : null;
+
+    // how many sheets per box to store
+    let sheetsPerBox = null;
+    if (type === "box") {
+      // from current sheet input or original info
+      sheetsPerBox =
+        Number(row.sheet) ||
+        Number(row.sheetsPerBox) ||
+        Number(row.originalSheetsPerBox) ||
+        null;
+    } else if (type === "sheet") {
+      sheetsPerBox =
+        Number(row.sheetsPerBox) ||
+        Number(row.originalSheetsPerBox) ||
+        null;
+    }
+
     const quantity =
-      row.type === "box"  ? Number(row.box)  :
-      row.type === "sheet"? Number(row.sheet):
-      row.type === "sqm"  ? Number(row.sqm)  : 0;
+      type === "box"
+        ? Number(row.box) || 0
+        : type === "sheet"
+        ? Number(row.sheet) || 0
+        : type === "sqm"
+        ? Number(row.sheet) || 0 // count of pieces
+        : 0;
 
     const totalAmount = Number((sqm * unitPrice).toFixed(2));
-    const vatNum = Number(row.vat) || 0;
+    const vatAmount = Number((totalAmount * vatRate).toFixed(2));
 
     if (row.batchId == null) {
       console.warn(`Row ${idx} missing batchId`, row);
     }
 
     return {
-      // existing line id (if present)
-      id: row.invoiceItemId ?? undefined,
-      // REQUIRED for backend math
+      // 🔹 existing line id so backend can treat as "changed", not "new"
+      id: row.invoiceItemId ?? row.id ?? undefined,
+
       itemBatchId: Number(row.batchId),
       itemVariantId: Number(row.itemVariantId),
+
+      // 🔹 NEW: keep geometry
+      length,
+      width,
+      sheetsPerBox,
+
       sqm,
       unitPrice,
       totalAmount,
-      vat: vatNum,
+      vat: vatAmount,
       quantity,
-       invoiceId: Number(selectedInvoiceId),
+      invoiceId: Number(selectedInvoiceId),
+
+      // 🔹 NEW: preserve sqm piece link
+      sqmPieceId:
+        row.sqmPieceId ??
+        (row.sqmPiece && row.sqmPiece.id) ??
+        null,
     };
   });
 
-  // Header totals (like create payload)
-  const vatPct = Number(vat) || 0;
-  const vatRate = vatPct / 100;
-  const totalWithoutVAT = formattedItems.reduce((a, it) => a + it.totalAmount, 0);
-  const totalVAT = formattedItems.reduce((a, it) => a + (it.totalAmount * vatRate), 0);
+  // Header totals (recomputed from formatted items)
+  const totalWithoutVAT = formattedItems.reduce(
+    (a, it) => a + it.totalAmount,
+    0
+  );
+  const totalVAT = formattedItems.reduce(
+    (a, it) => a + it.vat,
+    0
+  );
   const grandTotal = totalWithoutVAT + totalVAT;
 
-  // ✅ Use the locked type if we’re editing an invoice; otherwise fall back
   const typeToSave = editingInvoiceType ?? selectedInvoiceType;
 
   const invoiceData = {
     id: selectedInvoiceId,
     customerId: selectedCustomerId,
-    invoiceType: typeToSave,                // 'S' | 'G' | 'RVR' (never "Both")
+    invoiceType: typeToSave, // 'S' | 'G' | 'RVR'
     date,
     currencyRate: Number(currencyRate) || 1,
     vatPercentage: vatPct,
@@ -828,6 +937,7 @@ const handleSaveInvoice = async () => {
     setLoading(false);
   }
 };
+
 
 
   const handleCreateRequest = async () => {

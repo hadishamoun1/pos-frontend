@@ -293,10 +293,11 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
           const amount = it.totalAmount ?? (Number(it.unitPrice || 0) * Number(it.sqm || 0));
           const isBox = it.itemType === "box";
           const isSheet = it.itemType === "sheet";
+          const isSqmPiece = it.itemType === "sqm"
           const hasThickness = it.thickness !== undefined && it.thickness !== null && String(it.thickness) !== "";
           const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
           const sheetsPerBox = it.sheetsPerBox ?? it.sheets_per_box ?? it.sheetsPerCarton ?? it.sheets_per_carton;
-          const sheetsCell = isSheet ? fmtOpt(it.quantity) : isBox ? fmtOpt(sheetsPerBox) : "";
+          const sheetsCell = isSheet || isSqmPiece ? fmtOpt(it.quantity) : isBox ? fmtOpt(sheetsPerBox) : "";
           return `
             <tr>
               <td>${fmtSmart(amount)}</td>

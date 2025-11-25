@@ -3,13 +3,15 @@ import React, { useEffect, useRef, useState } from "react";
 import "./searchModal.css";
 import StockTab from "./StockTab";
 import AllTab from "./AllTab";
+import SqmPiecesTab from "./SqmPiecesTab";
 
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
-  const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all"
+  const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all" | "sqm"
   const [selectedCount, setSelectedCount] = useState(0);
 
   const stockRef = useRef(null);
   const allRef = useRef(null);
+  const sqmRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -26,13 +28,15 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       selectedData = stockRef.current.collectSelected();
     } else if (activeTab === "all" && allRef.current) {
       selectedData = allRef.current.collectSelected();
+    } else if (activeTab === "sqm" && sqmRef.current) {
+      selectedData = sqmRef.current.collectSelected();
     }
 
     onSelectItems(selectedData);
     onClose();
   };
 
-  const TabButton = ({ id, label, isActive, onClick }) => (
+  const TabButton = ({ id, label, isActive }) => (
     <button
       role="tab"
       aria-selected={isActive}
@@ -51,7 +55,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   return (
     <div className="search-modal-overlay" onClick={onClose}>
-      <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="search-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
           <div className="search-modal-buttons">
@@ -69,16 +76,21 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
         </div>
 
         {/* Tabs */}
-        <div className="search-tabs" role="tablist" aria-label="Search Results Tabs">
+        <div
+          className="search-tabs"
+          role="tablist"
+          aria-label="Search Results Tabs"
+        >
           <TabButton
             id="stock"
             label="Stock Items"
             isActive={activeTab === "stock"}
           />
+          <TabButton id="all" label="All" isActive={activeTab === "all"} />
           <TabButton
-            id="all"
-            label="All"
-            isActive={activeTab === "all"}
+            id="sqm"
+            label="SQM Pieces"
+            isActive={activeTab === "sqm"}
           />
         </div>
 
@@ -97,6 +109,16 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
             <AllTab
               ref={allRef}
               isOpen={isOpen && activeTab === "all"}
+              onSelectionCountChange={setSelectedCount}
+            />
+          </div>
+        )}
+
+        {activeTab === "sqm" && (
+          <div id="sqm-panel" role="tabpanel" aria-labelledby="sqm-tab">
+            <SqmPiecesTab
+              ref={sqmRef}
+              isOpen={isOpen && activeTab === "sqm"}
               onSelectionCountChange={setSelectedCount}
             />
           </div>
