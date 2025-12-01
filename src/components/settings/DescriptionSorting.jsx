@@ -51,7 +51,8 @@ export default function DescriptionSettings() {
     setLoading(true);
     setErr("");
     try {
-      const url = new URL(`${API_BASE}/items/real-descriptions`);
+const url = new URL(`/items/real-descriptions`, window.location.origin);
+if (API_BASE) url.pathname = `${API_BASE.replace(/\/+$/, "")}${url.pathname}`;
       if (q) url.searchParams.set("q", q);
       if (withCounts) url.searchParams.set("withCounts", "1");
 
