@@ -149,7 +149,9 @@ const url = apiUrl("/items/variants/search");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchVariants(true), 250);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantTokens, baseUrl]);
+  }, [variantTokens, RAW_API_BASE]);
+
+
 
   // Description search (only when in "select" tab)
   const fetchDescriptions = async () => {

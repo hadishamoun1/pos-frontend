@@ -71,7 +71,7 @@ const url = apiUrl("/items/descriptions/search");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchList(true), 250);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, query, baseUrl]);
+  }, [mode, query, RAW_API_BASE]);
 
   // Load selection into form
   const pickRow = (row) => {
