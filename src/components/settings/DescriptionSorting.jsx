@@ -3,9 +3,19 @@ import "./styles/DescriptionSorting.css";
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, "") || "";
 const apiUrl = (path) => {
-  const u = new URL(path, window.location.origin); // always absolute
-  if (API_BASE) u.pathname = `${API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (/^https?:\/\//i.test(RAW_API_BASE)) {
+    return new URL(cleanPath, `${RAW_API_BASE}/`);
+  }
+
+  if (RAW_API_BASE) {
+    const prefix = RAW_API_BASE.startsWith("/") ? RAW_API_BASE : `/${RAW_API_BASE}`;
+    return new URL((prefix + cleanPath).replace(/\/{2,}/g, "/"), window.location.origin);
+  }
+
+  // Default: same origin
+  return new URL(cleanPath, window.location.origin);
 };
 
 /* ----------------- helpers ----------------- */
@@ -57,11 +67,12 @@ export default function DescriptionSettings() {
     setErr("");
     try {
 const url = apiUrl("/items/real-descriptions");
-if (API_BASE) url.pathname = `${API_BASE.replace(/\/+$/, "")}${url.pathname}`;
-      if (q) url.searchParams.set("q", q);
-      if (withCounts) url.searchParams.set("withCounts", "1");
+if (q) url.searchParams.set("q", q);
+if (withCounts) url.searchParams.set("withCounts", "1");
+const res = await fetch(url.toString());
 
-      const res = await fetch(url.toString());
+
+     
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
