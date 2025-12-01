@@ -9,7 +9,8 @@ import ItemNameDescriptionSettings from "./ItemNameDescriptionSettings";
 import VariantRelinker from "./VariantRelinker";
 import DescriptionEditor from "./editDescription";
 import YearSettings from "./YearSettings";           
-import CurrencySettings from "./CurrencySettings";   
+import CurrencySettings from "./CurrencySettings";
+import InvoiceDisplayNamesPanel from "./invoiceDisplayName";   
 
 import "./settings.css";
 
@@ -39,7 +40,9 @@ const SettingsPage = () => {
       case "year-settings":
         return <YearSettings />;           // ← NEW
       case "currency-settings":
-        return <CurrencySettings />;       // ← NEW
+        return <CurrencySettings />;  
+         case "invoice-display-name-settings":
+        return <InvoiceDisplayNamesPanel />;      
       default:
         return <GeneralSettings />;
     }
@@ -115,6 +118,14 @@ const SettingsPage = () => {
             onClick={() => setActiveTab("currency-settings")}
           >
             Currency
+          </li>
+
+
+              <li
+            className={activeTab === "invoice-display-name-settings" ? "active" : ""}
+            onClick={() => setActiveTab("invoice-display-name-settings")}
+          >
+            Invoice display
           </li>
         </ul>
       </aside>

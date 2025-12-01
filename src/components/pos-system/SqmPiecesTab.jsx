@@ -134,11 +134,7 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
           }}
         />
         <div className="search-modal-chips">
-          <span className="search-chip">
-            <span className="search-chip-label search-chip-label--dims">
-              Showing pieces with remaining sqm &gt; 0 only
-            </span>
-          </span>
+    
         </div>
       </div>
 

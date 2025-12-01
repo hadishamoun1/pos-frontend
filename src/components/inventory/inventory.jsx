@@ -275,7 +275,7 @@ export default function InventoryBrowser() {
     try {
       const signal = cancel();
 
-      const url = new URL(`${baseUrl}${currentLedgerPath}`);
+const url = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
       url.searchParams.set("_", String(Date.now()));
       url.searchParams.set("page", String(page));
       url.searchParams.set("limit", String(limit));
@@ -339,7 +339,7 @@ export default function InventoryBrowser() {
     try {
       const signal = newReportSignal();
 
-      const base = new URL(`${baseUrl}${currentLedgerPath}`);
+const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
       base.searchParams.set("_", String(Date.now()));
       const parsed = parseChipsToParams(chips);
       if (parsed.itemName) base.searchParams.set("itemName", parsed.itemName);

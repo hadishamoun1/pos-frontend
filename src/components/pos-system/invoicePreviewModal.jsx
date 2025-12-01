@@ -298,6 +298,11 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
           const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
           const sheetsPerBox = it.sheetsPerBox ?? it.sheets_per_box ?? it.sheetsPerCarton ?? it.sheets_per_carton;
           const sheetsCell = isSheet || isSqmPiece ? fmtOpt(it.quantity) : isBox ? fmtOpt(sheetsPerBox) : "";
+          const displayName =
+  (it.invoiceItemDisplayName && String(it.invoiceItemDisplayName).trim()) ||
+  (it.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
+  `${thicknessLabel}${it.itemName ?? ""}`.trim();
+
           return `
             <tr>
               <td>${fmtSmart(amount)}</td>
@@ -307,7 +312,7 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
               <td>${fmtOpt(it.length)}</td>
               <td>${sheetsCell}</td>
               <td>${isBox ? fmtOpt(it.quantity) : ""}</td>
-              <td class="arabic-item-name">${thicknessLabel}${it.itemName ?? ""}</td>
+              <td class="arabic-item-name">${displayName}</td>
               <td>${it.itemVariantId ?? ""}</td>
             </tr>`;
         }).join("");

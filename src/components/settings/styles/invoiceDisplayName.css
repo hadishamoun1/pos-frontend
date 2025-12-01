@@ -1,0 +1,518 @@
+/* ====== Layout ====== */
+.invnames {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #111827;
+}
+
+.invnames__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.invnames__title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.invnames__subtitle {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.invnames__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.invnames__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.invnames__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.invnames__searchIcon {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.invnames__search input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  background: transparent;
+}
+
+.invnames__clear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 14px;
+}
+.invnames__clear:hover {
+  color: #111827;
+}
+
+.invnames__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  color: #374151;
+  font-size: 13px;
+}
+.invnames__toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+/* ====== Message ====== */
+.invnames__message {
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 13px;
+  background: #fff;
+}
+.invnames__message--success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+.invnames__message--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.invnames__message--info {
+  border-color: #e5e7eb;
+  background: #fff;
+  color: #374151;
+}
+
+/* ====== Table ====== */
+.invnames__tableWrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: auto;
+  max-height: 68vh;
+  background: #fff;
+}
+
+.invnames__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  min-width: 980px;
+}
+
+.invnames__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f9fafb;
+  text-align: left;
+  padding: 10px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  color: #374151;
+}
+
+.invnames__table tbody td {
+  padding: 10px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.invnames__table tbody tr:hover td {
+  background: #fafafa;
+}
+
+.invnames__table tbody tr.isDirty td {
+  background: #fff7ed;
+}
+.invnames__table tbody tr.isDirty:hover td {
+  background: #ffedd5;
+}
+
+.invnames__sysName {
+  font-weight: 700;
+}
+
+.invnames__muted {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.invnames__editCell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.invnames__input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+}
+.invnames__input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.invnames__preview {
+  margin-top: 6px;
+  color: #374151;
+  font-size: 12px;
+}
+.invnames__previewLabel {
+  color: #6b7280;
+}
+.invnames__previewText {
+  font-weight: 700;
+}
+.invnames__changedHint {
+  margin-left: 8px;
+  color: #6b7280;
+}
+
+/* ====== Footer ====== */
+.invnames__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+}
+
+/* ====== Buttons + badges ====== */
+.btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border 120ms ease;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: #111827;
+  color: #fff;
+}
+.btn--primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #0b1220;
+}
+
+.btn--ghost {
+  background: #fff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+.btn--ghost:hover:not(:disabled) {
+  трансform: translateY(-1px);
+  background: #f9fafb;
+}
+
+.btn--tiny {
+  padding: 7px 10px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+
+/* Badge */
+.invnames__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.dot--muted {
+  background: #cbd5e1;
+}
+.dot--warn {
+  background: #fb923c;
+}
+
+.pill {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.pill--muted {
+  background: #f1f5f9;
+  color: #334155;
+}
+.pill--warn {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+/* Loading + empty */
+.invnames__loading {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #111827;
+  animation: spin 0.9s linear infinite;
+}
+
+.invnames__modalBackdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.invnames__modal{
+  width: min(520px, calc(100% - 24px));
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+.invnames__modalTitle{
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.invnames__modalText{
+  font-size: .9rem;
+  line-height: 1.45;
+  color: #333;
+}
+
+.invnames__modalActions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+/* =========================================================
+   Arabic + English numbers readability (bidi / digits)
+   Add this at the END of the file
+   ========================================================= */
+
+/* 1) Use Arabic-friendly font stack + consistent numeric shaping */
+.invnames {
+  /* Pick fonts that render Arabic nicely; falls back safely */
+  font-family: "Tajawal", "Cairo", "Noto Naskh Arabic", "Noto Sans Arabic",
+    system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* Make numbers super readable and aligned in columns */
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+
+  /* Better Arabic shaping + spacing */
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+/* 2) Inputs: keep caret/typing stable with mixed Arabic/Latin */
+.invnames input,
+.invnames__input,
+.invnames__search input {
+  font-family: inherit;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+
+  /* This is the key for mixed scripts: keeps Arabic/Latin together cleanly */
+  unicode-bidi: plaintext;
+}
+
+/* 3) In table cells that may contain Arabic + numbers, force sane bidi */
+.invnames__sysName,
+.invnames__preview,
+.invnames__previewText,
+.invnames__muted,
+.invnames__modalText,
+.invnames__message {
+  unicode-bidi: plaintext;
+}
+
+/* 4) Keep numeric columns crisp (thickness/origin/ids) */
+.mono,
+.invnames__table td.mono,
+.invnames__table th.mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  unicode-bidi: plaintext;
+  direction: ltr; /* numbers read naturally */
+  text-align: left;
+}
+
+/* 5) Make the "Preview" and fallback display nicer when Arabic is present */
+.invnames__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+.invnames__previewLabel {
+  white-space: nowrap;
+}
+
+/* Mixed Arabic text should read RTL, but numbers inside stay LTR — plaintext handles it */
+.invnames__previewText {
+  font-weight: 800;
+  /* If most of your items are Arabic, RTL reads nicer */
+  direction: rtl;
+  text-align: right;
+}
+
+/* The hint "(was: default)" should stay LTR so English punctuation doesn't jump */
+.invnames__changedHint {
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+/* 6) Placeholder readability (Arabic placeholders can look faint) */
+.invnames__input::placeholder,
+.invnames__search input::placeholder {
+  color: #9ca3af;
+  opacity: 1; /* ensure placeholders don't become too light in some browsers */
+}
+
+/* 7) Improve row readability for Arabic: slightly bigger type in key places */
+.invnames__table {
+  font-size: 13.5px;
+}
+.invnames__sysName {
+  font-size: 14px;
+}
+.invnames__muted,
+.invnames__preview {
+  font-size: 12.5px;
+}
+
+/* 8) Optional: if your invoice display names are mostly Arabic, align that column RTL */
+.invnames__table tbody td:nth-child(5) {
+  /* column 5 = Invoice Display Name */
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+.invnames__modeToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+/* But keep the actual input itself LTR-friendly for typing mixed text and numbers */
+.invnames__table tbody td:nth-child(5) .invnames__input {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+/* 9) Fix your hover bug (you have "трансform" typo) */
+.btn--ghost:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #f9fafb;
+}
+
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.invnames__empty {
+  padding: 22px;
+  text-align: center;
+}
+.invnames__emptyTitle {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.invnames__emptyText {
+  font-size: 13px;
+  color: #6b7280;
+}
