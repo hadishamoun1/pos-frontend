@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./styles/DescriptionSorting.css";
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, "") || "";
+const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+
 const apiUrl = (path) => {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
 
+  // If env is an absolute URL (http://... or https://...), use it as the base
   if (/^https?:\/\//i.test(RAW_API_BASE)) {
     return new URL(cleanPath, `${RAW_API_BASE}/`);
   }
 
+  // Else treat env as a prefix (e.g. "/api")
   if (RAW_API_BASE) {
     const prefix = RAW_API_BASE.startsWith("/") ? RAW_API_BASE : `/${RAW_API_BASE}`;
     return new URL((prefix + cleanPath).replace(/\/{2,}/g, "/"), window.location.origin);
