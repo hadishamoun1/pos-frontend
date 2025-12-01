@@ -5,7 +5,13 @@ import "./styles/VarientRelinker.css";
 const PAGE_SIZE = 30;
 
 const VariantRelinker = () => {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+
+const apiUrl = (path) => {
+  const u = new URL(path, window.location.origin); // always absolute
+  if (RAW_API_BASE) u.pathname = `${RAW_API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
+  return u;
+};
 
   // ========== Variant search (tokenized) ==========
   const [variantInput, setVariantInput] = useState("");
@@ -115,7 +121,7 @@ const VariantRelinker = () => {
     const page = reset ? 1 : (pageArg ?? variantPage);
     setVariantLoading(true);
     try {
-      const url = new URL(`${baseUrl}/items/variants/search`);
+const url = apiUrl("/items/variants/search");
       const q = makeQueryFromTokens(variantTokens);
       url.searchParams.set("q", q);
       url.searchParams.set("page", String(page));
@@ -149,7 +155,7 @@ const VariantRelinker = () => {
   const fetchDescriptions = async () => {
     setDescLoading(true);
     try {
-      const url = new URL(`${baseUrl}/items/descriptions/search`);
+const url = apiUrl("/items/descriptions/search");
       url.searchParams.set("mode", mode === "real" ? "real" : "name");
       url.searchParams.set("q", descQuery || "");
       url.searchParams.set("page", "1");
@@ -243,10 +249,11 @@ const VariantRelinker = () => {
         body = { mode: effMode, fields: { ...fields }, alsoSetOtherSide: effAlso };
       }
 
-      const res = await fetch(
-        `${baseUrl}/items/variants/${encodeURIComponent(selectedVariant.variantId)}/description`,
-        { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-      );
+   const res = await fetch(
+  apiUrl(`/items/variants/${encodeURIComponent(selectedVariant.variantId)}/description`).toString(),
+  { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+);
+
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || "Update failed");

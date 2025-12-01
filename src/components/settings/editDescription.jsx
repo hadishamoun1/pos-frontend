@@ -4,7 +4,13 @@ import "./styles/editDescription.css";
 const PAGE_SIZE = 30;
 
 const DescriptionEditor = () => {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+
+const apiUrl = (path) => {
+  const u = new URL(path, window.location.origin); // always absolute
+  if (RAW_API_BASE) u.pathname = `${RAW_API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
+  return u;
+};
 
   // Mode
   const [mode, setMode] = useState("name"); // "name" | "real"
@@ -37,7 +43,7 @@ const DescriptionEditor = () => {
     const p = reset ? 1 : (pageArg ?? page);
     setLoading(true);
     try {
-      const url = new URL(`${baseUrl}/items/descriptions/search`);
+const url = apiUrl("/items/descriptions/search");
       url.searchParams.set("mode", mode);
       url.searchParams.set("q", query || "");
       url.searchParams.set("page", String(p));
@@ -100,10 +106,11 @@ const DescriptionEditor = () => {
     setSaving(true);
     setStatus(null);
     try {
-      const endpoint =
-        mode === "name"
-          ? `${baseUrl}/items/descriptions/name/${encodeURIComponent(selected.id)}`
-          : `${baseUrl}/items/descriptions/real/${encodeURIComponent(selected.id)}`;
+ const endpoint =
+  mode === "name"
+    ? apiUrl(`/items/descriptions/name/${encodeURIComponent(selected.id)}`).toString()
+    : apiUrl(`/items/descriptions/real/${encodeURIComponent(selected.id)}`).toString();
+
 
       const body = {
         ...Object.fromEntries(

@@ -4,6 +4,12 @@ import "./styles/DescriptionSorting.css";
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, "") || "";
 
+const apiUrl = (path) => {
+  const u = new URL(path, window.location.origin); // always absolute
+  if (API_BASE) u.pathname = `${API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
+  return u;
+};
+
 /* ----------------- helpers ----------------- */
 function highlight(text, q) {
   if (!q) return text;
@@ -63,7 +69,7 @@ export default function DescriptionSettingsBase({ resource, title }) {
     try {
       // LIST endpoint:
       // GET /items/<resource>?q=&withCounts=1
-      const url = new URL(`${API_BASE}/items/item-descriptions`);
+const url = apiUrl(`/items/${resource || "item-descriptions"}`);
       if (q) url.searchParams.set("q", q);
       if (withCounts) url.searchParams.set("withCounts", "1");
 
@@ -120,7 +126,7 @@ export default function DescriptionSettingsBase({ resource, title }) {
       setLoading(true);
       setErr("");
       // PUT /items/<resource>/reorder  with body { order: number[] }
-      const res = await fetch(`${API_BASE}/items/item-descriptions/reorder`, {
+const res = await fetch(apiUrl(`/items/${resource || "item-descriptions"}/reorder`).toString(), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order }),
@@ -149,7 +155,7 @@ export default function DescriptionSettingsBase({ resource, title }) {
     try {
       setViewerLoading(true);
       // GET /items/<resource>/:descId/variants?limit=500&page=1&q=
-      const url = new URL(`${API_BASE}/items/item-descriptions/${descRow.id}/variants`);
+const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/variants`);
       url.searchParams.set("limit", "500");
       url.searchParams.set("page", "1");
       if (q) url.searchParams.set("q", q);

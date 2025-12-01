@@ -2,6 +2,11 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./styles/DescriptionSorting.css";
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, "") || "";
+const apiUrl = (path) => {
+  const u = new URL(path, window.location.origin); // always absolute
+  if (API_BASE) u.pathname = `${API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
+  return u;
+};
 
 /* ----------------- helpers ----------------- */
 function highlight(text, q) {
@@ -51,7 +56,7 @@ export default function DescriptionSettings() {
     setLoading(true);
     setErr("");
     try {
-const url = new URL(`/items/real-descriptions`, window.location.origin);
+const url = apiUrl("/items/real-descriptions");
 if (API_BASE) url.pathname = `${API_BASE.replace(/\/+$/, "")}${url.pathname}`;
       if (q) url.searchParams.set("q", q);
       if (withCounts) url.searchParams.set("withCounts", "1");
@@ -107,7 +112,7 @@ if (API_BASE) url.pathname = `${API_BASE.replace(/\/+$/, "")}${url.pathname}`;
     try {
       setLoading(true);
       setErr("");
-      const res = await fetch(`${API_BASE}/items/real-descriptions/reorder`, {
+const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order }),
@@ -136,9 +141,8 @@ if (API_BASE) url.pathname = `${API_BASE.replace(/\/+$/, "")}${url.pathname}`;
     try {
       setViewerLoading(true);
       // NEW API: /items/item-descriptions/:descId/variants
-      const url = new URL(
-        `${API_BASE}/items/real-descriptions/${descRow.id}/variants`
-      );
+ const url = apiUrl(`/items/real-descriptions/${descRow.id}/variants`);
+
       url.searchParams.set("limit", "1000");
       const res = await fetch(url.toString());
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
