@@ -1,5 +1,5 @@
 // src/components/pos-system/SearchModal.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./searchModal.css";
 import StockTab from "./StockTab";
 import AllTab from "./AllTab";
@@ -7,7 +7,11 @@ import SqmPiecesTab from "./SqmPiecesTab";
 
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all" | "sqm"
-  const [selectedCount, setSelectedCount] = useState(0);
+
+  // ✅ selections stored in parent so they don't disappear on tab switch
+  const [selectedStock, setSelectedStock] = useState(() => new Map());
+  const [selectedAll, setSelectedAll] = useState(() => new Map());
+  const [selectedSqm, setSelectedSqm] = useState(() => new Map());
 
   const stockRef = useRef(null);
   const allRef = useRef(null);
@@ -16,37 +20,50 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   useEffect(() => {
     if (!isOpen) return;
     setActiveTab("stock");
-    setSelectedCount(0);
+    setSelectedStock(new Map());
+    setSelectedAll(new Map());
+    setSelectedSqm(new Map());
   }, [isOpen]);
+
+  const selectedCount = useMemo(() => {
+    // ✅ count unique things: batchId for stock/all, sqmPieceId for sqm
+    const keys = new Set();
+
+    const addValues = (map) => {
+      for (const v of map.values()) {
+        if (v?.sqmPieceId != null) keys.add(`sqm:${v.sqmPieceId}`);
+        else if (v?.batchId != null) keys.add(`batch:${v.batchId}`);
+        else keys.add(`k:${v?.uniqueId ?? JSON.stringify(v)}`);
+      }
+    };
+
+    addValues(selectedStock);
+    addValues(selectedAll);
+    addValues(selectedSqm);
+
+    return keys.size;
+  }, [selectedStock, selectedAll, selectedSqm]);
 
   if (!isOpen) return null;
 
   const handleOk = () => {
-    let selectedData = [];
-
-    if (activeTab === "stock" && stockRef.current) {
-      selectedData = stockRef.current.collectSelected();
-    } else if (activeTab === "all" && allRef.current) {
-      selectedData = allRef.current.collectSelected();
-    } else if (activeTab === "sqm" && sqmRef.current) {
-      selectedData = sqmRef.current.collectSelected();
-    }
-
-    onSelectItems(selectedData);
+    const items = [
+      ...Array.from(selectedStock.values()),
+      ...Array.from(selectedAll.values()),
+      ...Array.from(selectedSqm.values()),
+    ];
+    onSelectItems(items);
     onClose();
   };
 
-  const TabButton = ({ id, label, isActive }) => (
+  const TabButton = ({ id, label }) => (
     <button
       role="tab"
-      aria-selected={isActive}
+      aria-selected={activeTab === id}
       aria-controls={`${id}-panel`}
       id={`${id}-tab`}
-      className={`search-tab ${isActive ? "is-active" : ""}`}
-      onClick={() => {
-        setActiveTab(id);
-        setSelectedCount(0); // reset count when switching tabs
-      }}
+      className={`search-tab ${activeTab === id ? "is-active" : ""}`}
+      onClick={() => setActiveTab(id)}
       type="button"
     >
       {label}
@@ -55,10 +72,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   return (
     <div className="search-modal-overlay" onClick={onClose}>
-      <div
-        className="search-modal-content"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="search-modal-header">
           <h2 className="search-modal-title">Search</h2>
           <div className="search-modal-buttons">
@@ -75,31 +89,21 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div
-          className="search-tabs"
-          role="tablist"
-          aria-label="Search Results Tabs"
-        >
-          <TabButton
-            id="stock"
-            label="Stock Items"
-            isActive={activeTab === "stock"}
-          />
-          <TabButton id="all" label="All" isActive={activeTab === "all"} />
-          <TabButton
-            id="sqm"
-            label="SQM Pieces"
-            isActive={activeTab === "sqm"}
-          />
+        <div className="search-tabs" role="tablist" aria-label="Search Results Tabs">
+          <TabButton id="stock" label="Stock Items" />
+          <TabButton id="all" label="All" />
+          <TabButton id="sqm" label="SQM Pieces" />
         </div>
 
+        {/* Panels (they can unmount now, selections still won’t be lost) */}
         {activeTab === "stock" && (
           <div id="stock-panel" role="tabpanel" aria-labelledby="stock-tab">
             <StockTab
               ref={stockRef}
-              isOpen={isOpen && activeTab === "stock"}
-              onSelectionCountChange={setSelectedCount}
+              modalOpen={isOpen}
+              isActive={activeTab === "stock"}
+              selectedMap={selectedStock}
+              setSelectedMap={setSelectedStock}
             />
           </div>
         )}
@@ -108,8 +112,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           <div id="all-panel" role="tabpanel" aria-labelledby="all-tab">
             <AllTab
               ref={allRef}
-              isOpen={isOpen && activeTab === "all"}
-              onSelectionCountChange={setSelectedCount}
+              modalOpen={isOpen}
+              isActive={activeTab === "all"}
+              selectedMap={selectedAll}
+              setSelectedMap={setSelectedAll}
             />
           </div>
         )}
@@ -118,8 +124,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           <div id="sqm-panel" role="tabpanel" aria-labelledby="sqm-tab">
             <SqmPiecesTab
               ref={sqmRef}
-              isOpen={isOpen && activeTab === "sqm"}
-              onSelectionCountChange={setSelectedCount}
+              modalOpen={isOpen}
+              isActive={activeTab === "sqm"}
+              selectedMap={selectedSqm}
+              setSelectedMap={setSelectedSqm}
             />
           </div>
         )}

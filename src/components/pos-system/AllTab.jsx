@@ -12,22 +12,18 @@ import axios from "axios";
 import "./AllTab.css";
 
 const AllTab = forwardRef(function AllTab(
-  { isOpen, onSelectionCountChange },
+  { modalOpen, isActive, selectedMap, setSelectedMap },
   ref
 ) {
-  // ---- config
   const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
-  // ---- state
-  // default list (v2/filtered-items-all-batches) is FLAT: one row per batch
+  // default list (flat)
   const [flatRows, setFlatRows] = useState([]);
-  // search list (pos/search-modal) returns NESTED structure
+  // search list (nested)
   const [nestedItems, setNestedItems] = useState([]);
 
-  const [selectedItems, setSelectedItems] = useState(new Set());
+  // input + chips
   const [inputValue, setInputValue] = useState("");
-
-  // Two pinned chips: name OR dims/number
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
 
@@ -43,130 +39,147 @@ const AllTab = forwardRef(function AllTab(
   const cancelInFlight = () => {
     const ctl = abortRef.current;
     if (ctl && typeof ctl.abort === "function") {
-      try { ctl.abort(); } catch {}
+      try {
+        ctl.abort();
+      } catch {}
     }
     const next = new AbortController();
     abortRef.current = next;
     return next.signal;
   };
 
-  // Map Arabic digits → Latin, normalize punctuation
   const normalizeDigits = useCallback((s = "") => {
     return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
   }, []);
 
-  // ✅ Robust Arabic normalization to match DB values like "ابيض"
+  // robust Arabic normalization
   const normalizeArabic = useCallback((s = "") => {
     return s
-      // remove diacritics
-      .replace(/[\u064B-\u065F]/g, "")
-      // remove tatweel
-      .replace(/\u0640/g, "")
-      // Alif variants -> ا
+      .replace(/[\u064B-\u065F]/g, "") // tashkeel
+      .replace(/\u0640/g, "") // tatweel
       .replace(/[أإآ]/g, "ا")
-      // ى -> ي
       .replace(/ى/g, "ي")
-      // ة -> ه
       .replace(/ة/g, "ه")
-      // ئ -> ي
       .replace(/ئ/g, "ي")
-      // ؤ -> و
       .replace(/ؤ/g, "و")
-      // collapse spaces
       .replace(/\s+/g, " ")
       .trim();
   }, []);
 
-  // Should be treated as dims like 225*321-025 or 200*300
-  const looksLikeDims = useCallback((s) => {
-    if (!s) return false;
-    const t = normalizeDigits(s).trim();
-    if (!t.includes("*")) return false;
-    const [L, rest] = t.split("*");
-    if (!L || !rest) return false;
-    if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
-    const parts = rest.split("-");
-    if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
-    if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
-    return true;
-  }, [normalizeDigits]);
+  const looksLikeDims = useCallback(
+    (s) => {
+      if (!s) return false;
+      const t = normalizeDigits(s).trim();
+      if (!t.includes("*")) return false;
+      const [L, rest] = t.split("*");
+      if (!L || !rest) return false;
+      if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
+      const parts = rest.split("-");
+      if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
+      if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
+      return true;
+    },
+    [normalizeDigits]
+  );
 
-  // plain number (Arabic or Latin digits) → treat as LENGTH
-  const isPlainNumber = useCallback((s) => {
-    if (!s) return false;
-    const t = normalizeDigits(String(s)).trim();
-    return /^\d{1,5}(\.\d+)?$/.test(t);
-  }, [normalizeDigits]);
+  const isPlainNumber = useCallback(
+    (s) => {
+      if (!s) return false;
+      const t = normalizeDigits(String(s)).trim();
+      return /^\d{1,5}(\.\d+)?$/.test(t);
+    },
+    [normalizeDigits]
+  );
 
-  // normalize any API result to { data: [], hasMore: boolean }
-  const normalizeEnvelope = useCallback((raw) => {
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      const data =
-        Array.isArray(raw.data) ? raw.data :
-        Array.isArray(raw.items) ? raw.items :
-        Array.isArray(raw.results) ? raw.results : [];
-      let hm;
-      if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
-      else if (raw.page != null && raw.totalPages != null) hm = Number(raw.page) < Number(raw.totalPages);
-      else hm = data.length >= limit;
-      return { data, hasMore: hm };
-    }
-    if (Array.isArray(raw)) return { data: raw, hasMore: raw.length >= limit };
-    return { data: [], hasMore: false };
-  }, [limit]);
+  const normalizeEnvelope = useCallback(
+    (raw) => {
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        const data =
+          Array.isArray(raw.data)
+            ? raw.data
+            : Array.isArray(raw.items)
+            ? raw.items
+            : Array.isArray(raw.results)
+            ? raw.results
+            : [];
+        let hm;
+        if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
+        else if (raw.page != null && raw.totalPages != null)
+          hm = Number(raw.page) < Number(raw.totalPages);
+        else hm = data.length >= limit;
+        return { data, hasMore: hm };
+      }
+      if (Array.isArray(raw)) return { data: raw, hasMore: raw.length >= limit };
+      return { data: [], hasMore: false };
+    },
+    [limit]
+  );
 
-  // ---------- default list (FLAT) ----------
-  const fetchDefaultPage = useCallback(async (targetPage) => {
-    setLoading(true);
-    try {
-      const signal = cancelInFlight();
-      const url = `${baseUrl}/items/v2/filtered-items-all-batches`;
-      const params = { page: targetPage, limit };
-      const res = await axios.get(url, { params, signal });
-      const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
+  // row -> payload to send back to POS page
+  const rowToPayload = useCallback((row) => {
+    const [variantStr, batchStr] = String(row.uniqueId).split("-");
+    return {
+      itemVariantId: Number(variantStr),
+      batchId: Number(batchStr),
+      itemName: row.itemName,
+      type: row.type,
+      thickness: row.thickness,
+      length: row.length,
+      width: row.width,
+      sheetsPerBox: row.sheetsPerBox,
+      origin: row.origin || "",
+      condition: row.condition ?? "",
+      dateReceived: row.dateReceived ?? "",
+      balanceOFR: row.balanceOFR ?? "",
+    };
+  }, []);
 
-      if (targetPage === 1) setFlatRows(flat || []);
-      else setFlatRows((prev) => [...prev, ...(flat || [])]);
+  // ---------- fetchers ----------
+  const fetchDefaultPage = useCallback(
+    async (targetPage) => {
+      if (!modalOpen || !isActive) return;
+      setLoading(true);
+      try {
+        const signal = cancelInFlight();
+        const url = `${baseUrl}/items/v2/filtered-items-all-batches`;
+        const params = { page: targetPage, limit };
+        const res = await axios.get(url, { params, signal });
+        const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
-      setNestedItems([]);
-      setPage(targetPage);
-      setHasMore(Boolean(hm));
-    } catch (err) {
-      if (axios.isCancel?.(err)) return;
-      console.error("Error fetching all-batches page:", err);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [baseUrl, limit, normalizeEnvelope]);
+        if (targetPage === 1) setFlatRows(flat || []);
+        else setFlatRows((prev) => [...prev, ...(flat || [])]);
+
+        setNestedItems([]);
+        setPage(targetPage);
+        setHasMore(Boolean(hm));
+      } catch (err) {
+        if (axios.isCancel?.(err)) return;
+        console.error("Error fetching all-batches default:", err);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [baseUrl, isActive, limit, modalOpen, normalizeEnvelope]
+  );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
 
-  // ---------- search list (NESTED) ----------
   const fetchSearch = useCallback(async () => {
+    if (!modalOpen || !isActive) return;
     setLoading(true);
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/pos/search-modal`;
 
-      // Build params:
-      // - includeEmpty=1 to show everything (even 0/negative) in search mode
-      // - q: normalized Arabic for names
-      // - dims: "225*321-025" (if user typed dims)
-      // - length: 225 (if user typed a plain number)
       const params = { page: 1, limit: 200, includeEmpty: 1 };
 
-      // name (normalize Arabic)
       if (nameChip) params.q = normalizeArabic(nameChip);
 
-      // dims or numeric
-      let dimsOrNumber = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      const dimsOrNumber = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
       if (dimsOrNumber) {
-        if (looksLikeDims(dimsOrNumber)) {
-          params.dims = dimsOrNumber; // e.g. 225*321-025
-        } else if (isPlainNumber(dimsOrNumber)) {
-          params.length = Number(dimsOrNumber); // plain "225" → length filter
-        }
+        if (looksLikeDims(dimsOrNumber)) params.dims = dimsOrNumber;
+        else if (isPlainNumber(dimsOrNumber)) params.length = Number(dimsOrNumber);
       }
 
       const res = await axios.get(url, { params, signal });
@@ -184,40 +197,45 @@ const AllTab = forwardRef(function AllTab(
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, nameChip, dimsChip, normalizeArabic, normalizeDigits, looksLikeDims, isPlainNumber]);
+  }, [
+    baseUrl,
+    dimsChip,
+    isActive,
+    isPlainNumber,
+    looksLikeDims,
+    modalOpen,
+    nameChip,
+    normalizeArabic,
+    normalizeDigits,
+  ]);
 
-  // ---------- effects ----------
+  // reset filters when modal opens (selection is in parent)
   useEffect(() => {
-    if (!isOpen) return;
-    setSelectedItems(new Set());
+    if (!modalOpen) return;
     setInputValue("");
     setNameChip("");
     setDimsChip("");
-    onSelectionCountChange?.(0);
-    setPage(1);
-    setHasMore(false);
     setFlatRows([]);
     setNestedItems([]);
-    fetchDefault();
+    setPage(1);
+    setHasMore(false);
+  }, [modalOpen]);
+
+  // fetch on active tab + chips change
+  useEffect(() => {
+    if (!modalOpen || !isActive) return;
+
+    if (nameChip || dimsChip) fetchSearch();
+    else fetchDefault();
+
     return () => {
-      if (abortRef.current && typeof abortRef.current.abort === "function") {
-        try { abortRef.current.abort(); } catch {}
+      if (abortRef.current?.abort) {
+        try {
+          abortRef.current.abort();
+        } catch {}
       }
     };
-  }, [isOpen, fetchDefault, onSelectionCountChange]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (nameChip || dimsChip) {
-      fetchSearch();
-    } else {
-      setFlatRows([]);
-      setNestedItems([]);
-      setPage(1);
-      setHasMore(false);
-      fetchDefault();
-    }
-  }, [isOpen, nameChip, dimsChip, fetchDefault, fetchSearch]);
+  }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
   // ---------- UI handlers ----------
   const handleEnter = (e) => {
@@ -225,39 +243,30 @@ const AllTab = forwardRef(function AllTab(
     const raw = inputValue.trim();
     if (!raw) return;
 
-    // Normalize digits first
     const withDigits = normalizeDigits(raw);
 
-    // If it looks like dims → pin as dims
     if (looksLikeDims(withDigits)) {
       setDimsChip(withDigits);
       setInputValue("");
       return;
     }
 
-    // If it's a plain number → pin as numeric (length)
     if (isPlainNumber(withDigits)) {
-      setDimsChip(withDigits); // treated as length in fetchSearch
+      setDimsChip(withDigits);
       setInputValue("");
       return;
     }
 
-    // Otherwise treat as NAME (normalize Arabic)
-    const nm = normalizeArabic(withDigits);
-    setNameChip(nm);
+    setNameChip(normalizeArabic(withDigits));
     setInputValue("");
   };
 
-  const clearNameChip = () => setNameChip("");
-  const clearDimsChip = () => setDimsChip("");
-
-  const toggleSelect = (uniqueId, selectable) => {
-    if (!selectable) return;
-    setSelectedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(uniqueId)) next.delete(uniqueId);
-      else next.add(uniqueId);
-      onSelectionCountChange?.(next.size);
+  const toggleSelect = (row) => {
+    if (!row.selectable) return;
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(row.uniqueId)) next.delete(row.uniqueId);
+      else next.set(row.uniqueId, rowToPayload(row));
       return next;
     });
   };
@@ -266,10 +275,13 @@ const AllTab = forwardRef(function AllTab(
   const rowsFromFlat = useMemo(() => {
     if (!flatRows.length) return [];
     return flatRows.map((r) => {
-      const hasRealVariantId = Number.isFinite(Number(r.variantId));
+      const variantId = Number(r.variantId);
+      const batchId = Number(r.batchId);
+      const selectable = Number.isFinite(variantId) && Number.isFinite(batchId);
+
       return {
-        uniqueId: `${r.variantId}-${r.batchId ?? "n"}`,
-        selectable: hasRealVariantId,
+        uniqueId: `${variantId}-${batchId}`,
+        selectable,
         itemName: r.itemName,
         type: r.type,
         thickness: r.thickness,
@@ -290,11 +302,15 @@ const AllTab = forwardRef(function AllTab(
     (nestedItems || []).forEach((item) => {
       (item.thicknesses || []).forEach((th) => {
         (th.variants || []).forEach((v) => {
-          const hasRealVariantId = Number.isFinite(Number(v.id));
+          const variantId = Number(v.id);
+          const hasRealVariantId = Number.isFinite(variantId);
           (v.batches || []).forEach((b) => {
+            const batchId = Number(b.id);
+            const selectable = hasRealVariantId && Number.isFinite(batchId);
+
             out.push({
-              uniqueId: `${v.id}-${b.id}`,
-              selectable: hasRealVariantId,
+              uniqueId: `${variantId}-${batchId}`,
+              selectable,
               itemName: item.itemName,
               type: item.type,
               thickness: th.thickness,
@@ -316,36 +332,12 @@ const AllTab = forwardRef(function AllTab(
   const inSearchMode = Boolean(nameChip || dimsChip);
   const rows = inSearchMode ? rowsFromNested : rowsFromFlat;
 
-  // ---------- expose to parent ----------
   useImperativeHandle(ref, () => ({
-    collectSelected: () => {
-      const selectedData = [];
-      rows.forEach((r) => {
-        if (selectedItems.has(r.uniqueId) && r.selectable) {
-          selectedData.push({
-            itemVariantId: Number(r.uniqueId.split("-")[0]),
-            itemName: r.itemName,
-            type: r.type,
-            thickness: r.thickness,
-            length: r.length,
-            width: r.width,
-            sheetsPerBox: r.sheetsPerBox,
-            origin: r.origin,
-            condition: r.condition,
-            dateReceived: r.dateReceived,
-            balanceOFR: r.balanceOFR,
-            batchId: r.uniqueId.includes("-") ? Number(r.uniqueId.split("-")[1]) : null,
-          });
-        }
-      });
-      return selectedData;
-    },
+    collectSelected: () => Array.from(selectedMap.values()),
   }));
 
-  // ---------- render ----------
   return (
     <div className="all-tab-root">
-      {/* Input + chips row */}
       <div className="all-tab-item-input-row">
         <input
           type="text"
@@ -362,7 +354,13 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button className="all-chip-x" onClick={clearNameChip} aria-label="Remove name filter">×</button>
+              <button
+                className="all-chip-x"
+                onClick={() => setNameChip("")}
+                aria-label="Remove name filter"
+              >
+                ×
+              </button>
             </span>
           )}
           {dimsChip && (
@@ -370,9 +368,19 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">×</button>
+              <button
+                className="all-chip-x"
+                onClick={() => setDimsChip("")}
+                aria-label="Remove dims/length filter"
+              >
+                ×
+              </button>
             </span>
           )}
+
+          <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
+            Selected: {selectedMap.size}
+          </span>
         </div>
       </div>
 
@@ -391,43 +399,49 @@ const AllTab = forwardRef(function AllTab(
             <th>STOCK</th>
           </tr>
         </thead>
+
         <tbody>
-          {rows.map((r) => (
-            <tr
-              key={r.uniqueId}
-              className={!r.selectable ? "all-row-disabled" : ""}
-              title={!r.selectable ? "Unavailable for selection (missing real variant id)" : undefined}
-            >
-              <td className="cell-select">
-                <input
-                  type="checkbox"
-                  disabled={!r.selectable}
-                  checked={r.selectable ? selectedItems.has(r.uniqueId) : false}
-                  onChange={() => toggleSelect(r.uniqueId, r.selectable)}
-                />
-              </td>
-              <td style={{ direction: "rtl", textAlign: "right" }}>
-                {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
-              </td>
-              <td>{r.type}</td>
-              <td>{r.length ?? ""}</td>
-              <td>{r.width ?? ""}</td>
-              <td>{r.type === "box" ? r.sheetsPerBox : ""}</td>
-              <td>{r.origin ?? ""}</td>
-              <td>{r.condition ?? ""}</td>
-              <td>{r.dateReceived ?? ""}</td>
-              <td>{r.balanceOFR ?? ""}</td>
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const checked = selectedMap.has(r.uniqueId);
+            return (
+              <tr
+                key={r.uniqueId}
+                className={!r.selectable ? "all-row-disabled" : ""}
+                title={!r.selectable ? "Unavailable for selection (missing real variant id)" : undefined}
+              >
+                <td className="cell-select">
+                  <input
+                    type="checkbox"
+                    disabled={!r.selectable}
+                    checked={checked}
+                    onChange={() => toggleSelect(r)}
+                  />
+                </td>
+                <td style={{ direction: "rtl", textAlign: "right" }}>
+                  {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
+                </td>
+                <td>{r.type}</td>
+                <td>{r.length ?? ""}</td>
+                <td>{r.width ?? ""}</td>
+                <td>{r.type === "box" ? r.sheetsPerBox : ""}</td>
+                <td>{r.origin ?? ""}</td>
+                <td>{r.condition ?? ""}</td>
+                <td>{r.dateReceived ?? ""}</td>
+                <td>{r.balanceOFR ?? ""}</td>
+              </tr>
+            );
+          })}
+
           {rows.length === 0 && (
             <tr className="empty-row">
-              <td className="empty-cell" colSpan={10}>No Data</td>
+              <td className="empty-cell" colSpan={10}>
+                No Data
+              </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {/* Load more footer (only for default list) */}
       {!inSearchMode && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
           <button

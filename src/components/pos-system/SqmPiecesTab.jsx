@@ -1,10 +1,5 @@
 // src/components/pos-system/SqmPiecesTab.jsx
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useState,
-} from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import axios from "axios";
 
 const rawBase = process.env.REACT_APP_API_BASE_URL || "";
@@ -18,108 +13,141 @@ const num = (v) => {
 const fmt2 = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return "0.00";
-  return n.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 const SqmPiecesTab = forwardRef(function SqmPiecesTab(
-  { isOpen, onSelectionCountChange },
+  { modalOpen, isActive, onSelectionCountChange },
   ref
 ) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // Load pieces with remaining > 0
+  // ✅ persistent selection map: pieceId -> payload
+  const [selectedMap, setSelectedMap] = useState(() => new Map());
+
+  // abort in-flight
+  const abortRef = useRef(null);
+  const cancelInFlight = () => {
+    const ctl = abortRef.current;
+    if (ctl && typeof ctl.abort === "function") {
+      try { ctl.abort(); } catch {}
+    }
+    const next = new AbortController();
+    abortRef.current = next;
+    return next.signal;
+  };
+
+  const normalizeApiRows = (data) => {
+    const rawRows = Array.isArray(data) ? data : data?.rows || [];
+
+    return rawRows.map((r) => {
+      const pieceId = r.sqmPieceId ?? r.id;
+      return {
+        ...r,
+        id: pieceId,                  // stable key
+        type: "sqm",
+        sqmPieceId: pieceId,
+        itemVariantId: r.itemVariantId,
+        batchId: r.itemBatchId,       // ✅ used by POS table
+        thickness: r.thickness,
+        itemName: r.itemName,
+        length: r.length,
+        width: r.width,
+        piecesRemaining: r.piecesRemaining,
+        transferNumber: r.transferNumber,
+        label: r.label,
+      };
+    });
+  };
+
   const fetchPieces = async (query = "") => {
+    if (!modalOpen || !isActive) return;
     setLoading(true);
     setErrorMsg("");
     try {
+      const signal = cancelInFlight();
       const res = await axios.get(`${baseUrl}/sqm-pieces/pos-pieces`, {
-        params: {
-          // onlyRemaining can be ignored by backend, we already filter sqmRemaining > 0 there
-          q: query.trim() || undefined,
-        },
+        params: { q: query.trim() || undefined },
+        signal,
       });
 
-      const data = res.data || [];
-      const rawRows = Array.isArray(data) ? data : data.rows || [];
-
-      // 🔹 Ensure each row has type: "sqm" (even if backend forgot)
-      const normalized = rawRows.map((r) => ({
-         ...r,
-         id: r.sqmPieceId ?? r.id,
-        type: r.type || "sqm",
-       sqmPieceId: r.sqmPieceId ?? r.id,   // SqmPiece.id
-       itemVariantId: r.itemVariantId,     // from API
-       batchId: r.itemBatchId, 
-      }));
-
+      const normalized = normalizeApiRows(res.data);
       setRows(normalized);
-      setSelectedIds(new Set());
-      onSelectionCountChange(0);
+      // ✅ DO NOT clear selection here
     } catch (err) {
+      if (axios.isCancel?.(err)) return;
       console.error("Failed to load SQM pieces for POS search", err);
-      setErrorMsg(
-        err?.response?.data?.message ||
-          "Failed to load SQM pieces. Please try again."
-      );
+      setErrorMsg(err?.response?.data?.message || "Failed to load SQM pieces. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // When tab opens, load
+  // Reset selection ONLY when modal opens
   useEffect(() => {
-    if (!isOpen) return;
+    if (!modalOpen) return;
+    setSelectedMap(new Map());
+    onSelectionCountChange?.(0);
+    // also reset UI rows/search if you want:
+    // setSearchText("");
+    // setRows([]);
+  }, [modalOpen, onSelectionCountChange]);
+
+  // When SQM tab becomes active, load rows
+  useEffect(() => {
+    if (!modalOpen || !isActive) return;
     fetchPieces(searchText);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [modalOpen, isActive]);
 
   // expose collectSelected() to parent
   useImperativeHandle(ref, () => ({
-    collectSelected: () => {
-      const ids = selectedIds;
-      return rows.filter((r) => ids.has(r.id));
-    },
+    collectSelected: () => Array.from(selectedMap.values()),
   }));
 
-  const toggleRow = (rowId) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(rowId)) {
-        next.delete(rowId);
-      } else {
-        next.add(rowId);
-      }
-      onSelectionCountChange(next.size);
+  const toggleRow = (row) => {
+    const rowId = row.id;
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.set(rowId, row); // store full payload
+      onSelectionCountChange?.(next.size);
       return next;
     });
   };
 
-  const toggleAll = () => {
-    setSelectedIds((prev) => {
-      let next;
-      if (prev.size === rows.length) {
-        next = new Set();
+  // Select/Deselect ALL **visible** rows only (don’t wipe selections from other searches)
+  const toggleAllVisible = () => {
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      const visibleIds = rows.map((r) => r.id);
+
+      const allVisibleSelected =
+        rows.length > 0 && visibleIds.every((id) => next.has(id));
+
+      if (allVisibleSelected) {
+        // remove only visible
+        visibleIds.forEach((id) => next.delete(id));
       } else {
-        next = new Set(rows.map((r) => r.id));
+        // add only visible
+        rows.forEach((r) => next.set(r.id, r));
       }
-      onSelectionCountChange(next.size);
+
+      onSelectionCountChange?.(next.size);
       return next;
     });
   };
 
-  const allChecked = rows.length > 0 && selectedIds.size === rows.length;
-  const someChecked = selectedIds.size > 0 && selectedIds.size < rows.length;
+  const allVisibleChecked =
+    rows.length > 0 && rows.every((r) => selectedMap.has(r.id));
+  const someVisibleChecked =
+    rows.some((r) => selectedMap.has(r.id)) && !allVisibleChecked;
 
   return (
     <div>
-      {/* Sticky filter row (reuses existing styles) */}
       <div className="search-modal-item-input-row">
         <input
           type="text"
@@ -129,12 +157,14 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
           onChange={(e) => {
             const value = e.target.value;
             setSearchText(value);
-            // live search
-            fetchPieces(value);
+            // live search while active
+            if (modalOpen && isActive) fetchPieces(value);
           }}
         />
         <div className="search-modal-chips">
-    
+          <span style={{ fontSize: 12, opacity: 0.75 }}>
+            Selected: {selectedMap.size}
+          </span>
         </div>
       </div>
 
@@ -146,11 +176,11 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
             <th className="col-select">
               <input
                 type="checkbox"
-                checked={allChecked}
+                checked={allVisibleChecked}
                 ref={(el) => {
-                  if (el) el.indeterminate = someChecked;
+                  if (el) el.indeterminate = someVisibleChecked;
                 }}
-                onChange={toggleAll}
+                onChange={toggleAllVisible}
               />
             </th>
             <th>Item</th>
@@ -160,6 +190,7 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
             <th>Pieces Rem.</th>
           </tr>
         </thead>
+
         <tbody>
           {loading ? (
             <tr className="empty-row">
@@ -175,27 +206,22 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
             </tr>
           ) : (
             rows.map((row) => {
-              const key = row.id;
-              const checked = selectedIds.has(key);
-
+              const checked = selectedMap.has(row.id);
               const label =
                 row.label ||
-                ((row.thickness != null ? `${row.thickness}ملم ` : "") +
-                  (row.itemName || ""));
+                ((row.thickness != null ? `${row.thickness}ملم ` : "") + (row.itemName || ""));
 
               return (
-                <tr key={key}>
+                <tr key={row.id}>
                   <td className="cell-select">
                     <input
                       type="checkbox"
                       className="search-modal-select-checkbox"
                       checked={checked}
-                      onChange={() => toggleRow(key)}
+                      onChange={() => toggleRow(row)}
                     />
                   </td>
-                  <td style={{ direction: "rtl", textAlign: "right" }}>
-                    {label}
-                  </td>
+                  <td style={{ direction: "rtl", textAlign: "right" }}>{label}</td>
                   <td>{row.transferNumber || "-"}</td>
                   <td>{row.length != null ? num(row.length) : "-"}</td>
                   <td>{row.width != null ? num(row.width) : "-"}</td>
