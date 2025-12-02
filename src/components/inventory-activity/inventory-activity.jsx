@@ -711,86 +711,71 @@ export default function InventoryActivityPage() {
         </div>
       )}
 
-      {/* Prompt Modal */}
-      {promptBox.open && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.25)",
-            zIndex: 6000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
-        >
-          <div
-            style={{
-              width: 440,
-              maxWidth: "100%",
-              background: "#fff",
-              borderRadius: 10,
-              padding: 14,
-              border: "1px solid #ddd",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontWeight: 800, marginBottom: 8 }}>
-              {promptBox.op === "contains"
-                ? "Contain"
-                : promptBox.op === "eq"
-                ? "Equals"
-                : promptBox.op === "gt"
-                ? "Greater than"
-                : promptBox.op === "lt"
-                ? "Less than"
-                : promptBox.op === "before"
-                ? "Before"
-                : promptBox.op === "after"
-                ? "After"
-                : "Filter"}{" "}
-              — column: {promptBox.label}
-            </div>
-
-            <input
-              autoFocus
-              value={promptBox.value}
-              placeholder={promptBox.placeholder}
-              onChange={(e) => setPromptBox((p) => ({ ...p, value: e.target.value }))}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 8,
-                border: "1px solid #ccc",
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setPromptBox((p) => ({ ...p, open: false }));
-                if (e.key === "Enter") {
-                  applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
-                  setPromptBox((p) => ({ ...p, open: false }));
-                }
-              }}
-            />
-
-            <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
-              <button className="inventory-activity-btn-transfers" onClick={() => setPromptBox((p) => ({ ...p, open: false }))}>
-                Cancel
-              </button>
-              <button
-                className="inventory-activity-btn-count"
-                onClick={() => {
-                  applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
-                  setPromptBox((p) => ({ ...p, open: false }));
-                }}
-              >
-                Apply
-              </button>
-            </div>
+{promptBox.open && (
+  <div
+    className="inv-prompt-overlay"
+    onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
+  >
+    <div className="inv-prompt-card" onClick={(e) => e.stopPropagation()}>
+      <div className="inv-prompt-header">
+        <div>
+          <div className="inv-prompt-title">
+            {/* same title logic you already have */}
+            Filter — column: {promptBox.label}
           </div>
+          <div className="inv-prompt-subtitle">Press Enter to apply • Esc to close</div>
         </div>
-      )}
+
+        <button
+          className="inv-prompt-close"
+          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
+          aria-label="Close"
+          type="button"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="inv-prompt-body">
+        <input
+          className="inv-prompt-input"
+          autoFocus
+          value={promptBox.value}
+          placeholder={promptBox.placeholder}
+          onChange={(e) => setPromptBox((p) => ({ ...p, value: e.target.value }))}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setPromptBox((p) => ({ ...p, open: false }));
+            if (e.key === "Enter") {
+              applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
+              setPromptBox((p) => ({ ...p, open: false }));
+            }
+          }}
+        />
+      </div>
+
+      <div className="inv-prompt-footer">
+        <button
+          className="inv-prompt-btn"
+          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="inv-prompt-btn inv-prompt-btn-primary"
+          onClick={() => {
+            applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
+            setPromptBox((p) => ({ ...p, open: false }));
+          }}
+          type="button"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {/* Cell right-click menu (quick add) */}
       {contextMenu.visible && (
