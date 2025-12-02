@@ -426,8 +426,15 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
-  const isEqualBase = totalDebitBase === totalCreditBase && totalDebitBase !== 0;
-  const isEqualOFR = totalDebitOFR === totalCreditOFR && totalDebitOFR !== 0;
+  
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+
+const isEqualBase =
+  round2(totalDebitBase) === round2(totalCreditBase) && round2(totalDebitBase) !== 0;
+
+const isEqualOFR =
+  round2(totalDebitOFR) === round2(totalCreditOFR) && round2(totalDebitOFR) !== 0;
   const isUSDEqual = totalDebitUSD === totalCreditUSD;
   const isLLEqual = totalDebitLL === totalCreditLL;
 

@@ -105,14 +105,14 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       const payload = {
         customerId: Number(customerAccountId),
         date,
-        invoiceId,
+        invoiceId: (invoiceId || "").trim() || null,
         cashNumber: Number(stripCommas(cashNumber)),
         currency,
         exchangeRate: exchangeRate
           ? Number(stripCommas(exchangeRate))
           : undefined,
         amountExchanged: Number(stripCommas(amountExchanged)),
-        comments,
+        comments: (comments || "").trim() || null,
         type,
         pmtType,
       };

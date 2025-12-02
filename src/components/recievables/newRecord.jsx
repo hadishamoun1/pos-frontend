@@ -98,12 +98,11 @@ const NewRecordModal = ({ onClose, onSave }) => {
         if (!r.amountExchanged)
           throw new Error("Amount exchanged is required.");
         if (!r.date) throw new Error("Date is required.");
-        if (!r.invoiceNumber) throw new Error("Invoice Number is required.");
 
         const payload = {
           customerId: r.customerId,
           date: r.date,
-          invoiceId: r.invoiceNumber,
+         invoiceId: (r.invoiceNumber || "").trim() || null,
           cashNumber: parseFloat(r.cashNumber.replace(/,/g, "")),
           currency: r.currency,
           exchangeRate: parseFloat(r.exchangeRate.replace(/,/g, "")),
