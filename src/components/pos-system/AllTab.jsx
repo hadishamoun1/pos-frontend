@@ -1,4 +1,3 @@
-// src/components/pos-system/AllTab.jsx
 import React, {
   forwardRef,
   useCallback,
@@ -17,17 +16,13 @@ const AllTab = forwardRef(function AllTab(
 ) {
   const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
-  // default list (flat)
   const [flatRows, setFlatRows] = useState([]);
-  // search list (nested)
   const [nestedItems, setNestedItems] = useState([]);
 
-  // input + chips
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
 
-  // pagination (default list only)
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
   const [hasMore, setHasMore] = useState(false);
@@ -35,10 +30,45 @@ const AllTab = forwardRef(function AllTab(
 
   const abortRef = useRef(null);
 
-  // ---------- helpers ----------
+  // -------- SQM Repeat Modal (NO alert/prompt) --------
+  const [repeatModal, setRepeatModal] = useState({
+    open: false,
+    row: null,
+    label: "",
+    value: "1",
+  });
+  const repeatInputRef = useRef(null);
+
+  useEffect(() => {
+    if (repeatModal.open) {
+      // focus input next tick
+      setTimeout(() => repeatInputRef.current?.focus?.(), 0);
+    }
+  }, [repeatModal.open]);
+
+  const closeRepeatModal = () => {
+    setRepeatModal({ open: false, row: null, label: "", value: "1" });
+  };
+
+  const confirmRepeatModal = () => {
+    const row = repeatModal.row;
+    if (!row) return closeRepeatModal();
+
+    let rep = Math.floor(Number(String(repeatModal.value || "1").trim()));
+    if (!Number.isFinite(rep) || rep <= 0) rep = 1;
+
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      next.set(row.uniqueId, rowToPayload(row, rep));
+      return next;
+    });
+
+    closeRepeatModal();
+  };
+
   const cancelInFlight = () => {
     const ctl = abortRef.current;
-    if (ctl && typeof ctl.abort === "function") {
+    if (ctl?.abort) {
       try {
         ctl.abort();
       } catch {}
@@ -49,14 +79,15 @@ const AllTab = forwardRef(function AllTab(
   };
 
   const normalizeDigits = useCallback((s = "") => {
-    return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
+    return String(s)
+      .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+      .replace(/،/g, ",");
   }, []);
 
-  // robust Arabic normalization
   const normalizeArabic = useCallback((s = "") => {
-    return s
-      .replace(/[\u064B-\u065F]/g, "") // tashkeel
-      .replace(/\u0640/g, "") // tatweel
+    return String(s || "")
+      .replace(/[\u064B-\u065F]/g, "")
+      .replace(/\u0640/g, "")
       .replace(/[أإآ]/g, "ا")
       .replace(/ى/g, "ي")
       .replace(/ة/g, "ه")
@@ -94,14 +125,13 @@ const AllTab = forwardRef(function AllTab(
   const normalizeEnvelope = useCallback(
     (raw) => {
       if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-        const data =
-          Array.isArray(raw.data)
-            ? raw.data
-            : Array.isArray(raw.items)
-            ? raw.items
-            : Array.isArray(raw.results)
-            ? raw.results
-            : [];
+        const data = Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw.items)
+          ? raw.items
+          : Array.isArray(raw.results)
+          ? raw.results
+          : [];
         let hm;
         if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
         else if (raw.page != null && raw.totalPages != null)
@@ -115,10 +145,13 @@ const AllTab = forwardRef(function AllTab(
     [limit]
   );
 
-  // row -> payload to send back to POS page
-  const rowToPayload = useCallback((row) => {
+  const rowToPayload = useCallback((row, repeat = 1) => {
     const [variantStr, batchStr] = String(row.uniqueId).split("-");
     return {
+      uniqueId: row.uniqueId,
+      repeat: Number(repeat) || 1,
+      source: "all",
+
       itemVariantId: Number(variantStr),
       batchId: Number(batchStr),
       itemName: row.itemName,
@@ -134,10 +167,10 @@ const AllTab = forwardRef(function AllTab(
     };
   }, []);
 
-  // ---------- fetchers ----------
   const fetchDefaultPage = useCallback(
     async (targetPage) => {
       if (!modalOpen || !isActive) return;
+
       setLoading(true);
       try {
         const signal = cancelInFlight();
@@ -154,7 +187,7 @@ const AllTab = forwardRef(function AllTab(
         setHasMore(Boolean(hm));
       } catch (err) {
         if (axios.isCancel?.(err)) return;
-        console.error("Error fetching all-batches default:", err);
+        console.error("Error fetching all-batches default page:", err);
         setHasMore(false);
       } finally {
         setLoading(false);
@@ -167,11 +200,11 @@ const AllTab = forwardRef(function AllTab(
 
   const fetchSearch = useCallback(async () => {
     if (!modalOpen || !isActive) return;
+
     setLoading(true);
     try {
       const signal = cancelInFlight();
       const url = `${baseUrl}/items/pos/search-modal`;
-
       const params = { page: 1, limit: 200, includeEmpty: 1 };
 
       if (nameChip) params.q = normalizeArabic(nameChip);
@@ -209,35 +242,26 @@ const AllTab = forwardRef(function AllTab(
     normalizeDigits,
   ]);
 
-  // reset filters when modal opens (selection is in parent)
   useEffect(() => {
     if (!modalOpen) return;
+
+    setFlatRows([]);
+    setNestedItems([]);
     setInputValue("");
     setNameChip("");
     setDimsChip("");
-    setFlatRows([]);
-    setNestedItems([]);
     setPage(1);
     setHasMore(false);
+
+    return () => abortRef.current?.abort?.();
   }, [modalOpen]);
 
-  // fetch on active tab + chips change
   useEffect(() => {
     if (!modalOpen || !isActive) return;
-
     if (nameChip || dimsChip) fetchSearch();
     else fetchDefault();
-
-    return () => {
-      if (abortRef.current?.abort) {
-        try {
-          abortRef.current.abort();
-        } catch {}
-      }
-    };
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
-  // ---------- UI handlers ----------
   const handleEnter = (e) => {
     if (e.key !== "Enter") return;
     const raw = inputValue.trim();
@@ -261,17 +285,33 @@ const AllTab = forwardRef(function AllTab(
     setInputValue("");
   };
 
+  const clearNameChip = () => setNameChip("");
+  const clearDimsChip = () => setDimsChip("");
+
   const toggleSelect = (row) => {
     if (!row.selectable) return;
+
     setSelectedMap((prev) => {
       const next = new Map(prev);
-      if (next.has(row.uniqueId)) next.delete(row.uniqueId);
-      else next.set(row.uniqueId, rowToPayload(row));
+
+      if (next.has(row.uniqueId)) {
+        next.delete(row.uniqueId);
+        return next;
+      }
+
+      const t = String(row.type || "").toLowerCase();
+      if (t === "sqm") {
+        // open modal instead of prompt
+        const label = `${parseFloat(String(row.thickness))} ملم ${row.itemName}`;
+        setRepeatModal({ open: true, row, label, value: "1" });
+        return prev; // do not select yet, wait user confirm
+      }
+
+      next.set(row.uniqueId, rowToPayload(row, 1));
       return next;
     });
   };
 
-  // ---------- build rows for render ----------
   const rowsFromFlat = useMemo(() => {
     if (!flatRows.length) return [];
     return flatRows.map((r) => {
@@ -299,11 +339,13 @@ const AllTab = forwardRef(function AllTab(
   const rowsFromNested = useMemo(() => {
     if (!nestedItems.length) return [];
     const out = [];
+
     (nestedItems || []).forEach((item) => {
       (item.thicknesses || []).forEach((th) => {
         (th.variants || []).forEach((v) => {
           const variantId = Number(v.id);
           const hasRealVariantId = Number.isFinite(variantId);
+
           (v.batches || []).forEach((b) => {
             const batchId = Number(b.id);
             const selectable = hasRealVariantId && Number.isFinite(batchId);
@@ -326,18 +368,93 @@ const AllTab = forwardRef(function AllTab(
         });
       });
     });
+
     return out;
   }, [nestedItems]);
 
   const inSearchMode = Boolean(nameChip || dimsChip);
   const rows = inSearchMode ? rowsFromNested : rowsFromFlat;
 
+  const selectedTotal = useMemo(() => {
+    let total = 0;
+    (selectedMap || new Map()).forEach((v) => (total += Number(v?.repeat || 1)));
+    return total;
+  }, [selectedMap]);
+
   useImperativeHandle(ref, () => ({
-    collectSelected: () => Array.from(selectedMap.values()),
+    collectSelected: () => {
+      const out = [];
+      for (const v of (selectedMap || new Map()).values()) {
+        const rep = Math.max(1, Number(v?.repeat || 1));
+        for (let i = 0; i < rep; i++) {
+          out.push({ ...v, _repeatIndex: i + 1, _repeatTotal: rep });
+        }
+      }
+      return out;
+    },
   }));
 
   return (
     <div className="all-tab-root">
+      {/* -------- Repeat Modal -------- */}
+      {repeatModal.open && (
+        <div
+          className="repeat-modal-overlay"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeRepeatModal();
+          }}
+        >
+          <div
+            className="repeat-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="repeat-title"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="repeat-modal-header">
+              <div className="repeat-modal-title" id="repeat-title">
+                SQM Repetitions
+              </div>
+              <button className="repeat-modal-x" onClick={closeRepeatModal} aria-label="Close">
+                ×
+              </button>
+            </div>
+
+            <div className="repeat-modal-body">
+              <div className="repeat-modal-label">{repeatModal.label}</div>
+
+              <div className="repeat-modal-field">
+                <label className="repeat-modal-field-label">How many times?</label>
+                <input
+                  ref={repeatInputRef}
+                  className="repeat-modal-input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={repeatModal.value}
+                  onChange={(e) =>
+                    setRepeatModal((p) => ({ ...p, value: e.target.value }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmRepeatModal();
+                    if (e.key === "Escape") closeRepeatModal();
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="repeat-modal-footer">
+              <button className="repeat-modal-btn ghost" onClick={closeRepeatModal}>
+                Cancel
+              </button>
+              <button className="repeat-modal-btn primary" onClick={confirmRepeatModal}>
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="all-tab-item-input-row">
         <input
           type="text"
@@ -348,38 +465,32 @@ const AllTab = forwardRef(function AllTab(
           onKeyDown={handleEnter}
           autoFocus
         />
+
         <div className="all-tab-chips">
           {nameChip && (
             <span className="all-chip" title={nameChip}>
               <span className="all-chip-label all-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button
-                className="all-chip-x"
-                onClick={() => setNameChip("")}
-                aria-label="Remove name filter"
-              >
+              <button className="all-chip-x" onClick={clearNameChip} aria-label="Remove name filter">
                 ×
               </button>
             </span>
           )}
+
           {dimsChip && (
             <span className="all-chip" title={dimsChip}>
               <span className="all-chip-label all-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button
-                className="all-chip-x"
-                onClick={() => setDimsChip("")}
-                aria-label="Remove dims/length filter"
-              >
+              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">
                 ×
               </button>
             </span>
           )}
 
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-            Selected: {selectedMap.size}
+            Selected: {selectedTotal}
           </span>
         </div>
       </div>
@@ -403,6 +514,8 @@ const AllTab = forwardRef(function AllTab(
         <tbody>
           {rows.map((r) => {
             const checked = selectedMap.has(r.uniqueId);
+            const rep = checked ? Number(selectedMap.get(r.uniqueId)?.repeat || 1) : 1;
+
             return (
               <tr
                 key={r.uniqueId}
@@ -416,7 +529,11 @@ const AllTab = forwardRef(function AllTab(
                     checked={checked}
                     onChange={() => toggleSelect(r)}
                   />
+                  {checked && String(r.type || "").toLowerCase() === "sqm" && (
+                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>x{rep}</span>
+                  )}
                 </td>
+
                 <td style={{ direction: "rtl", textAlign: "right" }}>
                   {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
                 </td>
@@ -451,6 +568,7 @@ const AllTab = forwardRef(function AllTab(
           >
             {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
           </button>
+
           <span style={{ fontSize: 12, opacity: 0.7 }}>
             Page {page} • Showing {rows.length} rows
           </span>

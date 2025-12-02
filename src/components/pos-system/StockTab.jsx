@@ -10,6 +10,80 @@ import React, {
 } from "react";
 import axios from "axios";
 
+/* ----------------- Light Repeat Modal (no prompt) ----------------- */
+function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
+  const [val, setVal] = useState(String(defaultValue));
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setVal(String(defaultValue ?? 1));
+    // focus a tick later
+    setTimeout(() => inputRef.current?.focus?.(), 0);
+  }, [open, defaultValue]);
+
+  if (!open) return null;
+
+  const parseCount = () => {
+    const n = Math.floor(Number(String(val).trim()));
+    if (!Number.isFinite(n) || n <= 0) return 1;
+    return n;
+  };
+
+  const submit = () => onConfirm(parseCount());
+
+  return (
+    <div
+      className="repeat-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        // click outside to close
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="repeat-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="repeat-modal-header">
+          <div className="repeat-modal-title">SQM repetitions</div>
+          <button className="repeat-modal-x" onClick={onCancel} aria-label="Close">
+            ×
+          </button>
+        </div>
+
+        <div className="repeat-modal-body">
+          <div className="repeat-modal-label">{label}</div>
+
+          <div className="repeat-modal-field">
+            <div className="repeat-modal-field-label">How many times do you want to add it?</div>
+            <input
+              ref={inputRef}
+              className="repeat-modal-input"
+              type="number"
+              min={1}
+              step={1}
+              value={val}
+              onChange={(e) => setVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") onCancel();
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="repeat-modal-footer">
+          <button className="repeat-modal-btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="repeat-modal-btn primary" onClick={submit}>
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const StockTab = forwardRef(function StockTab(
   { modalOpen, isActive, selectedMap, setSelectedMap },
   ref
@@ -30,10 +104,16 @@ const StockTab = forwardRef(function StockTab(
 
   const abortRef = useRef(null);
 
+  // modal state for SQM repeat
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const pendingRowRef = useRef(null);
+
   const cancelInFlight = () => {
     const ctl = abortRef.current;
-    if (ctl && typeof ctl.abort === "function") {
-      try { ctl.abort(); } catch {}
+    if (ctl?.abort) {
+      try {
+        ctl.abort();
+      } catch {}
     }
     const next = new AbortController();
     abortRef.current = next;
@@ -41,11 +121,13 @@ const StockTab = forwardRef(function StockTab(
   };
 
   const normalizeDigits = useCallback((s = "") => {
-    return s.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/،/g, ",");
+    return String(s)
+      .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+      .replace(/،/g, ",");
   }, []);
 
   const normalizeArabic = useCallback((s = "") => {
-    return s
+    return String(s || "")
       .replace(/[\u064B-\u065F]/g, "")
       .replace(/\u0640/g, "")
       .replace(/[أإآ]/g, "ا")
@@ -57,44 +139,60 @@ const StockTab = forwardRef(function StockTab(
       .trim();
   }, []);
 
-  const looksLikeDims = useCallback((s) => {
-    if (!s) return false;
-    const t = normalizeDigits(s).trim();
-    if (!t.includes("*")) return false;
-    const [L, rest] = t.split("*");
-    if (!L || !rest) return false;
-    if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
-    const parts = rest.split("-");
-    if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
-    if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
-    return true;
-  }, [normalizeDigits]);
+  const looksLikeDims = useCallback(
+    (s) => {
+      if (!s) return false;
+      const t = normalizeDigits(s).trim();
+      if (!t.includes("*")) return false;
+      const [L, rest] = t.split("*");
+      if (!L || !rest) return false;
+      if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
+      const parts = rest.split("-");
+      if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
+      if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
+      return true;
+    },
+    [normalizeDigits]
+  );
 
-  const isPlainNumber = useCallback((s) => {
-    if (!s) return false;
-    const t = normalizeDigits(String(s)).trim();
-    return /^\d{1,5}(\.\d+)?$/.test(t);
-  }, [normalizeDigits]);
+  const isPlainNumber = useCallback(
+    (s) => {
+      if (!s) return false;
+      const t = normalizeDigits(String(s)).trim();
+      return /^\d{1,5}(\.\d+)?$/.test(t);
+    },
+    [normalizeDigits]
+  );
 
-  const normalizeEnvelope = useCallback((raw) => {
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      const data =
-        Array.isArray(raw.data) ? raw.data :
-        Array.isArray(raw.items) ? raw.items :
-        Array.isArray(raw.results) ? raw.results : [];
-      let hm;
-      if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
-      else if (raw.page != null && raw.totalPages != null) hm = Number(raw.page) < Number(raw.totalPages);
-      else hm = data.length >= limit;
-      return { data, hasMore: hm };
-    }
-    if (Array.isArray(raw)) return { data: raw, hasMore: raw.length >= limit };
-    return { data: [], hasMore: false };
-  }, [limit]);
+  const normalizeEnvelope = useCallback(
+    (raw) => {
+      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+        const data = Array.isArray(raw.data)
+          ? raw.data
+          : Array.isArray(raw.items)
+          ? raw.items
+          : Array.isArray(raw.results)
+          ? raw.results
+          : [];
+        let hm;
+        if (typeof raw.hasMore === "boolean") hm = raw.hasMore;
+        else if (raw.page != null && raw.totalPages != null)
+          hm = Number(raw.page) < Number(raw.totalPages);
+        else hm = data.length >= limit;
+        return { data, hasMore: hm };
+      }
+      if (Array.isArray(raw)) return { data: raw, hasMore: raw.length >= limit };
+      return { data: [], hasMore: false };
+    },
+    [limit]
+  );
 
-  const rowToPayload = useCallback((row) => {
+  const rowToPayload = useCallback((row, repeat = 1) => {
     const [variantStr, batchStr] = String(row.uniqueId).split("-");
     return {
+      uniqueId: row.uniqueId,
+      repeat: Number(repeat) || 1,
+      source: "stock",
       itemVariantId: Number(variantStr),
       batchId: Number(batchStr),
       itemName: row.itemName,
@@ -110,30 +208,33 @@ const StockTab = forwardRef(function StockTab(
     };
   }, []);
 
-  const fetchDefaultPage = useCallback(async (targetPage) => {
-    if (!modalOpen || !isActive) return;
-    setLoading(true);
-    try {
-      const signal = cancelInFlight();
-      const url = `${baseUrl}/items/v2/filtered-items`;
-      const params = { page: targetPage, limit };
-      const res = await axios.get(url, { params, signal });
-      const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
+  const fetchDefaultPage = useCallback(
+    async (targetPage) => {
+      if (!modalOpen || !isActive) return;
+      setLoading(true);
+      try {
+        const signal = cancelInFlight();
+        const url = `${baseUrl}/items/v2/filtered-items`;
+        const params = { page: targetPage, limit };
+        const res = await axios.get(url, { params, signal });
+        const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
-      if (targetPage === 1) setFlatRows(flat || []);
-      else setFlatRows((prev) => [...prev, ...(flat || [])]);
+        if (targetPage === 1) setFlatRows(flat || []);
+        else setFlatRows((prev) => [...prev, ...(flat || [])]);
 
-      setNestedItems([]);
-      setPage(targetPage);
-      setHasMore(Boolean(hm));
-    } catch (err) {
-      if (axios.isCancel?.(err)) return;
-      console.error("Error fetching stock default:", err);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [baseUrl, isActive, limit, modalOpen, normalizeEnvelope]);
+        setNestedItems([]);
+        setPage(targetPage);
+        setHasMore(Boolean(hm));
+      } catch (err) {
+        if (axios.isCancel?.(err)) return;
+        console.error("Error fetching stock default:", err);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [baseUrl, isActive, limit, modalOpen, normalizeEnvelope]
+  );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
 
@@ -168,7 +269,17 @@ const StockTab = forwardRef(function StockTab(
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, dimsChip, isActive, isPlainNumber, looksLikeDims, modalOpen, nameChip, normalizeArabic, normalizeDigits]);
+  }, [
+    baseUrl,
+    dimsChip,
+    isActive,
+    isPlainNumber,
+    looksLikeDims,
+    modalOpen,
+    nameChip,
+    normalizeArabic,
+    normalizeDigits,
+  ]);
 
   // reset ONLY filters when modal opens (selection lives in parent)
   useEffect(() => {
@@ -180,17 +291,15 @@ const StockTab = forwardRef(function StockTab(
     setNestedItems([]);
     setPage(1);
     setHasMore(false);
+    setRepeatOpen(false);
+    pendingRowRef.current = null;
   }, [modalOpen]);
 
   useEffect(() => {
     if (!modalOpen || !isActive) return;
     if (nameChip || dimsChip) fetchSearch();
     else fetchDefault();
-    return () => {
-      if (abortRef.current?.abort) {
-        try { abortRef.current.abort(); } catch {}
-      }
-    };
+    return () => abortRef.current?.abort?.();
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
   const handleEnter = (e) => {
@@ -215,12 +324,49 @@ const StockTab = forwardRef(function StockTab(
 
   const toggleSelect = (row) => {
     if (!row.selectable) return;
+
+    // unselect immediately
+    if (selectedMap.has(row.uniqueId)) {
+      setSelectedMap((prev) => {
+        const next = new Map(prev);
+        next.delete(row.uniqueId);
+        return next;
+      });
+      return;
+    }
+
+    // SQM -> open modal, then confirm
+    const t = String(row.type || "").toLowerCase();
+    if (t === "sqm") {
+      pendingRowRef.current = row;
+      setRepeatOpen(true);
+      return;
+    }
+
+    // normal select
     setSelectedMap((prev) => {
       const next = new Map(prev);
-      if (next.has(row.uniqueId)) next.delete(row.uniqueId);
-      else next.set(row.uniqueId, rowToPayload(row));
+      next.set(row.uniqueId, rowToPayload(row, 1));
       return next;
     });
+  };
+
+  const confirmRepeat = (repeatCount) => {
+    const row = pendingRowRef.current;
+    pendingRowRef.current = null;
+    setRepeatOpen(false);
+    if (!row) return;
+
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      next.set(row.uniqueId, rowToPayload(row, repeatCount));
+      return next;
+    });
+  };
+
+  const cancelRepeat = () => {
+    pendingRowRef.current = null;
+    setRepeatOpen(false);
   };
 
   const rowsFromFlat = useMemo(() => {
@@ -282,12 +428,42 @@ const StockTab = forwardRef(function StockTab(
   const inSearchMode = Boolean(nameChip || dimsChip);
   const rows = inSearchMode ? rowsFromNested : rowsFromFlat;
 
+  const selectedTotal = useMemo(() => {
+    let total = 0;
+    (selectedMap || new Map()).forEach((v) => (total += Number(v?.repeat || 1)));
+    return total;
+  }, [selectedMap]);
+
   useImperativeHandle(ref, () => ({
-    collectSelected: () => Array.from(selectedMap.values()),
+    collectSelected: () => {
+      const out = [];
+      for (const v of (selectedMap || new Map()).values()) {
+        const rep = Math.max(1, Number(v?.repeat || 1));
+        for (let i = 0; i < rep; i++) {
+          out.push({ ...v, _repeatIndex: i + 1, _repeatTotal: rep });
+        }
+      }
+      return out;
+    },
   }));
+
+  const pendingLabel = useMemo(() => {
+    const row = pendingRowRef.current;
+    if (!row) return "";
+    return `${parseFloat(String(row.thickness))} ملم ${row.itemName}`;
+  }, [repeatOpen]);
 
   return (
     <>
+      {/* light-mode SQM repeat modal */}
+      <RepeatModal
+        open={repeatOpen}
+        label={pendingLabel}
+        defaultValue={1}
+        onCancel={cancelRepeat}
+        onConfirm={confirmRepeat}
+      />
+
       <div className="search-modal-item-input-row">
         <input
           type="text"
@@ -298,21 +474,32 @@ const StockTab = forwardRef(function StockTab(
           onKeyDown={handleEnter}
           autoFocus
         />
+
         <div className="search-modal-chips">
           {nameChip && (
             <span className="search-chip" title={nameChip}>
-              <span className="search-chip-label search-chip-label--name" dir="rtl">{nameChip}</span>
-              <button className="search-chip-x" onClick={() => setNameChip("")}>×</button>
+              <span className="search-chip-label search-chip-label--name" dir="rtl">
+                {nameChip}
+              </span>
+              <button className="search-chip-x" onClick={() => setNameChip("")} aria-label="Remove name filter">
+                ×
+              </button>
             </span>
           )}
+
           {dimsChip && (
             <span className="search-chip" title={dimsChip}>
-              <span className="search-chip-label search-chip-label--dims" dir="ltr"><bdi>{dimsChip}</bdi></span>
-              <button className="search-chip-x" onClick={() => setDimsChip("")}>×</button>
+              <span className="search-chip-label search-chip-label--dims" dir="ltr">
+                <bdi>{dimsChip}</bdi>
+              </span>
+              <button className="search-chip-x" onClick={() => setDimsChip("")} aria-label="Remove dims/length filter">
+                ×
+              </button>
             </span>
           )}
+
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-            Selected: {selectedMap.size}
+            Selected: {selectedTotal}
           </span>
         </div>
       </div>
@@ -332,9 +519,12 @@ const StockTab = forwardRef(function StockTab(
             <th>STOCK</th>
           </tr>
         </thead>
+
         <tbody>
           {rows.map((r) => {
             const checked = selectedMap.has(r.uniqueId);
+            const rep = checked ? Number(selectedMap.get(r.uniqueId)?.repeat || 1) : 1;
+
             return (
               <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""}>
                 <td className="cell-select">
@@ -344,7 +534,11 @@ const StockTab = forwardRef(function StockTab(
                     checked={checked}
                     onChange={() => toggleSelect(r)}
                   />
+                  {checked && String(r.type || "").toLowerCase() === "sqm" && (
+                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>x{rep}</span>
+                  )}
                 </td>
+
                 <td style={{ direction: "rtl", textAlign: "right" }}>
                   {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
                 </td>
@@ -362,7 +556,9 @@ const StockTab = forwardRef(function StockTab(
 
           {rows.length === 0 && (
             <tr className="empty-row">
-              <td className="empty-cell" colSpan={10}>No Data</td>
+              <td className="empty-cell" colSpan={10}>
+                No Data
+              </td>
             </tr>
           )}
         </tbody>

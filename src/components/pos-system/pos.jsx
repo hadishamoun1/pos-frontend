@@ -92,24 +92,36 @@ const handleReorder = (newRows) => {
   setSelectedBatchIds(ids);
 };
 
-
+const makeKey = () =>
+  (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const handleSelectItems = (selectedItems) => {
-  const newRows = selectedItems.map((item) => {
+  // selectedItems can include { repeat } for SQM rows
+  const expanded = [];
+  (selectedItems || []).forEach((item) => {
+    const type = String(item?.type || "").toLowerCase();
+    const repeatRaw = item?.repeat;
+    const repeat =
+      type === "sqm" ? Math.max(1, Math.floor(Number(repeatRaw || 1))) : 1;
+
+    for (let i = 0; i < repeat; i++) {
+      expanded.push({ ...item, __repeatIndex: i, __rowKey: makeKey() });
+    }
+  });
+
+  const newRows = expanded.map((item) => {
     const length = parseFloat(item.length);
-    const width  = parseFloat(item.width);
-    const type   = item.type;
+    const width = parseFloat(item.width);
+    const type = item.type;
     const sheetsPerBox = parseFloat(item.sheetsPerBox);
     const quantity = 1;
 
-    const isSqmPiece = type === "sqm";
+    const isSqm = String(type || "").toLowerCase() === "sqm";
 
     let sqm = "";
     let box = "";
     let sheet = "";
 
-    if (isSqmPiece) {
-      // SQM piece: user will type how many pieces in "sheet"
-      // sqm will be calculated in handleInputChange from L/W * sheet
+    if (isSqm) {
       sqm = "";
       box = "";
       sheet = "";
@@ -126,14 +138,15 @@ const handleSelectItems = (selectedItems) => {
     }
 
     return {
+      __rowKey: item.__rowKey, // ✅ unique row identity (for sqm duplicates)
+
       itemVariantId: item.itemVariantId,
-      batchId: item.batchId, // ✅ this will become itemBatchId
+      batchId: item.batchId,
 
       origin: item.origin || "",
       item:
-        (item.thickness != null
-          ? `${parseFloat(item.thickness)} ملم `
-          : "") + (item.itemName || ""),
+        (item.thickness != null ? `${parseFloat(item.thickness)} ملم ` : "") +
+        (item.itemName || ""),
 
       type: type || "",
       length: item.length || "",
@@ -145,16 +158,31 @@ const handleSelectItems = (selectedItems) => {
       price: "",
       total: "0.00",
 
-      // 🔹 for SQM pieces: extra info
-      sqmPieceId: isSqmPiece ? item.sqmPieceId ?? item.id ?? null : null,
-      maxPieces: isSqmPiece ? item.piecesRemaining ?? null : null,
+      // SQM pieces (optional)
+      sqmPieceId: isSqm ? (item.sqmPieceId ?? item.id ?? null) : null,
+      maxPieces: isSqm ? (item.piecesRemaining ?? null) : null,
     };
   });
 
   setTableData((prev) => {
-    const byId = new Map(prev.map((r) => [r.batchId, r]));
-    newRows.forEach((r) => byId.set(r.batchId, r));
-    return Array.from(byId.values());
+    // ✅ Non-SQM: keep your old behavior (dedupe by batchId)
+    // ✅ SQM: allow duplicates (append, don’t overwrite)
+    const next = [...prev];
+
+    newRows.forEach((r) => {
+      const isSqm = String(r.type || "").toLowerCase() === "sqm";
+      if (isSqm) {
+        next.push(r);
+      } else {
+        const idx = next.findIndex(
+          (x) => x.batchId === r.batchId && String(x.type || "").toLowerCase() !== "sqm"
+        );
+        if (idx >= 0) next[idx] = r;
+        else next.push(r);
+      }
+    });
+
+    return next;
   });
 };
 
