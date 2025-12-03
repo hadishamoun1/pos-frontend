@@ -1,106 +1,282 @@
-/* Overlay for New Popup */
-.customer-unique-selection-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
+/* ===== Overlay ===== */
+.cust-overlay{
+  position:fixed; inset:0;
+  z-index:2000;
+  display:flex; align-items:center; justify-content:center;
+  padding:18px;
+  background:
+    radial-gradient(1200px 600px at 20% 10%, rgba(99,102,241,.22), transparent 60%),
+    radial-gradient(900px 500px at 80% 35%, rgba(56,189,248,.18), transparent 55%),
+    rgba(10,10,20,.60);
+  backdrop-filter: blur(4px);
 }
 
-/* Content for New Popup */
-.customer-unique-selection-modal-content {
-  background: linear-gradient(135deg, #ffffff, #f9fafb);
-  padding: 1.5rem;
-  border-radius: 12px;
-  width: 50%;
-  max-width: 400px;
-  height: 85%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  animation: scaleIn 0.3s ease;
+/* ===== Modal ===== */
+.cust-modal{
+  width:min(1050px, 96vw);
+  height:min(740px, 92vh);
+  border-radius:16px;
+  overflow:hidden;
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 22px 70px rgba(0,0,0,.38);
+  border: 1px solid rgba(255,255,255,.50);
+  display:flex;
+  flex-direction:column;
+  animation: custPop .16s ease-out;
 }
 
-/* Header for New Popup */
-.customer-unique-selection-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+@keyframes custPop {
+  from { transform: translateY(10px) scale(.99); opacity:.6; }
+  to   { transform: translateY(0) scale(1); opacity:1; }
 }
 
-.customer-unique-selection-modal-header h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: bold;
-  color: #333;
+/* ===== Header ===== */
+.cust-header{
+  padding:16px 16px 14px;
+  color:#fff;
+  background: linear-gradient(135deg, #1d4ed8, #0891b2);
+  position:relative;
 }
 
-/* Table Styling for New Popup */
-.customer-unique-selection-modal-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
+.cust-header::after{
+  content:"";
+  position:absolute;
+  top:-40px; right:-40px;
+  width:180px; height:180px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), transparent 60%);
+  transform: rotate(18deg);
+  opacity:.7;
+  pointer-events:none;
+}
+
+.cust-badge{
+  display:inline-block;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.22);
+}
+
+.cust-header h2{
+  margin:8px 0 2px;
+  font-size:22px;
+  font-weight:900;
+}
+
+.cust-subtitle{
+  font-size:12px;
+  opacity:.9;
+}
+
+/* Close */
+.cust-close{
+  position:absolute;
+  top:12px; right:12px;
+  width:40px; height:40px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  color:#0b1220;
+  font-size:18px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 10px 22px rgba(0,0,0,.18);
+  transition: transform .12s ease;
+}
+.cust-close:hover{ transform: translateY(-1px); }
+.cust-close:active{ transform: translateY(0); }
+
+/* ===== Search ===== */
+.cust-search{
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background: #f8fafc;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.cust-searchbox{
+  flex:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
   background: #fff;
+  border: 1px solid rgba(15,23,42,.14);
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+}
+.cust-searchbox:focus-within{
+  border-color: rgba(29,78,216,.55);
+  box-shadow: 0 0 0 4px rgba(29,78,216,.12);
 }
 
-.customer-unique-selection-modal-table th,
-.customer-unique-selection-modal-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border: 1px solid #ddd;
-  font-size: 1rem;
+.cust-searchicon{
+  font-size:14px;
+  color: rgba(15,23,42,.55);
 }
 
-.customer-unique-selection-modal-table th {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  font-weight: bold;
-  text-transform: uppercase;
+.cust-searchbox input{
+  flex:1;
+  border:none;
+  outline:none;
+  background:transparent;
+  font-size:14px;
+  color:#0f172a;
 }
 
-.customer-unique-selection-modal-table tbody tr:hover {
-  background: #eaf4ff;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+.cust-clear{
+  border:none;
+  cursor:pointer;
+  font-weight:800;
+  font-size:12px;
+  padding:8px 10px;
+  border-radius:10px;
+  background: rgba(29,78,216,.10);
+  color: rgba(29,78,216,1);
+}
+.cust-clear:hover{ background: rgba(29,78,216,.16); }
+
+.cust-count{
+  font-size:12px;
+  font-weight:800;
+  color:#0f172a;
+  opacity:.75;
+  white-space:nowrap;
 }
 
-/* Close Button for New Popup */
-.customer-unique-selection-modal-header .close-button {
-  background: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
+/* ===== Table ===== */
+.cust-table-wrap{
+  flex:1;
+  overflow:auto;
+  background: #ffffff;
 }
 
-.customer-unique-selection-modal-header .close-button:hover {
-  background: #960110;
-}
-.customer-unique-selection-search {
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.customer-unique-selection-search input {
-  width: 95%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  outline: none;
+.cust-table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout: fixed; /* makes widths behave nicely */
 }
 
-.customer-unique-selection-search input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+.cust-table th, .cust-table td{
+  padding:12px 12px;
+  border-bottom:1px solid rgba(0,0,0,.08);
+  font-size:14px;
+  text-align:left;
+  vertical-align:middle;
+  color:#0f172a;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sticky header */
+.cust-table th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background: #f1f5f9;
+  font-weight:900;
+  color:#0b1220;
+  border-bottom: 1px solid rgba(0,0,0,.12);
+}
+
+/* Zebra rows */
+.cust-table tbody tr:nth-child(even){
+  background: rgba(2,6,23,.02);
+}
+
+.cust-table tbody tr:hover{
+  background: rgba(59,130,246,.10);
+  cursor:pointer;
+}
+
+/* Name cell */
+.cust-namecell .cust-name{
+  font-weight:900;
+  color:#0b1220;
+  line-height:1.15;
+  white-space: normal; /* allow 2 lines for long names */
+}
+.cust-namecell .cust-subname{
+  margin-top:3px;
+  font-size:12px;
+  color:#475569;
+  white-space: normal;
+}
+
+/* Empty */
+.cust-empty{
+  text-align:center;
+  padding:24px 10px;
+  color:#64748b;
+  font-weight:700;
+}
+
+/* Footer */
+.cust-footer{
+  padding:10px 14px;
+  border-top:1px solid rgba(0,0,0,.08);
+  background: #f8fafc;
+}
+
+.cust-footnote{
+  font-size:12px;
+  color:#64748b;
+}
+
+/* ===== Balances columns ===== */
+/* Header in Arabic: RTL, centered, wider */
+.th-balance{
+  width: 140px;          /* increase size */
+  text-align:center !important;
+  direction: rtl;
+}
+
+/* Body cells: keep numbers LTR so commas/decimals are correct */
+.td-balance{
+  width: 140px;
+  text-align:right;
+  direction: ltr;
+  font-weight:900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .2px;
+}
+
+/* subtle highlight for balance cells */
+.cust-table td.td-balance{
+  background: rgba(2,6,23,.015);
+}
+.cust-table tbody tr:hover td.td-balance{
+  background: rgba(59,130,246,.06);
+}
+
+.pos { color: #0f5132 !important; }  /* green */
+.neg { color: #b91c1c !important; }  /* red */
+
+
+/* colors */
+.pos{ color:#065f46; }
+.neg{ color:#b91c1c; }
+
+/* Optional: make account number column a bit narrower */
+.th-acc{ width: 130px; }
+.th-phone{ width: 170px; }
+.th-area{ width: 130px; }
+
+/* Responsive: hide less important columns on small screens */
+@media (max-width: 760px){
+  .cust-modal{ width:96vw; height:92vh; }
+  .cust-table th:nth-child(3),
+  .cust-table td:nth-child(3),
+  .cust-table th:nth-child(4),
+  .cust-table td:nth-child(4){
+    display:none; /* hide phone + area */
+  }
+  .th-balance, .td-balance{ width: 120px; }
 }

@@ -148,7 +148,7 @@ const CustomerDetails = ({
             style={{ marginLeft: "auto" }}
             onClick={handleSearchClick}
           >
-            Search
+            Search Items
           </button>
 
           {/* ✅ NEW Cut button */}

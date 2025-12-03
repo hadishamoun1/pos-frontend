@@ -12,19 +12,23 @@ const NewRecordModal = ({ onClose, onSave }) => {
   const [notification, setNotification] = useState(null);
   const [closeAfterNotification, setCloseAfterNotification] = useState(false);
 
+  // ✅ prevents double save
+  const [saving, setSaving] = useState(false);
+
   const formatNumberWithCommas = (number) => {
-    if (number === "" || number === null) return "";
+    if (number === "" || number === null || number === undefined) return "";
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
   const handleAddRow = () => {
+    if (saving) return;
     setRows((prev) => [
       ...prev,
       {
         customerId: "",
         customerName: "",
         type: "S", // default JV Type
-        pmtType: "", // new Payment Type
+        pmtType: "", // Payment Type
         currency: "",
         exchangeRate: "",
         cashNumber: "",
@@ -37,6 +41,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
   };
 
   const handleInputChange = (index, field, value) => {
+    if (saving) return;
+
     setRows((prev) =>
       prev.map((row, i) => {
         if (i !== index) return row;
@@ -44,8 +50,9 @@ const NewRecordModal = ({ onClose, onSave }) => {
 
         // whenever cashNumber / exchangeRate / currency changes, recalc amountExchanged:
         if (["cashNumber", "exchangeRate", "currency"].includes(field)) {
-          const cash = parseFloat(updated.cashNumber.replace(/,/g, "")) || 0;
-          const rate = parseFloat(updated.exchangeRate.replace(/,/g, "")) || 0;
+          const cash = parseFloat((updated.cashNumber || "").replace(/,/g, "")) || 0;
+          const rate = parseFloat((updated.exchangeRate || "").replace(/,/g, "")) || 0;
+
           if (updated.currency === "LL" && rate) {
             // LL → USD
             updated.amountExchanged = formatNumberWithCommas(
@@ -56,6 +63,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
             updated.amountExchanged = formatNumberWithCommas(
               (cash * rate).toFixed(2)
             );
+          } else {
+            updated.amountExchanged = "";
           }
         }
 
@@ -65,6 +74,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
   };
 
   const handleCustomerSelect = (customer) => {
+    if (saving) return;
+
     setRows((prev) =>
       prev.map((row, i) =>
         i === currentRowIndex
@@ -80,6 +91,9 @@ const NewRecordModal = ({ onClose, onSave }) => {
   };
 
   const handleSave = async () => {
+    if (saving) return; // ✅ guard
+    setSaving(true);
+
     try {
       if (!rows.length) throw new Error("Add at least one row.");
 
@@ -93,23 +107,44 @@ const NewRecordModal = ({ onClose, onSave }) => {
         if (!r.pmtType) throw new Error("Payment Type is required.");
         if (!r.currency) throw new Error("Currency is required.");
         if (!r.cashNumber) throw new Error("Cash number is required.");
+
         if (r.currency === "LL" && !r.exchangeRate)
           throw new Error("Exchange rate is required for LL.");
+
         if (!r.amountExchanged)
           throw new Error("Amount exchanged is required.");
+
         if (!r.date) throw new Error("Date is required.");
+
+        const cashNumber = parseFloat((r.cashNumber || "").replace(/,/g, ""));
+        if (!Number.isFinite(cashNumber)) throw new Error("Invalid cash number.");
+
+        const exchangeRateRaw = (r.exchangeRate || "").replace(/,/g, "");
+        const exchangeRate =
+          exchangeRateRaw === "" ? null : parseFloat(exchangeRateRaw);
+
+        // if your backend expects exchangeRate always, keep it; otherwise allow null
+        if (r.currency === "LL" && !Number.isFinite(exchangeRate)) {
+          throw new Error("Invalid exchange rate.");
+        }
+
+        const amountExchanged = parseFloat(
+          (r.amountExchanged || "").replace(/,/g, "")
+        );
+        if (!Number.isFinite(amountExchanged))
+          throw new Error("Invalid amount exchanged.");
 
         const payload = {
           customerId: r.customerId,
           date: r.date,
-         invoiceId: (r.invoiceNumber || "").trim() || null,
-          cashNumber: parseFloat(r.cashNumber.replace(/,/g, "")),
+          invoiceId: (r.invoiceNumber || "").trim() || null,
+          cashNumber,
           currency: r.currency,
-          exchangeRate: parseFloat(r.exchangeRate.replace(/,/g, "")),
-          amountExchanged: parseFloat(r.amountExchanged.replace(/,/g, "")),
+          exchangeRate: exchangeRate ?? null,
+          amountExchanged,
           comments: r.comments,
           type: r.type,
-          pmtType: r.pmtType, // include the new Payment Type
+          pmtType: r.pmtType,
         };
 
         const resp = await axios.post(`${baseUrl}/recievables`, payload);
@@ -126,6 +161,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
         type: "error",
         message: e.response?.data?.message || e.message,
       });
+    } finally {
+      setSaving(false); // ✅ release lock
     }
   };
 
@@ -143,14 +180,18 @@ const NewRecordModal = ({ onClose, onSave }) => {
             <button
               className="payments-modal-action-button payments-modal-cancel-button"
               onClick={onClose}
+              disabled={saving}
             >
               Cancel
             </button>
+
             <button
               className="payments-modal-action-button payments-modal-save-button"
               onClick={handleSave}
+              disabled={saving || rows.length === 0}
+              title={rows.length === 0 ? "Add at least one row" : undefined}
             >
-              Save
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
@@ -170,6 +211,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
               <th>Comments</th>
             </tr>
           </thead>
+
           <tbody>
             {rows.map((row, idx) => (
               <tr key={idx}>
@@ -178,15 +220,19 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     type="text"
                     value={row.customerName}
                     readOnly
+                    disabled={saving}
                     onClick={() => {
+                      if (saving) return;
                       setCurrentRowIndex(idx);
                       setCustomerModalOpen(true);
                     }}
                   />
                 </td>
+
                 <td>
                   <select
                     value={row.type}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "type", e.target.value)
                     }
@@ -196,9 +242,11 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <option value="RVR">RVR</option>
                   </select>
                 </td>
+
                 <td>
                   <select
                     value={row.pmtType}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "pmtType", e.target.value)
                     }
@@ -208,9 +256,11 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <option value="Check">Check</option>
                   </select>
                 </td>
+
                 <td>
                   <select
                     value={row.currency}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "currency", e.target.value)
                     }
@@ -220,49 +270,65 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <option value="LL">LL</option>
                   </select>
                 </td>
+
                 <td>
                   <input
                     type="text"
                     value={row.cashNumber}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "cashNumber", e.target.value)
                     }
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
                     value={row.exchangeRate}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "exchangeRate", e.target.value)
                     }
                   />
                 </td>
+
                 <td>
-                  <input type="text" value={row.amountExchanged} readOnly />
+                  <input
+                    type="text"
+                    value={row.amountExchanged}
+                    readOnly
+                    disabled={saving}
+                  />
                 </td>
+
                 <td>
                   <input
                     type="date"
                     value={row.date}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "date", e.target.value)
                     }
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
                     value={row.invoiceNumber}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "invoiceNumber", e.target.value)
                     }
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
                     value={row.comments}
+                    disabled={saving}
                     onChange={(e) =>
                       handleInputChange(idx, "comments", e.target.value)
                     }
@@ -277,18 +343,20 @@ const NewRecordModal = ({ onClose, onSave }) => {
           <button
             className="payments-modal-action-button"
             onClick={handleAddRow}
+            disabled={saving}
           >
             Add Row
           </button>
         </div>
       </div>
 
-      {isCustomerModalOpen && (
+      {isCustomerModalOpen && !saving && (
         <CustomerSelectionModal
           onClose={() => setCustomerModalOpen(false)}
           onSelectCustomer={handleCustomerSelect}
         />
       )}
+
       {notification && (
         <NotificationModal
           type={notification.type}
