@@ -615,14 +615,17 @@ const handleDeleteRow = () => {
   };
 
 
-  const toYMD = (x) => {
+
+
+// put these helpers near the top of POSSystemPage (above handleSelectInvoice)
+const toYMD = (x) => {
   if (!x) return new Date().toISOString().slice(0, 10);
 
-  // if backend already sends "YYYY-MM-DD", keep it exactly
+  // already "YYYY-MM-DD"
   const s = String(x);
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // otherwise parse and format using LOCAL date parts (avoids timezone shift)
+  // parse and format using LOCAL date parts (avoids timezone shift)
   const d = new Date(x);
   if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
 
@@ -632,12 +635,15 @@ const handleDeleteRow = () => {
   return `${y}-${m}-${day}`;
 };
 
+const pickInvoiceDate = (inv) =>
+  inv?.date ?? inv?.invoiceDate ?? inv?.invDate ?? inv?.createdAt ?? null;
 
+// ✅ COMPLETE handleSelectInvoice
 const handleSelectInvoice = async (invoiceSummary) => {
   console.log("Selected Invoice:", invoiceSummary);
   if (!invoiceSummary) return;
 
-  // Resolve the real invoice id
+  // resolve real invoice id
   const invId = invoiceSummary.invoiceId || invoiceSummary.id;
   if (!invId) {
     console.error("❌ No invoice id in selected invoice summary:", invoiceSummary);
@@ -648,109 +654,95 @@ const handleSelectInvoice = async (invoiceSummary) => {
   setSelectedRequestId(null);
   setEditingInvoiceType(invoiceSummary.invoiceType || "S");
 
-  // 🔹 Fetch the FULL invoice (so we get sqmpieceId, original sizes, etc.)
+  // fetch full invoice
   let invoice = invoiceSummary;
   try {
     const res = await axios.get(`${baseUrl}/invoices/${invId}`);
     invoice = res.data;
     console.log("📥 Full invoice from API:", invoice);
-    setDate(toYMD(invoice.date))
   } catch (err) {
     console.error("❌ Failed to fetch full invoice, using summary only:", err);
   }
 
-  const vatPercentage = invoice.vatPercentage
+  // ✅ ALWAYS set the date (even if fetch failed)
+  const rawDate = pickInvoiceDate(invoice);
+  console.log("🧾 invoice raw date =", rawDate, "keys:", Object.keys(invoice || {}));
+  setDate(toYMD(rawDate));
+
+  // header fields
+  const vatPercentage = invoice?.vatPercentage
     ? parseFloat(invoice.vatPercentage).toString()
     : "11";
 
-  const currencyRateValue = invoice.currencyRate
+  const currencyRateValue = invoice?.currencyRate
     ? parseFloat(invoice.currencyRate).toString()
     : "89000";
 
-  // 🔹 Fill customer / header fields
-  setCustomerInput(invoice.customerName);
-  setSelectedCustomerId(invoice.customerId);
-  setSelectedCustomerName(invoice.customerName || "");
+  setCustomerInput(invoice?.customerName || invoice?.customer?.customerName || "");
+  setSelectedCustomerId(invoice?.customerId ?? invoice?.customer?.id ?? null);
+  setSelectedCustomerName(invoice?.customerName || invoice?.customer?.customerName || "");
   setCurrencyRate(currencyRateValue);
   setIsEditable(false);
   setVat(vatPercentage);
 
+  // preview header object
   setCustomerPreview({
-    customerName:
-      invoice.customerName ??
-      invoice.customer?.customerName ??
-      "",
-    customerAddress:
-      invoice.customerAddress ??
-      invoice.customer?.address ??
-      "",
-    customerPhone:
-      invoice.customerPhone ??
-      invoice.customer?.phoneNumber ??
-      "",
+    customerName: invoice?.customerName ?? invoice?.customer?.customerName ?? "",
+    customerAddress: invoice?.customerAddress ?? invoice?.customer?.address ?? "",
+    customerPhone: invoice?.customerPhone ?? invoice?.customer?.phoneNumber ?? "",
     customerAccountNumber:
-      invoice.customerAccountNumber ??
-      invoice.customer?.customerAccountNumber ??
-      "",
-    customerTaxNumber:
-      invoice.customerTaxNumber ??
-      invoice.customer?.financialNumber ??
-      "",
-    currencyCode:
-      invoice.currencyCode ??
-      invoice.customer?.currency?.currencyCode ??
-      "USD",
+      invoice?.customerAccountNumber ?? invoice?.customer?.customerAccountNumber ?? "",
+    customerTaxNumber: invoice?.customerTaxNumber ?? invoice?.customer?.financialNumber ?? "",
+    currencyCode: invoice?.currencyCode ?? invoice?.customer?.currency?.currencyCode ?? "USD",
   });
 
-  // 🔹 Build items table rows
-  const updatedTableData = (invoice.items || [])
+  // build table rows
+  const updatedTableData = (invoice?.items || [])
     .map((item) => {
-      if (!item.itemVariantId || !item.itemName) {
+      if (!item?.itemVariantId || !item?.itemName) {
         console.warn("Skipping invalid item:", item);
         return null;
       }
 
-      // IMPORTANT: API returns `sqmpieceId`
       const sqmPieceId =
-        item.sqmPieceId ??           // if you later rename in API
-        item.sqmpieceId ??           // current key from your DTO
-        (item.sqmPiece && item.sqmPiece.id) ??
+        item?.sqmPieceId ??
+        item?.sqmpieceId ??
+        (item?.sqmPiece && item.sqmPiece.id) ??
         null;
 
-      const type = item.itemType || (sqmPieceId ? "sqm" : "");
+      const type = item?.itemType || (sqmPieceId ? "sqm" : "");
 
       return {
         __rowKey: makeKey(),
-        origin: item.origin || "",
-        item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
+        origin: item?.origin || "",
+        item: `${parseFloat(item?.thickness)} ملم ${item?.itemName}`,
         type,
 
-        length: item.length || "",
-        width: item.width || "",
-        sqm: item.sqm || "",
-        price: item.unitPrice || "",
-        total: item.totalAmount || "0.00",
+        length: item?.length || "",
+        width: item?.width || "",
+        sqm: item?.sqm || "",
+        price: item?.unitPrice || "",
+        total: item?.totalAmount || "0.00",
 
-        box: type === "box" ? item.quantity : "",
+        box: type === "box" ? item?.quantity : "",
         sheet:
           type === "sheet" || type === "sqm"
-            ? item.quantity            // pieces count for sheet/sqm
-            : item.sheetsPerBox,       // for box rows, sheet column shows sheetsPerBox
+            ? item?.quantity
+            : item?.sheetsPerBox,
 
-        itemVariantId: item.itemVariantId,
-        batchId: item.itemBatchId ?? (item.batch && item.batch.id) ?? null,
+        itemVariantId: item?.itemVariantId,
+        batchId: item?.itemBatchId ?? (item?.batch && item.batch.id) ?? null,
 
-        // original info for tooltip / restoring
-        originalLength: item.originalLength ?? null,
-        originalWidth: item.originalWidth ?? null,
-        originalSheetsPerBox: item.originalSheetsPerBox ?? null,
+        originalLength: item?.originalLength ?? null,
+        originalWidth: item?.originalWidth ?? null,
+        originalSheetsPerBox: item?.originalSheetsPerBox ?? null,
 
-        invoiceItemId: item.invoiceItemId ?? item.id,
+        invoiceItemId: item?.invoiceItemId ?? item?.id,
 
-        // 🔥 This is what update payload will use:
-        sqmPieceId: sqmPieceId,
+        // used in update payload
+        sqmPieceId,
 
-        sheetsPerBox: item.sheetsPerBox ?? null,
+        sheetsPerBox: item?.sheetsPerBox ?? null,
       };
     })
     .filter(Boolean);
@@ -758,9 +750,13 @@ const handleSelectInvoice = async (invoiceSummary) => {
   console.log("✅ Updated Table Data (with sqmPieceId):", updatedTableData);
   setTableData(updatedTableData);
 
-  // For preview modal
-  setInvoiceData(invoice);
+  // for preview modal (IMPORTANT: preview reads invoiceData.date, so keep it in sync too)
+  setInvoiceData({
+    ...(invoice || {}),
+    date: toYMD(rawDate),
+  });
 };
+
 
 
 
