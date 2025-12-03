@@ -614,6 +614,25 @@ const handleDeleteRow = () => {
     }
   };
 
+
+  const toYMD = (x) => {
+  if (!x) return new Date().toISOString().slice(0, 10);
+
+  // if backend already sends "YYYY-MM-DD", keep it exactly
+  const s = String(x);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // otherwise parse and format using LOCAL date parts (avoids timezone shift)
+  const d = new Date(x);
+  if (Number.isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+
 const handleSelectInvoice = async (invoiceSummary) => {
   console.log("Selected Invoice:", invoiceSummary);
   if (!invoiceSummary) return;
@@ -635,6 +654,7 @@ const handleSelectInvoice = async (invoiceSummary) => {
     const res = await axios.get(`${baseUrl}/invoices/${invId}`);
     invoice = res.data;
     console.log("📥 Full invoice from API:", invoice);
+    setDate(toYMD(invoice.date))
   } catch (err) {
     console.error("❌ Failed to fetch full invoice, using summary only:", err);
   }
