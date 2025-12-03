@@ -347,28 +347,29 @@ const UniqueItemsPage = () => {
   // ============ Tokenized search ============
   const queryString = useMemo(() => tokens.join(" ").trim(), [tokens]);
 
-  const runTokenSearch = async () => {
-    if (!queryString) {
-      setSearchResults(null);
-      return;
-    }
-    setSearching(true);
-    try {
-      const url = new URL(endpoints.search[descMode]);
-      url.searchParams.set("q", queryString);
-      url.searchParams.set("limit", "200");
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Search failed");
-      const json = await res.json();
-      const rows = Array.isArray(json?.data) ? json.data : [];
-      setSearchResults(rows);
-    } catch (e) {
-      console.warn("token search error:", e);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
+const runTokenSearch = async () => {
+  if (!queryString) {
+    setSearchResults(null);
+    return;
+  }
+  setSearching(true);
+  try {
+    const base = endpoints.search[descMode];
+    const url = `${base}?q=${encodeURIComponent(queryString)}&limit=200`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    setSearchResults(rows);
+  } catch (e) {
+    console.warn("token search error:", e);
+    setSearchResults([]);
+  } finally {
+    setSearching(false);
+  }
+};
 
   useEffect(() => {
     runTokenSearch();
