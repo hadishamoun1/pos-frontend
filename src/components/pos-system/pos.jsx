@@ -333,6 +333,8 @@ useEffect(() => {
   };
 
   const handleNewTransaction = () => {
+      const today = new Date().toISOString().slice(0, 10);
+
     setTableData([]);
     setSelectedCustomerId(null);
     setCustomerInput("");
@@ -347,6 +349,7 @@ useEffect(() => {
     setPricingGroups(null);
     setEditingInvoiceType(null);
     setCutMode(false);
+    setDate(today);
   };
 
 const handleInputChange = (index, field, value) => {
