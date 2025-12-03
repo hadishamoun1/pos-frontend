@@ -164,26 +164,10 @@ const handleSelectItems = (selectedItems) => {
     };
   });
 
-  setTableData((prev) => {
-    // ✅ Non-SQM: keep your old behavior (dedupe by batchId)
-    // ✅ SQM: allow duplicates (append, don’t overwrite)
-    const next = [...prev];
+ setTableData((prev) => {
+  return [...prev, ...newRows];
+});
 
-    newRows.forEach((r) => {
-      const isSqm = String(r.type || "").toLowerCase() === "sqm";
-      if (isSqm) {
-        next.push(r);
-      } else {
-        const idx = next.findIndex(
-          (x) => x.batchId === r.batchId && String(x.type || "").toLowerCase() !== "sqm"
-        );
-        if (idx >= 0) next[idx] = r;
-        else next.push(r);
-      }
-    });
-
-    return next;
-  });
 };
 
 
@@ -211,6 +195,7 @@ const handleSelectItems = (selectedItems) => {
       setSelectedInvoiceType(request.invoiceType || "Both");
 
       const updatedData = request.details.map((detail) => ({
+        __rowKey: makeKey(),
         itemVariantId: detail.itemVariantId || null,
         item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
         origin: detail.origin || "",
@@ -715,6 +700,7 @@ const handleSelectInvoice = async (invoiceSummary) => {
       const type = item.itemType || (sqmPieceId ? "sqm" : "");
 
       return {
+        __rowKey: makeKey(),
         origin: item.origin || "",
         item: `${parseFloat(item.thickness)} ملم ${item.itemName}`,
         type,

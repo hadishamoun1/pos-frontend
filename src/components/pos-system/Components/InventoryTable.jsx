@@ -154,7 +154,7 @@ const InventoryTable = ({
 
             return (
               <tr
-                key={index}
+                key={row.__rowKey}
                 onClick={() => handleRowClick(index)}
                 onContextMenu={(e) => handleRightClick(e, index)}
                 draggable={canReorder}
