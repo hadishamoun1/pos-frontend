@@ -171,57 +171,74 @@ const handleSelectItems = (selectedItems) => {
 };
 
 
-  const handleSelectRequest = async (requestId) => {
-    console.log("Fetching request details for ID:", requestId);
+const handleSelectRequest = async (reqOrId) => {
+  // Accept either: number id  OR  request object
+  const id =
+    typeof reqOrId === "object"
+      ? (reqOrId?.id ?? reqOrId?.requestId ?? null)
+      : reqOrId;
 
-    if (!requestId) return;
+  console.log("Fetching request details for:", reqOrId, "→ id:", id);
+  if (!id) return;
 
-    setSelectedRequestId(requestId);
-    setSelectedInvoiceId(null);
-    setLoading(true);
-    setSelectedCustomerName(requestId.customerName || "");
-    setIsEditable(false);
+  setSelectedRequestId(id);
+  setSelectedInvoiceId(null);
+  setLoading(true);
+  setIsEditable(false);
 
-    try {
-      const response = await axios.get(
-        `${baseUrl}/requests/${requestId}`
-      );
-      const request = response.data;
+  // Optional: instant UI update if we got the object from the list
+  if (typeof reqOrId === "object") {
+    setSelectedCustomerName(reqOrId?.customerName || "");
+    setCustomerInput(reqOrId?.customerName || "");
+    setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
+  }
 
-      console.log("Fetched Request:", request);
+  try {
+    const { data: request } = await axios.get(`${baseUrl}/requests/${id}`);
+    console.log("Fetched Request:", request);
 
-      setCustomerInput(request.customerName || "");
-      setSelectedCustomerId(request.customerId || null);
-      setSelectedInvoiceType(request.invoiceType || "Both");
+    setCustomerInput(request.customerName || "");
+    setSelectedCustomerName(request.customerName || "");
+    setSelectedCustomerId(request.customerId || null);
+    setSelectedInvoiceType(request.invoiceType || "Both");
+    setDate(toYMD(request.requestDate || request.date));
 
-      const updatedData = request.details.map((detail) => ({
-        __rowKey: makeKey(),
-        itemVariantId: detail.itemVariantId || null,
-        item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
-        origin: detail.origin || "",
-        thickness: detail.thickness || "",
-        length: detail.length || "",
-        width: detail.width || "",
-        type: detail.itemType || "",
-        box: detail.itemType === "box" ? detail.quantity || 0 : "",
-        sheet:
-          detail.itemType === "sheet"
-            ? detail.quantity || 0
-            : detail.sheetsPerBox,
-        sqm: detail.sqm || "",
-        price: detail.price || "",
-        total: detail.total || "0.00",
-      }));
+    const details = Array.isArray(request.details) ? request.details : [];
+    const updatedData = details.map((detail) => ({
+      __rowKey: makeKey(),
+      itemVariantId: detail.itemVariantId || null,
+      batchId: detail.itemBatchId ?? detail.batchId ?? null,
 
-      setTableData(updatedData);
-      
-    } catch (error) {
-      console.error("Error fetching request details:", error);
-      showNotification("error", "Failed to fetch request details.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
+      origin: detail.origin || "",
+      thickness: detail.thickness || "",
+      length: detail.length || "",
+      width: detail.width || "",
+      type: detail.itemType || "",
+
+      box: detail.itemType === "box" ? detail.quantity || 0 : "",
+      sheet:
+        detail.itemType === "sheet"
+          ? detail.quantity || 0
+          : detail.sheetsPerBox,
+
+      sqm: detail.sqm || "",
+      price: detail.price || "",
+      total: detail.total || "0.00",
+    }));
+
+    setTableData(updatedData);
+  } catch (error) {
+    console.error("Error fetching request details:", error);
+    showNotification(
+      "error",
+      `Failed to fetch request details: ${error.response?.data?.message || error.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 
   // ====================== PRICING (Get Price) ======================
@@ -588,6 +605,7 @@ const handleDeleteRow = () => {
       currencyRate: parseFloat(currencyRate) || 1,
       vatPercentage: vatPercentageValue,
       items,
+      requestId: selectedRequestId ?? null,
      
     };
 

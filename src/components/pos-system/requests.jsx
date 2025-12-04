@@ -147,7 +147,7 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
               <li
                 key={`request-${request.id}`}
                 className={`request-item ${isItemBlinking(request.id) ? "blink" : ""}`}
-                onClick={() => onSelectRequest(request.id)}
+                onClick={() => onSelectRequest(request)}
               >
                 <div className="request-header">
                   {/* Container controls hover + positions tooltip */}

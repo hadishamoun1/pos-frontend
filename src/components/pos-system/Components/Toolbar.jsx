@@ -63,7 +63,7 @@ const Toolbar = ({
             <button
               className="pos-page-toolbar-button pos-page-red-button"
               onClick={() => handleCreateInvoice("S")}
-              disabled={loading || selectedRequestId !== null}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
             >
               {loading ? "Processing..." : "Issue"}
             </button>
@@ -73,7 +73,7 @@ const Toolbar = ({
             <button
               className="pos-page-toolbar-button pos-page-yellow-button"
               onClick={() => handleCreateInvoice("G")}
-              disabled={loading || selectedRequestId !== null}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
             >
               {loading ? "Processing..." : "Offer"}
             </button>
@@ -84,7 +84,7 @@ const Toolbar = ({
             <button
               className="pos-page-toolbar-button pos-page-purple-button"
               onClick={() => handleCreateInvoice("RVR")}
-              disabled={loading || selectedRequestId !== null}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
             >
               {loading ? "Processing..." : "RVR"}
             </button>
