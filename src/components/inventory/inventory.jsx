@@ -205,6 +205,9 @@ export default function InventoryBrowser() {
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
 
+  // ✅ NEW: As-of date filter (empty = backend uses "today")
+  const [asOf, setAsOf] = useState("");
+
   // description source (maps to your endpoints)
   const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
   const currentLedgerPath = useMemo(
@@ -243,7 +246,7 @@ export default function InventoryBrowser() {
     }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qInput, type, includeZeros, descMode]);
+  }, [qInput, type, includeZeros, descMode, asOf]);
 
   const addChipFromInput = () => {
     const raw = normalizeDigits(qInput).trim().replace(/\s+/g, " ");
@@ -275,10 +278,17 @@ export default function InventoryBrowser() {
     try {
       const signal = cancel();
 
-const url = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
+      const url = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
       url.searchParams.set("_", String(Date.now()));
       url.searchParams.set("page", String(page));
       url.searchParams.set("limit", String(limit));
+
+      // ✅ NEW: send asOf only if user picked a date (else backend uses "today")
+      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+        url.searchParams.set("asOf", asOf);
+      } else {
+        url.searchParams.delete("asOf");
+      }
 
       const parsed = parseChipsToParams(chips);
       if (parsed.itemName) url.searchParams.set("itemName", parsed.itemName);
@@ -339,8 +349,16 @@ const url = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
     try {
       const signal = newReportSignal();
 
-const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
+      const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
       base.searchParams.set("_", String(Date.now()));
+
+      // ✅ NEW: include asOf in report fetch too
+      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
+        base.searchParams.set("asOf", asOf);
+      } else {
+        base.searchParams.delete("asOf");
+      }
+
       const parsed = parseChipsToParams(chips);
       if (parsed.itemName) base.searchParams.set("itemName", parsed.itemName);
       if (parsed.thickness != null) base.searchParams.set("thickness", String(parsed.thickness));
@@ -401,7 +419,7 @@ const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
   // Re-fetch on these changes
   useEffect(() => {
     fetchFromLedger(); // eslint-disable-line react-hooks/exhaustive-deps
-  }, [chips, type, page, limit, includeZeros, currentLedgerPath]);
+  }, [chips, type, page, limit, includeZeros, currentLedgerPath, asOf]);
 
   // Drawer helpers
   const batchQtyUnits = (batch, header) => {
@@ -580,6 +598,24 @@ const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
           ))}
         </select>
 
+        {/* ✅ NEW: As-of date control (empty = today) */}
+        <div className="invb-date">
+          <span className="u-muted">As of</span>
+          <input
+            type="date"
+            value={asOf}
+            onChange={(e) => { setAsOf(e.target.value); setPage(1); }}
+          />
+          <button
+            className="invb-btn invb-btn--ghost"
+            onClick={() => { setAsOf(""); setPage(1); }}
+            disabled={!asOf}
+            title="Back to today"
+          >
+            Today
+          </button>
+        </div>
+
         <label className="invb-chk">
           <input
             type="checkbox"
@@ -625,7 +661,7 @@ const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
           </button>
           <button
             className="invb-btn"
-            onClick={() => setPage((p) => p + 1)}   
+            onClick={() => setPage((p) => p + 1)}
             disabled={loading || !hasMore}
           >
             Next ▶

@@ -42,6 +42,23 @@
   background: #fff;
 }
 
+/* ✅ NEW: As-of date control */
+.invb-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px dashed #c6cbd8;
+  border-radius: 10px;
+  background: #fff;
+}
+.invb-date input[type="date"] {
+  padding: 8px 10px;
+  border: 1px solid #dcdcdc;
+  border-radius: 8px;
+  background: #fff;
+}
+
 /* Tweak: make the default input a bit smaller so the narrow version rules */
 .invb-input { min-width: 200px; }
 
@@ -266,7 +283,7 @@
   width: 280px;            /* adjust 240–320px to taste */
   min-width: 220px;
   flex: 0 0 auto;
-  direction: rtl; 
+  direction: rtl;
   font-size: large;
 }
 
