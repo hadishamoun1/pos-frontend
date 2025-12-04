@@ -27,12 +27,32 @@ function sanitizeParams(p) {
 }
 
 export default function AccountStatement() {
-  const today = new Date().toISOString().split("T")[0];
+
+ const toYMD = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  // ✅ default range: [today - 1 month, today]
+  const getDefaultRange = () => {
+    const toDate = new Date();     // today
+    const fromDate = new Date();   // clone
+    fromDate.setMonth(fromDate.getMonth() - 1); // one month back (handles month length)
+    return { from: toYMD(fromDate), to: toYMD(toDate) };
+  };
+
+  const [{ from: defaultFrom, to: defaultTo }] = useState(() => getDefaultRange());
 
   // inputs
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
-  const [type, setType] = useState("ALL"); // ALL | S | G
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+  const [type, setType] = useState("ALL");
+
+
+
+
 
   // accounts
   const [accTree, setAccTree] = useState([]);

@@ -6,8 +6,7 @@ import StatementReportModal from "./StatementReportModal";
 const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName }) => {
   const today = defaultDate || new Date().toISOString().split("T")[0];
   const [type, setType] = useState("ALL");
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
@@ -21,10 +20,39 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
     process.env.REACT_APP_API_BASE_URL ||
     "http://localhost:3000";
 
+    const toYMDLocal = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const addMonthsSafe = (date, deltaMonths) => {
+  const d = new Date(date);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + deltaMonths);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+};
+
+const base = defaultDate
+  ? new Date(`${defaultDate}T00:00:00`)
+  : new Date();
+
+const baseYMD = toYMDLocal(base);
+const fromDefault = toYMDLocal(addMonthsSafe(base, -1));
+const toDefault = baseYMD;
+
+const [from, setFrom] = useState(fromDefault);
+const [to, setTo] = useState(toDefault);
+
+
   useEffect(() => {
     if (isOpen) {
-      setFrom(today);
-      setTo(today);
+     setFrom(fromDefault);
+  setTo(toDefault);
       setType("ALL");
       setData(null);
       setErr("");

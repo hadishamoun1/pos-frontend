@@ -51,7 +51,20 @@ const [customerPreview, setCustomerPreview] = useState({
   customerTaxNumber: "",
   currencyCode: "USD",
 });
+const [statementBaseDate, setStatementBaseDate] = useState(null);
 
+const toYMDLocal = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+
+const openStatement = () => {
+    setStatementBaseDate(toYMDLocal(new Date()));
+  setShowStatement(true);
+};
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -1089,8 +1102,8 @@ const handleSaveInvoice = async () => {
             setDate={setDate}
             isEditable={isEditable}
             setShowPreview={setShowPreview}
-                handleOpenStatement={() => setShowStatement(true)}
-    canOpenStatement={!!selectedCustomerId}
+             handleOpenStatement={openStatement}
+  canOpenStatement={!!selectedCustomerId}
 
           />
           
@@ -1118,7 +1131,7 @@ const handleSaveInvoice = async () => {
   isOpen={showStatement}
   onClose={() => setShowStatement(false)}
   customerId={selectedCustomerId}
-  defaultDate={date}
+ defaultDate={statementBaseDate}
    customerName={selectedCustomerName} 
 />
 
