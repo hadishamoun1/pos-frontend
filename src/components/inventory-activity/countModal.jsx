@@ -88,6 +88,39 @@ const CountModal = ({ isOpen, onClose }) => {
     }
   };
 
+
+
+    const handleRebuildOpeningCounts = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        keepDate: "2025-11-29",
+        deleteDate: "2025-10-31",
+      };
+
+      await axios.post(`${baseUrl}/inventory-count/opening/rebuild`, payload);
+
+      setNotif({
+        open: true,
+        type: "success",
+        message: "✅ Opening counts rebuilt (kept 29-11-2025, deleted 31-10-2025).",
+      });
+
+      // optional: clear local rows if you want
+      // resetAll();
+    } catch (err) {
+      console.error("❌ Error rebuilding opening counts", err);
+      setNotif({
+        open: true,
+        type: "error",
+        message: "❌ Failed to rebuild opening counts. Check server logs.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
   const updateCell = (idx, field, value) => {
     setRows((prev) => {
       const copy = [...prev];
@@ -192,7 +225,21 @@ const CountModal = ({ isOpen, onClose }) => {
                     : "Opening Count"}
                 </button>
               ))}
+
             </div>
+                        {view === "opening" && (
+              <div className="header-buttons">
+                <button
+                  className="count-modal-btn save-btn"
+                  onClick={handleRebuildOpeningCounts}
+                  disabled={saving}
+                  title="Deletes Opening Counts of 31-10-2025 and rebuilds Opening Count txns using 29-11-2025 only"
+                >
+                  {saving ? "Rebuilding…" : "Rebuild Opening Counts"}
+                </button>
+              </div>
+            )}
+
             {view === "create" && (
               <div className="header-buttons">
                 <button
