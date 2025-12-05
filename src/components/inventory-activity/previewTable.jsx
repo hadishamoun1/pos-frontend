@@ -43,6 +43,18 @@ const parseChip = (rawChip) => {
   return { thickness, length, width, sheetsPerBox, nameTokens };
 };
 
+const toDateInputValue = (v) => {
+  if (!v) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return String(v);
+
+  const d = new Date(v);
+  if (!Number.isFinite(d.getTime())) return "";
+
+  // convert to local date yyyy-mm-dd (prevents off-by-one from timezone)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+};
+
 const mergeChipParams = (chips) => {
   // Combine all chips → one params object
   const out = {
@@ -74,7 +86,7 @@ const mapSearchRowToView = (r) => ({
   sheetsPerBox: r.sheetsPerBox,
   origin: r.origin,
   itemVariantType: r.itemVariantType,
-  date: r.date ?? null,
+  date: toDateInputValue(r.date),
   count: r.count ?? null,
   sqm: r.sqm ?? null,
   type: r.type ?? null,
@@ -92,7 +104,7 @@ const mapFilteredRowToView = (r) => ({
   sheetsPerBox: r.sheetsPerBox,
   origin: r.origin,
   itemVariantType: r.itemVariantType,
-  date: r.date,
+  date: toDateInputValue(r.date),
   count: r.count,
   sqm: r.sqm,
   type: r.type,
@@ -115,6 +127,9 @@ const PreviewTable = () => {
   // selection + modal
   const [selected, setSelected] = useState(new Set());
   const [editOpen, setEditOpen] = useState(false);
+
+  // ✅ NEW: delete flow state
+  const [deleting, setDeleting] = useState(false);
 
   // search chips
   const [chips, setChips] = useState([]);
@@ -215,6 +230,39 @@ const PreviewTable = () => {
     });
   };
 
+  // ✅ NEW: Delete selected counts
+  const handleDeleteSelected = async () => {
+    const ids = Array.from(selected).filter((n) => Number.isInteger(n) && n > 0);
+    if (!ids.length) return;
+
+    const ok = window.confirm(
+      `Delete ${ids.length} count(s)?\nThis will also delete related inventory transactions and recompute batch/variant totals.`
+    );
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      // NOTE: Adjust URL to match your NestJS route
+      // Expected payload: { ids: number[] }
+      await axios.post(`${baseUrl}/inventory-count/v1/delete-counts-strict`, { ids });
+
+      // remove from UI immediately
+      setRows((prev) => prev.filter((r) => !selected.has(r.id)));
+      setSelected(new Set());
+
+      // optional refresh to be 100% sure server recompute is reflected
+      if (chips.length > 0) await fetchSearch();
+      else await fetchFiltered();
+    } catch (e) {
+      console.error("Delete failed", e);
+      alert(
+        "Delete failed.\nIf any selected count does not have a related inventory transaction, the server will throw an error."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const selectedRows = rows
     .filter((r) => selected.has(r.id))
     .map((r) => ({
@@ -299,6 +347,8 @@ const PreviewTable = () => {
     );
   }
 
+  const disableActions = deleting || loading;
+
   return (
     <>
       <div className="count-preview-container">
@@ -333,14 +383,26 @@ const PreviewTable = () => {
             </div>
           </div>
 
-          {/* Edit button */}
-          <button
-            className="count-preview-edit-btn"
-            onClick={() => setEditOpen(true)}
-            disabled={selected.size === 0}
-          >
-            Edit
-          </button>
+          {/* Edit + Delete buttons */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              className="count-preview-edit-btn"
+              onClick={() => setEditOpen(true)}
+              disabled={selected.size === 0 || disableActions}
+            >
+              Edit
+            </button>
+
+            {/* ✅ NEW DELETE BUTTON */}
+            <button
+              className="count-preview-edit-btn"
+              onClick={handleDeleteSelected}
+              disabled={selected.size === 0 || disableActions}
+              title="Deletes selected InventoryCount(s) + related InventoryTransaction(s), then recomputes totals"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -385,6 +447,7 @@ const PreviewTable = () => {
                         type="checkbox"
                         checked={selected.has(r.id)}
                         onChange={() => toggleSelect(r.id)}
+                        disabled={disableActions || r.id == null}
                       />
                     </td>
                     <td className="count-preview-itemname">{itemName}</td>

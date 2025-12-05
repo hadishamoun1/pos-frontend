@@ -46,6 +46,9 @@ const apiUrl = (path) => {
   return u;
 };
 
+
+
+
 /** ---------- Small helpers ---------- */
 const toNum = (v) => {
   const n = Number(String(v ?? "").replace(/,/g, "").trim());
@@ -130,6 +133,72 @@ export default function InventoryActivityPage() {
 
   const [sortConfig, setSortConfig] = useState({ column: null, direction: null });
 
+   const visibleIds = useMemo(
+    () => (rows || []).map((r) => r?.id).filter(Boolean),
+    [rows]
+  );
+   // ✅ Row selection for delete
+  const [selectedTxIds, setSelectedTxIds] = useState(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleTx = useCallback((id, checked) => {
+    setSelectedTxIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+
+  const toggleAllVisible = useCallback((checked) => {
+    setSelectedTxIds((prev) => {
+      const next = new Set(prev);
+      visibleIds.forEach((id) => {
+        if (checked) next.add(id);
+        else next.delete(id);
+      });
+      return next;
+    });
+  }, [visibleIds]);
+
+  const deleteSelected = async () => {
+    if (selectedTxIds.size === 0) return;
+
+    const ok = window.confirm(`Delete ${selectedTxIds.size} transaction(s)?`);
+    if (!ok) return;
+
+    setDeleting(true);
+    try {
+      // delete sequentially (simpler, safer)
+      for (const id of Array.from(selectedTxIds)) {
+        const u = apiUrl(`/inventory-transactions/${id}`);
+        const res = await fetch(u.toString(), { method: "DELETE" });
+        if (!res.ok) throw new Error(`Delete failed for id=${id}`);
+      }
+
+      // remove from UI locally
+      setRows((prev) => prev.filter((r) => !selectedTxIds.has(r.id)));
+
+      // clear selection
+      setSelectedTxIds(new Set());
+
+      // Optional: refetch to recalc totals precisely
+      setPage(1);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete. Check server logs / permissions.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+    useEffect(() => {
+    setSelectedTxIds(new Set());
+  }, [activeFilters, sortConfig, page]);
+
+
+
   /** Cell right-click menu (kept, for quick “Add this exact value”) */
   const [contextMenu, setContextMenu] = useState({
     visible: false,
@@ -161,9 +230,37 @@ export default function InventoryActivityPage() {
   /** ---------- Columns ---------- */
   const defaultColumns = useMemo(
     () => [
+      {
+        Header: () => {
+          const allChecked =
+            visibleIds.length > 0 && visibleIds.every((id) => selectedTxIds.has(id));
+
+          return (
+            <input
+              type="checkbox"
+              checked={allChecked}
+              onChange={(e) => toggleAllVisible(e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          );
+        },
+        id: "select",
+        accessor: "select",
+        Cell: ({ row }) => {
+          const id = row.original?.id;
+          return (
+            <input
+              type="checkbox"
+              checked={id ? selectedTxIds.has(id) : false}
+              onChange={(e) => toggleTx(id, e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          );
+        },
+      },
+
       { Header: "Category", accessor: "category" },
       { Header: "Subcategory", accessor: "subCategory" },
-
       { Header: "Item Name", accessor: "name" },
       { Header: "Condition", accessor: "condition" },
       { Header: "Batch Date", accessor: "batchDate" },
@@ -176,7 +273,6 @@ export default function InventoryActivityPage() {
       { Header: "Final Cost", accessor: "finalcost" },
       { Header: "Final Cost OFR", accessor: "finalcostofr" },
       { Header: "Unit", accessor: "unit" },
-
       { Header: "Prev Qty", accessor: "previousQuantity" },
       { Header: "Prev Qty C", accessor: "previousQuantityC" },
       { Header: "Prev Qty VM", accessor: "previousQuantityVM" },
@@ -188,13 +284,15 @@ export default function InventoryActivityPage() {
       { Header: "Avg Cost C", accessor: "averageCostC" },
       { Header: "Avg Cost CVM", accessor: "averageCostCVM" },
       { Header: "Avg Cost VM", accessor: "averageCostVM" },
-
       { Header: "Status", accessor: "status" },
       { Header: "Date", accessor: "date", id: "date" },
       { Header: "Invoice #", accessor: "invoiceNo" },
     ],
-    []
+    [selectedTxIds, visibleIds, toggleAllVisible, toggleTx]
   );
+
+
+
 
   /** ---------- react-table setup ---------- */
   const data = useMemo(() => {
@@ -205,6 +303,7 @@ export default function InventoryActivityPage() {
       const design = r.design ?? r.description?.designName ?? "—";
 
       return {
+        id: r.id,
         category,
         subCategory,
         color,
@@ -600,6 +699,15 @@ export default function InventoryActivityPage() {
           <button className="inventory-activity-btn-transfers" onClick={clearAll}>
             Clear All
           </button>
+          <button
+  className="inventory-activity-btn-transfers"
+  onClick={deleteSelected}
+  disabled={deleting || selectedTxIds.size === 0}
+  title={selectedTxIds.size === 0 ? "Select rows to delete" : "Delete selected rows"}
+>
+  {deleting ? "Deleting..." : `Delete (${selectedTxIds.size})`}
+</button>
+
         </div>
       </div>
 
