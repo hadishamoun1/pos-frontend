@@ -257,31 +257,61 @@ const handleSelectRequest = async (reqOrId) => {
     setSelectedInvoiceType(request.invoiceType || "Both");
     setDate(toYMD(request.requestDate || request.date));
 
-    const details = Array.isArray(request.details) ? request.details : [];
-    const updatedData = details.map((detail) => ({
-      __rowKey: makeKey(),
-      itemVariantId: detail.itemVariantId || null,
-      batchId: detail.itemBatchId ?? detail.batchId ?? null,
+const details = Array.isArray(request.details) ? request.details : [];
 
-      item: `${parseFloat(detail.thickness)} ملم ${detail.itemName || ""}`,
-      origin: detail.origin || "",
-      thickness: detail.thickness || "",
-      length: detail.length || "",
-      width: detail.width || "",
-      type: detail.itemType || "",
+const updatedData = details.map((detail) => {
+  const itemType = String(detail?.itemType || "").toLowerCase();     // box/sheet/sqm/unit
+  const stockMode = detail?.stockMode ?? null;                       // SQM/QTY/NONE
 
-      box: detail.itemType === "box" ? detail.quantity || 0 : "",
-      sheet:
-        detail.itemType === "sheet"
-          ? detail.quantity || 0
-          : detail.sheetsPerBox,
+  const qty = Number(detail?.quantity ?? 0);
 
-      sqm: detail.sqm || "",
-      price: detail.price || "",
-      total: detail.total || "0.00",
-    }));
+  const isBox = itemType === "box";
+  const isSheet = itemType === "sheet";
+  const isSqm = itemType === "sqm";
+  const isUnit = itemType === "unit";
 
-    setTableData(updatedData);
+  // UI conventions in your table:
+  // - box: box=qty, sheet=sheetsPerBox
+  // - sheet/sqm/unit: sheet=qty
+  const boxVal = isBox ? qty : "";
+  const sheetVal = isBox
+    ? (detail?.sheetsPerBox ?? "")
+    : qty;
+
+  // unit should never have sqm
+  const sqmVal = isUnit ? 0 : (detail?.sqm ?? "");
+
+  return {
+    __rowKey: makeKey(),
+
+    itemVariantId: detail?.itemVariantId || null,
+    batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
+
+    origin: detail?.origin || "",
+    item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
+
+    // IMPORTANT: keep row.type for your existing logic (sqm/unit calculations)
+    type: itemType,
+
+    // ✅ NEW: keep these in the row so invoice payload includes them
+    itemType,                 // same value as type, but you use both in other places
+    stockMode,                // SQM/QTY/NONE
+
+    thickness: detail?.thickness || "",
+    length: detail?.length ?? "",
+    width: detail?.width ?? "",
+
+    box: boxVal,
+    sheet: sheetVal,
+
+    sqm: sqmVal,
+    price: detail?.price ?? "",
+    total: detail?.total ?? "0.00",
+  };
+});
+
+setTableData(updatedData);
+
   } catch (error) {
     console.error("Error fetching request details:", error);
     showNotification(
@@ -923,6 +953,7 @@ const label =
       grandTotal: grandTotal.toFixed(2),
       details: tableData.map((item) => ({
         itemVariantId: item.itemVariantId,
+        itemBatchId : item.batchId,
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),
@@ -1104,6 +1135,7 @@ const handleSaveInvoice = async () => {
       grandTotal: grandTotal.toFixed(2),
       details: tableData.map((item) => ({
         itemVariantId: item.itemVariantId,
+         itemBatchId: item.batchId, 
         sqm: Number(item.sqm),
         price: Number(item.price),
         total: Number(item.total),

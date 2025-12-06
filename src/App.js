@@ -22,6 +22,8 @@ import SqmPiecesPage from "./components/sqmPiece/sqmPiece"
 // Import the BlinkingRequestsProvider to manage the blinking state
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
 import SettingsPage from "./components/settings/settings";
+import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
+
 
 // Initialize QueryClient
 const queryClient = new QueryClient();
@@ -58,7 +60,9 @@ function App() {
               path="/inventory-activity"
               element={<InventoryActivityPage />}
             />
+            <Route path="/cuts-control" element={<CutsQueuePage />} />
           </Routes>
+
         </Router>
       </BlinkingItemsProvider>
     </QueryClientProvider>
