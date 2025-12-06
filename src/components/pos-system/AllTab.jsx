@@ -145,6 +145,7 @@ const AllTab = forwardRef(function AllTab(
     [limit]
   );
 
+  // ✅ include itemType + stockMode in payload (same idea as StockTab)
   const rowToPayload = useCallback((row, repeat = 1) => {
     const [variantStr, batchStr] = String(row.uniqueId).split("-");
     return {
@@ -160,6 +161,10 @@ const AllTab = forwardRef(function AllTab(
       length: row.length,
       width: row.width,
       sheetsPerBox: row.sheetsPerBox,
+
+      itemType: row.itemType ?? row.type,
+      stockMode: row.stockMode ?? "sqm",
+
       origin: row.origin || "",
       condition: row.condition ?? "",
       dateReceived: row.dateReceived ?? "",
@@ -300,11 +305,15 @@ const AllTab = forwardRef(function AllTab(
       }
 
       const t = String(row.type || "").toLowerCase();
-      if (t === "sqm") {
-        // open modal instead of prompt
-        const label = `${parseFloat(String(row.thickness))} ملم ${row.itemName}`;
+
+      if (t === "sqm" || t === "unit") {
+        const label =
+          t === "unit"
+            ? `${row.itemName ?? ""}`.trim()
+            : `${parseFloat(String(row.thickness))} ملم ${row.itemName ?? ""}`.trim();
+
         setRepeatModal({ open: true, row, label, value: "1" });
-        return prev; // do not select yet, wait user confirm
+        return prev;
       }
 
       next.set(row.uniqueId, rowToPayload(row, 1));
@@ -312,6 +321,7 @@ const AllTab = forwardRef(function AllTab(
     });
   };
 
+  // ✅ include itemType + stockMode in flat rows
   const rowsFromFlat = useMemo(() => {
     if (!flatRows.length) return [];
     return flatRows.map((r) => {
@@ -328,6 +338,10 @@ const AllTab = forwardRef(function AllTab(
         length: Math.floor(Number(r.length || 0)),
         width: Math.floor(Number(r.width || 0)),
         sheetsPerBox: Number(r.sheetsPerBox || 0),
+
+        itemType: r.itemType ?? r.type,
+        stockMode: r.stockMode ?? "sqm",
+
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
@@ -336,6 +350,7 @@ const AllTab = forwardRef(function AllTab(
     });
   }, [flatRows]);
 
+  // ✅ include itemType + stockMode in nested rows (mirroring StockTab)
   const rowsFromNested = useMemo(() => {
     if (!nestedItems.length) return [];
     const out = [];
@@ -359,6 +374,10 @@ const AllTab = forwardRef(function AllTab(
               length: Math.floor(Number(v.length)),
               width: Math.floor(Number(v.width)),
               sheetsPerBox: Number(v.sheetsPerBox),
+
+              itemType: item.itemType ?? item.type,
+              stockMode: item.stockMode ?? "sqm",
+
               origin: v.origin,
               condition: b.condition,
               dateReceived: b.dateReceived,
@@ -472,7 +491,11 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button className="all-chip-x" onClick={clearNameChip} aria-label="Remove name filter">
+              <button
+                className="all-chip-x"
+                onClick={clearNameChip}
+                aria-label="Remove name filter"
+              >
                 ×
               </button>
             </span>
@@ -483,7 +506,11 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">
+              <button
+                className="all-chip-x"
+                onClick={clearDimsChip}
+                aria-label="Remove dims/length filter"
+              >
                 ×
               </button>
             </span>
@@ -520,7 +547,11 @@ const AllTab = forwardRef(function AllTab(
               <tr
                 key={r.uniqueId}
                 className={!r.selectable ? "all-row-disabled" : ""}
-                title={!r.selectable ? "Unavailable for selection (missing real variant id)" : undefined}
+                title={
+                  !r.selectable
+                    ? "Unavailable for selection (missing real variant id)"
+                    : undefined
+                }
               >
                 <td className="cell-select">
                   <input
@@ -529,13 +560,28 @@ const AllTab = forwardRef(function AllTab(
                     checked={checked}
                     onChange={() => toggleSelect(r)}
                   />
-                  {checked && String(r.type || "").toLowerCase() === "sqm" && (
-                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>x{rep}</span>
-                  )}
+                  {checked &&
+                    ["sqm", "unit"].includes(
+                      String(r.type || "").toLowerCase()
+                    ) && (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 12,
+                          opacity: 0.8,
+                        }}
+                      >
+                        x{rep}
+                      </span>
+                    )}
                 </td>
 
                 <td style={{ direction: "rtl", textAlign: "right" }}>
-                  {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
+                  {String(r.type || "").toLowerCase() === "unit"
+                    ? `${r.itemName ?? ""}`.trim()
+                    : `${parseFloat(String(r.thickness))} ملم ${
+                        r.itemName ?? ""
+                      }`.trim()}
                 </td>
                 <td>{r.type}</td>
                 <td>{r.length ?? ""}</td>
@@ -560,7 +606,14 @@ const AllTab = forwardRef(function AllTab(
       </table>
 
       {!inSearchMode && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            marginTop: 12,
+          }}
+        >
           <button
             className="all-save-button"
             disabled={loading || !hasMore}

@@ -11,6 +11,8 @@ import DescriptionEditor from "./editDescription";
 import YearSettings from "./YearSettings";           
 import CurrencySettings from "./CurrencySettings";
 import InvoiceDisplayNamesPanel from "./invoiceDisplayName";   
+import StockTotalsAudit from "./StockTotalsAudit";
+
 
 import "./settings.css";
 
@@ -43,6 +45,9 @@ const SettingsPage = () => {
         return <CurrencySettings />;  
          case "invoice-display-name-settings":
         return <InvoiceDisplayNamesPanel />;      
+      case "stock-totals-audit":
+        return <StockTotalsAudit />;
+
       default:
         return <GeneralSettings />;
     }
@@ -127,6 +132,14 @@ const SettingsPage = () => {
           >
             Invoice display
           </li>
+
+          <li
+            className={activeTab === "stock-totals-audit" ? "active" : ""}
+            onClick={() => setActiveTab("stock-totals-audit")}
+          >
+             Stock Totals / Audit
+          </li>
+
         </ul>
       </aside>
       <section className="settings-content">{renderTab()}</section>

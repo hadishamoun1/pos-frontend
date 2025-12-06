@@ -114,6 +114,7 @@ const InventoryTable = ({
               isEditable &&
               (row.type === "sheet" ||
                 row.type === "sqm" ||
+                row.type === "unit" || 
                 allowCutSPB); // 🔹 box sheet-per-box editable in cut mode
 
             // length/width:
@@ -151,6 +152,15 @@ const InventoryTable = ({
             const spbTooltip = hasOrigSpb
               ? `sheets/box: ${originalSpb}`
               : "";
+
+            // ✅ NEW: unit total = sheet * price (display only)
+            const unitTotal =
+              row.type === "unit"
+                ? ((Number(row.sheet) || 0) * (Number(row.price) || 0)).toLocaleString("en-US", {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 0,
+                  })
+                : null;
 
             return (
               <tr
@@ -260,7 +270,9 @@ const InventoryTable = ({
                         canEditSheet
                           ? row.type === "box"
                             ? "Sheets/box…"
-                            : "Enter sheets…"
+                            : row.type === "unit"
+                              ? "Enter qty…"
+                              : "Enter sheets…"
                           : ""
                       }
                     />
@@ -290,7 +302,8 @@ const InventoryTable = ({
                 </td>
 
                 <td>
-                  <input type="text" value={row.total ?? ""} readOnly />
+                  {/* ✅ NEW: for unit show computed total, otherwise original row.total */}
+                  <input type="text" value={row.type === "unit" ? (unitTotal ?? "") : (row.total ?? "")} readOnly />
                 </td>
               </tr>
             );

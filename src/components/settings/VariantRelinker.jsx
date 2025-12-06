@@ -1,17 +1,91 @@
 // src/pages/settings/VariantRelinker.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./styles/VarientRelinker.css";
 
 const PAGE_SIZE = 30;
 
 const VariantRelinker = () => {
-const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+  const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
-const apiUrl = (path) => {
-  const u = new URL(path, window.location.origin); // always absolute
-  if (RAW_API_BASE) u.pathname = `${RAW_API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
-};
+  // ✅ robust URL builder:
+  // - RAW_API_BASE = "/api"   -> same-origin "/api/..."
+  // - RAW_API_BASE = "http://x:3001/api" -> absolute base
+  const apiUrl = useCallback(
+    (path) => {
+      const p = String(path || "");
+      const cleanPath = p.startsWith("/") ? p : `/${p}`;
+
+      if (!RAW_API_BASE) return new URL(cleanPath, window.location.origin);
+
+      // absolute base
+      if (/^https?:\/\//i.test(RAW_API_BASE)) {
+        return new URL(`${RAW_API_BASE}${cleanPath}`);
+      }
+
+      // relative base like "/api"
+      return new URL(`${RAW_API_BASE}${cleanPath}`, window.location.origin);
+    },
+    [RAW_API_BASE]
+  );
+
+  // ✅ Safe JSON fetch: catches the "<!DOCTYPE html>" case and shows a real message.
+  const fetchJson = useCallback(async (urlObj, init) => {
+    const res = await fetch(urlObj.toString(), init);
+
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const text = await res.text();
+
+    // If backend returns HTML (often React index.html), JSON.parse will fail with "<"
+    if (!ct.includes("application/json")) {
+      const head = text.slice(0, 120).replace(/\s+/g, " ").trim();
+      throw new Error(
+        `Expected JSON but got "${ct || "unknown"}". ` +
+          `This usually means your request hit the frontend (index.html) instead of the API. ` +
+          `URL: ${urlObj.toString()} | Starts with: ${head}`
+      );
+    }
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Bad JSON from ${urlObj.toString()} — ${String(e)} — starts: ${text.slice(0, 120)}`);
+    }
+
+    if (!res.ok) {
+      throw new Error(json?.message || json?.error || `${res.status} ${res.statusText}`);
+    }
+
+    return json;
+  }, []);
+
+  // ---------- Normalization helpers ----------
+  const normalizeDigits = (s) => {
+    if (!s) return "";
+    const map = {
+      "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+      "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+      "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+      "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+    };
+    return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
+  };
+
+  const normalizeToken = (s) => {
+    if (!s) return "";
+    let t = String(s)
+      .replace(/\u00A0/g, " ")
+      .replace(/[xX×✕✖︎]/g, "*") // 225x321 / 225×321 -> 225*321
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+    t = normalizeDigits(t);
+    return t;
+  };
+
+  const makeQueryFromTokens = (tokens) =>
+    normalizeDigits(tokens.join(" ").replace(/\s+/g, " ").trim());
+  // -------------------------------------------
 
   // ========== Variant search (tokenized) ==========
   const [variantInput, setVariantInput] = useState("");
@@ -27,8 +101,7 @@ const apiUrl = (path) => {
   const [alsoSetOtherSide, setAlsoSetOtherSide] = useState(true);
 
   // ========== Workbench tabs ==========
-  // 'select' (pick existing), 'create' (create from fields), 'unlink' (set FK to null)
-  const [tab, setTab] = useState("select");
+  const [tab, setTab] = useState("select"); // 'select' | 'create' | 'unlink'
 
   // ========== Description: select/create ==========
   const [descQuery, setDescQuery] = useState("");
@@ -36,7 +109,6 @@ const apiUrl = (path) => {
   const [descLoading, setDescLoading] = useState(false);
   const [selectedDescId, setSelectedDescId] = useState(null);
 
-  // Create-fields + which sides to create
   const [fields, setFields] = useState({
     itemNumber: "",
     categoryName: "",
@@ -44,42 +116,11 @@ const apiUrl = (path) => {
     colorName: "",
     designName: "",
   });
-  const [createSides, setCreateSides] = useState({
-    name: true,
-    real: true,
-  }); // choose to create name only, real only, or both
 
-  // Submit state
+  const [createSides, setCreateSides] = useState({ name: true, real: true });
+
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState(null);
-
-  // ---------- Normalization helpers ----------
-  const normalizeDigits = (s) => {
-    if (!s) return "";
-    const map = {
-      "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
-      "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
-      "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-      "۵": "5", "۶": "6", "۷": "8", "۸": "8", "۹": "9",
-    };
-    return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
-  };
-
-  const normalizeToken = (s) => {
-    if (!s) return "";
-    let t = String(s)
-      .replace(/\u00A0/g, " ")
-      .replace(/[xX×✕✖︎]/g, "*")   // 225x321 / 225×321 → 225*321
-      .replace(/[\u2013\u2014]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
-    t = normalizeDigits(t);
-    return t;
-  };
-
-  const makeQueryFromTokens = (tokens) =>
-    normalizeDigits(tokens.join(" ").replace(/\s+/g, " ").trim());
-  // -------------------------------------------
 
   // Token actions
   const addToken = (raw) => {
@@ -89,12 +130,10 @@ const apiUrl = (path) => {
     setVariantInput("");
     setSelectedVariant(null);
   };
-
   const removeToken = (idx) => {
     setVariantTokens((prev) => prev.filter((_, i) => i !== idx));
     setSelectedVariant(null);
   };
-
   const clearTokens = () => {
     setVariantTokens([]);
     setVariantInput("");
@@ -115,84 +154,97 @@ const apiUrl = (path) => {
     }
   };
 
-  // Variant search (debounced on tokens)
-  const debounceRef = useRef(null);
-  const fetchVariants = async (reset = true, pageArg) => {
-    const page = reset ? 1 : (pageArg ?? variantPage);
-    setVariantLoading(true);
-    try {
-const url = apiUrl("/items/variants/search");
-      const q = makeQueryFromTokens(variantTokens);
-      url.searchParams.set("q", q);
-      url.searchParams.set("page", String(page));
-      url.searchParams.set("limit", String(PAGE_SIZE));
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Variant search failed");
-      const json = await res.json();
-      if (reset) {
-        setVariantResults(Array.isArray(json?.data) ? json.data : []);
-        setVariantPage(1);
-      } else {
-        setVariantResults((p) => [...p, ...(Array.isArray(json?.data) ? json.data : [])]);
-        setVariantPage(page);
-      }
-      setVariantTotal(Number(json?.total ?? 0));
-    } catch {
-      setVariantResults([]);
-      setVariantTotal(0);
-    } finally {
-      setVariantLoading(false);
-    }
+  // ✅ Helper to read paginated responses with different shapes
+  const toArray = (x) => (Array.isArray(x) ? x : []);
+  const pickData = (json) => toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
+  const pickTotal = (json, fallbackLen) => {
+    const n =
+      json?.total ??
+      json?.totalRows ??
+      json?.totalCount ??
+      json?.count ??
+      json?.recordsTotal ??
+      null;
+    const num = Number(n);
+    return Number.isFinite(num) ? num : fallbackLen ?? 0;
   };
 
+  // ✅ Variant search
+  const fetchVariants = useCallback(
+    async (reset = true, pageArg) => {
+      const page = reset ? 1 : (pageArg ?? variantPage);
+      const q = makeQueryFromTokens(variantTokens);
+
+      setVariantLoading(true);
+      try {
+        const url = apiUrl("/items/variants/search");
+        url.searchParams.set("q", q);
+        url.searchParams.set("page", String(page));
+        url.searchParams.set("limit", String(PAGE_SIZE));
+
+        const json = await fetchJson(url);
+
+        const data = pickData(json);
+        const total = pickTotal(json, data.length);
+
+        if (reset) {
+          setVariantResults(data);
+          setVariantPage(1);
+        } else {
+          setVariantResults((p) => [...p, ...data]);
+          setVariantPage(page);
+        }
+        setVariantTotal(total);
+      } catch (e) {
+        setVariantResults([]);
+        setVariantTotal(0);
+        setStatus({ ok: false, message: String(e?.message || e) });
+      } finally {
+        setVariantLoading(false);
+      }
+    },
+    [apiUrl, fetchJson, variantTokens, variantPage]
+  );
+
+  // Debounce token changes -> search
+  const debounceRef = useRef(null);
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchVariants(true), 250);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantTokens, RAW_API_BASE]);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [variantTokens, fetchVariants]);
 
-
-
-  // Description search (only when in "select" tab)
-  const fetchDescriptions = async () => {
+  // ✅ Description search
+  const fetchDescriptions = useCallback(async () => {
     setDescLoading(true);
     try {
-const url = apiUrl("/items/descriptions/search");
+      const url = apiUrl("/items/descriptions/search");
       url.searchParams.set("mode", mode === "real" ? "real" : "name");
       url.searchParams.set("q", descQuery || "");
       url.searchParams.set("page", "1");
       url.searchParams.set("limit", "30");
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Description search failed");
-      const json = await res.json();
-      setDescResults(Array.isArray(json?.data) ? json.data : []);
-    } catch {
+
+      const json = await fetchJson(url);
+      setDescResults(pickData(json));
+    } catch (e) {
       setDescResults([]);
+      setStatus({ ok: false, message: String(e?.message || e) });
     } finally {
       setDescLoading(false);
     }
-  };
-  useEffect(() => {
-    if (tab === "select") {
-      const t = setTimeout(fetchDescriptions, 200);
-      return () => clearTimeout(t);
-    }
-  }, [descQuery, mode, tab]); // eslint-disable-line
+  }, [apiUrl, fetchJson, mode, descQuery]);
 
-  // Helpers
+  useEffect(() => {
+    if (tab !== "select") return;
+    const t = setTimeout(fetchDescriptions, 200);
+    return () => clearTimeout(t);
+  }, [tab, fetchDescriptions]);
+
   const canSubmit = useMemo(() => {
     if (!selectedVariant) return false;
+    if (tab === "unlink") return true;
+    if (tab === "select") return Number.isFinite(Number(selectedDescId));
 
-    if (tab === "unlink") {
-      // unlink always valid; controlled by mode + alsoSetOtherSide
-      return true;
-    }
-
-    if (tab === "select") {
-      return Number.isFinite(Number(selectedDescId));
-    }
-
-    // tab === "create"
     const anyField =
       fields.itemNumber ||
       fields.categoryName ||
@@ -200,7 +252,6 @@ const url = apiUrl("/items/descriptions/search");
       fields.colorName ||
       fields.designName;
 
-    // Must pick at least one side to create
     const anySide = createSides.name || createSides.real;
 
     return Boolean(anyField && anySide);
@@ -213,28 +264,23 @@ const url = apiUrl("/items/descriptions/search");
           .join(" • ")
       : "—";
 
-  // Submit
   const handleSubmit = async () => {
     if (!canSubmit || !selectedVariant?.variantId) return;
+
     setSubmitting(true);
     setStatus(null);
+
     try {
       let body;
 
       if (tab === "unlink") {
-        // set to NULL
         body = { mode, description: null, alsoSetOtherSide };
       } else if (tab === "select") {
         body = { mode, description: { id: Number(selectedDescId) }, alsoSetOtherSide };
       } else {
-        // create
-        // We pass mode = the main side to change now.
-        // If both sides are selected, we let alsoSetOtherSide mirror on the fly.
-        // If only one side is selected, alsoSetOtherSide=false to avoid mirrored creation.
         let effMode = mode;
         let effAlso = alsoSetOtherSide;
 
-        // If user picked only one side to create, force effMode to that side and disable mirror
         if (createSides.name && !createSides.real) {
           effMode = "name";
           effAlso = false;
@@ -242,26 +288,22 @@ const url = apiUrl("/items/descriptions/search");
           effMode = "real";
           effAlso = false;
         } else {
-          // both sides selected
-          // use current toggle 'mode' as the primary and keep alsoSetOtherSide as chosen
           effMode = mode;
-          effAlso = true; // both was chosen → ensure mirror is applied
+          effAlso = true;
         }
 
         body = { mode: effMode, fields: { ...fields }, alsoSetOtherSide: effAlso };
       }
 
-   const res = await fetch(
-  apiUrl(`/items/variants/${encodeURIComponent(selectedVariant.variantId)}/description`).toString(),
-  { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-);
+      const url = apiUrl(`/items/variants/${encodeURIComponent(selectedVariant.variantId)}/description`);
+      const json = await fetchJson(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Update failed");
-      }
-      const json = await res.json();
       setStatus({ ok: true, message: "Variant description updated." });
+
       setSelectedVariant((prev) =>
         prev
           ? {
@@ -272,7 +314,7 @@ const url = apiUrl("/items/descriptions/search");
           : prev
       );
     } catch (e) {
-      setStatus({ ok: false, message: String(e.message || e) });
+      setStatus({ ok: false, message: String(e?.message || e) });
     } finally {
       setSubmitting(false);
     }
@@ -294,7 +336,6 @@ const url = apiUrl("/items/descriptions/search");
         <section className="vr-panel">
           <div className="vr-panel-title">1) Find a Variant</div>
 
-          {/* Tokenized search bar */}
           <div className="vr-tokenbar">
             <div className="vr-chip-row">
               {variantTokens.map((t, i) => (
@@ -332,6 +373,12 @@ const url = apiUrl("/items/descriptions/search");
               </button>
             </div>
           </div>
+
+          {status?.ok === false && (
+            <div className="vr-status vr-status-err" style={{ marginTop: 10 }}>
+              {status.message}
+            </div>
+          )}
 
           <div className="vr-list">
             {variantLoading && variantResults.length === 0 ? (
@@ -450,7 +497,6 @@ const url = apiUrl("/items/descriptions/search");
                 </div>
               </div>
 
-              {/* Side toggle + mirror toggle */}
               <div className="vr-toggle-row">
                 <div className="vr-toggle">
                   <label className="toggle-pill" title="Switch editing side">
@@ -475,29 +521,18 @@ const url = apiUrl("/items/descriptions/search");
                 </label>
               </div>
 
-              {/* Tabs: select / create / unlink */}
               <div className="vr-tabs">
-                <button
-                  className={`vr-tab ${tab === "select" ? "active" : ""}`}
-                  onClick={() => setTab("select")}
-                >
+                <button className={`vr-tab ${tab === "select" ? "active" : ""}`} onClick={() => setTab("select")}>
                   Select existing
                 </button>
-                <button
-                  className={`vr-tab ${tab === "create" ? "active" : ""}`}
-                  onClick={() => setTab("create")}
-                >
+                <button className={`vr-tab ${tab === "create" ? "active" : ""}`} onClick={() => setTab("create")}>
                   Create new
                 </button>
-                <button
-                  className={`vr-tab ${tab === "unlink" ? "active" : ""}`}
-                  onClick={() => setTab("unlink")}
-                >
+                <button className={`vr-tab ${tab === "unlink" ? "active" : ""}`} onClick={() => setTab("unlink")}>
                   Unlink (set to NULL)
                 </button>
               </div>
 
-              {/* Select existing */}
               {tab === "select" && (
                 <div className="vr-box">
                   <div className="vr-search">
@@ -532,10 +567,8 @@ const url = apiUrl("/items/descriptions/search");
                 </div>
               )}
 
-              {/* Create new */}
               {tab === "create" && (
                 <div className="vr-box">
-                  {/* Which sides to create */}
                   <div className="vr-side-choices">
                     <label className="vr-check">
                       <input
@@ -605,73 +638,15 @@ const url = apiUrl("/items/descriptions/search");
                 </div>
               )}
 
-              {/* Unlink */}
               {tab === "unlink" && (
                 <div className="vr-box">
                   <p className="vr-empty">
-                    This will set the selected side’s description to <b>NULL</b>.  
+                    This will set the selected side’s description to <b>NULL</b>.
                     Turn on “Also set the other side” above to null both.
                   </p>
                 </div>
               )}
 
-              {/* Preview */}
-              <div className="vr-preview">
-                <div className="vr-preview-title">Preview</div>
-                <div className="vr-preview-body">
-                  {tab === "unlink" ? (
-                    <>
-                      <div>
-                        <div className="vr-desc-label">Operation</div>
-                        <div className="vr-desc-text">
-                          Unlink (set to NULL) {mode === "real" ? "Real Description" : "Item-Name Description"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="vr-desc-label">Also set other side?</div>
-                        <div className="vr-desc-text">{alsoSetOtherSide ? "Yes (both to NULL)" : "No"}</div>
-                      </div>
-                    </>
-                  ) : tab === "select" ? (
-                    <>
-                      <div>
-                        <div className="vr-desc-label">Will link (this side)</div>
-                        <div className="vr-desc-text ar-rtl">
-                          {(() => {
-                            const picked = descResults.find((d) => Number(d.id) === Number(selectedDescId));
-                            return picked ? currentDescToText(picked) : "—";
-                          })()}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="vr-desc-label">Also set other side?</div>
-                        <div className="vr-desc-text">{alsoSetOtherSide ? "Yes" : "No"}</div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <div className="vr-desc-label">Will create from fields</div>
-                        <div className="vr-desc-text ar-rtl">{currentDescToText(fields)}</div>
-                      </div>
-                      <div>
-                        <div className="vr-desc-label">Sides</div>
-                        <div className="vr-desc-text">
-                          {createSides.name && createSides.real
-                            ? "Both (Item-Name & Real)"
-                            : createSides.name
-                            ? "Item-Name only"
-                            : createSides.real
-                            ? "Real only"
-                            : "—"}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
               <div className="vr-actions">
                 <button className="vr-btn vr-btn-dark" disabled={!canSubmit || submitting} onClick={handleSubmit}>
                   {submitting ? "Applying…" : "Apply Changes"}

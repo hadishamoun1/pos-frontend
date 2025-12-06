@@ -1,16 +1,69 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/settings/DescriptionEditor.jsx
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./styles/editDescription.css";
 
 const PAGE_SIZE = 30;
 
 const DescriptionEditor = () => {
-const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+  const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
-const apiUrl = (path) => {
-  const u = new URL(path, window.location.origin); // always absolute
-  if (RAW_API_BASE) u.pathname = `${RAW_API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
-};
+  // ✅ robust URL builder:
+  // - RAW_API_BASE="/api" -> same-origin "/api/..."
+  // - RAW_API_BASE="http://server:3001/api" -> absolute base
+  const apiUrl = useCallback(
+    (path) => {
+      const p = String(path || "");
+      const cleanPath = p.startsWith("/") ? p : `/${p}`;
+
+      if (!RAW_API_BASE) return new URL(cleanPath, window.location.origin);
+
+      if (/^https?:\/\//i.test(RAW_API_BASE)) {
+        return new URL(`${RAW_API_BASE}${cleanPath}`);
+      }
+
+      // relative base like "/api"
+      return new URL(`${RAW_API_BASE}${cleanPath}`, window.location.origin);
+    },
+    [RAW_API_BASE]
+  );
+
+  // ✅ Safe JSON fetch: catches HTML index.html and shows the real URL
+  const fetchJson = useCallback(async (urlObj, init) => {
+    const res = await fetch(urlObj.toString(), init);
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    const text = await res.text();
+
+    if (!ct.includes("application/json")) {
+      const head = text.slice(0, 140).replace(/\s+/g, " ").trim();
+      throw new Error(
+        `Expected JSON but got "${ct || "unknown"}". ` +
+          `This usually means the request hit React (index.html) instead of the API. ` +
+          `URL: ${urlObj.toString()} | Starts with: ${head}`
+      );
+    }
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Bad JSON from ${urlObj.toString()} — ${String(e)} — starts: ${text.slice(0, 140)}`);
+    }
+
+    if (!res.ok) {
+      throw new Error(json?.message || json?.error || `${res.status} ${res.statusText}`);
+    }
+
+    return json;
+  }, []);
+
+  // Helpers for different response shapes
+  const toArray = (x) => (Array.isArray(x) ? x : []);
+  const pickData = (json) => toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
+  const pickTotal = (json, fallbackLen) => {
+    const n = json?.total ?? json?.totalRows ?? json?.count ?? json?.totalCount ?? null;
+    const num = Number(n);
+    return Number.isFinite(num) ? num : (fallbackLen ?? 0);
+  };
 
   // Mode
   const [mode, setMode] = useState("name"); // "name" | "real"
@@ -39,39 +92,49 @@ const apiUrl = (path) => {
 
   // Debounced search
   const debounceRef = useRef(null);
-  const fetchList = async (reset = true, pageArg) => {
-    const p = reset ? 1 : (pageArg ?? page);
-    setLoading(true);
-    try {
-const url = apiUrl("/items/descriptions/search");
-      url.searchParams.set("mode", mode);
-      url.searchParams.set("q", query || "");
-      url.searchParams.set("page", String(p));
-      url.searchParams.set("limit", String(PAGE_SIZE));
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Search failed");
-      const json = await res.json();
-      if (reset) {
-        setResults(Array.isArray(json?.data) ? json.data : []);
-        setPage(1);
-      } else {
-        setResults((prev) => [...prev, ...(Array.isArray(json?.data) ? json.data : [])]);
-        setPage(p);
+
+  const fetchList = useCallback(
+    async (reset = true, pageArg) => {
+      const p = reset ? 1 : (pageArg ?? page);
+      setLoading(true);
+      setStatus(null);
+
+      try {
+        const url = apiUrl("/items/descriptions/search");
+        url.searchParams.set("mode", mode);
+        url.searchParams.set("q", query || "");
+        url.searchParams.set("page", String(p));
+        url.searchParams.set("limit", String(PAGE_SIZE));
+
+        const json = await fetchJson(url);
+
+        const data = pickData(json);
+        const tot = pickTotal(json, data.length);
+
+        if (reset) {
+          setResults(data);
+          setPage(1);
+        } else {
+          setResults((prev) => [...prev, ...data]);
+          setPage(p);
+        }
+        setTotal(tot);
+      } catch (e) {
+        setResults([]);
+        setTotal(0);
+        setStatus({ ok: false, message: String(e?.message || e) });
+      } finally {
+        setLoading(false);
       }
-      setTotal(Number(json?.total ?? 0));
-    } catch (e) {
-      setResults([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [apiUrl, fetchJson, mode, query, page]
+  );
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchList(true), 250);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, query, RAW_API_BASE]);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [mode, query, fetchList]);
 
   // Load selection into form
   const pickRow = (row) => {
@@ -101,34 +164,28 @@ const url = apiUrl("/items/descriptions/search");
   const canSave = !!selected && isDirty && !saving;
 
   // Save
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selected) return;
     setSaving(true);
     setStatus(null);
-    try {
- const endpoint =
-  mode === "name"
-    ? apiUrl(`/items/descriptions/name/${encodeURIComponent(selected.id)}`).toString()
-    : apiUrl(`/items/descriptions/real/${encodeURIComponent(selected.id)}`).toString();
 
+    try {
+      const endpoint =
+        mode === "name"
+          ? apiUrl(`/items/descriptions/name/${encodeURIComponent(selected.id)}`)
+          : apiUrl(`/items/descriptions/real/${encodeURIComponent(selected.id)}`);
 
       const body = {
-        ...Object.fromEntries(
-          Object.entries(form).filter(([_, v]) => v !== undefined) // partial update ok
-        ),
+        ...Object.fromEntries(Object.entries(form).filter(([_, v]) => v !== undefined)),
         onDuplicate,
       };
 
-      const res = await fetch(endpoint, {
+      // ✅ use fetchJson so we catch HTML responses too
+      const json = await fetchJson(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const text = await res.text();
-      if (!res.ok) {
-        throw new Error(text || "Update failed");
-      }
-      const json = text ? JSON.parse(text) : null;
 
       // Update local selection + list row
       setSelected(json);
@@ -140,17 +197,18 @@ const url = apiUrl("/items/descriptions/search");
         designName: json?.designName || "",
       });
 
-      setResults((prev) =>
-        prev.map((r) => (Number(r.id) === Number(selected.id) ? json : r))
-      );
+      setResults((prev) => prev.map((r) => (Number(r.id) === Number(selected.id) ? json : r)));
 
-      setStatus({ ok: true, message: onDuplicate === "merge" ? "Updated (merged if duplicate existed)." : "Updated." });
+      setStatus({
+        ok: true,
+        message: onDuplicate === "merge" ? "Updated (merged if duplicate existed)." : "Updated.",
+      });
     } catch (e) {
-      setStatus({ ok: false, message: String(e.message || e) });
+      setStatus({ ok: false, message: String(e?.message || e) });
     } finally {
       setSaving(false);
     }
-  };
+  }, [selected, mode, form, onDuplicate, apiUrl, fetchJson]);
 
   // Helpers
   const rowToText = (d) =>
@@ -190,6 +248,7 @@ const url = apiUrl("/items/descriptions/search");
                       colorName: "",
                       designName: "",
                     });
+                    setStatus(null);
                   }}
                 />
                 <span className="pill">
@@ -209,6 +268,12 @@ const url = apiUrl("/items/descriptions/search");
               <button className="de-btn" onClick={() => fetchList(true)}>Search</button>
             </div>
           </div>
+
+          {status?.ok === false && (
+            <div className="de-status de-err" style={{ marginBottom: 10 }}>
+              {status.message}
+            </div>
+          )}
 
           <div className="de-list">
             {loading && results.length === 0 ? (
@@ -343,7 +408,9 @@ const url = apiUrl("/items/descriptions/search");
                   {saving ? "Saving…" : "Save Changes"}
                 </button>
                 {status && (
-                  <span className={`de-status ${status.ok ? "de-ok" : "de-err"}`}>{status.message}</span>
+                  <span className={`de-status ${status.ok ? "de-ok" : "de-err"}`}>
+                    {status.message}
+                  </span>
                 )}
               </div>
             </>

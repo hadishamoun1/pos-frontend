@@ -105,16 +105,37 @@ const handleReorder = (newRows) => {
   setSelectedBatchIds(ids);
 };
 
+const fmtItemLabel = (type, thickness, itemName) => {
+  const t = String(type || "").toLowerCase();
+  const name = String(itemName || "").trim();
+
+  if (t === "unit") return name;
+
+  const th = parseFloat(String(thickness ?? ""));
+  if (Number.isFinite(th)) return `${th} ملم ${name}`.trim();
+
+  return name;
+};
+
+
 const makeKey = () =>
   (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 const handleSelectItems = (selectedItems) => {
-  // selectedItems can include { repeat } for SQM rows
+   (selectedItems || []).forEach((it, i) => {
+    console.log(
+      `🟦 SearchModal selected[${i}] stockMode=`,
+      it?.stockMode,
+      "| itemType=", it?.itemType,
+      "| type=", it?.type,
+      "| batchId=", it?.batchId,
+      "| itemBatchId=", it?.itemBatchId
+    );
+  });
   const expanded = [];
   (selectedItems || []).forEach((item) => {
-    const type = String(item?.type || "").toLowerCase();
+    const t = String(item?.type || "").toLowerCase();
     const repeatRaw = item?.repeat;
-    const repeat =
-      type === "sqm" ? Math.max(1, Math.floor(Number(repeatRaw || 1))) : 1;
+    const repeat = t === "sqm" ? Math.max(1, Math.floor(Number(repeatRaw || 1))) : 1;
 
     for (let i = 0; i < repeat; i++) {
       expanded.push({ ...item, __repeatIndex: i, __rowKey: makeKey() });
@@ -125,16 +146,24 @@ const handleSelectItems = (selectedItems) => {
     const length = parseFloat(item.length);
     const width = parseFloat(item.width);
     const type = item.type;
+
+    const typeLower = String(type || "").toLowerCase();              // ✅
+    const isSqm = typeLower === "sqm";
+    const isUnit = typeLower === "unit";                             // ✅
+
     const sheetsPerBox = parseFloat(item.sheetsPerBox);
     const quantity = 1;
-
-    const isSqm = String(type || "").toLowerCase() === "sqm";
 
     let sqm = "";
     let box = "";
     let sheet = "";
 
-    if (isSqm) {
+    // ✅ UNIT: default qty to 1 (we'll use "sheet" as qty input)
+    if (isUnit) {
+      sheet = 1;
+      sqm = 0; // keep numeric 0 to avoid "0" string issues
+      box = "";
+    } else if (isSqm) {
       sqm = "";
       box = "";
       sheet = "";
@@ -151,37 +180,49 @@ const handleSelectItems = (selectedItems) => {
     }
 
     return {
-      __rowKey: item.__rowKey, // ✅ unique row identity (for sqm duplicates)
+      __rowKey: item.__rowKey,
 
       itemVariantId: item.itemVariantId,
       batchId: item.batchId,
 
       origin: item.origin || "",
-      item:
-        (item.thickness != null ? `${parseFloat(item.thickness)} ملم ` : "") +
-        (item.itemName || ""),
+      item: fmtItemLabel(item.type, item.thickness, item.itemName),
 
       type: type || "",
+      itemType: item.itemType ?? item.type ?? "",
+
+      // ✅ better default: unit items shouldn't default to "sqm"
+      stockMode: item.stockMode ?? null,
+
       length: item.length || "",
       width: item.width || "",
       box,
-      sheet,
+      sheet,        // ✅ for unit: this now starts at 1
       quantity,
-      sqm,
+      sqm,          // ✅ for unit: now 0 (number)
+
       price: "",
       total: "0.00",
 
-      // SQM pieces (optional)
       sqmPieceId: isSqm ? (item.sqmPieceId ?? item.id ?? null) : null,
       maxPieces: isSqm ? (item.piecesRemaining ?? null) : null,
     };
   });
 
- setTableData((prev) => {
-  return [...prev, ...newRows];
-});
+   newRows.forEach((r, i) => {
+    console.log(
+      `🟩 MAPPED row[${i}] stockMode=`,
+      r.stockMode,
+      "| itemType=", r.itemType,
+      "| type=", r.type,
+      "| batchId=", r.batchId
+    );
+  });
 
+
+  setTableData((prev) => [...prev, ...newRows]);
 };
+
 
 
 const handleSelectRequest = async (reqOrId) => {
@@ -410,6 +451,17 @@ const handleInputChange = (index, field, value) => {
     setTableData(newData);
     return;
   }
+  // ============ UNIT ITEMS ============ //
+if (String(row.type || "").toLowerCase() === "unit") {
+  const qty = Number(row.sheet || row.quantity || 0); // using sheet as qty
+  row.sqm = 0; // keep 0
+  row.total = (qty * price).toFixed(2);
+
+  newData[index] = row;
+  setTableData(newData);
+  return;
+}
+
   // For box/sheet: auto-calc sqm
   if (row.length && row.width && row.sheet !== "" && row.sheet !== undefined) {
     row.sqm = calculateSQM(
@@ -560,44 +612,53 @@ const handleDeleteRow = () => {
     const vatPercentageValue = Number(vat);
     const vatRate = vatPercentageValue / 100;
 
- const items = tableData.map((row) => {
-  const unitPrice = Number(row.price) || 0;
-  const sqm = Number(row.sqm) || 0;
+const round2 = (n) => Number((Number(n || 0)).toFixed(2));
 
-  // these come from:
-  // - variant (fixed) for box/sheet
-  // - user input for sqm (since we allow editing)
+const items = tableData.map((row) => {
+  const unitPrice = Number(row.price) || 0;
+
+  const itemType = String(row.itemType ?? row.type ?? "").toLowerCase();
+
   const length = row.length !== "" && row.length != null ? Number(row.length) : null;
   const width  = row.width  !== "" && row.width  != null ? Number(row.width)  : null;
-  const sheetsPerBox =
-      row.type === "box" ? Number(row.sheet) || null : null;
+
+  const sheetsPerBox = itemType === "box" ? (Number(row.sheet) || null) : null;
+
   const quantity =
-    row.type === "box"
+    itemType === "box"
       ? Number(row.box) || 0
-      : row.type === "sheet"
+      : itemType === "sheet" || itemType === "sqm" || itemType === "unit"
       ? Number(row.sheet) || 0
-      : row.type === "sqm"
-      ? Number(row.sheet) || 0   // keep as sqm for now
       : 0;
 
-  const totalAmount = Number((sqm * unitPrice).toFixed(2));
-  const vatAmount   = Number((totalAmount * vatRate).toFixed(2));
+  const sqm = Number(row.sqm) || 0;
 
+  // ✅ unit totals are qty * price, others are sqm * price
+  const baseForTotal = itemType === "unit" ? quantity : sqm;
+
+  const totalAmount = round2(baseForTotal * unitPrice);
+  const vatAmount   = round2(totalAmount * vatRate);
 
   return {
     itemVariantId: row.itemVariantId,
     itemBatchId: row.batchId,
+    itemType,
+    stockMode: row.stockMode ?? null,
+
     length,
     width,
-    sqm,
+    sheetsPerBox,
+
+    sqm,          // keep sending it (0 for unit is fine)
     unitPrice,
     totalAmount,
-    sheetsPerBox,
     vat: vatAmount,
     quantity,
+
     sqmPieceId: row.sqmPieceId ?? null,
   };
 });
+
 
     const totalWithoutVAT = items.reduce(
       (acc, item) => acc + item.totalAmount,
@@ -744,12 +805,25 @@ const handleSelectInvoice = async (invoiceSummary) => {
         (item?.sqmPiece && item.sqmPiece.id) ??
         null;
 
-      const type = item?.itemType || (sqmPieceId ? "sqm" : "");
+      const qty = Number(item?.quantity ?? 0);
+
+const itemTypeLower = String(item?.itemType ?? "").toLowerCase();
+const type = itemTypeLower || (sqmPieceId ? "sqm" : "");
+
+const isBox  = type === "box";
+const isSheet = type === "sheet";
+const isSqm  = type === "sqm";
+const isUnit = type === "unit";
+const label =
+  itemTypeLower === "unit"
+    ? String(item?.itemName ?? "").trim()
+    : `${parseFloat(String(item?.thickness))} ملم ${String(item?.itemName ?? "").trim()}`.trim();
+
 
       return {
         __rowKey: makeKey(),
         origin: item?.origin || "",
-        item: `${parseFloat(item?.thickness)} ملم ${item?.itemName}`,
+        item: label,
         type,
 
         length: item?.length || "",
@@ -758,14 +832,22 @@ const handleSelectInvoice = async (invoiceSummary) => {
         price: item?.unitPrice || "",
         total: item?.totalAmount || "0.00",
 
-        box: type === "box" ? item?.quantity : "",
-        sheet:
-          type === "sheet" || type === "sqm"
-            ? item?.quantity
-            : item?.sheetsPerBox,
+    
+             // ✅ unit should carry qty in "sheet" (your UI uses sheet as qty input)
+  box: isBox ? qty : "",
+  sheet: (isSheet || isSqm || isUnit) ? qty : (item?.sheetsPerBox ?? ""),
+
+  // ✅ for unit keep sqm = 0 (or "")
+  sqm: isUnit ? 0 : (item?.sqm ?? ""),
+
+  // ✅ use ?? so 0 doesn’t become ""
+  price: item?.unitPrice ?? "",
+  total: item?.totalAmount ?? "0.00",
 
         itemVariantId: item?.itemVariantId,
         batchId: item?.itemBatchId ?? (item?.batch && item.batch.id) ?? null,
+          itemType: item?.itemType ?? type,
+  stockMode: item?.stockMode ?? null,
 
         originalLength: item?.originalLength ?? null,
         originalWidth: item?.originalWidth ?? null,
@@ -886,75 +968,70 @@ const handleSaveInvoice = async () => {
   const vatPct = Number(vat) || 0;
   const vatRate = vatPct / 100;
 
-  const formattedItems = tableData.map((row, idx) => {
-    const unitPrice = Number(row.price) || 0;
-    const sqm = Number(row.sqm) || 0;
+ const formattedItems = tableData.map((row, idx) => {
+  const unitPrice = Number(row.price) || 0;
 
-    const type = row.type;
+  const itemType = String(row.itemType ?? row.type ?? "").toLowerCase(); // ✅ better than row.type only
+  const isUnit = itemType === "unit";
 
-    const length =
-      row.length !== "" && row.length != null ? Number(row.length) : null;
-    const width =
-      row.width !== "" && row.width != null ? Number(row.width) : null;
+  const length = row.length !== "" && row.length != null ? Number(row.length) : null;
+  const width  = row.width  !== "" && row.width  != null ? Number(row.width)  : null;
 
-    // how many sheets per box to store
-    let sheetsPerBox = null;
-    if (type === "box") {
-      // from current sheet input or original info
-      sheetsPerBox =
-        Number(row.sheet) ||
-        Number(row.sheetsPerBox) ||
-        Number(row.originalSheetsPerBox) ||
-        null;
-    } else if (type === "sheet") {
-      sheetsPerBox =
-        Number(row.sheetsPerBox) ||
-        Number(row.originalSheetsPerBox) ||
-        null;
-    }
+  // sheetsPerBox
+  let sheetsPerBox = null;
+  if (itemType === "box") {
+    sheetsPerBox =
+      Number(row.sheet) ||
+      Number(row.sheetsPerBox) ||
+      Number(row.originalSheetsPerBox) ||
+      null;
+  } else if (itemType === "sheet") {
+    sheetsPerBox =
+      Number(row.sheetsPerBox) ||
+      Number(row.originalSheetsPerBox) ||
+      null;
+  }
 
-    const quantity =
-      type === "box"
-        ? Number(row.box) || 0
-        : type === "sheet"
-        ? Number(row.sheet) || 0
-        : type === "sqm"
-        ? Number(row.sheet) || 0 // count of pieces
-        : 0;
+  // ✅ quantity: UNIT uses sheet as qty
+  const quantity =
+    itemType === "box"
+      ? Number(row.box) || 0
+      : itemType === "sheet" || itemType === "sqm" || itemType === "unit"
+      ? Number(row.sheet) || 0
+      : 0;
 
-    const totalAmount = Number((sqm * unitPrice).toFixed(2));
-    const vatAmount = Number((totalAmount * vatRate).toFixed(2));
+  // ✅ sqm: UNIT must be 0
+  const sqm = isUnit ? 0 : Number(row.sqm) || 0;
 
-    if (row.batchId == null) {
-      console.warn(`Row ${idx} missing batchId`, row);
-    }
+  // ✅ totals: unit uses quantity, others use sqm
+  const baseForTotal = isUnit ? quantity : sqm;
+  const totalAmount = Number((baseForTotal * unitPrice).toFixed(2));
+  const vatAmount = Number((totalAmount * vatRate).toFixed(2));
 
-    return {
-      // 🔹 existing line id so backend can treat as "changed", not "new"
-      id: row.invoiceItemId ?? row.id ?? undefined,
+  return {
+    id: row.invoiceItemId ?? row.id ?? undefined,
 
-      itemBatchId: Number(row.batchId),
-      itemVariantId: Number(row.itemVariantId),
+    itemBatchId: Number(row.batchId),
+    itemVariantId: Number(row.itemVariantId),
 
-      // 🔹 NEW: keep geometry
-      length,
-      width,
-      sheetsPerBox,
+   itemType:row.itemType ,  // ✅ REQUIRED
+  stockMode: row.stockMode ?? null,  
 
-      sqm,
-      unitPrice,
-      totalAmount,
-      vat: vatAmount,
-      quantity,
-      invoiceId: Number(selectedInvoiceId),
+    length,
+    width,
+    sheetsPerBox,
 
-      // 🔹 NEW: preserve sqm piece link
-      sqmPieceId:
-        row.sqmPieceId ??
-        (row.sqmPiece && row.sqmPiece.id) ??
-        null,
-    };
-  });
+    sqm,
+    unitPrice,
+    totalAmount,
+    vat: vatAmount,
+    quantity,
+    invoiceId: Number(selectedInvoiceId),
+
+    sqmPieceId: row.sqmPieceId ?? (row.sqmPiece && row.sqmPiece.id) ?? null,
+  };
+});
+
 
   // Header totals (recomputed from formatted items)
   const totalWithoutVAT = formattedItems.reduce(

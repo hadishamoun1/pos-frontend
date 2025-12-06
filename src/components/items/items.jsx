@@ -4,6 +4,59 @@ import "./items.css";
 
 const PAGE_SIZE = 50;
 
+// defaults for stock-mode
+const defaultStockModeForType = (t) => {
+  if (t === "unit") return "QTY";
+  if (t === "sqm") return "SQM";
+  // glass items typically are SQM-driven even if type is box/sheet in your business
+  return "SQM";
+};
+
+const normalizeVariantForType = (type, v) => {
+  const t = String(type || "").toLowerCase();
+
+  const base = {
+    length: v?.length ?? "",
+    width: v?.width ?? "",
+    sheetsPerBox: v?.sheetsPerBox ?? "",
+    origin: v?.origin ?? "",
+    fixBox: !!v?.fixBox,
+    fixLength: !!v?.fixLength,
+    fixWidth: !!v?.fixWidth,
+  };
+
+  if (t === "sqm") {
+    return {
+      ...base,
+      length: 0,
+      width: 0,
+      sheetsPerBox: 0,
+      origin: "",
+    };
+  }
+
+  if (t === "unit") {
+    // satisfy NOT NULL columns on backend (length/width/spb/origin)
+    const o = String(base.origin || "").trim();
+    return {
+      ...base,
+      length: 0,
+      width: 0,
+      sheetsPerBox: 1,
+      origin: o || "", // avoid empty origin
+    };
+  }
+
+  // box/sheet
+  return {
+    ...base,
+    length: base.length === "" ? "" : Number(base.length),
+    width: base.width === "" ? "" : Number(base.width),
+    sheetsPerBox: base.sheetsPerBox === "" ? "" : Number(base.sheetsPerBox),
+    origin: String(base.origin || "").trim(),
+  };
+};
+
 const UniqueItemsPage = () => {
   const [items, setItems] = useState([]);
   const [itemsPage, setItemsPage] = useState(1);
@@ -33,6 +86,7 @@ const UniqueItemsPage = () => {
   const [editForm, setEditForm] = useState({
     itemName: "",
     type: "",
+    stockMode: "", // ✅ NEW
     thickness: "",
     length: "",
     width: "",
@@ -65,10 +119,9 @@ const UniqueItemsPage = () => {
           `${base}/items/selected-details/by-description?page=${page}&limit=${limit}`,
       },
       search: {
-        real: `${base}/items/v1/search-real`, // 👈 real-description search
-        name: `${base}/items/v1/search`, // item-name-description search
+        real: `${base}/items/v1/search-real`,
+        name: `${base}/items/v1/search`,
       },
-      // EDIT NOW USES THE SAME editFullItem API FOR BOTH MODES
       edit: {
         real: `${base}/items/v1/full`,
         name: `${base}/items/v1/full`,
@@ -140,6 +193,7 @@ const UniqueItemsPage = () => {
             thickness: v?.thickness,
             itemName: v?.itemName,
             type: v?.type,
+            stockMode: v?.stockMode ?? entry?.stockMode ?? null, // ✅ NEW
             length: v?.length,
             width: v?.width,
             sheetsPerBox: v?.sheetsPerBox,
@@ -153,6 +207,7 @@ const UniqueItemsPage = () => {
       // LEGACY SHAPE
       const itemName = entry?.itemName ?? "";
       const type = entry?.type ?? "";
+      const stockMode = entry?.stockMode ?? null; // ✅ NEW
       const ths = Array.isArray(entry?.thicknesses) ? entry.thicknesses : [];
       for (const th of ths) {
         const tval = th?.thickness;
@@ -167,6 +222,7 @@ const UniqueItemsPage = () => {
             thickness: tval,
             itemName,
             type,
+            stockMode, // ✅ NEW
             length: v?.length,
             width: v?.width,
             sheetsPerBox: v?.sheetsPerBox,
@@ -228,6 +284,7 @@ const UniqueItemsPage = () => {
   // ============ Create modal refs ============
   const refItemName = useRef(null);
   const refType = useRef(null);
+  const refStockMode = useRef(null); // ✅ NEW
   const refItemNumber = useRef(null);
   const refDesignName = useRef(null);
   const refThickness = useRef(null);
@@ -248,6 +305,7 @@ const UniqueItemsPage = () => {
   const [newItemData, setNewItemData] = useState({
     itemName: "",
     type: "box",
+    stockMode: "SQM", // ✅ NEW
     descriptions: [
       {
         itemNumber: "",
@@ -347,34 +405,34 @@ const UniqueItemsPage = () => {
   // ============ Tokenized search ============
   const queryString = useMemo(() => tokens.join(" ").trim(), [tokens]);
 
-const runTokenSearch = async () => {
-  if (!queryString) {
-    setSearchResults(null);
-    return;
-  }
-  setSearching(true);
-  try {
-    const base = endpoints.search[descMode];
-    const url = `${base}?q=${encodeURIComponent(queryString)}&limit=200`;
+  const runTokenSearch = async () => {
+    if (!queryString) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const base = endpoints.search[descMode];
+      const url = `${base}?q=${encodeURIComponent(queryString)}&limit=200`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
 
-    const json = await res.json();
-    const rows = Array.isArray(json?.data) ? json.data : [];
-    setSearchResults(rows);
-  } catch (e) {
-    console.warn("token search error:", e);
-    setSearchResults([]);
-  } finally {
-    setSearching(false);
-  }
-};
+      const json = await res.json();
+      const rows = Array.isArray(json?.data) ? json.data : [];
+      setSearchResults(rows);
+    } catch (e) {
+      console.warn("token search error:", e);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => {
     runTokenSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, baseUrl, descMode]); // 👈 re-run when mode flips
+  }, [queryString, baseUrl, descMode]);
 
   const addToken = (t) => {
     const v = (t || "").trim();
@@ -415,12 +473,17 @@ const runTokenSearch = async () => {
     const base = [
       refItemName,
       refType,
+      refStockMode, // ✅ NEW
       refItemNumber,
       refDesignName,
       refThickness,
     ];
-    if (t !== "sqm") base.push(refLength, refWidth);
+
+    // unit + sqm hide dims
+    if (t !== "sqm" && t !== "unit") base.push(refLength, refWidth);
     if (t === "box") base.push(refSheetsPerBox);
+
+    // keep origin for unit too (optional, but present)
     base.push(refOrigin, refColorName, refCategoryName, refSubCategory);
     return base.filter(Boolean);
   };
@@ -445,6 +508,7 @@ const runTokenSearch = async () => {
     setNewItemData({
       itemName: "",
       type: "box",
+      stockMode: "SQM", // ✅ NEW
       descriptions: [
         {
           itemNumber: "",
@@ -467,15 +531,6 @@ const runTokenSearch = async () => {
               fixLength: false,
               fixWidth: false,
             },
-            {
-              length: "",
-              width: "",
-              sheetsPerBox: "",
-              origin: "",
-              fixBox: false,
-              fixLength: false,
-              fixWidth: false,
-            },
           ],
         },
       ],
@@ -486,9 +541,22 @@ const runTokenSearch = async () => {
     const { name, value, checked, type } = e.target;
     setNewItemData((prev) => {
       const updated = { ...prev };
-      if (name === "type") updated.type = value;
-      else if (name === "thickness") updated.thicknesses[0].thickness = value;
-      else if (["length", "width", "sheetsPerBox", "origin"].includes(name)) {
+      const prevType = updated.type;
+
+      if (name === "type") {
+        updated.type = value;
+
+        // ✅ auto-adjust stockMode if the user didn't customize it
+        const prevDefault = defaultStockModeForType(prevType);
+        const nextDefault = defaultStockModeForType(value);
+        if (String(updated.stockMode || "") === String(prevDefault)) {
+          updated.stockMode = nextDefault;
+        }
+      } else if (name === "stockMode") {
+        updated.stockMode = value;
+      } else if (name === "thickness") {
+        updated.thicknesses[0].thickness = value;
+      } else if (["length", "width", "sheetsPerBox", "origin"].includes(name)) {
         updated.thicknesses[0].variants[variantIndex][name] = value;
       } else if (type === "checkbox") {
         updated.thicknesses[0].variants[variantIndex][name] = checked;
@@ -513,22 +581,30 @@ const runTokenSearch = async () => {
     if (submitting) return;
     setSubmitting(true);
 
-    // dedupe variants on the client just in case
+    // normalize variants (unit/sqm get forced values)
     const rawVariants = newItemData.thicknesses[0].variants || [];
+    const normalized = rawVariants.map((v) =>
+      normalizeVariantForType(newItemData.type, v)
+    );
+
+    // dedupe variants on the client
     const uniq = new Map();
-    for (const v of rawVariants) {
+    for (const v of normalized) {
       const key = [
         newItemData.type,
-        v.length || 0,
-        v.width || 0,
-        v.sheetsPerBox || 0,
-        (v.origin || "").trim().toLowerCase(),
+        Number(v.length || 0),
+        Number(v.width || 0),
+        Number(v.sheetsPerBox || 0),
+        String(v.origin || "").trim().toLowerCase(),
       ].join("|");
-      if ((v.origin || "").trim() !== "" && !uniq.has(key)) uniq.set(key, v);
+
+      // for SQM, origin is "", still ok: keep first
+      if (!uniq.has(key)) uniq.set(key, v);
     }
 
     const payload = {
       ...newItemData,
+      stockMode: newItemData.stockMode, // ✅ NEW
       thicknesses: [
         {
           thickness: newItemData.thicknesses[0].thickness,
@@ -607,6 +683,7 @@ const runTokenSearch = async () => {
             thickness: v?.thickness,
             itemName: v?.itemName,
             type: v?.type,
+            stockMode: v?.stockMode ?? g?.stockMode ?? null, // ✅ NEW
             length: v?.length,
             width: v?.width,
             sheetsPerBox: v?.sheetsPerBox,
@@ -615,7 +692,7 @@ const runTokenSearch = async () => {
           });
         }
       } else {
-        // FLAT ROW SHAPE (searchSmart / searchSmartReal output)
+        // FLAT ROW SHAPE
         const rd =
           g?.realDescription || g?.itemNameDescription || g?.description || {};
         rows.push({
@@ -625,6 +702,7 @@ const runTokenSearch = async () => {
           thickness: Number(g?.thickness),
           itemName: g?.itemName,
           type: g?.type,
+          stockMode: g?.stockMode ?? null, // ✅ NEW
           length: Number(g?.length ?? 0),
           width: Number(g?.width ?? 0),
           sheetsPerBox: Number(g?.sheetsPerBox ?? 0),
@@ -634,7 +712,6 @@ const runTokenSearch = async () => {
       }
     }
 
-    // Order: by sortIndex (Real or Name) asc, NULLS LAST, then thickness asc, then length asc
     rows.sort((a, b) => {
       const ai = Number(
         a?.description?.sortIndexRealDescription ??
@@ -737,19 +814,18 @@ const runTokenSearch = async () => {
     const iid = getItemIdFromKey(rowKey);
     if (!vid) return null;
 
-    if (tokens.length > 0) {
-      const rows = Array.isArray(flattenedSearchRows)
-        ? flattenedSearchRows
-        : [];
-      const found = rows.find((r) => String(r?.variantId) === String(vid));
-      if (!found) return null;
+    const pick = (found) => {
       const d = found.description || {};
+      const t = safe(found.type);
       return {
         variantId: Number(found.variantId),
         itemId: Number(found.itemId ?? iid),
         thicknessId: Number(found.thicknessId ?? tid),
         itemName: safe(found.itemName),
-        type: safe(found.type),
+        type: t,
+        stockMode:
+          safe(found.stockMode) ||
+          defaultStockModeForType(t), // ✅ NEW
         thickness: numOrEmpty(found.thickness),
         length: numOrEmpty(found.length),
         width: numOrEmpty(found.width),
@@ -762,44 +838,36 @@ const runTokenSearch = async () => {
         colorName: safe(d.colorName),
         designName: safe(d.designName),
       };
+    };
+
+    if (tokens.length > 0) {
+      const rows = Array.isArray(flattenedSearchRows)
+        ? flattenedSearchRows
+        : [];
+      const found = rows.find((r) => String(r?.variantId) === String(vid));
+      if (!found) return null;
+      return pick(found);
     } else {
       const rows = Array.isArray(flattenedListRows)
         ? flattenedListRows
         : [];
       const found = rows.find((r) => String(r?.variantId) === String(vid));
-      if (found) {
-        const d = found.description || {};
-        return {
-          variantId: Number(found.variantId),
-          itemId: Number(found.itemId ?? iid),
-          thicknessId: Number(found.thicknessId ?? tid),
-          itemName: safe(found.itemName),
-          type: safe(found.type),
-          thickness: numOrEmpty(found.thickness),
-          length: numOrEmpty(found.length),
-          width: numOrEmpty(found.width),
-          sheetsPerBox: numOrEmpty(found.sheetsPerBox),
-          origin: safe(found.origin),
-          descriptionId: d?.id ? Number(d.id) : null,
-          itemNumber: safe(d.itemNumber),
-          categoryName: safe(d.categoryName),
-          subCategory: safe(d.subCategory),
-          colorName: safe(d.colorName),
-          designName: safe(d.designName),
-        };
-      }
+      if (found) return pick(found);
 
       for (const item of items || []) {
         for (const thick of item?.thicknesses || []) {
           for (const v of thick?.variants || []) {
             if (String(v?.id) === String(vid)) {
               const d = v.realDescription || v.itemNameDescription || {};
+              const t = safe(item.type);
               return {
                 variantId: Number(v.id),
                 itemId: Number(item.id ?? iid),
                 thicknessId: Number(thick.id ?? tid),
                 itemName: safe(item.itemName),
-                type: safe(item.type),
+                type: t,
+                stockMode:
+                  safe(item.stockMode) || defaultStockModeForType(t), // ✅ NEW
                 thickness: numOrEmpty(thick.thickness),
                 length: numOrEmpty(v.length),
                 width: numOrEmpty(v.width),
@@ -834,6 +902,7 @@ const runTokenSearch = async () => {
     setEditForm({
       itemName: snap.itemName,
       type: snap.type,
+      stockMode: snap.stockMode, // ✅ NEW
       thickness: snap.thickness,
       length: snap.length,
       width: snap.width,
@@ -856,7 +925,18 @@ const runTokenSearch = async () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
+    setEditForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "type") {
+        // keep stockMode sensible unless user customized
+        const prevDefault = defaultStockModeForType(prev.type);
+        const nextDefault = defaultStockModeForType(value);
+        if (String(prev.stockMode || "") === String(prevDefault)) {
+          next.stockMode = nextDefault;
+        }
+      }
+      return next;
+    });
   };
 
   const resolveItemIdFromThicknessId = (thicknessId) => {
@@ -874,33 +954,44 @@ const runTokenSearch = async () => {
 
   // Build payload for editFullItem API
   const buildEditPayload = () => {
+    const t = String(editForm.type || "").toLowerCase();
     const v = { id: Number(editVariantId) };
-    if (editForm.type !== "sqm") {
+
+    // dims behavior depends on type
+    if (t !== "sqm" && t !== "unit") {
       if (editForm.length !== "") v.length = Number(editForm.length);
       if (editForm.width !== "") v.width = Number(editForm.width);
-      if (editForm.type === "box" && editForm.sheetsPerBox !== "") {
+      if (t === "box" && editForm.sheetsPerBox !== "") {
         v.sheetsPerBox = Number(editForm.sheetsPerBox);
       }
       if (editForm.origin !== "") v.origin = String(editForm.origin).trim();
+    } else {
+      // unit/sqm: only origin is meaningful (optional); backend will enforce 0/1 defaults
+      if (t === "unit" && editForm.origin !== "") {
+        v.origin = String(editForm.origin).trim();
+      }
     }
 
-    // Re-link description ONLY in name-mode (editFullItem uses itemNameDescription)
-    if (
-      descMode === "name" &&
-      Number.isFinite(Number(editForm.descriptionId))
-    ) {
-      v.description = { id: Number(editForm.descriptionId) };
+    // ✅ re-link description:
+    // - name-mode => itemNameDescription
+    // - real-mode => realDescription
+    if (Number.isFinite(Number(editForm.descriptionId))) {
+      if (descMode === "name") {
+        v.description = { id: Number(editForm.descriptionId) };
+      } else {
+        v.realDescription = { id: Number(editForm.descriptionId) };
+      }
     }
-    // In real-mode we do NOT send realDescription here, because editFullItem
-    // uses itemNameDescriptionRepository internally. In real mode this edit
-    // will only update dimensions/origin.
 
     const resolvedItemId = resolveItemIdFromThicknessId(editCtx.thicknessId);
     const finalItemId = Number.isFinite(resolvedItemId)
       ? resolvedItemId
       : Number(editCtx.itemId);
-    return {
+
+    const payload = {
       itemId: Number(finalItemId),
+      type: t, // ✅ NEW: allow editing item.type
+      stockMode: editForm.stockMode || undefined, // ✅ NEW: allow editing stockMode
       thicknesses: [
         {
           thicknessId: Number(editCtx.thicknessId),
@@ -908,6 +999,11 @@ const runTokenSearch = async () => {
         },
       ],
     };
+
+    // remove undefined to keep request clean
+    if (!payload.stockMode) delete payload.stockMode;
+
+    return payload;
   };
 
   const saveEdit = async (e) => {
@@ -1103,98 +1199,62 @@ const runTokenSearch = async () => {
           </thead>
 
           <tbody>
-            {inSearchMode
-              ? (flattenedSearchRows || []).map((r) => {
-                  const d = r.description || {};
-                  const rowKey = makeKeyFromSearch(r);
-                  const checked = selectedRowKeys.has(rowKey);
-                  return (
-                    <tr key={rowKey}>
-                      <td className="items-creation-col-select">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleSelectRow(rowKey)}
-                          aria-label={`select row ${rowKey}`}
-                        />
-                      </td>
-                      <td>{d.itemNumber ?? "—"}</td>
-                      <td className="ar-rtl">{d.categoryName ?? "—"}</td>
-                      <td className="ar-rtl">{d.subCategory ?? "—"}</td>
-                      <td className="ar-rtl">{d.colorName ?? "—"}</td>
-                      <td className="ar-rtl">{d.designName ?? "—"}</td>
-                      <td className="ar-rtl">
-                        {`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
-                      </td>
-                      <td>{r.type ?? "—"}</td>
-                      {r.type === "sqm" ? (
-                        <>
-                          <td>—</td>
-                          <td>—</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="ltr">{r.length ?? "—"}</td>
-                          <td className="ltr">{r.width ?? "—"}</td>
-                        </>
-                      )}
-                      <td className="ltr">
-                        {r.type === "box" ? r.sheetsPerBox ?? "—" : "—"}
-                      </td>
-                      <td className="ar-rtl">{r.origin ?? "—"}</td>
-                    </tr>
-                  );
-                })
-              : (flattenedListRows || []).map((r) => {
-                  const d = r.description || {};
-                  const rowKey = makeKeyFromSearch(r);
-                  const checked = selectedRowKeys.has(rowKey);
-                  return (
-                    <tr key={rowKey}>
-                      <td className="items-creation-col-select">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleSelectRow(rowKey)}
-                          aria-label={`select row ${rowKey}`}
-                        />
-                      </td>
-                      <td>{d.itemNumber ?? "—"}</td>
-                      <td className="ar-rtl">{d.categoryName ?? "—"}</td>
-                      <td className="ar-rtl">{d.subCategory ?? "—"}</td>
-                      <td className="ar-rtl">{d.colorName ?? "—"}</td>
-                      <td className="ar-rtl">{d.designName ?? "—"}</td>
-                      <td className="ar-rtl">
-                        {`${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
-                      </td>
-                      <td>{r.type ?? "—"}</td>
-                      {r.type === "sqm" ? (
-                        <>
-                          <td>—</td>
-                          <td>—</td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="ltr">{r.length ?? "—"}</td>
-                          <td className="ltr">{r.width ?? "—"}</td>
-                        </>
-                      )}
-                      <td className="ltr">
-                        {r.type === "box" ? r.sheetsPerBox ?? "—" : "—"}
-                      </td>
-                      <td className="ar-rtl">{r.origin ?? "—"}</td>
-                    </tr>
-                  );
-                })}
+            {(inSearchMode ? flattenedSearchRows : flattenedListRows || []).map(
+              (r) => {
+                const d = r.description || {};
+                const rowKey = makeKeyFromSearch(r);
+                const checked = selectedRowKeys.has(rowKey);
+                const t = String(r.type || "");
+
+                return (
+                  <tr key={rowKey}>
+                    <td className="items-creation-col-select">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSelectRow(rowKey)}
+                        aria-label={`select row ${rowKey}`}
+                      />
+                    </td>
+                    <td>{d.itemNumber ?? "—"}</td>
+                    <td className="ar-rtl">{d.categoryName ?? "—"}</td>
+                    <td className="ar-rtl">{d.subCategory ?? "—"}</td>
+                    <td className="ar-rtl">{d.colorName ?? "—"}</td>
+                    <td className="ar-rtl">{d.designName ?? "—"}</td>
+                   <td className="ar-rtl">
+  {String(r.type || "").toLowerCase() === "unit" ||
+  String(r.type || "").toLowerCase() === "sqm"
+    ? (r.itemName ?? "—")
+    : `${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
+</td>
+
+                    <td>{t || "—"}</td>
+
+                    {t === "sqm" || t === "unit" ? (
+                      <>
+                        <td>—</td>
+                        <td>—</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="ltr">{r.length ?? "—"}</td>
+                        <td className="ltr">{r.width ?? "—"}</td>
+                      </>
+                    )}
+
+                    <td className="ltr">{t === "box" ? r.sheetsPerBox ?? "—" : "—"}</td>
+                    <td className="ar-rtl">{r.origin ?? "—"}</td>
+                  </tr>
+                );
+              }
+            )}
           </tbody>
         </table>
 
         {/* Search results counter */}
         {inSearchMode && (
           <div style={{ padding: "8px 0", fontSize: 12, opacity: 0.75 }}>
-            {searching
-              ? "Searching…"
-              : `Showing ${searchResults?.length ?? 0} results`}
+            {searching ? "Searching…" : `Showing ${searchResults?.length ?? 0} results`}
           </div>
         )}
 
@@ -1211,11 +1271,7 @@ const runTokenSearch = async () => {
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <button
-                type="button"
-                className="items-creation-loadmore-btn"
-                disabled
-              >
+              <button type="button" className="items-creation-loadmore-btn" disabled>
                 All items loaded{" "}
                 {Number.isFinite(totalItems)
                   ? `(${items.length}/${totalItems})`
@@ -1231,10 +1287,7 @@ const runTokenSearch = async () => {
         <div className="items-creation-modal">
           <div className="items-creation-modal-content">
             <h2>Create New Item</h2>
-            <form
-              onSubmit={handleFormSubmit}
-              className="items-creation-form-grid"
-            >
+            <form onSubmit={handleFormSubmit} className="items-creation-form-grid">
               <label>
                 Item Name:
                 <input
@@ -1261,6 +1314,22 @@ const runTokenSearch = async () => {
                   <option value="box">Box</option>
                   <option value="sheet">Sheet</option>
                   <option value="sqm">SQM</option>
+                  <option value="unit">Unit</option> {/* ✅ NEW */}
+                </select>
+              </label>
+
+              <label>
+                Stock Mode:
+                <select
+                  ref={refStockMode}
+                  name="stockMode"
+                  value={newItemData.stockMode}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => onEnterFocusNext(e, refStockMode)}
+                >
+                  <option value="SQM">SQM</option>
+                  <option value="QTY">QTY</option>
+                  <option value="NONE">NONE</option>
                 </select>
               </label>
 
@@ -1305,7 +1374,8 @@ const runTokenSearch = async () => {
                 />
               </label>
 
-              {newItemData.type !== "sqm" && (
+              {/* unit + sqm hide dims */}
+              {newItemData.type !== "sqm" && newItemData.type !== "unit" && (
                 <>
                   <label>
                     Length (cm):
@@ -1360,7 +1430,7 @@ const runTokenSearch = async () => {
                   onChange={handleInputChange}
                   onKeyDown={(e) => onEnterFocusNext(e, refOrigin)}
                   className="ar-rtl"
-                  required
+                  required={newItemData.type !== "unit" && newItemData.type !== "sqm"} // ✅ unit/sqm not required
                 />
               </label>
 
@@ -1427,10 +1497,6 @@ const runTokenSearch = async () => {
               <div className="ar-rtl">
                 <b>الاسم:</b> {editForm.itemName}
               </div>
-              <div>
-                <b>Type:</b> {editForm.type} &nbsp;|&nbsp;{" "}
-                <b>Thickness:</b> {editForm.thickness}
-              </div>
               <div className="ar-rtl">
                 <b>الوصف:</b>{" "}
                 {[
@@ -1450,6 +1516,34 @@ const runTokenSearch = async () => {
               className="items-creation-form-grid"
               style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
             >
+              {/* ✅ allow editing item.type + stockMode */}
+              <label>
+                Type:
+                <select
+                  name="type"
+                  value={editForm.type}
+                  onChange={handleEditChange}
+                >
+                  <option value="box">box</option>
+                  <option value="sheet">sheet</option>
+                  <option value="sqm">sqm</option>
+                  <option value="unit">unit</option>
+                </select>
+              </label>
+
+              <label>
+                Stock Mode:
+                <select
+                  name="stockMode"
+                  value={editForm.stockMode}
+                  onChange={handleEditChange}
+                >
+                  <option value="SQM">SQM</option>
+                  <option value="QTY">QTY</option>
+                  <option value="NONE">NONE</option>
+                </select>
+              </label>
+
               <label>
                 Length (cm):
                 <input
@@ -1458,7 +1552,7 @@ const runTokenSearch = async () => {
                   value={editForm.length}
                   onChange={handleEditChange}
                   className="ltr"
-                  disabled={editForm.type === "sqm"}
+                  disabled={editForm.type === "sqm" || editForm.type === "unit"}
                 />
               </label>
 
@@ -1470,7 +1564,7 @@ const runTokenSearch = async () => {
                   value={editForm.width}
                   onChange={handleEditChange}
                   className="ltr"
-                  disabled={editForm.type === "sqm"}
+                  disabled={editForm.type === "sqm" || editForm.type === "unit"}
                 />
               </label>
 
@@ -1483,7 +1577,9 @@ const runTokenSearch = async () => {
                   onChange={handleEditChange}
                   className="ltr"
                   disabled={
-                    editForm.type === "sheet" || editForm.type === "sqm"
+                    editForm.type === "sheet" ||
+                    editForm.type === "sqm" ||
+                    editForm.type === "unit"
                   }
                 />
               </label>
@@ -1510,6 +1606,13 @@ const runTokenSearch = async () => {
                 </button>
               </div>
             </form>
+
+            {/* Optional debug */}
+            {lastSentPayload && (
+              <pre style={{ marginTop: 12, fontSize: 11, opacity: 0.7, overflowX: "auto" }}>
+                {JSON.stringify(lastSentPayload, null, 2)}
+              </pre>
+            )}
           </div>
         </div>
       )}
@@ -1539,10 +1642,7 @@ const runTokenSearch = async () => {
                 <div className="items-creation-modal-icon">✖</div>
               </>
             )}
-            <button
-              className="items-creation-modal-button"
-              onClick={closeModal}
-            >
+            <button className="items-creation-modal-button" onClick={closeModal}>
               OK
             </button>
           </div>

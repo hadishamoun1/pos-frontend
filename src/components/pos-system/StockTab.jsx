@@ -201,6 +201,8 @@ const StockTab = forwardRef(function StockTab(
       length: row.length,
       width: row.width,
       sheetsPerBox: row.sheetsPerBox,
+      itemType: row.itemType ?? row.type,
+      stockMode: row.stockMode ?? "sqm",
       origin: row.origin || "",
       condition: row.condition ?? "",
       dateReceived: row.dateReceived ?? "",
@@ -337,11 +339,12 @@ const StockTab = forwardRef(function StockTab(
 
     // SQM -> open modal, then confirm
     const t = String(row.type || "").toLowerCase();
-    if (t === "sqm") {
-      pendingRowRef.current = row;
-      setRepeatOpen(true);
-      return;
-    }
+  if (t === "sqm" || t === "unit") {
+  pendingRowRef.current = row;
+  setRepeatOpen(true);
+  return;
+}
+
 
     // normal select
     setSelectedMap((prev) => {
@@ -384,6 +387,8 @@ const StockTab = forwardRef(function StockTab(
         length: Math.floor(Number(r.length || 0)),
         width: Math.floor(Number(r.width || 0)),
         sheetsPerBox: Number(r.sheetsPerBox || 0),
+        itemType: r.itemType ?? r.type,
+stockMode: r.stockMode ?? "sqm",
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
@@ -414,6 +419,8 @@ const StockTab = forwardRef(function StockTab(
               width: Math.floor(Number(v.width)),
               sheetsPerBox: Number(v.sheetsPerBox),
               origin: v.origin,
+              itemType: item.itemType ?? item.type,
+              stockMode: item.stockMode ?? "sqm",
               condition: b.condition,
               dateReceived: b.dateReceived,
               balanceOFR: b.balanceOFR,
@@ -450,7 +457,11 @@ const StockTab = forwardRef(function StockTab(
   const pendingLabel = useMemo(() => {
     const row = pendingRowRef.current;
     if (!row) return "";
-    return `${parseFloat(String(row.thickness))} ملم ${row.itemName}`;
+    const t = String(row.type || "").toLowerCase();
+return t === "unit"
+  ? `${row.itemName ?? ""}`.trim()
+  : `${parseFloat(String(row.thickness))} ملم ${row.itemName ?? ""}`.trim();
+
   }, [repeatOpen]);
 
   return (
@@ -539,9 +550,12 @@ const StockTab = forwardRef(function StockTab(
                   )}
                 </td>
 
-                <td style={{ direction: "rtl", textAlign: "right" }}>
-                  {`${parseFloat(String(r.thickness))} ملم ${r.itemName}`}
-                </td>
+              <td style={{ direction: "rtl", textAlign: "right" }}>
+  {String(r.type || "").toLowerCase() === "unit"
+    ? `${r.itemName ?? ""}`.trim()
+    : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim()}
+</td>
+
                 <td>{r.type}</td>
                 <td>{r.length ?? ""}</td>
                 <td>{r.width ?? ""}</td>

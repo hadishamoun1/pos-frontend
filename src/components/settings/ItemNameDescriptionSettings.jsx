@@ -2,19 +2,62 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./styles/DescriptionSorting.css";
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL?.replace(/\/+$/, "") || "";
+/**
+ * Production (Nginx):
+ *   REACT_APP_API_BASE_URL=/api
+ * Dev:
+ *   You can also use /api if you proxy, or set full URL.
+ *
+ * This helper supports BOTH:
+ *   - "/api" (path prefix)
+ *   - "http://192.168.x.x:3001/api" (full url)
+ *   - "http://192.168.x.x:3001" (full url no prefix)
+ */
+const API_BASE = (process.env.REACT_APP_API_BASE_URL || "/api").replace(/\/+$/, "");
 
 const apiUrl = (path) => {
-  const u = new URL(path, window.location.origin); // always absolute
-  if (API_BASE) u.pathname = `${API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
+  const cleanPath = String(path || "").startsWith("/") ? String(path || "") : `/${String(path || "")}`;
+
+  // If API_BASE is a full URL
+  if (/^https?:\/\//i.test(API_BASE)) {
+    const base = new URL(API_BASE);
+    const prefix = base.pathname.replace(/\/+$/, "");
+    base.pathname = `${prefix}${cleanPath}`.replace(/\/{2,}/g, "/");
+    return base;
+  }
+
+  // If API_BASE is a path prefix like "/api"
+  return new URL(`${API_BASE}${cleanPath}`.replace(/\/{2,}/g, "/"), window.location.origin);
 };
+
+async function fetchJson(url, options) {
+  const res = await fetch(url.toString(), options);
+  const ct = res.headers.get("content-type") || "";
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} — ${text.slice(0, 200)}`);
+  }
+
+  // Help you catch the famous "<!DOCTYPE html>" issue early
+  if (!ct.includes("application/json")) {
+    throw new Error(
+      `Expected JSON but got "${ct || "unknown"}". First bytes: ${text.slice(0, 80)}`
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON. First bytes: ${text.slice(0, 120)}`);
+  }
+}
 
 /* ----------------- helpers ----------------- */
 function highlight(text, q) {
   if (!q) return text;
   const t = String(text ?? "");
-  const i = t.toLowerCase().indexOf(q.toLowerCase());
+  const i = t.toLowerCase().indexOf(String(q).toLowerCase());
   if (i === -1) return t;
   const before = t.slice(0, i);
   const mid = t.slice(i, i + q.length);
@@ -42,9 +85,7 @@ function fmtDims(len, wid, spb) {
 /**
  * Base component for description sorting pages.
  * Props:
- *   - resource: one of:
- *       "item-descriptions"           → uses your provided APIs
- *       "item-name-descriptions"      → same shape, if/when you expose similar endpoints
+ *   - resource: "item-descriptions" | "item-name-descriptions"
  *   - title: string shown in header
  */
 export default function DescriptionSettingsBase({ resource, title }) {
@@ -67,15 +108,11 @@ export default function DescriptionSettingsBase({ resource, title }) {
     setLoading(true);
     setErr("");
     try {
-      // LIST endpoint:
-      // GET /items/<resource>?q=&withCounts=1
-const url = apiUrl(`/items/${resource || "item-descriptions"}`);
+      const url = apiUrl(`/items/${resource || "item-descriptions"}`);
       if (q) url.searchParams.set("q", q);
       if (withCounts) url.searchParams.set("withCounts", "1");
 
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchJson(url);
       setRows(Array.isArray(data) ? data : []);
       setIsDirty(false);
     } catch (e) {
@@ -125,13 +162,14 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}`);
     try {
       setLoading(true);
       setErr("");
-      // PUT /items/<resource>/reorder  with body { order: number[] }
-const res = await fetch(apiUrl(`/items/${resource || "item-descriptions"}/reorder`).toString(), {
+
+      const url = apiUrl(`/items/${resource || "item-descriptions"}/reorder`);
+      await fetchJson(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       await fetchData();
     } catch (e) {
       setErr(String(e?.message || e));
@@ -154,15 +192,13 @@ const res = await fetch(apiUrl(`/items/${resource || "item-descriptions"}/reorde
     setViewerOpen(true);
     try {
       setViewerLoading(true);
-      // GET /items/<resource>/:descId/variants?limit=500&page=1&q=
-const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/variants`);
+
+      const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/variants`);
       url.searchParams.set("limit", "500");
       url.searchParams.set("page", "1");
       if (q) url.searchParams.set("q", q);
 
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const js = await res.json();
+      const js = await fetchJson(url);
       const arr = Array.isArray(js?.data) ? js.data : Array.isArray(js) ? js : [];
       setViewerData(arr);
     } catch (e) {
@@ -176,6 +212,7 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
   const viewerGrouped = useMemo(() => {
     const out = [];
     const byItem = new Map();
+
     for (const row of viewerData) {
       const keyItem = row.itemName || "(Unnamed)";
       if (!byItem.has(keyItem)) {
@@ -184,12 +221,12 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
         out.push(obj);
       }
       const itemObj = byItem.get(keyItem);
+
       const th = Number(row.thickness || 0);
-      if (!itemObj.thicknesses.has(th)) {
-        itemObj.thicknesses.set(th, []);
-      }
+      if (!itemObj.thicknesses.has(th)) itemObj.thicknesses.set(th, []);
       itemObj.thicknesses.get(th).push(row);
     }
+
     return out.map((item) => {
       const thArr = Array.from(item.thicknesses.entries())
         .sort((a, b) => a[0] - b[0])
@@ -260,7 +297,7 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
       ) : (
         <div className="description-setting__list">
           {rows.map((r) => {
-            const title =
+            const titleText =
               [r.categoryName, r.subCategory, r.colorName, r.designName]
                 .filter(Boolean)
                 .join(" | ") || "(Untitled)";
@@ -279,11 +316,10 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
 
                 <div className="description-setting__row-main">
                   <div className="description-setting__row-title">
-                    {highlight(title, q)}
+                    {highlight(titleText, q)}
                   </div>
 
                   <div className="description-setting__row-sub">
-                    {/* itemNumber pill */}
                     {r.itemNumber ? (
                       <span className="description-setting__badge">
                         {highlight(r.itemNumber, q)}
@@ -294,10 +330,8 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
                       </span>
                     )}
 
-                    {/* id */}
                     <span className="description-setting__chip">ID: {r.id}</span>
 
-                    {/* optional count */}
                     {withCounts && (
                       <span className="description-setting__chip">
                         Variants: {r.variantsCount ?? 0}
@@ -372,7 +406,10 @@ const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/vari
 
                           <div className="description-setting__viewer-variants">
                             {th.variants.map((v) => (
-                              <div className="description-setting__viewer-variant" key={v.variantId ?? v.id}>
+                              <div
+                                className="description-setting__viewer-variant"
+                                key={v.variantId ?? v.id}
+                              >
                                 <div className="description-setting__viewer-variant-title">
                                   {fmtDims(v.length, v.width, v.sheetsPerBox) || "(No size)"}
                                 </div>

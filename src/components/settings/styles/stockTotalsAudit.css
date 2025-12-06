@@ -1,0 +1,592 @@
+/* ✅ Scoped ONLY to this page */
+.sta-root {
+  --sta-bg: #f6f8fc;
+  --sta-card: #ffffff;
+  --sta-text: #0f172a;
+  --sta-muted: #64748b;
+  --sta-border: rgba(15, 23, 42, 0.10);
+  --sta-border2: rgba(15, 23, 42, 0.08);
+  --sta-shadow2: 0 10px 25px rgba(15, 23, 42, 0.06);
+
+  --sta-primary: #2563eb;
+  --sta-primary-soft: rgba(37, 99, 235, 0.12);
+  --sta-ok-soft: rgba(22, 163, 74, 0.12);
+  --sta-warn-soft: rgba(217, 119, 6, 0.12);
+  --sta-danger-soft: rgba(220, 38, 38, 0.12);
+
+  --sta-radius: 16px;
+  --sta-radius-sm: 12px;
+
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  color: var(--sta-text);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Header */
+.sta-root .sta-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 4px;
+}
+
+.sta-root .sta-title {
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.sta-root .sta-subtitle {
+  margin-top: 6px;
+  color: var(--sta-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sta-root .sta-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Legend dots */
+.sta-root .sta-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid var(--sta-border);
+}
+.sta-root .sta-legend-dot.stored { background: rgba(100, 116, 139, 0.25); }
+.sta-root .sta-legend-dot.expected { background: rgba(22, 163, 74, 0.25); }
+.sta-root .sta-legend-dot.edit { background: rgba(37, 99, 235, 0.25); }
+
+/* Card */
+.sta-root .sta-card {
+  background: var(--sta-card);
+  border: 1px solid var(--sta-border);
+  border-radius: var(--sta-radius);
+  box-shadow: var(--sta-shadow2);
+  padding: 12px;
+}
+
+/* Controls */
+.sta-root .sta-controls {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.7fr 0.8fr 0.7fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.sta-root .sta-control label {
+  display: block;
+  font-size: 12px;
+  color: var(--sta-muted);
+  margin-bottom: 6px;
+}
+
+.sta-root .sta-control input,
+.sta-root .sta-control select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--sta-radius-sm);
+  border: 1px solid var(--sta-border);
+  background: #fff;
+  outline: none;
+  color: var(--sta-text);
+}
+
+.sta-root .sta-control input:focus,
+.sta-root .sta-control select:focus {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* Toggle */
+.sta-root .sta-togglebtn {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--sta-border);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+.sta-root .sta-togglebtn.on {
+  background: var(--sta-primary-soft);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+/* Buttons */
+.sta-root .sta-btn {
+  padding: 10px 12px;
+  border-radius: var(--sta-radius-sm);
+  border: 1px solid var(--sta-border);
+  background: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  transition: transform 0.06s ease, box-shadow 0.2s ease;
+}
+.sta-root .sta-btn:hover {
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10);
+}
+.sta-root .sta-btn:active { transform: translateY(1px); }
+.sta-root .sta-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.sta-root .sta-btn.small {
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+.sta-root .sta-btn.primary {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.18);
+  color: #1e3a8a;
+}
+.sta-root .sta-btn.primary.active { background: rgba(37, 99, 235, 0.20); }
+.sta-root .sta-btn.danger.active {
+  background: var(--sta-danger-soft);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+.sta-root .sta-btn.ghost {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+/* Pager */
+.sta-root .sta-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.sta-root .sta-pager-inline { display: flex; gap: 8px; align-items: center; }
+.sta-root .sta-page-chip {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--sta-border);
+  background: linear-gradient(180deg, #fff, #fbfcff);
+  font-weight: 900;
+  font-size: 12px;
+}
+.sta-root .sta-pager-meta { font-size: 12px; color: var(--sta-muted); }
+
+/* KPI */
+.sta-root .sta-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.6fr;
+  gap: 12px;
+}
+.sta-root .sta-kpi { display: flex; flex-direction: column; gap: 6px; }
+.sta-root .sta-kpi-title { font-size: 12px; color: var(--sta-muted); }
+.sta-root .sta-kpi-value { font-size: 26px; font-weight: 950; }
+.sta-root .sta-kpi-meta { font-size: 12px; color: var(--sta-muted); }
+
+.sta-root .sta-kpi-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.sta-root .sta-mini {
+  background: linear-gradient(180deg, #fff, #fbfcff);
+  border: 1px solid var(--sta-border2);
+  border-radius: 14px;
+  padding: 10px;
+}
+.sta-root .sta-mini-h {
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--sta-muted);
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+.sta-root .sta-mini-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.10);
+}
+.sta-root .sta-mini-row:last-child { border-bottom: 0; }
+.sta-root .sta-mini-row span { color: var(--sta-muted); }
+
+/* Alerts */
+.sta-root .sta-alert {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--sta-border);
+  background: #fff;
+}
+.sta-root .sta-alert.info {
+  border-color: rgba(37, 99, 235, 0.24);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1e3a8a;
+}
+.sta-root .sta-alert.error {
+  border-color: rgba(220, 38, 38, 0.24);
+  background: var(--sta-danger-soft);
+  color: #7f1d1d;
+}
+
+/* List */
+.sta-root .sta-list { padding: 10px; }
+.sta-root .sta-empty { padding: 18px; text-align: center; color: var(--sta-muted); }
+
+/* Item row */
+.sta-root .sta-itemrow {
+  border: 1px solid var(--sta-border2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 10px;
+}
+.sta-root .sta-itemrow-top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+.sta-root .sta-itemrow.expanded .sta-itemrow-top { background: rgba(37, 99, 235, 0.06); }
+
+.sta-root .sta-expand {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--sta-border);
+  background: #fff;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.sta-root .sta-itemrow-main { flex: 1; min-width: 0; }
+.sta-root .sta-itemrow-title {
+  font-weight: 950;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ✅ FIX: RTL + mixed text looks correct */
+.sta-root .sta-item-title-main {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 78ch;
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+.sta-root .sta-itemrow-sub { margin-top: 4px; font-size: 12px; color: var(--sta-muted); }
+
+.sta-root .sta-itemrow-totals { display: flex; gap: 14px; }
+.sta-root .sta-tot { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.sta-root .sta-tot span { font-size: 11px; color: var(--sta-muted); }
+.sta-root .sta-tot b { font-size: 14px; }
+
+/* pills */
+.sta-root .sta-pillstate {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  border: 1px solid var(--sta-border);
+}
+.sta-root .sta-pillstate.ok {
+  background: var(--sta-ok-soft);
+  border-color: rgba(22, 163, 74, 0.25);
+  color: #14532d;
+}
+.sta-root .sta-pillstate.warn {
+  background: var(--sta-warn-soft);
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #7c2d12;
+}
+
+.sta-root .sta-badge-small {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  border: 1px solid var(--sta-border);
+  background: #fff;
+}
+.sta-root .sta-badge-small.warn {
+  background: var(--sta-warn-soft);
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #7c2d12;
+}
+.sta-root .sta-badge-small.edit {
+  background: var(--sta-primary-soft);
+  border-color: rgba(37, 99, 235, 0.25);
+  color: #1e3a8a;
+}
+
+/* Expanded body */
+.sta-root .sta-expand-body {
+  padding: 12px;
+  background: var(--sta-bg);
+  border-top: 1px solid var(--sta-border2);
+}
+.sta-root .sta-expand-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.sta-root .sta-expand-label { font-weight: 950; }
+.sta-root .sta-expand-hint { font-size: 12px; color: var(--sta-muted); }
+
+/* Variant card */
+.sta-root .sta-vcard {
+  border: 1px solid var(--sta-border2);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--sta-shadow2);
+  overflow: hidden;
+}
+.sta-root .sta-vcard-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 10px;
+  padding: 12px;
+  background: var(--sta-bg);
+}
+.sta-root .sta-vbox {
+  background: #fff;
+  border: 1px solid var(--sta-border2);
+  border-radius: 14px;
+  padding: 10px;
+}
+.sta-root .sta-vbox.edit { border-color: rgba(37, 99, 235, 0.22); }
+
+.sta-root .sta-vbox-title {
+  font-weight: 950;
+  font-size: 12px;
+  color: var(--sta-muted);
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sta-root .sta-vrow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(15, 23, 42, 0.10);
+  font-size: 13px;
+}
+.sta-root .sta-vrow:last-child { border-bottom: 0; }
+.sta-root .sta-vrow span { color: var(--sta-muted); }
+.sta-root .sta-vrow.small { font-size: 12px; }
+
+/* Edit grid */
+.sta-root .sta-editgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sta-root .sta-edithead {
+  font-weight: 950;
+  font-size: 11px;
+  color: var(--sta-muted);
+  letter-spacing: 0.6px;
+}
+.sta-root .sta-editcol label {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--sta-muted);
+}
+
+/* Inputs */
+.sta-root .sta-inp {
+  width: 100%; /* ✅ IMPORTANT: you removed this earlier and it breaks batch edit inputs */
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.sta-root .sta-inp:focus {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.sta-root .sta-inp-sm {
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+.sta-root .sta-inp.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Balance box */
+.sta-root .sta-balance {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--sta-border2);
+  background: linear-gradient(180deg, #fff, #fbfcff);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sta-root .sta-balance span { font-size: 11px; color: var(--sta-muted); }
+.sta-root .sta-balance b { font-size: 16px; font-weight: 950; }
+
+.sta-root .sta-vactions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* =========================
+   ✅ Batches (EDIT UI FIXED)
+   ========================= */
+.sta-root .sta-batches-block {
+  margin-top: 12px;
+  border: 1px solid var(--sta-border2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.sta-root .sta-batches-head {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  background: linear-gradient(180deg, #fff, #fbfcff);
+  border-bottom: 1px solid var(--sta-border2);
+}
+
+.sta-root .sta-batches-title { font-weight: 950; }
+.sta-root .sta-batches-hint { font-size: 12px; color: var(--sta-muted); }
+
+.sta-root .sta-batches-wrap {
+  overflow: auto;
+  padding: 0;
+}
+
+.sta-root .sta-batches-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1250px;          /* ✅ make sure the action column doesn’t crush */
+  table-layout: fixed;        /* ✅ stable column widths */
+}
+
+/* Sticky header */
+.sta-root .sta-batches-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--sta-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--sta-border2);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
+}
+
+/* Table cells */
+.sta-root .sta-batches-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: #fff;
+  vertical-align: middle;     /* ✅ align inputs & numbers nicely */
+  font-size: 13px;
+}
+
+/* Hover so it’s easy to read */
+.sta-root .sta-batches-table tbody tr:hover td {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+/* Numeric alignment */
+.sta-root .sta-batches-table td.num,
+.sta-root .sta-batches-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ✅ Ensure inputs inside the batch table fill the cell */
+.sta-root .sta-batches-table td input {
+  width: 75px;
+
+}
+
+/* ✅ Make the rightmost Actions column stable */
+.sta-root .sta-actions-col {
+  width: 230px;
+  text-align: right;
+}
+
+/* Actions layout */
+.sta-root .sta-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Compact the buttons in table rows */
+.sta-root .sta-row-actions .sta-btn.small {
+  padding: 7px 10px;
+}
+
+/* Mismatch row highlighting */
+.sta-root .sta-batch-warn td { background: rgba(217, 119, 6, 0.06); }
+.sta-root .sta-wrong { color: #7c2d12; }
+
+.sta-root .sta-batches-empty {
+  text-align: center;
+  color: var(--sta-muted);
+  padding: 16px;
+}
+
+/* Warning chip */
+.sta-root .sta-chip-warn {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 950;
+  color: #7c2d12;
+  background: var(--sta-warn-soft);
+  border: 1px solid rgba(217, 119, 6, 0.22);
+}
+
+.sta-root .sta-batches-foot {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--sta-muted);
+  background: #fff;
+  border-top: 1px solid var(--sta-border2);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .sta-root .sta-controls { grid-template-columns: 1fr 1fr; }
+  .sta-root .sta-grid { grid-template-columns: 1fr; }
+  .sta-root .sta-vcard-cols { grid-template-columns: 1fr; }
+  .sta-root .sta-itemrow-totals { display: none; }
+}
