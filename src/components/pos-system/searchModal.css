@@ -236,7 +236,7 @@
 .row-disabled td { background-image: linear-gradient(180deg, #fafafa, #ffffff); }
 
 .search-modal-select-checkbox {
-  width: 1.2rem;
+  width: 1.9rem;
   height: 1.2rem;
   cursor: pointer;
 }
@@ -320,6 +320,93 @@
 .placeholder-sub {
   color: #475569;
 }
+/* --- Quick bubbles sticky block (names + thickness) --- */
+.search-quick-bubbles-wrap {
+  position: sticky;
+  top: 76px;                 /* directly under the sticky input row */
+  z-index: 5;
+  background: #fff;
+
+  padding: 10px 0.75rem 10px;
+  margin: -0.25rem -0.25rem 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+
+  /* IMPORTANT: keep height stable so table header top is predictable */
+  max-height: 92px;
+  overflow-y: auto;
+}
+
+/* each row */
+.search-quick-bubbles-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  direction: rtl;
+  justify-content: flex-start;
+}
+
+/* second line spacing */
+.search-quick-bubbles-row.thickness-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+/* bubble button */
+.quick-bubble {
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.06);
+  color: inherit;
+  border-radius: 999px;
+  padding: 6px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.quick-bubble:hover {
+  background: rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.quick-bubble.active {
+  border-color: rgba(59, 130, 246, 0.9);
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.quick-bubble:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.65);
+  outline-offset: 2px;
+}
+
+/* thickness style a bit different (optional) */
+.quick-bubble-thick {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.35);
+}
+.quick-bubble-thick.active {
+  background: rgba(2, 132, 199, 0.18);
+  border-color: rgba(2, 132, 199, 0.9);
+}
+
+/* ✅ FIX: table header must sit under (input row + bubbles block) */
+.search-modal-table thead th {
+  position: sticky;
+  top: calc(76px + 92px);   /* input row (76) + bubbles max-height (92) */
+  z-index: 4;
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  .search-modal-table thead th {
+    top: calc(132px + 92px);  /* your mobile input row height + bubbles */
+    z-index: 4;
+  }
+}
+
 
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 720px) {
@@ -337,5 +424,8 @@
     min-width: 0;
   }
 
-  .search-modal-table thead th { top: 68px; }
+.search-modal-table thead th{
+  top: 132px;   /* <- increase from 76px */
+  z-index: 4;
+}
 }

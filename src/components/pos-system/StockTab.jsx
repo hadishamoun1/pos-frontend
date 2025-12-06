@@ -18,7 +18,6 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
   useEffect(() => {
     if (!open) return;
     setVal(String(defaultValue ?? 1));
-    // focus a tick later
     setTimeout(() => inputRef.current?.focus?.(), 0);
   }, [open, defaultValue]);
 
@@ -38,7 +37,6 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
       role="dialog"
       aria-modal="true"
       onMouseDown={(e) => {
-        // click outside to close
         if (e.target === e.currentTarget) onCancel();
       }}
     >
@@ -54,7 +52,9 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
           <div className="repeat-modal-label">{label}</div>
 
           <div className="repeat-modal-field">
-            <div className="repeat-modal-field-label">How many times do you want to add it?</div>
+            <div className="repeat-modal-field-label">
+              How many times do you want to add it?
+            </div>
             <input
               ref={inputRef}
               className="repeat-modal-input"
@@ -107,6 +107,42 @@ const StockTab = forwardRef(function StockTab(
   // modal state for SQM repeat
   const [repeatOpen, setRepeatOpen] = useState(false);
   const pendingRowRef = useRef(null);
+
+  // ✅ Name bubbles
+  const QUICK_BUBBLES = useMemo(
+    () => [
+      "ابيض",
+      "اسود",
+      "برونز",
+      "برش",
+      "مرايا",
+      "مغش",
+      "تريبلكس",
+      "كريستال",
+      "عاكس",
+      "مشرط",
+      "ازرق",
+      "اخضر",
+      "غامق",
+      "فاتح",
+      "صليب",
+      "دلتا",
+    ],
+    []
+  );
+
+  // ✅ Thickness bubbles (edit as you like)
+  const THICKNESS_BUBBLES = useMemo(
+    () => ["3", "4", "5", "5.5", "6", "8", "10", "12", "15", "19"],
+    []
+  );
+
+  // ✅ ONE ordered list for "click order" across BOTH rows
+  // items are like: "N:ابيض" or "T:6"
+  const [quickOrder, setQuickOrder] = useState([]);
+
+  // keep input focused when clicking bubbles
+  const searchInputRef = useRef(null);
 
   const cancelInFlight = () => {
     const ctl = abortRef.current;
@@ -295,6 +331,9 @@ const StockTab = forwardRef(function StockTab(
     setHasMore(false);
     setRepeatOpen(false);
     pendingRowRef.current = null;
+
+    // ✅ reset bubbles order
+    setQuickOrder([]);
   }, [modalOpen]);
 
   useEffect(() => {
@@ -304,11 +343,26 @@ const StockTab = forwardRef(function StockTab(
     return () => abortRef.current?.abort?.();
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
+  const orderToText = useCallback((ord) => {
+    return (ord || [])
+      .map((k) => {
+        if (k.startsWith("N:")) return k.slice(2);
+        if (k.startsWith("T:")) return `${k.slice(2)}ملم`; // no space -> matches your example "5.5ملم"
+        return "";
+      })
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  }, []);
+
   const handleEnter = (e) => {
     if (e.key !== "Enter") return;
     const raw = inputValue.trim();
     if (!raw) return;
     const withDigits = normalizeDigits(raw);
+
+    // clear bubbles because we "committed" the search into chips
+    setQuickOrder([]);
 
     if (looksLikeDims(withDigits)) {
       setDimsChip(withDigits);
@@ -324,6 +378,54 @@ const StockTab = forwardRef(function StockTab(
     setInputValue("");
   };
 
+  // ✅ Active helpers
+  const isNameActive = useCallback(
+    (token) => quickOrder.includes(`N:${token}`),
+    [quickOrder]
+  );
+
+  const activeThickness = useMemo(() => {
+    const t = quickOrder.find((x) => x.startsWith("T:"));
+    return t ? t.slice(2) : null;
+  }, [quickOrder]);
+
+  // ✅ Name bubble toggle (keeps CLICK ORDER)
+  const toggleNameBubble = (token) => {
+    const t = String(token || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `N:${t}`;
+      const next = prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key];
+
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
+
+      return next;
+    });
+  };
+
+  // ✅ Thickness bubble toggle (single thickness)
+  // - clicking another thickness replaces the old one and goes to the END (latest click)
+  const toggleThicknessBubble = (th) => {
+    const t = String(th || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `T:${t}`;
+      const withoutAnyThickness = prev.filter((x) => !x.startsWith("T:"));
+
+      // if same thickness was active => remove it
+      const wasSameActive = prev.includes(key);
+      const next = wasSameActive ? withoutAnyThickness : [...withoutAnyThickness, key];
+
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
+
+      return next;
+    });
+  };
+
   const toggleSelect = (row) => {
     if (!row.selectable) return;
 
@@ -337,14 +439,13 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // SQM -> open modal, then confirm
+    // SQM + UNIT -> open modal for repeat
     const t = String(row.type || "").toLowerCase();
-  if (t === "sqm" || t === "unit") {
-  pendingRowRef.current = row;
-  setRepeatOpen(true);
-  return;
-}
-
+    if (t === "sqm" || t === "unit") {
+      pendingRowRef.current = row;
+      setRepeatOpen(true);
+      return;
+    }
 
     // normal select
     setSelectedMap((prev) => {
@@ -388,7 +489,7 @@ const StockTab = forwardRef(function StockTab(
         width: Math.floor(Number(r.width || 0)),
         sheetsPerBox: Number(r.sheetsPerBox || 0),
         itemType: r.itemType ?? r.type,
-stockMode: r.stockMode ?? "sqm",
+        stockMode: r.stockMode ?? "sqm",
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
@@ -458,15 +559,13 @@ stockMode: r.stockMode ?? "sqm",
     const row = pendingRowRef.current;
     if (!row) return "";
     const t = String(row.type || "").toLowerCase();
-return t === "unit"
-  ? `${row.itemName ?? ""}`.trim()
-  : `${parseFloat(String(row.thickness))} ملم ${row.itemName ?? ""}`.trim();
-
+    return t === "unit"
+      ? `${row.itemName ?? ""}`.trim()
+      : `${parseFloat(String(row.thickness))} ملم ${row.itemName ?? ""}`.trim();
   }, [repeatOpen]);
 
   return (
     <>
-      {/* light-mode SQM repeat modal */}
       <RepeatModal
         open={repeatOpen}
         label={pendingLabel}
@@ -477,6 +576,7 @@ return t === "unit"
 
       <div className="search-modal-item-input-row">
         <input
+          ref={searchInputRef}
           type="text"
           placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225"
           className="search-modal-items-input"
@@ -492,7 +592,11 @@ return t === "unit"
               <span className="search-chip-label search-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button className="search-chip-x" onClick={() => setNameChip("")} aria-label="Remove name filter">
+              <button
+                className="search-chip-x"
+                onClick={() => setNameChip("")}
+                aria-label="Remove name filter"
+              >
                 ×
               </button>
             </span>
@@ -503,7 +607,11 @@ return t === "unit"
               <span className="search-chip-label search-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button className="search-chip-x" onClick={() => setDimsChip("")} aria-label="Remove dims/length filter">
+              <button
+                className="search-chip-x"
+                onClick={() => setDimsChip("")}
+                aria-label="Remove dims/length filter"
+              >
                 ×
               </button>
             </span>
@@ -512,6 +620,42 @@ return t === "unit"
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
             Selected: {selectedTotal}
           </span>
+        </div>
+      </div>
+
+      {/* ✅ Sticky bubbles block (names row then thickness row) */}
+      <div className="search-quick-bubbles-wrap">
+        <div className="search-quick-bubbles-row">
+          {QUICK_BUBBLES.map((token) => {
+            const active = isNameActive(token);
+            return (
+              <button
+                key={token}
+                type="button"
+                onClick={() => toggleNameBubble(token)}
+                className={"quick-bubble" + (active ? " active" : "")}
+              >
+                {token}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ✅ NEW: thickness bubbles line */}
+        <div className="search-quick-bubbles-row thickness-row">
+          {THICKNESS_BUBBLES.map((t) => {
+            const active = activeThickness === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleThicknessBubble(t)}
+                className={"quick-bubble quick-bubble-thick" + (active ? " active" : "")}
+              >
+                {t} ملم
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -546,15 +690,17 @@ return t === "unit"
                     onChange={() => toggleSelect(r)}
                   />
                   {checked && String(r.type || "").toLowerCase() === "sqm" && (
-                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>x{rep}</span>
+                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>
+                      x{rep}
+                    </span>
                   )}
                 </td>
 
-              <td style={{ direction: "rtl", textAlign: "right" }}>
-  {String(r.type || "").toLowerCase() === "unit"
-    ? `${r.itemName ?? ""}`.trim()
-    : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim()}
-</td>
+                <td style={{ direction: "rtl", textAlign: "right" }}>
+                  {String(r.type || "").toLowerCase() === "unit"
+                    ? `${r.itemName ?? ""}`.trim()
+                    : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim()}
+                </td>
 
                 <td>{r.type}</td>
                 <td>{r.length ?? ""}</td>
