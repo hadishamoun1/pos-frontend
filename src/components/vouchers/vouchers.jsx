@@ -16,6 +16,7 @@ const JournalVoucherPage = () => {
   const [summarySeq, setSummarySeq] = useState("");
   const [searchActive, setSearchActive] = useState(false);
   const searchDebounceRef = useRef();
+  const [kindFilter, setKindFilter] = useState("");
 
   // Edit / saved state
   const [isEditing, setIsEditing] = useState(false);
@@ -719,15 +720,24 @@ const isEqualOFR =
   };
 
   // ====== PAGINATED fetch for the modal list ======
-  const fetchJournalData = async (pageArg = 1, seqArg = "") => {
-    const base = `${baseUrl}/journal-vouchers/v1`;
-    const url =
-      seqArg && seqArg.trim()
-        ? `${base}/search-by-seq?seq=${encodeURIComponent(seqArg)}&page=${pageArg}`
-        : `${base}/list?page=${pageArg}`;
-    const response = await axios.get(url);
-    return response.data;
-  };
+const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
+  const base = `${baseUrl}/journal-vouchers/v1`;
+
+  const seq = (seqArg || "").trim();
+  const kind = (kindArg || "").trim(); // "" | "INVOICE" | "RECEIVABLE" | "JV"
+
+  const qs = new URLSearchParams();
+  qs.set("page", String(pageArg));
+  qs.set("limit", "100");
+  if (kind) qs.set("type", kind); // ✅ backend expects ?type=
+  if (seq) qs.set("seq", seq);
+
+  const url = seq ? `${base}/search-by-seq?${qs.toString()}` : `${base}/list?${qs.toString()}`;
+
+  const response = await axios.get(url);
+  return response.data;
+};
+
 
   useEffect(() => {
     if (isJournalListOpen) {
@@ -735,10 +745,13 @@ const isEqualOFR =
         try {
           setLoading(true);
           setSummaryPage(1);
-          const res = await fetchJournalData(1, summarySeq);
+          const digits = (summarySeq || "").replace(/\D+/g, "");
+const res = await fetchJournalData(1, digits, kindFilter);
+
           setJournalData(res.data || []);
           setHasMoreSummary(Boolean(res.hasMore));
-          setSearchActive(Boolean(summarySeq && summarySeq.trim()));
+          setSearchActive(Boolean(digits));
+
         } catch (error) {
           setJournalData([]);
           setHasMoreSummary(false);
@@ -758,7 +771,8 @@ const isEqualOFR =
       try {
         setLoading(true);
         setSummaryPage(1);
-        const res = await fetchJournalData(1, digits);
+      const res = await fetchJournalData(1, digits, kindFilter);
+
         setJournalData(res.data || []);
         setHasMoreSummary(Boolean(res.hasMore));
         setSearchActive(Boolean(digits));
@@ -779,7 +793,8 @@ const isEqualOFR =
       const next = summaryPage + 1;
 
       const digits = (summarySeq || "").replace(/\D+/g, "");
-      const res = await fetchJournalData(next, digits);
+      const res = await fetchJournalData(next, digits, kindFilter);
+
       setJournalData((prev) => [...prev, ...(res.data || [])]);
       setSummaryPage(next);
       setHasMoreSummary(Boolean(res.hasMore));
@@ -1017,17 +1032,42 @@ const isEqualOFR =
             >
               Open Journal List
             </button>
-            <JournalListsModal
-              isOpen={isJournalListOpen}
-              onClose={() => setIsJournalListOpen(false)}
-              journalData={journalData}
-              onView={handleView}
-              onLoadMore={handleLoadMore}
-              hasMore={hasMoreSummary}
-              loadingMoreSummary={loadingMoreSummary}
-              searchSeq={summarySeq}
-              onSearchSeqChange={handleSearchSeqChange}
-            />
+     <JournalListsModal
+  isOpen={isJournalListOpen}
+  onClose={() => setIsJournalListOpen(false)}
+  journalData={journalData}
+  onView={handleView}
+  onLoadMore={handleLoadMore}
+  hasMore={hasMoreSummary}
+  loadingMoreSummary={loadingMoreSummary}
+  searchSeq={summarySeq}
+  onSearchSeqChange={handleSearchSeqChange}
+
+  // ✅ add these
+  kindFilter={kindFilter}
+  onKindFilterChange={(val) => {
+    setKindFilter(val);
+
+    // re-fetch page 1 with the NEW filter + current seq (debounced not needed here)
+    const digits = (summarySeq || "").replace(/\D+/g, "");
+    (async () => {
+      try {
+        setLoading(true);
+        setSummaryPage(1);
+        const res = await fetchJournalData(1, digits, val); // <-- update fetchJournalData signature
+        setJournalData(res.data || []);
+        setHasMoreSummary(Boolean(res.hasMore));
+        setSearchActive(Boolean(digits));
+      } catch (e) {
+        setJournalData([]);
+        setHasMoreSummary(false);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }}
+/>
+
 
             {/* Submit vs Save Edit */}
             {!isSaved && !isEditing ? (

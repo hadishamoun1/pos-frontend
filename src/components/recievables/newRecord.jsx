@@ -15,7 +15,7 @@ function InvoicePicker({
   placeholder = "— None —",
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ left: 0, top: 0, width: 0 });
+  const [pos, setPos] = useState({ left: 10, top: 0, width: 0 });
   const rootRef = useRef(null);
 
   const toYMD = (val) => {
@@ -67,16 +67,27 @@ function InvoicePicker({
   const displayText =
     selected?.invoiceNumber || (loading ? "Loading..." : placeholder);
 
-  const computeMenuPos = () => {
-    const el = rootRef.current;
-    if (!el) return;
-    const btn = el.querySelector(".inv-picker__btn");
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const left = rect.left;
-    const top = rect.bottom + 6;
-    setPos({ left, top, width: rect.width });
-  };
+const computeMenuPos = () => {
+  const el = rootRef.current;
+  if (!el) return;
+  const btn = el.querySelector(".inv-picker__btn");
+  if (!btn) return;
+
+  const rect = btn.getBoundingClientRect();
+
+  const MENU_W = 750; // must match the width you use in portal style
+  const GAP = 6;
+
+  // ✅ align menu to the LEFT side (right-aligned to the button)
+  let left = rect.right - MENU_W;
+
+  // ✅ keep inside viewport
+  left = Math.max(8, Math.min(left, window.innerWidth - MENU_W - 8));
+
+  const top = rect.bottom + GAP;
+
+  setPos({ left, top, width: rect.width });
+};
 
   // close on outside click / ESC
   useEffect(() => {

@@ -9,6 +9,15 @@ const kindLabel = (k) => {
   return "JV";
 };
 
+const kindOptionLabel = (k) => {
+  const x = String(k || "").toUpperCase();
+  if (x === "INVOICE") return "فاتورة";
+  if (x === "RECEIVABLE") return "دفعة";
+  if (x === "JV") return "قيد يومي";
+  if (x === "PURCHASE") return "فاتورة شراء";
+  return x || "الكل";
+};
+
 const JournalListsModal = ({
   isOpen,
   onClose,
@@ -21,6 +30,10 @@ const JournalListsModal = ({
   // search props
   searchSeq,
   onSearchSeqChange,
+
+  // ✅ NEW: type filter
+  kindFilter, // "" | "INVOICE" | "RECEIVABLE" | "JV"  (optional "PURCHASE")
+  onKindFilterChange, // (val) => void
 }) => {
   if (!isOpen) return null;
 
@@ -35,14 +48,33 @@ const JournalListsModal = ({
         </div>
 
         <div className="journal-list-body">
-          <input
-            type="text"
-            value={searchSeq}
-            onChange={(e) => onSearchSeqChange(e.target.value)}
-            placeholder="Search by trailing number… e.g. 3 or 003 or 25"
-            className="journal-list-search"
-            inputMode="numeric"
-          />
+          {/* ✅ Controls row: search + filter */}
+          <div className="journal-list-controls">
+            <input
+              type="text"
+              value={searchSeq}
+              onChange={(e) => onSearchSeqChange(e.target.value)}
+              placeholder="Search by trailing number… e.g. 3 or 003 or 25"
+              className="journal-list-search"
+              inputMode="numeric"
+            />
+
+            <div className="journal-list-filter">
+              <select
+                className="journal-list-filter-select"
+                value={kindFilter || ""}
+                onChange={(e) => onKindFilterChange?.(e.target.value)}
+              >
+                <option value="">{kindOptionLabel("")}</option>
+                <option value="INVOICE">{kindOptionLabel("INVOICE")}</option>
+                <option value="RECEIVABLE">{kindOptionLabel("RECEIVABLE")}</option>
+                <option value="JV">{kindOptionLabel("JV")}</option>
+
+                {/* optional: enable if you also want purchase in filter */}
+                {/* <option value="PURCHASE">{kindOptionLabel("PURCHASE")}</option> */}
+              </select>
+            </div>
+          </div>
 
           <div className="journal-list-table-wrap">
             <table className="journal-list-table">
@@ -82,7 +114,6 @@ const JournalListsModal = ({
                                 {kindLabel(kind)}
                               </span>
 
-                              {/* extra small meta when present */}
                               {item.receiptCurrency ? (
                                 <span className="meta-pill">{item.receiptCurrency}</span>
                               ) : null}
@@ -96,12 +127,9 @@ const JournalListsModal = ({
                               {name}
                             </div>
 
-                            {/* optional subline: customer + invoice # */}
                             {(item.customerName || item.invoiceNumber) && (
                               <div className="id-sub">
-                                {item.customerName ? (
-                                  <span>{item.customerName}</span>
-                                ) : null}
+                                {item.customerName ? <span>{item.customerName}</span> : null}
                                 {item.invoiceNumber ? (
                                   <span className="mono"> • {item.invoiceNumber}</span>
                                 ) : null}
