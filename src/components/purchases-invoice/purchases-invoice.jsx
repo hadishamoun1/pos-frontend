@@ -68,6 +68,8 @@ const PurchasesInvoicePage = () => {
   const canEdit = !isInvoiceSelected || isEditMode;
   const [invoiceType, setInvoiceType] = useState("S");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
+  const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
+
 
   const resetFields = () => {
     setSupplierName("");
@@ -87,6 +89,8 @@ const PurchasesInvoicePage = () => {
     setFinalCost(0);
     setInvoiceType("S");
     setPoDate(new Date().toISOString().slice(0, 10));
+    setJvDate(new Date().toISOString().slice(0, 10));
+
   };
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
@@ -246,6 +250,7 @@ const PurchasesInvoicePage = () => {
         invoiceNumber,
         date: inputedDate,
         expectedArrivalDate: invoiceDate,
+        jvDate: jvDate,  
         poDate: poDate,
         type,
         supplierId,
@@ -374,6 +379,8 @@ const PurchasesInvoicePage = () => {
     setInvoiceNumber(fullInvoice.invoiceNumber);
     setinputedDate(toYMD(fullInvoice.date));
     setInvoiceDate(fullInvoice.expectedArrivalDate?.slice(0, 10) || "");
+    setJvDate(toYMD(fullInvoice.jvDate) || toYMD(fullInvoice.date)); 
+
     // 3) status, currency, etc…
     setStatus(fullInvoice.status);
     setExchangeRate(Number(fullInvoice.exchangeRate));
@@ -475,6 +482,8 @@ const PurchasesInvoicePage = () => {
     setInvoiceDate(inv.expectedArrivalDate?.slice(0, 10) || "");
     setStatus(inv.status);
     setExchangeRate(Number(inv.exchangeRate));
+    setJvDate(toYMD(inv.jvDate) || toYMD(inv.date));
+
     // Prefer a stored percent; otherwise infer it from amount/total
     const itemsSum = (inv.items ?? []).reduce(
       (s, i) => s + Number(i.totalAmount || 0),
@@ -832,6 +841,16 @@ const PurchasesInvoicePage = () => {
                 disabled={!canEdit}
               />
             </label>
+            <label>
+  JV Date (تاريخ المعاملة)
+  <input
+    type="date"
+    value={jvDate}
+    onChange={(e) => setJvDate(e.target.value)}
+    disabled={!canEdit}
+  />
+</label>
+
 
             <label>
               Invoice Number

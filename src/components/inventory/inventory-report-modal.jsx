@@ -144,6 +144,7 @@ function useGroupedByDescription(
     const n = Number(t);
     return Number.isFinite(n) ? n.toFixed(1) : "0";
   };
+
   const prettyDimsSPB = (L, W, spb) =>
     Number(spb) > 0
       ? prettyDimsWithSPB(L, W, spb)
@@ -178,6 +179,7 @@ function useGroupedByDescription(
     // 0) Build SPB indices from the widest set
     const idxSource =
       rowsForSpbIndex && rowsForSpbIndex.length ? rowsForSpbIndex : rows;
+
     (idxSource || []).forEach((r) => {
       if (typeOf(r.type) !== "box") return;
 
@@ -211,8 +213,7 @@ function useGroupedByDescription(
       const descId = desc?.id ?? "null";
       const g = ensureGroup(descId);
 
-      if (!g.itemNumber && desc?.itemNumber)
-        g.itemNumber = String(desc.itemNumber);
+      if (!g.itemNumber && desc?.itemNumber) g.itemNumber = String(desc.itemNumber);
 
       const sIdx =
         mode === "real"
@@ -239,7 +240,7 @@ function useGroupedByDescription(
       const W = Math.floor(Number(r.width) || 0);
       const origin = String(r.origin ?? "").trim();
 
-      // itemNameKey added into the bucket key
+      // itemNameKey included in the bucket key (SPB intentionally NOT included)
       const bucketKey = `${itemNameKey}|${thkKey}|${L}x${W}|${origin}`;
 
       if (!g.buckets.has(bucketKey)) {
@@ -256,9 +257,14 @@ function useGroupedByDescription(
           sheetSqm: 0,
           boxQtyPerSpb: new Map(),
           boxSqmPerSpb: new Map(),
-          // cost info at bucket level (variant-level for real, description-level for name)
-          averageCost: null,
-          lastCost: null,
+
+          // ✅ FIX: costs stored PER SPB (so 13 != 14)
+          avgCostPerSpb: new Map(),
+          lastCostPerSpb: new Map(),
+          fallbackAvgCost: null,
+          fallbackLastCost: null,
+
+          // description-level costs (name mode)
           averageCostCVM: null,
           averageCostC: null,
           lastCostC: null,
@@ -266,17 +272,11 @@ function useGroupedByDescription(
         });
         g.order.push(bucketKey);
       }
+
       const b = g.buckets.get(bucketKey);
 
       const q = Number.isFinite(qty) ? qty : 0;
       const s = Number.isFinite(sqm) ? sqm : 0;
-
-      // Variant-level costs (used in real mode)
-      const avg = Number(r.averageCost);
-      if (Number.isFinite(avg)) b.averageCost = avg;
-
-      const last = Number(r.lastCost);
-      if (Number.isFinite(last)) b.lastCost = last;
 
       // Description-level costs (used in name mode)
       if (desc) {
@@ -292,8 +292,18 @@ function useGroupedByDescription(
 
       if (t === "box") {
         const spb = Math.max(0, Math.floor(Number(r.sheetsPerBox) || 0));
+
         b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
         b.boxSqmPerSpb.set(spb, (b.boxSqmPerSpb.get(spb) || 0) + s);
+
+        // ✅ FIX: store variant-level costs per SPB (real mode)
+        const avg = Number(r.averageCost);
+        if (Number.isFinite(avg) && spb > 0) b.avgCostPerSpb.set(spb, avg);
+        else if (Number.isFinite(avg)) b.fallbackAvgCost = avg;
+
+        const last = Number(r.lastCost);
+        if (Number.isFinite(last) && spb > 0) b.lastCostPerSpb.set(spb, last);
+        else if (Number.isFinite(last)) b.fallbackLastCost = last;
       } else if (t === "sheet") {
         b.sheetQty += q;
         b.sheetSqm += s;
@@ -344,6 +354,7 @@ function useGroupedByDescription(
         if (spbs.length > 0) {
           let attachSpb = spbs[0];
           let maxBoxes = -1;
+
           spbs.forEach((spb) => {
             const qb = Number(b.boxQtyPerSpb.get(spb) || 0);
             if (qb > maxBoxes) {
@@ -354,6 +365,7 @@ function useGroupedByDescription(
           if (maxBoxes <= 0) attachSpb = spbs[0];
 
           let anyRow = false;
+
           spbs.forEach((spb) => {
             const qtyBox = Number(b.boxQtyPerSpb.get(spb) || 0);
             const sqmBox = Number(b.boxSqmPerSpb.get(spb) || 0);
@@ -367,13 +379,17 @@ function useGroupedByDescription(
               dim: prettyDimsSPB(b.length, b.width, spb),
               itemNumber: b.itemNumber || "",
               origin: b.origin,
-          nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
+              nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
 
               qtyBox,
               qtySheet: attachSheets ? Number(b.sheetQty || 0) : 0,
               sqmTotal: Number(sqmBox + (attachSheets ? b.sheetSqm || 0 : 0)),
-              averageCost: b.averageCost,
-              lastCost: b.lastCost,
+
+              // ✅ FIX: cost per SPB
+              averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
+              lastCost: b.lastCostPerSpb.get(spb) ?? b.fallbackLastCost ?? null,
+
+              // name-mode costs (still ok)
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -387,13 +403,16 @@ function useGroupedByDescription(
               dim: prettyDimsSPB(b.length, b.width, attachSpb),
               itemNumber: b.itemNumber || "",
               origin: b.origin,
-         nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
+              nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
 
               qtyBox: 0,
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
-              averageCost: b.averageCost,
-              lastCost: b.lastCost,
+
+              // ✅ FIX: cost per SPB
+              averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
+              lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
+
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -401,19 +420,23 @@ function useGroupedByDescription(
             });
           }
         } else {
+          // no spbs at all
           if ((b.sheetQty || 0) > 0 || (b.sheetSqm || 0) > 0) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:0`,
               dim: prettyDimsSPB(b.length, b.width, 0),
               itemNumber: b.itemNumber || "",
               origin: b.origin,
-      nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
+              nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
 
               qtyBox: 0,
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
-              averageCost: b.averageCost,
-              lastCost: b.lastCost,
+
+              // no spb -> fallback if any
+              averageCost: b.fallbackAvgCost ?? null,
+              lastCost: b.fallbackLastCost ?? null,
+
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -438,9 +461,7 @@ function useGroupedByDescription(
       delete g.headerSet;
 
       if (debug && g.debugZeros.length) {
-        console.groupCollapsed(
-          `[INV-REPORT] empty buckets — descId=${g.descId}`
-        );
+        console.groupCollapsed(`[INV-REPORT] empty buckets — descId=${g.descId}`);
         console.table(g.debugZeros);
         console.groupEnd();
       }
@@ -457,15 +478,13 @@ function useGroupedByDescription(
 
       const as = String(a.headerTitle || "");
       const bs = String(b.headerTitle || "");
-      return as.localeCompare(bs, "ar", {
-        numeric: true,
-        sensitivity: "base",
-      });
+      return as.localeCompare(bs, "ar", { numeric: true, sensitivity: "base" });
     });
 
     return { groups: allGroups };
   }, [rows, mode, rowsForSpbIndex, debug]);
 }
+
 
 /* --------- Optional view transform: Transfer-to-SQM (name mode only) --------- */
 function useTransferredGroups(groups, transferToSqm, mode) {
