@@ -1,6 +1,14 @@
 import React from "react";
 import "./journal-list-modal.css";
 
+const kindLabel = (k) => {
+  const x = String(k || "").toUpperCase();
+  if (x === "INVOICE") return "فاتورة";
+  if (x === "RECEIVABLE") return "دفعة";
+  if (x === "PURCHASE") return "فاتورة شراء";
+  return "JV";
+};
+
 const JournalListsModal = ({
   isOpen,
   onClose,
@@ -10,75 +18,135 @@ const JournalListsModal = ({
   onLoadMore,
   hasMore,
   loadingMore,
-  // ✅ NEW: search props
-  searchSeq,             // string
-  onSearchSeqChange,     // (val: string) => void
+  // search props
+  searchSeq,
+  onSearchSeqChange,
 }) => {
+  if (!isOpen) return null;
+
   return (
-    isOpen && (
-      <div className="journal-list-modal-overlay">
-        <div className="journal-list-modal">
-          <div className="journal-list-header">
-            <h2>Journal Lists</h2>
-            <button className="close-btn" onClick={onClose}>&times;</button>
-          </div>
+    <div className="journal-list-modal-overlay">
+      <div className="journal-list-modal">
+        <div className="journal-list-header">
+          <h2>Journal Lists</h2>
+          <button className="close-btn" onClick={onClose}>
+            &times;
+          </button>
+        </div>
 
-          <div className="journal-list-body">
-            <input
-              type="text"
-              value={searchSeq}
-              onChange={(e) => onSearchSeqChange(e.target.value)}
-              placeholder="Search by trailing number… e.g. 3 or 003 or 25"
-              className="journal-list-search"
-              inputMode="numeric"
-            />
+        <div className="journal-list-body">
+          <input
+            type="text"
+            value={searchSeq}
+            onChange={(e) => onSearchSeqChange(e.target.value)}
+            placeholder="Search by trailing number… e.g. 3 or 003 or 25"
+            className="journal-list-search"
+            inputMode="numeric"
+          />
 
+          <div className="journal-list-table-wrap">
             <table className="journal-list-table">
               <thead>
                 <tr>
                   <th>JV Number</th>
                   <th>Date</th>
+                  <th>Identification</th>
                   <th>Description</th>
                   <th>Type</th>
                   <th></th>
                 </tr>
               </thead>
+
               <tbody>
-                {journalData.length > 0 ? (
-                  journalData.map((item, index) => (
-                    <tr key={`${item.id}-${index}`}>
-                      <td>{item.jvNumber}</td>
-                      <td>{new Date(item.date).toLocaleDateString()}</td>
-                      <td>{item.description}</td>
-                      <td>{item.jvType}</td>
-                      <td>
-                        <button className="view-btn" onClick={() => onView(item)}>
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                {Array.isArray(journalData) && journalData.length > 0 ? (
+                  journalData.map((item, index) => {
+                    const kind = String(item.kind || "JV").toUpperCase();
+                    const name =
+                      item.name ||
+                      (item.invoiceNumber
+                        ? `فاتورة - ${item.customerName || ""} - ${item.invoiceNumber}`
+                        : item.description || "");
+
+                    return (
+                      <tr key={`${item.id}-${index}`}>
+                        <td className="mono">{item.jvNumber}</td>
+
+                        <td className="mono">
+                          {item.date ? new Date(item.date).toLocaleDateString() : ""}
+                        </td>
+
+                        <td>
+                          <div className="id-cell">
+                            <div className="id-top">
+                              <span className={`kind-badge kind-${kind}`}>
+                                {kindLabel(kind)}
+                              </span>
+
+                              {/* extra small meta when present */}
+                              {item.receiptCurrency ? (
+                                <span className="meta-pill">{item.receiptCurrency}</span>
+                              ) : null}
+
+                              {item.invoiceId ? (
+                                <span className="meta-pill">INV-ID: {item.invoiceId}</span>
+                              ) : null}
+                            </div>
+
+                            <div className="id-name" title={name}>
+                              {name}
+                            </div>
+
+                            {/* optional subline: customer + invoice # */}
+                            {(item.customerName || item.invoiceNumber) && (
+                              <div className="id-sub">
+                                {item.customerName ? (
+                                  <span>{item.customerName}</span>
+                                ) : null}
+                                {item.invoiceNumber ? (
+                                  <span className="mono"> • {item.invoiceNumber}</span>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="desc-cell" title={item.description || ""}>
+                          {item.description || "—"}
+                        </td>
+
+                        <td className="mono">{item.jvType}</td>
+
+                        <td>
+                          <button className="view-btn" onClick={() => onView(item)}>
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="5">No Journal Vouchers Found</td>
+                    <td colSpan="6" className="empty-row">
+                      No Journal Vouchers Found
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
 
-            <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
-              <button
-                className="view-btn"
-                onClick={onLoadMore}
-                disabled={!hasMore || loadingMore}
-              >
-                {loadingMore ? "Loading..." : hasMore ? "Load more (100)" : "No more"}
-              </button>
-            </div>
+          <div className="journal-list-footer">
+            <button
+              className="view-btn"
+              onClick={onLoadMore}
+              disabled={!hasMore || loadingMore}
+            >
+              {loadingMore ? "Loading..." : hasMore ? "Load more (100)" : "No more"}
+            </button>
           </div>
         </div>
       </div>
-    )
+    </div>
   );
 };
 
