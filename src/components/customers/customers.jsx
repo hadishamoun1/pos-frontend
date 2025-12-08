@@ -14,13 +14,22 @@ const CreatePreviewCustomers = () => {
     currency: "",
     address: "",
     location: "",
+
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    paymentTerms: "",
+    area: "",
+    companyType: "",
   });
+
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
@@ -33,14 +42,13 @@ const CreatePreviewCustomers = () => {
       }
     };
     fetchCurrencyCodes();
-  }, []);
+  }, [baseUrl]);
 
   const fetchCustomers = async (currentPage) => {
     if (loading || !hasMore) return;
 
     setLoading(true);
     try {
-      console.log(`Fetching customers for page ${currentPage}`);
       const response = await axios.get(
         `${baseUrl}/customers/v1/paginated?page=${currentPage}&limit=50`
       );
@@ -48,9 +56,7 @@ const CreatePreviewCustomers = () => {
       setCustomers((prevCustomers) => {
         const newCustomers = response.data.customers.filter(
           (newCustomer) =>
-            !prevCustomers.some(
-              (existingCustomer) => existingCustomer.id === newCustomer.id
-            )
+            !prevCustomers.some((existingCustomer) => existingCustomer.id === newCustomer.id)
         );
         return [...prevCustomers, ...newCustomers];
       });
@@ -73,29 +79,41 @@ const CreatePreviewCustomers = () => {
 
   useEffect(() => {
     fetchCustomers(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleAddCustomer = async () => {
     try {
       const newCustomer = {
         customerName: formData.customerName,
-        phoneNumber: formData.phoneNumber,
-        financialNumber: formData.financialAccount,
-        invoiceType: formData.invoiceType,
-        vat: formData.vat,
+
+        firstName: formData.firstName || undefined,
+        middleName: formData.middleName || undefined,
+        lastName: formData.lastName || undefined,
+        paymentTerms: formData.paymentTerms || undefined,
+        area: formData.area || undefined,
+        companyType: formData.companyType || undefined,
+
+        phoneNumber: formData.phoneNumber || undefined,
+        financialNumber: formData.financialAccount || undefined,
+        invoiceType: formData.invoiceType || undefined,
+        vat: formData.vat || undefined,
         currencyId: formData.currency,
-        address: formData.address,
-        location: formData.location,
+        address: formData.address || undefined,
+
+        // keep only if your backend accepts it
+        location: formData.location || undefined,
       };
 
       const response = await axios.post(`${baseUrl}/customers`, newCustomer);
 
       setCustomers((prevCustomers) => [...prevCustomers, response.data]);
+
       setFormData({
         customerName: "",
         phoneNumber: "",
@@ -105,6 +123,13 @@ const CreatePreviewCustomers = () => {
         currency: "",
         address: "",
         location: "",
+
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        paymentTerms: "",
+        area: "",
+        companyType: "",
       });
 
       setModalType("success");
@@ -120,10 +145,14 @@ const CreatePreviewCustomers = () => {
 
   return (
     <div className="customers-container">
-      <h2 className="customers-heading">Create and Preview Customers</h2>
+      <div className="customers-header">
+        <h2 className="customers-heading">Create and Preview Customers</h2>
+      </div>
 
-      <div className="customers-form">
-        <table>
+      <div className="customers-card customers-form">
+        <div className="card-title">Create Customer</div>
+
+        <table className="form-table">
           <tbody>
             <tr>
               <td>
@@ -167,14 +196,51 @@ const CreatePreviewCustomers = () => {
                 </select>
               </td>
             </tr>
+
+            <tr>
+              <td>
+                <label>First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Middle Name</label>
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                />
+              </td>
+              <td>
+                <label>Payment Terms</label>
+                <input
+                  type="text"
+                  name="paymentTerms"
+                  value={formData.paymentTerms}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Net 30"
+                />
+              </td>
+            </tr>
+
             <tr>
               <td>
                 <label>VAT</label>
-                <select
-                  name="vat"
-                  value={formData.vat}
-                  onChange={handleInputChange}
-                >
+                <select name="vat" value={formData.vat} onChange={handleInputChange}>
                   <option value="">Select VAT</option>
                   <option value="5">5%</option>
                   <option value="10">10%</option>
@@ -197,6 +263,29 @@ const CreatePreviewCustomers = () => {
                 </select>
               </td>
               <td>
+                <label>Area</label>
+                <input
+                  type="text"
+                  name="area"
+                  value={formData.area}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Beirut"
+                />
+              </td>
+              <td>
+                <label>Company Type</label>
+                <input
+                  type="text"
+                  name="companyType"
+                  value={formData.companyType}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Contractor / Retail"
+                />
+              </td>
+            </tr>
+
+            <tr>
+              <td>
                 <label>Address</label>
                 <input
                   type="text"
@@ -214,13 +303,12 @@ const CreatePreviewCustomers = () => {
                   onChange={handleInputChange}
                 />
               </td>
+              <td colSpan="2" />
             </tr>
+
             <tr>
               <td colSpan="4">
-                <button
-                  className="add-customer-btn"
-                  onClick={handleAddCustomer}
-                >
+                <button className="btn-primary add-customer-btn" onClick={handleAddCustomer}>
                   Add Customer
                 </button>
               </td>
@@ -229,59 +317,77 @@ const CreatePreviewCustomers = () => {
         </table>
       </div>
 
-      <div className="customers-preview">
-        <h3 className="customers-preview-heading">Customer Preview</h3>
-        <table className="customers-table">
-          <thead>
-            <tr>
-              <th>Customer Account Number</th>
-              <th>Customer Name</th>
-              <th>Phone Number</th>
-              <th>Financial Account</th>
-              <th>Invoice Type</th>
-              <th>VAT</th>
-              <th>Currency</th>
-              <th>Address</th>
-              <th>Location</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((customer, index) => (
-              <tr key={customer.id || index}>
-                <td>{customer.customerAccountNumber}</td>
-                <td>{customer.customerName}</td>
-                <td>{customer.phoneNumber}</td>
-                <td>{customer.financialNumber}</td>
-                <td>{customer.invoiceType}</td>
-                <td>{customer.vat}%</td>
-                <td>{customer.currencyCode}</td>
-                <td>{customer.address}</td>
-                <td>{customer.location}</td>
+      <div className="customers-card customers-preview">
+        <div className="card-title">Customer Preview</div>
+
+        {/* ✅ Horizontal scroll wrapper */}
+        <div className="table-scroll">
+          <table className="customers-table">
+            <thead>
+              <tr>
+                <th>Customer Account #</th>
+                <th>Customer Name</th>
+                <th>First</th>
+                <th>Middle</th>
+                <th>Last</th>
+                <th>Payment Terms</th>
+                <th>Area</th>
+                <th>Company Type</th>
+                <th>Phone</th>
+                <th>Financial #</th>
+                <th>Invoice Type</th>
+                <th>VAT</th>
+                <th>Currency</th>
+                <th>Address</th>
+                <th>Location</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {customers.map((customer, index) => (
+                <tr key={customer.id || index}>
+                  <td className="mono">{customer.customerAccountNumber}</td>
+                  <td>{customer.customerName}</td>
+                  <td>{customer.firstName}</td>
+                  <td>{customer.middleName}</td>
+                  <td>{customer.lastName}</td>
+                  <td>{customer.paymentTerms}</td>
+                  <td>{customer.area}</td>
+                  <td>{customer.companyType}</td>
+                  <td className="mono">{customer.phoneNumber}</td>
+                  <td className="mono">{customer.financialNumber}</td>
+                  <td className="mono">{customer.invoiceType}</td>
+                  <td className="mono">{customer.vat ? `${customer.vat}%` : ""}</td>
+                  <td className="mono">{customer.currencyCode}</td>
+                  <td className="truncate">{customer.address}</td>
+                  <td className="truncate">{customer.location}</td>
+                </tr>
+              ))}
+              {customers.length === 0 && (
+                <tr>
+                  <td colSpan="15" className="empty-row">
+                    No customers loaded yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
         {hasMore && !loading && (
-          <button className="load-more-customers-btn" onClick={nextPage}>
+          <button className="btn-secondary load-more-customers-btn" onClick={nextPage}>
             Load More
           </button>
         )}
-        {loading && <p>Loading...</p>}
-        {!hasMore && <p>No more customers to load</p>}
+        {loading && <p className="hint">Loading...</p>}
+        {!hasMore && <p className="hint">No more customers to load</p>}
       </div>
 
       {modalContent && (
         <div className="modal">
-          <div
-            className={`modal-content ${
-              modalType === "success" ? "success-modal" : "error-modal"
-            }`}
-          >
+          <div className={`cus-modal-content ${modalType === "success" ? "success-modal" : "error-modal"}`}>
             {modalType === "success" ? (
               <>
-                <h2 className="modal-success-text">
-                  Customer Added Successfully
-                </h2>
+                <h2 className="modal-success-text">Customer Added Successfully</h2>
                 <div className="modal-icon">✔</div>
               </>
             ) : (
