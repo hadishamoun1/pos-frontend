@@ -108,7 +108,7 @@ const StockTab = forwardRef(function StockTab(
   const [repeatOpen, setRepeatOpen] = useState(false);
   const pendingRowRef = useRef(null);
 
-  // ✅ Name bubbles
+  // ✅ NAME bubbles
   const QUICK_BUBBLES = useMemo(
     () => [
       "ابيض",
@@ -131,14 +131,45 @@ const StockTab = forwardRef(function StockTab(
     []
   );
 
-  // ✅ Thickness bubbles (edit as you like)
+  // ✅ THICKNESS bubbles
   const THICKNESS_BUBBLES = useMemo(
     () => ["3", "4", "5", "5.5", "6", "8", "10", "12", "15", "19"],
     []
   );
 
-  // ✅ ONE ordered list for "click order" across BOTH rows
-  // items are like: "N:ابيض" or "T:6"
+  // ✅ DIMS bubbles (length/width numbers)
+  const DIM_BUBBLES = useMemo(
+    () => [
+      "160",
+      "161",
+      "165",
+      "170",
+      "180",
+      "183",
+      "190",
+      "200",
+      "202",
+      "205",
+      "210",
+      "214",
+      "215",
+      "225",
+      "235",
+      "240",
+      "244",
+      "245",
+      "250",
+      "255",
+      "260",
+      "321",
+      "330",
+      "366",
+    ],
+    []
+  );
+
+  // ✅ ONE ordered list for click-order across ALL bubble rows
+  // items are: "N:ابيض" or "T:6" or "D:225"
   const [quickOrder, setQuickOrder] = useState([]);
 
   // keep input focused when clicking bubbles
@@ -319,22 +350,26 @@ const StockTab = forwardRef(function StockTab(
     normalizeDigits,
   ]);
 
-  // reset ONLY filters when modal opens (selection lives in parent)
-  useEffect(() => {
-    if (!modalOpen) return;
+  // ✅ Clear everything button
+  const clearEverything = useCallback(() => {
     setInputValue("");
     setNameChip("");
     setDimsChip("");
+    setQuickOrder([]);
+    setTimeout(() => searchInputRef.current?.focus?.(), 0);
+  }, []);
+
+  // reset ONLY filters when modal opens (selection lives in parent)
+  useEffect(() => {
+    if (!modalOpen) return;
+    clearEverything();
     setFlatRows([]);
     setNestedItems([]);
     setPage(1);
     setHasMore(false);
     setRepeatOpen(false);
     pendingRowRef.current = null;
-
-    // ✅ reset bubbles order
-    setQuickOrder([]);
-  }, [modalOpen]);
+  }, [modalOpen, clearEverything]);
 
   useEffect(() => {
     if (!modalOpen || !isActive) return;
@@ -343,11 +378,13 @@ const StockTab = forwardRef(function StockTab(
     return () => abortRef.current?.abort?.();
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
+  // ✅ build input from click-order
   const orderToText = useCallback((ord) => {
     return (ord || [])
       .map((k) => {
         if (k.startsWith("N:")) return k.slice(2);
-        if (k.startsWith("T:")) return `${k.slice(2)}ملم`; // no space -> matches your example "5.5ملم"
+        if (k.startsWith("T:")) return `${k.slice(2)}ملم`; // no space
+        if (k.startsWith("D:")) return k.slice(2);
         return "";
       })
       .filter(Boolean)
@@ -355,28 +392,74 @@ const StockTab = forwardRef(function StockTab(
       .trim();
   }, []);
 
+  // ✅ ENTER commit
   const handleEnter = (e) => {
     if (e.key !== "Enter") return;
-    const raw = inputValue.trim();
-    if (!raw) return;
-    const withDigits = normalizeDigits(raw);
+    const raw0 = inputValue.trim();
+    if (!raw0) return;
 
-    // clear bubbles because we "committed" the search into chips
+    const raw = normalizeDigits(raw0).trim();
+    const parts = raw.split(/\s+/).filter(Boolean);
+
+    // clear bubbles because we "committed" into chips
     setQuickOrder([]);
 
-    if (looksLikeDims(withDigits)) {
-      setDimsChip(withDigits);
+    // 1) explicit dims token like 225*321-012
+    const dimsToken = parts.find((p) => p.includes("*") && looksLikeDims(p));
+    if (dimsToken) {
+      setDimsChip(dimsToken);
+      const rest = parts.filter((p) => p !== dimsToken).join(" ").trim();
+      if (rest) setNameChip(normalizeArabic(rest));
       setInputValue("");
       return;
     }
-    if (isPlainNumber(withDigits)) {
-      setDimsChip(withDigits);
+
+    // 2) collect plain-number tokens (for "225 321 ..." or "225 ..." + name)
+    const numIdx = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (isPlainNumber(parts[i])) numIdx.push(i);
+    }
+
+    // two numbers => dimsChip = a*b
+    if (numIdx.length >= 2) {
+      const a = parts[numIdx[0]];
+      const b = parts[numIdx[1]];
+      setDimsChip(`${a}*${b}`);
+
+      // remove these two tokens from name
+      const restParts = parts.slice();
+      restParts.splice(numIdx[1], 1);
+      restParts.splice(numIdx[0], 1);
+      const rest = restParts.join(" ").trim();
+      if (rest) setNameChip(normalizeArabic(rest));
       setInputValue("");
       return;
     }
-    setNameChip(normalizeArabic(withDigits));
+
+    // one number only
+    if (numIdx.length === 1) {
+      const n = parts[numIdx[0]];
+      setDimsChip(n);
+
+      const restParts = parts.slice();
+      restParts.splice(numIdx[0], 1);
+      const rest = restParts.join(" ").trim();
+      if (rest) setNameChip(normalizeArabic(rest));
+
+      setInputValue("");
+      return;
+    }
+
+    // otherwise => name
+    setNameChip(normalizeArabic(raw));
     setInputValue("");
   };
+
+  // ✅ RIGHT CLICK = ENTER
+  const triggerEnterSearch = useCallback(() => {
+    if (!String(inputValue || "").trim()) return;
+    handleEnter({ key: "Enter" });
+  }, [handleEnter, inputValue]);
 
   // ✅ Active helpers
   const isNameActive = useCallback(
@@ -389,7 +472,12 @@ const StockTab = forwardRef(function StockTab(
     return t ? t.slice(2) : null;
   }, [quickOrder]);
 
-  // ✅ Name bubble toggle (keeps CLICK ORDER)
+  const isDimActive = useCallback(
+    (n) => quickOrder.includes(`D:${String(n)}`),
+    [quickOrder]
+  );
+
+  // ✅ Name bubble toggle (keeps click order)
   const toggleNameBubble = (token) => {
     const t = String(token || "").trim();
     if (!t) return;
@@ -400,13 +488,11 @@ const StockTab = forwardRef(function StockTab(
 
       setInputValue(orderToText(next));
       setTimeout(() => searchInputRef.current?.focus?.(), 0);
-
       return next;
     });
   };
 
-  // ✅ Thickness bubble toggle (single thickness)
-  // - clicking another thickness replaces the old one and goes to the END (latest click)
+  // ✅ Thickness bubble toggle (single)
   const toggleThicknessBubble = (th) => {
     const t = String(th || "").trim();
     if (!t) return;
@@ -414,14 +500,44 @@ const StockTab = forwardRef(function StockTab(
     setQuickOrder((prev) => {
       const key = `T:${t}`;
       const withoutAnyThickness = prev.filter((x) => !x.startsWith("T:"));
-
-      // if same thickness was active => remove it
       const wasSameActive = prev.includes(key);
       const next = wasSameActive ? withoutAnyThickness : [...withoutAnyThickness, key];
 
       setInputValue(orderToText(next));
       setTimeout(() => searchInputRef.current?.focus?.(), 0);
+      return next;
+    });
+  };
 
+  // ✅ Dims bubble toggle (max 2 numbers)
+  const toggleDimBubble = (num) => {
+    const t = String(num || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `D:${t}`;
+
+      // if active -> remove it
+      if (prev.includes(key)) {
+        const next = prev.filter((x) => x !== key);
+        setInputValue(orderToText(next));
+        setTimeout(() => searchInputRef.current?.focus?.(), 0);
+        return next;
+      }
+
+      // add it (keep max 2)
+      const dims = prev.filter((x) => x.startsWith("D:"));
+      let next = prev;
+
+      if (dims.length >= 2) {
+        const oldest = dims[0];
+        next = next.filter((x) => x !== oldest);
+      }
+
+      next = [...next, key];
+
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
       return next;
     });
   };
@@ -574,17 +690,40 @@ const StockTab = forwardRef(function StockTab(
         onConfirm={confirmRepeat}
       />
 
-      <div className="search-modal-item-input-row">
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225"
-          className="search-modal-items-input"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleEnter}
-          autoFocus
-        />
+      <div
+        className="search-modal-item-input-row"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          triggerEnterSearch();
+        }}
+      >
+        {/* input + clear button */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225 321"
+            className="search-modal-items-input"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleEnter}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              triggerEnterSearch();
+            }}
+            autoFocus
+          />
+
+          <button
+            type="button"
+            className="search-clear-btn"
+            onClick={clearEverything}
+            title="Clear"
+            aria-label="Clear search"
+          >
+            Clear
+          </button>
+        </div>
 
         <div className="search-modal-chips">
           {nameChip && (
@@ -623,8 +762,14 @@ const StockTab = forwardRef(function StockTab(
         </div>
       </div>
 
-      {/* ✅ Sticky bubbles block (names row then thickness row) */}
-      <div className="search-quick-bubbles-wrap">
+      {/* ✅ Sticky bubbles block (3 lines) */}
+      <div
+        className="search-quick-bubbles-wrap"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          triggerEnterSearch();
+        }}
+      >
         <div className="search-quick-bubbles-row">
           {QUICK_BUBBLES.map((token) => {
             const active = isNameActive(token);
@@ -641,7 +786,6 @@ const StockTab = forwardRef(function StockTab(
           })}
         </div>
 
-        {/* ✅ NEW: thickness bubbles line */}
         <div className="search-quick-bubbles-row thickness-row">
           {THICKNESS_BUBBLES.map((t) => {
             const active = activeThickness === t;
@@ -653,6 +797,22 @@ const StockTab = forwardRef(function StockTab(
                 className={"quick-bubble quick-bubble-thick" + (active ? " active" : "")}
               >
                 {t} ملم
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="search-quick-bubbles-row dims-row">
+          {DIM_BUBBLES.map((n) => {
+            const active = isDimActive(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggleDimBubble(n)}
+                className={"quick-bubble quick-bubble-dim" + (active ? " active" : "")}
+              >
+                {n}
               </button>
             );
           })}

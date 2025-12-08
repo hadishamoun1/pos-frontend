@@ -1,3 +1,4 @@
+// src/components/pos-system/AllTab.jsx
 import React, {
   forwardRef,
   useCallback,
@@ -30,6 +31,9 @@ const AllTab = forwardRef(function AllTab(
 
   const abortRef = useRef(null);
 
+  // keep input focused when clicking bubbles
+  const searchInputRef = useRef(null);
+
   // -------- SQM Repeat Modal (NO alert/prompt) --------
   const [repeatModal, setRepeatModal] = useState({
     open: false,
@@ -40,31 +44,74 @@ const AllTab = forwardRef(function AllTab(
   const repeatInputRef = useRef(null);
 
   useEffect(() => {
-    if (repeatModal.open) {
-      // focus input next tick
-      setTimeout(() => repeatInputRef.current?.focus?.(), 0);
-    }
+    if (repeatModal.open) setTimeout(() => repeatInputRef.current?.focus?.(), 0);
   }, [repeatModal.open]);
 
   const closeRepeatModal = () => {
     setRepeatModal({ open: false, row: null, label: "", value: "1" });
   };
 
-  const confirmRepeatModal = () => {
-    const row = repeatModal.row;
-    if (!row) return closeRepeatModal();
+  // ✅ SAME bubbles as StockTab
+  const QUICK_BUBBLES = useMemo(
+    () => [
+      "ابيض",
+      "اسود",
+      "برونز",
+      "برش",
+      "مرايا",
+      "مغش",
+      "تريبلكس",
+      "كريستال",
+      "عاكس",
+      "مشرط",
+      "ازرق",
+      "اخضر",
+      "غامق",
+      "فاتح",
+      "صليب",
+      "دلتا",
+    ],
+    []
+  );
 
-    let rep = Math.floor(Number(String(repeatModal.value || "1").trim()));
-    if (!Number.isFinite(rep) || rep <= 0) rep = 1;
+  const THICKNESS_BUBBLES = useMemo(
+    () => ["3", "4", "5", "5.5", "6", "8", "10", "12", "15", "19"],
+    []
+  );
 
-    setSelectedMap((prev) => {
-      const next = new Map(prev);
-      next.set(row.uniqueId, rowToPayload(row, rep));
-      return next;
-    });
+  // ✅ fixed list (removed ",," and duplicate 225)
+  const DIM_BUBBLES = useMemo(
+    () => [
+      "160",
+      "161",
+      "165",
+      "170",
+      "180",
+      "183",
+      "190",
+      "200",
+      "202",
+      "205",
+      "210",
+      "214",
+      "215",
+      "225",
+      "235",
+      "240",
+      "244",
+      "245",
+      "250",
+      "255",
+      "260",
+      "321",
+      "330",
+      "366",
+    ],
+    []
+  );
 
-    closeRepeatModal();
-  };
+  // ✅ click order across all rows
+  const [quickOrder, setQuickOrder] = useState([]);
 
   const cancelInFlight = () => {
     const ctl = abortRef.current;
@@ -145,7 +192,6 @@ const AllTab = forwardRef(function AllTab(
     [limit]
   );
 
-  // ✅ include itemType + stockMode in payload (same idea as StockTab)
   const rowToPayload = useCallback((row, repeat = 1) => {
     const [variantStr, batchStr] = String(row.uniqueId).split("-");
     return {
@@ -171,6 +217,22 @@ const AllTab = forwardRef(function AllTab(
       balanceOFR: row.balanceOFR ?? "",
     };
   }, []);
+
+  const confirmRepeatModal = () => {
+    const row = repeatModal.row;
+    if (!row) return closeRepeatModal();
+
+    let rep = Math.floor(Number(String(repeatModal.value || "1").trim()));
+    if (!Number.isFinite(rep) || rep <= 0) rep = 1;
+
+    setSelectedMap((prev) => {
+      const next = new Map(prev);
+      next.set(row.uniqueId, rowToPayload(row, rep));
+      return next;
+    });
+
+    closeRepeatModal();
+  };
 
   const fetchDefaultPage = useCallback(
     async (targetPage) => {
@@ -214,10 +276,10 @@ const AllTab = forwardRef(function AllTab(
 
       if (nameChip) params.q = normalizeArabic(nameChip);
 
-      const dimsOrNumber = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
-      if (dimsOrNumber) {
-        if (looksLikeDims(dimsOrNumber)) params.dims = dimsOrNumber;
-        else if (isPlainNumber(dimsOrNumber)) params.length = Number(dimsOrNumber);
+      const raw = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      if (raw) {
+        if (looksLikeDims(raw)) params.dims = raw;
+        else if (isPlainNumber(raw)) params.length = Number(raw);
       }
 
       const res = await axios.get(url, { params, signal });
@@ -247,19 +309,26 @@ const AllTab = forwardRef(function AllTab(
     normalizeDigits,
   ]);
 
+  // ✅ clear everything (input + chips + bubbles)
+  const clearEverything = useCallback(() => {
+    setInputValue("");
+    setNameChip("");
+    setDimsChip("");
+    setQuickOrder([]);
+    setTimeout(() => searchInputRef.current?.focus?.(), 0);
+  }, []);
+
   useEffect(() => {
     if (!modalOpen) return;
 
     setFlatRows([]);
     setNestedItems([]);
-    setInputValue("");
-    setNameChip("");
-    setDimsChip("");
+    clearEverything();
     setPage(1);
     setHasMore(false);
 
     return () => abortRef.current?.abort?.();
-  }, [modalOpen]);
+  }, [modalOpen, clearEverything]);
 
   useEffect(() => {
     if (!modalOpen || !isActive) return;
@@ -267,31 +336,167 @@ const AllTab = forwardRef(function AllTab(
     else fetchDefault();
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
-  const handleEnter = (e) => {
-    if (e.key !== "Enter") return;
-    const raw = inputValue.trim();
-    if (!raw) return;
+  const orderToText = useCallback((ord) => {
+    return (ord || [])
+      .map((k) => {
+        if (k.startsWith("N:")) return k.slice(2);
+        if (k.startsWith("T:")) return `${k.slice(2)}ملم`;
+        if (k.startsWith("D:")) return k.slice(2);
+        return "";
+      })
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  }, []);
 
-    const withDigits = normalizeDigits(raw);
+  const handleEnter = useCallback(
+    (e) => {
+      if (e.key !== "Enter") return;
+      const raw0 = inputValue.trim();
+      if (!raw0) return;
 
-    if (looksLikeDims(withDigits)) {
-      setDimsChip(withDigits);
+      const raw = normalizeDigits(raw0).trim();
+      const parts = raw.split(/\s+/).filter(Boolean);
+
+      setQuickOrder([]);
+
+      const dimsToken = parts.find((p) => p.includes("*") && looksLikeDims(p));
+      if (dimsToken) {
+        setDimsChip(dimsToken);
+        const rest = parts.filter((p) => p !== dimsToken).join(" ").trim();
+        if (rest) setNameChip(normalizeArabic(rest));
+        setInputValue("");
+        return;
+      }
+
+      const numIdx = [];
+      for (let i = 0; i < parts.length; i++) {
+        if (isPlainNumber(parts[i])) numIdx.push(i);
+      }
+
+      if (numIdx.length >= 2) {
+        const a = parts[numIdx[0]];
+        const b = parts[numIdx[1]];
+        setDimsChip(`${a}*${b}`);
+
+        const restParts = parts.slice();
+        restParts.splice(numIdx[1], 1);
+        restParts.splice(numIdx[0], 1);
+
+        const rest = restParts.join(" ").trim();
+        if (rest) setNameChip(normalizeArabic(rest));
+        setInputValue("");
+        return;
+      }
+
+      if (numIdx.length === 1) {
+        const n = parts[numIdx[0]];
+        setDimsChip(n);
+
+        const restParts = parts.slice();
+        restParts.splice(numIdx[0], 1);
+
+        const rest = restParts.join(" ").trim();
+        if (rest) setNameChip(normalizeArabic(rest));
+        setInputValue("");
+        return;
+      }
+
+      setNameChip(normalizeArabic(raw));
       setInputValue("");
-      return;
-    }
+    },
+    [
+      inputValue,
+      isPlainNumber,
+      looksLikeDims,
+      normalizeArabic,
+      normalizeDigits,
+      setDimsChip,
+      setNameChip,
+    ]
+  );
 
-    if (isPlainNumber(withDigits)) {
-      setDimsChip(withDigits);
-      setInputValue("");
-      return;
-    }
-
-    setNameChip(normalizeArabic(withDigits));
-    setInputValue("");
-  };
+  // ✅ right click triggers same behavior as Enter
+  const triggerEnterSearch = useCallback(() => {
+    if (!String(inputValue || "").trim()) return;
+    handleEnter({ key: "Enter" });
+  }, [handleEnter, inputValue]);
 
   const clearNameChip = () => setNameChip("");
   const clearDimsChip = () => setDimsChip("");
+
+  const isNameActive = useCallback(
+    (token) => quickOrder.includes(`N:${token}`),
+    [quickOrder]
+  );
+
+  const activeThickness = useMemo(() => {
+    const t = quickOrder.find((x) => x.startsWith("T:"));
+    return t ? t.slice(2) : null;
+  }, [quickOrder]);
+
+  const isDimActive = useCallback(
+    (n) => quickOrder.includes(`D:${String(n)}`),
+    [quickOrder]
+  );
+
+  const toggleNameBubble = (token) => {
+    const t = String(token || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `N:${t}`;
+      const next = prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key];
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
+      return next;
+    });
+  };
+
+  const toggleThicknessBubble = (th) => {
+    const t = String(th || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `T:${t}`;
+      const withoutAny = prev.filter((x) => !x.startsWith("T:"));
+      const wasSame = prev.includes(key);
+      const next = wasSame ? withoutAny : [...withoutAny, key];
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
+      return next;
+    });
+  };
+
+  const toggleDimBubble = (num) => {
+    const t = String(num || "").trim();
+    if (!t) return;
+
+    setQuickOrder((prev) => {
+      const key = `D:${t}`;
+
+      if (prev.includes(key)) {
+        const next = prev.filter((x) => x !== key);
+        setInputValue(orderToText(next));
+        setTimeout(() => searchInputRef.current?.focus?.(), 0);
+        return next;
+      }
+
+      const dims = prev.filter((x) => x.startsWith("D:"));
+      let next = prev;
+
+      if (dims.length >= 2) {
+        const oldest = dims[0];
+        next = next.filter((x) => x !== oldest);
+      }
+
+      next = [...next, key];
+
+      setInputValue(orderToText(next));
+      setTimeout(() => searchInputRef.current?.focus?.(), 0);
+      return next;
+    });
+  };
 
   const toggleSelect = (row) => {
     if (!row.selectable) return;
@@ -321,7 +526,6 @@ const AllTab = forwardRef(function AllTab(
     });
   };
 
-  // ✅ include itemType + stockMode in flat rows
   const rowsFromFlat = useMemo(() => {
     if (!flatRows.length) return [];
     return flatRows.map((r) => {
@@ -350,7 +554,6 @@ const AllTab = forwardRef(function AllTab(
     });
   }, [flatRows]);
 
-  // ✅ include itemType + stockMode in nested rows (mirroring StockTab)
   const rowsFromNested = useMemo(() => {
     if (!nestedItems.length) return [];
     const out = [];
@@ -451,9 +654,7 @@ const AllTab = forwardRef(function AllTab(
                   min="1"
                   step="1"
                   value={repeatModal.value}
-                  onChange={(e) =>
-                    setRepeatModal((p) => ({ ...p, value: e.target.value }))
-                  }
+                  onChange={(e) => setRepeatModal((p) => ({ ...p, value: e.target.value }))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") confirmRepeatModal();
                     if (e.key === "Escape") closeRepeatModal();
@@ -474,16 +675,41 @@ const AllTab = forwardRef(function AllTab(
         </div>
       )}
 
-      <div className="all-tab-item-input-row">
-        <input
-          type="text"
-          placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225"
-          className="all-tab-items-input"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleEnter}
-          autoFocus
-        />
+      {/* ✅ right click anywhere here triggers the search */}
+      <div
+        className="all-tab-item-input-row"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          triggerEnterSearch();
+        }}
+      >
+        {/* input + clear */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225 321"
+            className="all-tab-items-input"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleEnter}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              triggerEnterSearch();
+            }}
+            autoFocus
+          />
+
+          <button
+            type="button"
+            className="all-clear-btn"
+            onClick={clearEverything}
+            title="Clear"
+            aria-label="Clear search"
+          >
+            Clear
+          </button>
+        </div>
 
         <div className="all-tab-chips">
           {nameChip && (
@@ -491,11 +717,7 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--name" dir="rtl">
                 {nameChip}
               </span>
-              <button
-                className="all-chip-x"
-                onClick={clearNameChip}
-                aria-label="Remove name filter"
-              >
+              <button className="all-chip-x" onClick={clearNameChip} aria-label="Remove name filter">
                 ×
               </button>
             </span>
@@ -506,11 +728,7 @@ const AllTab = forwardRef(function AllTab(
               <span className="all-chip-label all-chip-label--dims" dir="ltr">
                 <bdi>{dimsChip}</bdi>
               </span>
-              <button
-                className="all-chip-x"
-                onClick={clearDimsChip}
-                aria-label="Remove dims/length filter"
-              >
+              <button className="all-chip-x" onClick={clearDimsChip} aria-label="Remove dims/length filter">
                 ×
               </button>
             </span>
@@ -519,6 +737,63 @@ const AllTab = forwardRef(function AllTab(
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
             Selected: {selectedTotal}
           </span>
+        </div>
+      </div>
+
+      {/* ✅ Sticky bubbles block (3 lines) + right click trigger */}
+      <div
+        className="all-quick-bubbles-wrap"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          triggerEnterSearch();
+        }}
+      >
+        <div className="all-quick-bubbles-row">
+          {QUICK_BUBBLES.map((token) => {
+            const active = isNameActive(token);
+            return (
+              <button
+                key={token}
+                type="button"
+                onClick={() => toggleNameBubble(token)}
+                className={"all-quick-bubble" + (active ? " active" : "")}
+              >
+                {token}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="all-quick-bubbles-row thickness-row">
+          {THICKNESS_BUBBLES.map((t) => {
+            const active = activeThickness === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleThicknessBubble(t)}
+                className={"all-quick-bubble all-quick-bubble-thick" + (active ? " active" : "")}
+              >
+                {t} ملم
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="all-quick-bubbles-row dims-row">
+          {DIM_BUBBLES.map((n) => {
+            const active = isDimActive(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggleDimBubble(n)}
+                className={"all-quick-bubble all-quick-bubble-dim" + (active ? " active" : "")}
+              >
+                {n}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -547,11 +822,7 @@ const AllTab = forwardRef(function AllTab(
               <tr
                 key={r.uniqueId}
                 className={!r.selectable ? "all-row-disabled" : ""}
-                title={
-                  !r.selectable
-                    ? "Unavailable for selection (missing real variant id)"
-                    : undefined
-                }
+                title={!r.selectable ? "Unavailable for selection (missing real variant id)" : undefined}
               >
                 <td className="cell-select">
                   <input
@@ -560,29 +831,17 @@ const AllTab = forwardRef(function AllTab(
                     checked={checked}
                     onChange={() => toggleSelect(r)}
                   />
-                  {checked &&
-                    ["sqm", "unit"].includes(
-                      String(r.type || "").toLowerCase()
-                    ) && (
-                      <span
-                        style={{
-                          marginLeft: 6,
-                          fontSize: 12,
-                          opacity: 0.8,
-                        }}
-                      >
-                        x{rep}
-                      </span>
-                    )}
+                  {checked && ["sqm", "unit"].includes(String(r.type || "").toLowerCase()) && (
+                    <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>x{rep}</span>
+                  )}
                 </td>
 
                 <td style={{ direction: "rtl", textAlign: "right" }}>
                   {String(r.type || "").toLowerCase() === "unit"
                     ? `${r.itemName ?? ""}`.trim()
-                    : `${parseFloat(String(r.thickness))} ملم ${
-                        r.itemName ?? ""
-                      }`.trim()}
+                    : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim()}
                 </td>
+
                 <td>{r.type}</td>
                 <td>{r.length ?? ""}</td>
                 <td>{r.width ?? ""}</td>
@@ -606,22 +865,10 @@ const AllTab = forwardRef(function AllTab(
       </table>
 
       {!inSearchMode && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            alignItems: "center",
-            marginTop: 12,
-          }}
-        >
-          <button
-            className="all-save-button"
-            disabled={loading || !hasMore}
-            onClick={() => fetchDefaultPage(page + 1)}
-          >
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+          <button className="all-save-button" disabled={loading || !hasMore} onClick={() => fetchDefaultPage(page + 1)}>
             {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
           </button>
-
           <span style={{ fontSize: 12, opacity: 0.7 }}>
             Page {page} • Showing {rows.length} rows
           </span>

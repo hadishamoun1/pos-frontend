@@ -13,9 +13,8 @@ const CustomerDetails = ({
   highlightedIndex,
   handleSearchClick,
   setHighlightedIndex,
-  // ✅ handler for the Get Price button
+  isEditable,
   handleGetPriceClick,
-  // ✅ NEW: cut mode props
   cutMode,
   onToggleCutMode,
 }) => {
@@ -147,6 +146,8 @@ const CustomerDetails = ({
             className="pos-page-toolbar-button pos-page-blue-button"
             style={{ marginLeft: "auto" }}
             onClick={handleSearchClick}
+            disabled={!isEditable}                                  
+            title={!isEditable ? "Click Edit first" : "Search Items"}
           >
             Search Items
           </button>
@@ -156,6 +157,8 @@ const CustomerDetails = ({
             className="pos-page-toolbar-button pos-page-red-button"
             style={{ marginLeft: "8px" }}
             onClick={onToggleCutMode}
+            disabled={!isEditable}                                  
+            title={!isEditable ? "Click Edit first" : "Cut Mode"} 
           >
             {cutMode ? "Cut (ON)" : "Cut"}
           </button>

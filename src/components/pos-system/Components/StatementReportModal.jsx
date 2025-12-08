@@ -63,6 +63,14 @@ const StatementReportModal = ({
     data?.closingBalance ?? (items.length ? items[items.length - 1]?.balanceAfter : openingBalance) ?? 0
   );
 
+  const fmtMaybe = (v) => {
+  if (v === null || v === undefined || v === "") return "";
+  const n = typeof v === "string" ? Number(v.replace(/,/g, "")) : Number(v);
+  if (!isFinite(n) || Math.abs(n) < 0.0000001) return ""; // hide 0 / NaN
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+
   // ------ Print: clone styles and let the browser paginate naturally ------
   const handlePrint = () => {
     const printableRoot = printRef.current;
@@ -314,21 +322,22 @@ const StatementReportModal = ({
                         <td>{toDMY(from)}</td>
                         <td>—</td>
                         <td>رصيد سابق</td>
-                        <td>{fmt(0)}</td>
-                        <td>{fmt(0)}</td>
+                        <td></td>
+                        <td></td>
                         <td>{fmt(openingBalance)}</td>
                       </tr>
 
-                      {items.map((r, i) => (
-                        <tr key={i}>
-                          <td>{toDMY(r.date)}</td>
-                          <td>{r.docNbr}</td>
-                          <td>{r.description}</td>
-                          <td>{fmt(Number(r.debit || 0).toFixed(2))}</td>
-                          <td>{fmt(Number(r.credit || 0).toFixed(2))}</td>
-                          <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
-                        </tr>
-                      ))}
+               {items.map((r, i) => (
+  <tr key={i}>
+    <td>{toDMY(r.date)}</td>
+    <td>{r.docNbr}</td>
+    <td>{r.description}</td>
+    <td>{fmtMaybe(r.debit)}</td>
+    <td>{fmtMaybe(r.credit)}</td>
+    <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
+  </tr>
+))}
+
                     </tbody>
 
                     <tfoot>

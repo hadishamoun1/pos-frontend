@@ -11,6 +11,10 @@
 
 /* Modal Content */
 .search-modal-content {
+  /* ✅ one source of truth for sticky heights */
+  --search-filter-h: 76px;      /* sticky input row height (desktop) */
+  --search-bubbles-h: 220px;    /* ✅ enough for: names + thickness + length + width (no scroll) */
+
   background-color: #ffffff;
   border-radius: 8px;
   padding: 2rem;
@@ -63,11 +67,11 @@
 /* ---------- Sticky filter (input left + chips right) ---------- */
 .search-modal-item-input-row {
   position: sticky;
-  top: 0; /* pins inside the modal content scroll area */
-  z-index: 5;
+  top: 0;
+  z-index: 6;
   background: #ffffff;
   padding: 0.75rem 0.75rem 0.9rem;
-  margin: -0.25rem -0.25rem 0.75rem; /* seam to the edges */
+  margin: -0.25rem -0.25rem 0.75rem;
   border-bottom: 1px solid #e9ecef;
   display: flex;
   flex-wrap: wrap;
@@ -79,7 +83,7 @@
 
 /* Input (left block) */
 .search-modal-items-input {
-  flex: 0 0 340px; /* adjust 300–380px */
+  flex: 0 0 340px;
   width: auto;
   margin: 0;
 
@@ -88,7 +92,6 @@
   border: 1px solid #ccc;
   border-radius: 8px;
 
-  /* Arabic-friendly text flow with good Latin digits */
   direction: rtl;
   text-align: right;
   unicode-bidi: plaintext;
@@ -114,11 +117,11 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
-  max-height: 6.5rem;  /* scroll if too many chips */
+  max-height: 6.5rem;
   overflow-y: auto;
   padding: 0.25rem 0.15rem;
   border-radius: 8px;
-  flex: 1 1 auto;      /* take remaining space */
+  flex: 1 1 auto;
   min-width: 220px;
   justify-content: flex-start;
 }
@@ -129,12 +132,12 @@
   align-items: center;
   gap: 0.45rem;
   padding: 0.35rem 0.6rem;
-  background: #f1f5f9;          /* slate-100 */
-  border: 1px solid #e2e8f0;    /* slate-200 */
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 999px;
   font-size: 0.95rem;
   line-height: 1;
-  color: #0f172a;               /* slate-900 */
+  color: #0f172a;
   max-width: 100%;
 }
 .search-chip:hover { background: #eef2f7; }
@@ -161,7 +164,7 @@
 .search-chip-label--dims {
   direction: ltr;
   text-align: left;
-  unicode-bidi: bidi-override;   /* ensure 225*321-023 stays that order */
+  unicode-bidi: bidi-override;
   font-variant-numeric: lining-nums tabular-nums;
   font-feature-settings: "lnum" 1, "tnum" 1;
   font-family: "Segoe UI", "Helvetica Neue", Arial, "Tajawal", "Cairo",
@@ -179,7 +182,7 @@
   line-height: 1;
   border-radius: 50%;
   font-size: 1rem;
-  color: #475569;               /* slate-600 */
+  color: #475569;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .search-chip-x:hover { background: #e2e8f0; color: #0f172a; }
@@ -189,7 +192,7 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
-  table-layout: auto; /* important for colspan behavior */
+  table-layout: auto;
 }
 .search-modal-table th,
 .search-modal-table td {
@@ -204,27 +207,26 @@
   text-transform: uppercase;
 }
 
-/* Sticky table header under the filter bar */
+/* ✅ SINGLE correct sticky header rule */
 .search-modal-table thead th {
   position: sticky;
-  top: 76px;  /* ~height of the pinned filter area */
+  top: calc(var(--search-filter-h) + var(--search-bubbles-h));
   z-index: 4;
 }
 
 /* ✅ Center the checkbox column perfectly */
 .search-modal-table th.col-select {
-  width: 56px; /* steady width for the column */
+  width: 56px;
 }
-
 .search-modal-table td.cell-select {
-  display: flex;           /* key: flexbox cell */
-  align-items: center;     /* vertical center */
-  justify-content: center; /* horizontal center */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.8rem;
 }
 .search-modal-table td.cell-select input[type="checkbox"] {
-  margin: 0;               /* remove default UA margins */
-  width: 1.3rem;           /* optional sizing */
+  margin: 0;
+  width: 1.3rem;
   height: 1.3rem;
 }
 
@@ -270,19 +272,19 @@
   padding: 0.6rem 0.9rem;
   border-radius: 8px 8px 0 0;
   font-weight: 600;
-  color: #334155; /* slate-700 */
+  color: #334155;
   cursor: pointer;
   position: relative;
   font-size: 1.2rem;
 }
 
 .search-tab:is(:hover, :focus-visible) {
-  background: #f1f5f9; /* slate-100 */
+  background: #f1f5f9;
   outline: none;
 }
 
 .search-tab.is-active {
-  color: #0f172a;           /* slate-900 */
+  color: #0f172a;
   background: #ffffff;
   border-bottom: 2px solid transparent;
 }
@@ -304,10 +306,10 @@
 }
 
 .placeholder-card {
-  border: 1px dashed #cbd5e1;  /* slate-300 */
+  border: 1px dashed #cbd5e1;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
-  background: #f8fafc;         /* slate-50 */
+  background: #f8fafc;
   text-align: center;
 }
 
@@ -320,10 +322,30 @@
 .placeholder-sub {
   color: #475569;
 }
-/* --- Quick bubbles sticky block (names + thickness) --- */
+
+.search-clear-btn{
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,0.18);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.search-clear-btn:hover{
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+.search-clear-btn:active{
+  transform: translateY(0px);
+}
+
+
+/* --- Quick bubbles sticky block (names + thickness + length + width) --- */
 .search-quick-bubbles-wrap {
   position: sticky;
-  top: 76px;                 /* directly under the sticky input row */
+  top: var(--search-filter-h);
   z-index: 5;
   background: #fff;
 
@@ -331,9 +353,8 @@
   margin: -0.25rem -0.25rem 0.75rem;
   border-bottom: 1px solid #e9ecef;
 
-  /* IMPORTANT: keep height stable so table header top is predictable */
-  max-height: 92px;
-  overflow-y: auto;
+  /* ✅ NO vertical scrolling */
+  overflow: hidden;
 }
 
 /* each row */
@@ -345,8 +366,8 @@
   justify-content: flex-start;
 }
 
-/* second line spacing */
-.search-quick-bubbles-row.thickness-row {
+/* line separators between rows */
+.search-quick-bubbles-row + .search-quick-bubbles-row {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed #e2e8f0;
@@ -354,13 +375,14 @@
 
 /* bubble button */
 .quick-bubble {
-  border: 1px solid rgba(148, 163, 184, 0.7);
+  border: 2px solid rgba(148, 163, 184, 0.7);
   background: rgba(15, 23, 42, 0.06);
   color: inherit;
   border-radius: 999px;
+  border-radius: 999px;
   padding: 6px 15px;
   font-size: 16px;
-  font-weight: bold;
+  font-weight: 800;
   line-height: 1.2;
   cursor: pointer;
   user-select: none;
@@ -382,7 +404,7 @@
   outline-offset: 2px;
 }
 
-/* thickness style a bit different (optional) */
+/* thickness style */
 .quick-bubble-thick {
   background: rgba(2, 132, 199, 0.08);
   border-color: rgba(2, 132, 199, 0.35);
@@ -392,24 +414,36 @@
   border-color: rgba(2, 132, 199, 0.9);
 }
 
-/* ✅ FIX: table header must sit under (input row + bubbles block) */
-.search-modal-table thead th {
-  position: sticky;
-  top: calc(76px + 92px);   /* input row (76) + bubbles max-height (92) */
-  z-index: 4;
+/* length/width style */
+.quick-bubble-dim {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.quick-bubble-dim.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.9);
 }
 
-/* Mobile */
-@media (max-width: 720px) {
-  .search-modal-table thead th {
-    top: calc(132px + 92px);  /* your mobile input row height + bubbles */
-    z-index: 4;
+/* optional: numbers look nicer */
+.search-quick-bubbles-row.dims-row {
+  direction: rtl;
+}
+
+/* optional: make it a tiny bit smaller on small screens */
+@media (max-width: 520px) {
+  .quick-bubble {
+    padding: 3px 9px;
+    font-size: 11px;
   }
 }
 
-
 /* ---------- Responsive tweaks ---------- */
 @media (max-width: 720px) {
+  .search-modal-content {
+    --search-filter-h: 132px;     /* your existing mobile input sticky height */
+    --search-bubbles-h: 300px;    /* ✅ more room on mobile so still NO scroll */
+  }
+
   .search-modal-header {
     flex-direction: column;
     align-items: stretch;
@@ -418,14 +452,8 @@
   .search-modal-item-input-row { gap: 0.5rem; }
   .search-modal-chips { max-height: 5.2rem; }
 
-  /* On small screens, let input span full width above chips */
   .search-modal-items-input {
     flex: 1 1 100%;
     min-width: 0;
   }
-
-.search-modal-table thead th{
-  top: 132px;   /* <- increase from 76px */
-  z-index: 4;
-}
 }

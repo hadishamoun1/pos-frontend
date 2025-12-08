@@ -755,6 +755,59 @@ input:disabled {
 
 
 
+/* ===================== Disabled Buttons (POS) ===================== */
+
+/* Base disabled look */
+.pos-page-toolbar-button:disabled,
+.pos-page-toolbar-button[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;              /* prevents click */
+  transform: none !important;        /* cancel hover scale */
+  filter: grayscale(35%);
+  box-shadow: none !important;
+}
+
+/* Keep colors but make them muted depending on button type */
+.pos-page-blue-button:disabled,
+.pos-page-blue-button[disabled] {
+  background-color: #6faef3 !important;
+}
+
+.pos-page-red-button:disabled,
+.pos-page-red-button[disabled] {
+  background-color: #f08f87 !important;
+}
+
+.pos-page-yellow-button:disabled,
+.pos-page-yellow-button[disabled] {
+  background-color: #f6de76 !important;
+}
+
+.pos-page-orange-button:disabled,
+.pos-page-orange-button[disabled] {
+  background-color: #f4d37a !important;
+}
+
+.pos-page-green-button:disabled,
+.pos-page-green-button[disabled] {
+  background-color: #7fe37f !important;
+}
+
+/* Remove hover effects while disabled */
+.pos-page-toolbar-button:disabled:hover,
+.pos-page-toolbar-button[disabled]:hover {
+  transform: none !important;
+}
+
+/* Optional: nicer focus behavior (won't glow on disabled) */
+.pos-page-toolbar-button:disabled:focus,
+.pos-page-toolbar-button[disabled]:focus {
+  outline: none;
+}
+
+
+
 /* Smaller screens → shrink */
 @media (max-width: 1400px) { :root { --ui-scale: 0.95; } }
 @media (max-width: 1200px) { :root { --ui-scale: 0.70; } }

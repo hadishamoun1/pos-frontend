@@ -17,8 +17,11 @@ const Toolbar = ({
   isEditable,
   setShowPreview,
   handleOpenStatement = () => {},
-  /* NEW: disable Stmt if no customer selected */
   canOpenStatement = true,
+
+  // ✅ NEW
+  handleCreateReturnInvoice = () => {},
+  canCreateReturnInvoice = true,
 }) => {
   console.log("isEditable in toolbar:", isEditable);
 
@@ -32,13 +35,31 @@ const Toolbar = ({
       </button>
 
       {selectedInvoiceId !== null ? (
-        <button
-          className="pos-page-toolbar-button pos-page-green-button"
-          onClick={handleEditInvoice}
-          disabled={loading}
-        >
-          {loading ? "Processing..." : "Edit Invoice"}
-        </button>
+        <>
+          <button
+            className="pos-page-toolbar-button pos-page-green-button"
+            onClick={handleEditInvoice}
+            disabled={loading}
+          >
+            {loading ? "Processing..." : "Edit Invoice"}
+          </button>
+
+          {/* ✅ NEW: Return button */}
+          <button
+            className="pos-page-toolbar-button pos-page-purple-button"
+            onClick={handleCreateReturnInvoice}
+            disabled={loading || isEditable || !canCreateReturnInvoice}
+            title={
+              !canCreateReturnInvoice
+                ? "Return is not available for this invoice"
+                : isEditable
+                ? "Finish editing before returning"
+                : "Create Return Invoice (RTN)"
+            }
+          >
+            {loading ? "Processing..." : "Return"}
+          </button>
+        </>
       ) : (
         <>
           {(selectedInvoiceType === "S" ||
@@ -46,16 +67,10 @@ const Toolbar = ({
             selectedInvoiceType === "Both") && (
             <button
               className="pos-page-toolbar-button pos-page-blue-button"
-              onClick={
-                selectedRequestId ? handleEditRequest : handleCreateRequest
-              }
+              onClick={selectedRequestId ? handleEditRequest : handleCreateRequest}
               disabled={loading}
             >
-              {loading
-                ? "Processing..."
-                : selectedRequestId
-                ? "Edit Request"
-                : "Request"}
+              {loading ? "Processing..." : selectedRequestId ? "Edit Request" : "Request"}
             </button>
           )}
 
@@ -79,8 +94,7 @@ const Toolbar = ({
             </button>
           )}
 
-          {(selectedInvoiceType === "RVR" ||
-            selectedInvoiceType === "Both") && (
+          {(selectedInvoiceType === "RVR" || selectedInvoiceType === "Both") && (
             <button
               className="pos-page-toolbar-button pos-page-purple-button"
               onClick={() => handleCreateInvoice("RVR")}
@@ -122,7 +136,6 @@ const Toolbar = ({
           </button>
         )}
 
-        {/* Stmt button (left of date) */}
         <button
           className="pos-page-toolbar-button pos-page-orange-button"
           onClick={handleOpenStatement}

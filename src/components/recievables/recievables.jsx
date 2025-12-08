@@ -8,6 +8,9 @@ import axios from "axios";
 import io from "socket.io-client";
 import RctPaper from "./rctPreview";
 
+// ✅ NEW: Statement modal (adjust path to your actual file location)
+import StatementModal from "../pos-system/Components/StatementModal";
+
 const AccountingPage = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -18,10 +21,16 @@ const AccountingPage = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false); // ⭐ NEW
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
   const [receiptPreviewRecord, setReceiptPreviewRecord] = useState(null);
+
+  // ✅ NEW: Statement modal state
+  const [isStatementOpen, setIsStatementOpen] = useState(false);
+  const [stmtCustomerId, setStmtCustomerId] = useState(null);
+  const [stmtCustomerName, setStmtCustomerName] = useState("");
+  const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -59,6 +68,7 @@ const AccountingPage = () => {
     });
     setIsEditModalOpen(true);
   };
+
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedRow(null);
@@ -75,6 +85,7 @@ const AccountingPage = () => {
     }
     setIsDeleteModalOpen(true);
   };
+
   const closeDeleteModal = () => setIsDeleteModalOpen(false);
 
   const handleDelete = async () => {
@@ -90,6 +101,35 @@ const AccountingPage = () => {
     } catch {
       setNotification({ type: "error", message: "Delete failed." });
     }
+  };
+
+  // ✅ NEW: Open Statement handler
+  const openStatement = () => {
+    if (selectedRowIndex === null) {
+      setNotification({
+        type: "error",
+        message: "Please select a row to open statement.",
+      });
+      return;
+    }
+
+    const sel = filteredData[selectedRowIndex];
+    const cid = sel?.customerAccountId;
+
+    if (!cid) {
+      setNotification({
+        type: "error",
+        message: "Selected row has no customer id.",
+      });
+      return;
+    }
+
+    setStmtCustomerId(cid);
+    setStmtCustomerName(sel?.customerName || "");
+    // optional: pass the record date as the default date in statement modal
+    setStmtDefaultDate(sel?.date || null);
+
+    setIsStatementOpen(true);
   };
 
   useEffect(() => {
@@ -159,27 +199,23 @@ const AccountingPage = () => {
   const formatNumberWithCommas = (n) =>
     n != null ? Number(n).toLocaleString("en-US") : "";
 
-  // ⭐ NEW — just record the text; server search happens in a debounced effect below
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // ⭐ NEW — Debounced server search using /journal-vouchers/search
-  // It filters your existing receivables rows by the matched JV numbers from the API.
+  // Debounced server search using /journal-vouchers/search
   const searchAbortRef = useRef(null);
   useEffect(() => {
     const term = (searchTerm || "").trim();
     if (!term) {
-      // empty → show all
       setFilteredData(data);
       return;
     }
 
-    // local quick filter while we wait (snappy UX)
     const t = term.toLowerCase();
     const quick = data.filter(
       (r) =>
-        r.customerName.toLowerCase().includes(t) ||
+        (r.customerName || "").toLowerCase().includes(t) ||
         (r.refInvoice || "").toLowerCase().includes(t) ||
         (r.invoiceNumber || "").toLowerCase().includes(t) ||
         (r.comments || "").toLowerCase().includes(t) ||
@@ -187,12 +223,9 @@ const AccountingPage = () => {
     );
     setFilteredData(quick);
 
-    // For very short inputs, avoid server calls
     if (term.length < 2) return;
 
-    // Debounce
     const timeout = setTimeout(async () => {
-      // cancel previous request if any
       if (searchAbortRef.current) {
         searchAbortRef.current.abort();
       }
@@ -206,7 +239,6 @@ const AccountingPage = () => {
           signal: controller.signal,
         });
 
-        // Expected: resp.data.data is array with { jvNumber, ... }
         const jvRows = Array.isArray(resp.data?.data) ? resp.data.data : [];
         const jvSet = new Set(
           jvRows
@@ -214,19 +246,15 @@ const AccountingPage = () => {
             .filter(Boolean)
         );
 
-        // Filter your receivables list by the matched JV numbers.
-        // (Keeps your table shape intact.)
         const byServer = data.filter((r) =>
           jvSet.has((r.invoiceNumber || "").toLowerCase())
         );
 
-        // If server returned matches, show them; otherwise keep the quick local result
         setFilteredData(byServer.length ? byServer : quick);
       } catch (err) {
         if (axios.isCancel?.(err)) return;
         if (err?.name === "CanceledError") return;
         console.warn("Server search failed, using local filter:", err);
-        // keep quick local result
       } finally {
         setSearching(false);
       }
@@ -251,6 +279,7 @@ const AccountingPage = () => {
               value={searchTerm}
               onChange={handleSearch}
             />
+
             <div className="button-group">
               <button className="action-button" onClick={openNewModal}>
                 New
@@ -261,6 +290,19 @@ const AccountingPage = () => {
               <button className="delete-button" onClick={openDeleteModal}>
                 Delete
               </button>
+
+              {/* ✅ NEW: Statement button */}
+              <button
+                className="action-button-stmt"
+                onClick={openStatement}
+                title={
+                  selectedRowIndex === null
+                    ? "Select a row first"
+                    : "Open statement for selected customer"
+                }
+              >
+                Stmt
+              </button>
             </div>
           </div>
 
@@ -270,9 +312,7 @@ const AccountingPage = () => {
             <p className="error-text">{error}</p>
           ) : (
             <>
-              {searching && (
-                <div className="searching-hint">Searching…</div> // ⭐ NEW (optional UI)
-              )}
+              {searching && <div className="searching-hint">Searching…</div>}
               <table className="accounting-table">
                 <thead>
                   <tr>
@@ -337,6 +377,7 @@ const AccountingPage = () => {
             }}
           />
         )}
+
         {isEditModalOpen && selectedRow && (
           <EditRecordModal
             selectedRow={selectedRow}
@@ -368,6 +409,7 @@ const AccountingPage = () => {
             }}
           />
         )}
+
         {isDeleteModalOpen && (
           <NotificationModal
             type="warning"
@@ -378,6 +420,7 @@ const AccountingPage = () => {
             cancelLabel="No"
           />
         )}
+
         {notification && (
           <NotificationModal
             type={notification.type}
@@ -386,12 +429,22 @@ const AccountingPage = () => {
           />
         )}
       </div>
+
       {receiptPreviewRecord && (
         <RctPaper
           record={receiptPreviewRecord}
           onClose={() => setReceiptPreviewRecord(null)}
         />
       )}
+
+      {/* ✅ NEW: Statement modal mount */}
+      <StatementModal
+        isOpen={isStatementOpen}
+        onClose={() => setIsStatementOpen(false)}
+        customerId={stmtCustomerId}
+        defaultDate={stmtDefaultDate}
+        customerName={stmtCustomerName}
+      />
     </>
   );
 };

@@ -75,6 +75,87 @@ const handleReorder = (newRows) => {
   setTableData(newRows);
 };
 
+const confirmAction = (message, onYes) => {
+  showNotification(
+    "confirm",
+    message,
+    () => {
+      closeNotification();
+      onYes?.();
+    },
+    { confirmLabel: "Yes", cancelLabel: "No" } 
+  );
+};
+
+
+
+const handleCreateRequestConfirmed = () => {
+  confirmAction("Are you sure you want to create this Request?", () => {
+    handleCreateRequest();
+  });
+};
+
+const handleEditRequestConfirmed = () => {
+  confirmAction("Are you sure you want to edit this Request?", () => {
+    handleEditRequest();
+  });
+};
+
+const handleCreateInvoiceConfirmed = (type) => {
+  const label =
+    type === "S" ? "Issue" : type === "G" ? "Offer" : type === "RVR" ? "RVR" : type;
+
+  confirmAction(`Are you sure you want to make this an ${label}?`, () => {
+    handleCreateInvoice(type);
+  });
+};
+
+const handleCreateReturnInvoiceConfirmed = () => {
+  confirmAction("Are you sure you want to create a Return invoice for this invoice?", () => {
+    handleCreateReturnInvoice();
+  });
+};
+
+
+const handleCreateReturnInvoice = async () => {
+  if (!selectedInvoiceId) {
+    showNotification("error", "Please select an invoice first.");
+    return;
+  }
+
+  if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
+    showNotification("error", "You cannot create a return from an RTN invoice.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // ✅ return date should be "today" (date of return creation)
+    const returnDate = new Date().toISOString().slice(0, 10);
+
+    const res = await axios.post(
+      `${baseUrl}/invoices/${selectedInvoiceId}/return`,
+      { date: returnDate }
+    );
+
+    const rtn = res.data;
+    showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+
+    await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
+  } catch (err) {
+    console.error("❌ Return invoice failed:", err);
+    showNotification(
+      "error",
+      `Failed to create return invoice. ${err.response?.data?.message || err.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
 
 
@@ -82,20 +163,37 @@ const handleReorder = (newRows) => {
     setModalOpen(false);
   };
 
-  const showNotification = (type, message, onConfirm = null) => {
-    setNotification({ show: true, type, message, onConfirm });
-  };
+const showNotification = (type, message, onConfirm = null, options = {}) => {
+  setNotification({
+    show: true,
+    type,
+    message,
+    onConfirm,
+    confirmLabel: options.confirmLabel ?? "OK",
+    cancelLabel: options.cancelLabel ?? null, 
+  });
+};
 
-  const closeNotification = () => {
-    setNotification({ show: false, type: "", message: "", onConfirm: null });
-  };
-
-  const [notification, setNotification] = useState({
+const closeNotification = () => {
+  setNotification({
     show: false,
     type: "",
     message: "",
     onConfirm: null,
+    confirmLabel: "OK",
+    cancelLabel: null,
   });
+};
+
+
+const [notification, setNotification] = useState({
+  show: false,
+  type: "",
+  message: "",
+  onConfirm: null,
+  confirmLabel: "OK",
+  cancelLabel: null,
+});
 
 
   const syncSelectedBatchIdsFromTable = (rows) => {
@@ -1195,26 +1293,33 @@ const handleSaveInvoice = async () => {
         className={`pos-page-center ${showOnlyCenter ? "expanded-center" : ""}`}
       >
         <div className="pos-page-toolbar">
-          <Toolbar
-            handleNewTransaction={handleNewTransaction}
-            handleEditInvoice={handleEditInvoice}
-            handleSaveRequest={handleSaveRequest}
-            handleSaveInvoice={handleSaveInvoice}
-            handleEditRequest={handleEditRequest}
-            handleCreateRequest={handleCreateRequest}
-            handleCreateInvoice={handleCreateInvoice}
-            loading={loading}
-            selectedInvoiceId={selectedInvoiceId}
-            selectedRequestId={selectedRequestId}
-            selectedInvoiceType={selectedInvoiceType}
-            date={date}
-            setDate={setDate}
-            isEditable={isEditable}
-            setShowPreview={setShowPreview}
-             handleOpenStatement={openStatement}
+  <Toolbar
+  handleNewTransaction={handleNewTransaction}
+  handleEditInvoice={handleEditInvoice}
+  handleSaveRequest={handleSaveRequest}
+  handleSaveInvoice={handleSaveInvoice}
+
+  handleEditRequest={handleEditRequestConfirmed}
+  handleCreateRequest={handleCreateRequestConfirmed}
+  handleCreateInvoice={handleCreateInvoiceConfirmed}
+
+  loading={loading}
+  selectedInvoiceId={selectedInvoiceId}
+  selectedRequestId={selectedRequestId}
+  selectedInvoiceType={selectedInvoiceType}
+  date={date}
+  setDate={setDate}
+  isEditable={isEditable}
+  setShowPreview={setShowPreview}
+  handleOpenStatement={openStatement}
   canOpenStatement={!!selectedCustomerId}
 
-          />
+  handleCreateReturnInvoice={handleCreateReturnInvoiceConfirmed}
+  canCreateReturnInvoice={
+    !!selectedInvoiceId && String(editingInvoiceType || "").toUpperCase() !== "RTN"
+  }
+/>
+
           
  {showPreview && (
 <InvoiceModal
@@ -1258,8 +1363,9 @@ const handleSaveInvoice = async () => {
             handleSearchClick={handleSearchClick}
              setHighlightedIndex={setHighlightedIndex}  
              handleGetPriceClick={handleGetPriceClick}
-               cutMode={cutMode}
-  onToggleCutMode={() => setCutMode((prev) => !prev)}
+             cutMode={cutMode}
+             onToggleCutMode={() => setCutMode((prev) => !prev)}
+             isEditable={isEditable}
           />
         </div>
         <div className="pos-page-inventory-table-container">
@@ -1332,14 +1438,17 @@ const handleSaveInvoice = async () => {
       )}
 
       {/* Notification Modal */}
-      {notification.show && (
-        <NotificationModal
-          type={notification.type}
-          message={notification.message}
-          onClose={closeNotification}
-          onConfirm={notification.onConfirm || closeNotification}
-        />
-      )}
+   {notification.show && (
+  <NotificationModal
+    type={notification.type}
+    message={notification.message}
+    onClose={closeNotification}
+    onConfirm={notification.onConfirm || closeNotification}
+    confirmLabel={notification.confirmLabel}
+    cancelLabel={notification.cancelLabel}
+  />
+)}
+
 
       <SearchModal
         isOpen={isModalOpen}

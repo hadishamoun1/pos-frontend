@@ -1,13 +1,16 @@
+/* src/components/pos-system/AllTab.css */
+
 /* Scope everything to this tab to avoid clashes with other tab styles */
 .all-tab-root {
-  --all-filter-h: 76px; /* height of the pinned filter area (adjust if needed) */
+  --all-filter-h: 76px;   /* height of sticky input row */
+  --all-bubbles-h: 148px; /* height of 3 bubble rows (tweak if needed) */
 }
 
 /* ---------- Sticky filter (input left + chips right) ---------- */
 .all-tab-root .all-tab-item-input-row {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 6;
   background: #ffffff;
   padding: 0.75rem 0.75rem 0.9rem;
   margin: -0.25rem -0.25rem 0.75rem;
@@ -81,7 +84,6 @@
 }
 .all-tab-root .all-chip:hover { background: #eef2f7; }
 
-/* Chip labels */
 .all-tab-root .all-chip-label {
   max-width: 32ch;
   overflow: hidden;
@@ -90,7 +92,6 @@
   padding: 5px;
 }
 
-/* Arabic name chip: RTL */
 .all-tab-root .all-chip-label--name {
   direction: rtl;
   text-align: right;
@@ -99,7 +100,6 @@
                "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Dims chip: keep numbers/symbols in LTR order */
 .all-tab-root .all-chip-label--dims {
   direction: ltr;
   text-align: left;
@@ -110,7 +110,6 @@
                sans-serif;
 }
 
-/* Chip “x” */
 .all-tab-root .all-chip-x {
   appearance: none;
   border: none;
@@ -125,6 +124,70 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 .all-tab-root .all-chip-x:hover { background: #e2e8f0; color: #0f172a; }
+
+/* ✅ Sticky bubbles (3 lines) */
+.all-tab-root .all-quick-bubbles-wrap {
+  position: sticky;
+  top: var(--all-filter-h);
+  z-index: 5;
+  background: #fff;
+
+  padding: 0 0.75rem 0.75rem;
+  margin: -0.25rem -0.25rem 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.all-tab-root .all-quick-bubbles-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  direction: rtl;
+  justify-content: flex-start;
+}
+
+.all-tab-root .all-quick-bubbles-row + .all-quick-bubbles-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.all-tab-root .all-quick-bubble {
+  border: 2px solid rgba(148, 163, 184, 0.7);
+  background: rgba(15, 23, 42, 0.06);
+  color: inherit;
+
+  border-radius: 999px;
+  padding: 6px 15px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+.all-tab-root .all-quick-bubble:hover {
+  background: rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+.all-tab-root .all-quick-bubble.active {
+  border-color: rgba(59, 130, 246, 0.9);
+  background: rgba(59, 130, 246, 0.16);
+}
+.all-tab-root .all-quick-bubble:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.65);
+  outline-offset: 2px;
+}
+
+/* Optional tint for thickness + dims */
+
+.all-tab-root .all-quick-bubble-dim {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.all-tab-root .all-quick-bubble-dim.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.9);
+}
 
 /* Results Table */
 .all-tab-root .all-tab-table {
@@ -146,17 +209,14 @@
   text-transform: uppercase;
 }
 
-/* Sticky table header under the filter bar (uses the CSS var) */
+/* ✅ Sticky header below input + bubbles */
 .all-tab-root .all-tab-table thead th {
   position: sticky;
-  top: var(--all-filter-h);
+  top: calc(var(--all-filter-h) + var(--all-bubbles-h));
   z-index: 4;
 }
 
-/* ✅ Center the checkbox column perfectly */
-.all-tab-root .all-tab-table th.col-select {
-  width: 56px;
-}
+.all-tab-root .all-tab-table th.col-select { width: 56px; }
 .all-tab-root .all-tab-table td.cell-select {
   display: flex;
   align-items: center;
@@ -169,14 +229,10 @@
   height: 1.3rem;
 }
 
-/* Hover */
 .all-tab-root .all-tab-table tbody tr:hover { background-color: #f8fafc; }
-
-/* Dim rows without selectable variants */
 .all-tab-root .all-row-disabled { opacity: 0.55; }
 .all-tab-root .all-row-disabled td { background-image: linear-gradient(180deg, #fafafa, #ffffff); }
 
-/* Load more button */
 .all-tab-root .all-save-button {
   padding: 0.5rem 1rem;
   background-color: #2563eb;
@@ -193,7 +249,6 @@
   cursor: not-allowed;
 }
 
-/* Empty-state row spans the full width cleanly */
 .all-tab-root .empty-row .empty-cell {
   display: table-cell !important;
   width: auto !important;
@@ -207,7 +262,7 @@
 .repeat-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35); /* soft slate overlay */
+  background: rgba(15, 23, 42, 0.35);
   display: grid;
   place-items: center;
   z-index: 9999;
@@ -218,7 +273,7 @@
   width: min(520px, 96vw);
   border-radius: 14px;
   background: #ffffff;
-  color: #0f172a; /* slate-900 */
+  color: #0f172a;
   border: 1px solid rgba(15, 23, 42, 0.12);
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
   overflow: hidden;
@@ -250,14 +305,9 @@
   line-height: 1;
   cursor: pointer;
 }
+.repeat-modal-x:hover { background: #f1f5f9; }
 
-.repeat-modal-x:hover {
-  background: #f1f5f9; /* slate-100 */
-}
-
-.repeat-modal-body {
-  padding: 16px;
-}
+.repeat-modal-body { padding: 16px; }
 
 .repeat-modal-label {
   font-size: 14px;
@@ -266,10 +316,7 @@
   line-height: 1.35;
 }
 
-.repeat-modal-field {
-  display: grid;
-  gap: 8px;
-}
+.repeat-modal-field { display: grid; gap: 8px; }
 
 .repeat-modal-field-label {
   font-size: 12px;
@@ -286,9 +333,8 @@
   outline: none;
   font-size: 14px;
 }
-
 .repeat-modal-input:focus {
-  border-color: rgba(59, 130, 246, 0.6); /* blue-500 */
+  border-color: rgba(59, 130, 246, 0.6);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
 
@@ -298,7 +344,7 @@
   gap: 10px;
   padding: 14px 16px;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
-  background: #f8fafc; /* slate-50 */
+  background: #f8fafc;
 }
 
 .repeat-modal-btn {
@@ -309,28 +355,34 @@
   cursor: pointer;
   font-weight: 800;
 }
-
-.repeat-modal-btn.ghost {
-  background: #ffffff;
-  color: #0f172a;
-}
-
-.repeat-modal-btn.ghost:hover {
-  background: #f1f5f9;
-}
-
+.repeat-modal-btn.ghost { background: #ffffff; color: #0f172a; }
+.repeat-modal-btn.ghost:hover { background: #f1f5f9; }
 .repeat-modal-btn.primary {
-  background: #2563eb; /* blue-600 */
+  background: #2563eb;
   color: #ffffff;
   border-color: rgba(37, 99, 235, 0.7);
 }
+.repeat-modal-btn.primary:hover { filter: brightness(0.95); }
 
-.repeat-modal-btn.primary:hover {
-  filter: brightness(0.95);
+.all-clear-btn{
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,23,42,0.18);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+.all-clear-btn:hover{
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+.all-clear-btn:active{
+  transform: translateY(0px);
 }
 
 
-/* ---------- Responsive tweaks ---------- */
 @media (max-width: 720px) {
   .all-tab-root .all-tab-item-input-row { gap: 0.5rem; }
   .all-tab-root .all-tab-chips { max-height: 5.2rem; }
@@ -340,6 +392,9 @@
     min-width: 0;
   }
 
-  /* slightly shorter header offset on small screens */
-  .all-tab-root { --all-filter-h: 68px; }
+  /* on small screens, sticky parts are taller */
+  .all-tab-root {
+    --all-filter-h: 132px;
+    --all-bubbles-h: 190px;
+  }
 }
