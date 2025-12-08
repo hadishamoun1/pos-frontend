@@ -264,6 +264,10 @@ function useGroupedByDescription(
           fallbackAvgCost: null,
           fallbackLastCost: null,
 
+          // ✅ ADDED: sheet costs (for sheet-only items)
+          sheetAvgCost: null,
+          sheetLastCost: null,
+
           // description-level costs (name mode)
           averageCostCVM: null,
           averageCostC: null,
@@ -307,8 +311,32 @@ function useGroupedByDescription(
       } else if (t === "sheet") {
         b.sheetQty += q;
         b.sheetSqm += s;
+
+        // ✅ ADDED: if no box avgCost exists, use sheet avgCost
+        const sAvg = Number(r.averageCost);
+        if (Number.isFinite(sAvg)) {
+          if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
+          if (b.fallbackAvgCost == null) b.fallbackAvgCost = sAvg;
+        }
+        const sLast = Number(r.lastCost);
+        if (Number.isFinite(sLast)) {
+          if (b.sheetLastCost == null) b.sheetLastCost = sLast;
+          if (b.fallbackLastCost == null) b.fallbackLastCost = sLast;
+        }
       } else if (t === "sqm") {
         b.sheetSqm += s;
+
+        // ✅ ADDED: sqm-only items can also carry costs (same fallback behavior)
+        const sAvg = Number(r.averageCost);
+        if (Number.isFinite(sAvg)) {
+          if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
+          if (b.fallbackAvgCost == null) b.fallbackAvgCost = sAvg;
+        }
+        const sLast = Number(r.lastCost);
+        if (Number.isFinite(sLast)) {
+          if (b.sheetLastCost == null) b.sheetLastCost = sLast;
+          if (b.fallbackLastCost == null) b.fallbackLastCost = sLast;
+        }
       }
     });
 
@@ -376,7 +404,7 @@ function useGroupedByDescription(
             anyRow = true;
             rowsOut.push({
               idKey: `${bucketKey}|spb:${spb}`,
-              dim: prettyDimsSPB(b.length, b.width, spb),
+              dim: prettyDimsWithSPB(b.length, b.width, spb),
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
@@ -385,7 +413,7 @@ function useGroupedByDescription(
               qtySheet: attachSheets ? Number(b.sheetQty || 0) : 0,
               sqmTotal: Number(sqmBox + (attachSheets ? b.sheetSqm || 0 : 0)),
 
-              // ✅ FIX: cost per SPB
+              // ✅ FIX: cost per SPB + fallback now can come from SHEETS too
               averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(spb) ?? b.fallbackLastCost ?? null,
 
@@ -400,7 +428,7 @@ function useGroupedByDescription(
           if (!anyRow) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:${attachSpb}`,
-              dim: prettyDimsSPB(b.length, b.width, attachSpb),
+              dim: prettyDimsWithSPB(b.length, b.width, attachSpb),
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
@@ -409,11 +437,9 @@ function useGroupedByDescription(
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
 
-              // ✅ FIX: cost per SPB
-              averageCost:
-                b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
-              lastCost:
-                b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
+              // ✅ FIX: fallback now can come from SHEETS too
+              averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
+              lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
 
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
@@ -426,7 +452,7 @@ function useGroupedByDescription(
           if ((b.sheetQty || 0) > 0 || (b.sheetSqm || 0) > 0) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:0`,
-              dim: prettyDimsSPB(b.length, b.width, 0),
+              dim: `${prettyDimsBase(b.length, b.width)}-000`,
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
@@ -435,7 +461,7 @@ function useGroupedByDescription(
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
 
-              // no spb -> fallback if any
+              // ✅ now sheet-only rows show their own cost
               averageCost: b.fallbackAvgCost ?? null,
               lastCost: b.fallbackLastCost ?? null,
 
@@ -535,7 +561,7 @@ function buildPrintHTML({
   showLastCostC = false,
   showLastCostCVM = false,
   mode = "real",
-  grandTotals = null, // ✅ ADDED (doesn't change existing logic)
+  grandTotals = null,
 }) {
   const now = new Date();
   const stamp = now
@@ -586,7 +612,6 @@ function buildPrintHTML({
       const rowsHtml = (g.rows || [])
         .map((r) => {
           if (transferMode) {
-            // name-mode transfer: no dimension/origin, but show name-costs
             const costNameCells =
               mode === "name"
                 ? `
@@ -772,7 +797,6 @@ function buildPrintHTML({
              }</td>
            </tr>`;
         }
-        // name mode, non-transfer
         return `<tr>
              <td colspan="${
                2 + costColsName
@@ -792,10 +816,10 @@ function buildPrintHTML({
       const totalColsForEmpty = (() => {
         if (transferMode) {
           const nameCostCols = mode === "name" ? costColsName : 0;
-          return 3 + nameCostCols; // itemNo + name + costs + sqm
+          return 3 + nameCostCols;
         }
         if (mode === "real") return 7 + costColsReal;
-        return 5 + costColsName; // name mode, non-transfer
+        return 5 + costColsName;
       })();
 
       return `
@@ -815,7 +839,6 @@ function buildPrintHTML({
     })
     .join("");
 
-  // ✅ ADDED: Grand total block (uses passed grandTotals if provided)
   const grand = grandTotals && typeof grandTotals === "object" ? grandTotals : null;
   const gtBoxes = grand ? Number(grand.boxes || 0) : 0;
   const gtSheets = grand ? Number(grand.sheets || 0) : 0;
@@ -870,7 +893,6 @@ function buildPrintHTML({
     .tr { text-align:right; } 
     .muted { color:#666; }
 
-    /* RTL + numeric-friendly for Arabic+numbers column in PRINT */
     .table th.col-ar,
     .table td.col-ar {
       direction: rtl;
@@ -948,7 +970,6 @@ export default function ReportModal({
   const displayGroups = useTransferredGroups(groups, transferToSqm, mode);
   const transferMode = transferToSqm && mode === "name";
 
-  // ✅ ADDED: grand totals row at end (based on original groups so boxes/sheets stay correct)
   const grandTotals = useMemo(() => {
     let boxes = 0;
     let sheets = 0;
@@ -980,7 +1001,8 @@ export default function ReportModal({
       : "Inventory Report — Item-Name Description (balance)";
 
   const unresolvedCount = (displayGroups || []).reduce(
-    (acc, g) => acc + g.rows.filter((r) => /-000$/.test(String(r.dim || ""))).length,
+    (acc, g) =>
+      acc + g.rows.filter((r) => /-000$/.test(String(r.dim || ""))).length,
     0
   );
 
@@ -996,7 +1018,7 @@ export default function ReportModal({
       showLastCostC,
       showLastCostCVM,
       mode,
-      grandTotals, // ✅ ADDED (no change to your existing logic, just extra data for print footer)
+      grandTotals,
     });
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -1043,7 +1065,10 @@ export default function ReportModal({
 
   return (
     <div className="invb-report-overlay" onClick={onClose}>
-      <aside className="invb-report-modal" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="invb-report-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="invb-report-head">
           <div>
@@ -1065,8 +1090,9 @@ export default function ReportModal({
                   .{" "}
                   {mode === "real" ? (
                     <>
-                      One row per <em>dimension + origin + (BOX SPB)</em>. Sheet
-                      quantity attaches to the primary SPB row.
+                      One row per{" "}
+                      <em>dimension + origin + (BOX SPB)</em>. Sheet quantity
+                      attaches to the primary SPB row.
                     </>
                   ) : (
                     <>One row per <em>(BOX SPB)</em> bucket in each description.</>
@@ -1178,9 +1204,10 @@ export default function ReportModal({
                   Gathering all items for the report…
                 </div>
               )}
-              {!loading && (!displayGroups || displayGroups.length === 0) && (
-                <div className="invb-empty">No data to preview.</div>
-              )}
+              {!loading &&
+                (!displayGroups || displayGroups.length === 0) && (
+                  <div className="invb-empty">No data to preview.</div>
+                )}
 
               {!loading &&
                 (displayGroups || []).map((g) => {
@@ -1199,7 +1226,11 @@ export default function ReportModal({
                     (showLastCostC ? 1 : 0) +
                     (showLastCostCVM ? 1 : 0);
 
-                  const nonCostBeforeQty = transferMode ? 2 : mode === "real" ? 4 : 2;
+                  const nonCostBeforeQty = transferMode
+                    ? 2
+                    : mode === "real"
+                    ? 4
+                    : 2;
 
                   return (
                     <div className="report-group" key={`desc-${g.descId}`}>
@@ -1243,7 +1274,9 @@ export default function ReportModal({
                           {transferMode ? (
                             <tr>
                               <th className="ta-center">Item No.</th>
-                              <th className="ta-center col-ar">Name+Thk (AR)</th>
+                              <th className="ta-center col-ar">
+                                Name+Thk (AR)
+                              </th>
 
                               {mode === "name" && showAvgCostCVM && (
                                 <th className="ta-right">Avg Cost CVM</th>
@@ -1262,7 +1295,9 @@ export default function ReportModal({
                           ) : (
                             <tr>
                               <th className="ta-center">Item No.</th>
-                              <th className="ta-center col-ar">Name+Thk (AR)</th>
+                              <th className="ta-center col-ar">
+                                Name+Thk (AR)
+                              </th>
 
                               {mode === "real" && (
                                 <>
@@ -1298,27 +1333,39 @@ export default function ReportModal({
                           {g.rows.map((row) =>
                             transferMode ? (
                               <tr key={row.idKey}>
-                                <td className="ta-center">{row.itemNumber || ""}</td>
-                                <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
+                                <td className="ta-center">
+                                  {row.itemNumber || ""}
+                                </td>
+                                <td className="ta-center col-ar">
+                                  {row.nameThkAr || ""}
+                                </td>
 
                                 {mode === "name" && showAvgCostCVM && (
                                   <td className="ta-right u-muted">
-                                    {row.averageCostCVM != null ? fmt2(row.averageCostCVM) : ""}
+                                    {row.averageCostCVM != null
+                                      ? fmt2(row.averageCostCVM)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showAvgCostC && (
                                   <td className="ta-right u-muted">
-                                    {row.averageCostC != null ? fmt2(row.averageCostC) : ""}
+                                    {row.averageCostC != null
+                                      ? fmt2(row.averageCostC)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showLastCostC && (
                                   <td className="ta-right u-muted">
-                                    {row.lastCostC != null ? fmt2(row.lastCostC) : ""}
+                                    {row.lastCostC != null
+                                      ? fmt2(row.lastCostC)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showLastCostCVM && (
                                   <td className="ta-right u-muted">
-                                    {row.lastCostCVM != null ? fmt2(row.lastCostCVM) : ""}
+                                    {row.lastCostCVM != null
+                                      ? fmt2(row.lastCostCVM)
+                                      : ""}
                                   </td>
                                 )}
                                 <td className="ta-right u-muted">
@@ -1327,46 +1374,66 @@ export default function ReportModal({
                               </tr>
                             ) : (
                               <tr key={row.idKey}>
-                                <td className="ta-center">{row.itemNumber || ""}</td>
-                                <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
+                                <td className="ta-center">
+                                  {row.itemNumber || ""}
+                                </td>
+                                <td className="ta-center col-ar">
+                                  {row.nameThkAr || ""}
+                                </td>
 
                                 {mode === "real" && (
                                   <>
                                     <td className="ta-center">{row.dim}</td>
-                                    <td className="truncate">{row.origin || ""}</td>
+                                    <td className="truncate">
+                                      {row.origin || ""}
+                                    </td>
                                   </>
                                 )}
                                 {mode === "real" && showAvgCost && (
                                   <td className="ta-right u-muted">
-                                    {row.averageCost != null ? fmt2(row.averageCost) : ""}
+                                    {row.averageCost != null
+                                      ? fmt2(row.averageCost)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "real" && showLastCost && (
                                   <td className="ta-right u-muted">
-                                    {row.lastCost != null ? fmt2(row.lastCost) : ""}
+                                    {row.lastCost != null
+                                      ? fmt2(row.lastCost)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showAvgCostCVM && (
                                   <td className="ta-right u-muted">
-                                    {row.averageCostCVM != null ? fmt2(row.averageCostCVM) : ""}
+                                    {row.averageCostCVM != null
+                                      ? fmt2(row.averageCostCVM)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showAvgCostC && (
                                   <td className="ta-right u-muted">
-                                    {row.averageCostC != null ? fmt2(row.averageCostC) : ""}
+                                    {row.averageCostC != null
+                                      ? fmt2(row.averageCostC)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showLastCostC && (
                                   <td className="ta-right u-muted">
-                                    {row.lastCostC != null ? fmt2(row.lastCostC) : ""}
+                                    {row.lastCostC != null
+                                      ? fmt2(row.lastCostC)
+                                      : ""}
                                   </td>
                                 )}
                                 {mode === "name" && showLastCostCVM && (
                                   <td className="ta-right u-muted">
-                                    {row.lastCostCVM != null ? fmt2(row.lastCostCVM) : ""}
+                                    {row.lastCostCVM != null
+                                      ? fmt2(row.lastCostCVM)
+                                      : ""}
                                   </td>
                                 )}
-                                <td className="ta-right">{row.qtyBox ? fmt2(row.qtyBox) : ""}</td>
+                                <td className="ta-right">
+                                  {row.qtyBox ? fmt2(row.qtyBox) : ""}
+                                </td>
                                 <td className="ta-right">
                                   {row.qtySheet ? fmt2(row.qtySheet) : ""}
                                 </td>
@@ -1446,7 +1513,6 @@ export default function ReportModal({
                   );
                 })}
 
-              {/* ✅ ADDED: FINAL GRAND TOTAL ROW AT THE END OF THE REPORT */}
               {!loading && displayGroups && displayGroups.length > 0 && (
                 <div className="report-group" key="grand-total">
                   <div className="report-group-head">
@@ -1526,7 +1592,10 @@ export default function ReportModal({
             <button className="invb-btn" disabled>
               Generate PDF
             </button>
-            <button className="invb-btn invb-btn--ghost" onClick={onClose}>
+            <button
+              className="invb-btn invb-btn--ghost"
+              onClick={onClose}
+            >
               Close
             </button>
           </div>
