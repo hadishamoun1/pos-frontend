@@ -23,6 +23,7 @@ import SqmPiecesPage from "./components/sqmPiece/sqmPiece"
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
 import SettingsPage from "./components/settings/settings";
 import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
+import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
 
 
 // Initialize QueryClient
@@ -61,6 +62,7 @@ function App() {
               element={<InventoryActivityPage />}
             />
             <Route path="/cuts-control" element={<CutsQueuePage />} />
+            <Route path="/viewing" element={<InvoiceDetailsPage />} />
           </Routes>
 
         </Router>

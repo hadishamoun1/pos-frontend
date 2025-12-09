@@ -19,6 +19,7 @@ const sections = [
    { name: "Reports", image: "/assets/payment-voucher.webp" },
       { name: "SQM", image: "/assets/payment-voucher.webp" },
         { name: "Cuts Control", image: "/assets/payment-voucher.webp" },
+           { name: "Viewing", image: "/assets/payment-voucher.webp" },
 ];
 
 const DashboardPage = () => {
