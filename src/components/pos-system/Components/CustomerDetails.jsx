@@ -17,6 +17,10 @@ const CustomerDetails = ({
   handleGetPriceClick,
   cutMode,
   onToggleCutMode,
+
+  // ✅ ADD THESE
+  currencyCode,
+  onCurrencyCodeChange,
 }) => {
   return (
     <div>
@@ -42,10 +46,17 @@ const CustomerDetails = ({
             <option value="11">11%</option>
           </select>
 
-          {/* Currency Dropdown */}
-          <select className="pos-page-currency-dropdown">
+          {/* ✅ Currency Dropdown */}
+          <select
+            className="pos-page-currency-dropdown"
+            value={currencyCode || "USD"}
+            onChange={(e) => onCurrencyCodeChange?.(e.target.value)}
+            disabled={!isEditable}
+            title={!isEditable ? "Click Edit first" : "Currency"}
+          >
             <option value="USD">USD</option>
             <option value="LL">LL</option>
+            <option value="LBP">LBP</option>
           </select>
         </div>
 
@@ -64,7 +75,6 @@ const CustomerDetails = ({
       <div className="pos-page-customer-name-row">
         <label className="pos-page-customer-name-label">Customer Name</label>
         <div className="pos-page-customer-search-container">
-          {/* Customer Search Input */}
           <input
             type="text"
             value={customerInput}
@@ -74,7 +84,6 @@ const CustomerDetails = ({
             className="pos-page-customer-name-input"
           />
 
-          {/* Suggestions Dropdown */}
           {customerSuggestions.length > 0 && (
             <ul className="customer-suggestions-dropdown" role="listbox">
               {customerSuggestions.map((c, index) => (
@@ -85,21 +94,17 @@ const CustomerDetails = ({
                   className={`cust-sugg ${
                     index === highlightedIndex ? "is-active" : ""
                   }`}
-                  onMouseDown={(e) => e.preventDefault()} // keep focus in the input
-                  onMouseEnter={() => setHighlightedIndex(index)} // sync hover with highlight
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setHighlightedIndex(index)}
                   onClick={() => handleCustomerSelect(c)}
                 >
-                  {/* Left: circular initials */}
                   <div className="cust-sugg-avatar">
-                    {String(
-                      c.customerName || c.firstName || "?"
-                    )
+                    {String(c.customerName || c.firstName || "?")
                       .trim()
                       .charAt(0)
                       .toUpperCase()}
                   </div>
 
-                  {/* Right: content */}
                   <div className="cust-sugg-content" dir="auto">
                     <div className="cust-sugg-line1" dir="auto">
                       <span
@@ -141,29 +146,26 @@ const CustomerDetails = ({
             </ul>
           )}
 
-          {/* Buttons (Search + Cut + Get Price) */}
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
             style={{ marginLeft: "auto" }}
             onClick={handleSearchClick}
-            disabled={!isEditable}                                  
+            disabled={!isEditable}
             title={!isEditable ? "Click Edit first" : "Search Items"}
           >
             Search Items
           </button>
 
-          {/* ✅ NEW Cut button */}
           <button
             className="pos-page-toolbar-button pos-page-red-button"
             style={{ marginLeft: "8px" }}
             onClick={onToggleCutMode}
-            disabled={!isEditable}                                  
-            title={!isEditable ? "Click Edit first" : "Cut Mode"} 
+            disabled={!isEditable}
+            title={!isEditable ? "Click Edit first" : "Cut Mode"}
           >
             {cutMode ? "Cut (ON)" : "Cut"}
           </button>
 
-          {/* "Get Price" button beside Cut */}
           <button
             className="pos-page-toolbar-button pos-page-orange-button"
             style={{ marginLeft: "8px" }}

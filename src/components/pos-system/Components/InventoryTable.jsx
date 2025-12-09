@@ -11,9 +11,15 @@ const InventoryTable = ({
   allowReorder = true,
   emptyHint = "No items selected. Click “Search” to add item batches.",
   cutMode = false,
+  currencyCode = "USD", 
 }) => {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+const currRaw = String(currencyCode ?? "").toUpperCase().trim();
+const currNorm = currRaw.replace(/[^A-Z]/g, "");
+const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
+          
+
 
   // Only allow dragging when both flags permit it
   const canReorder = Boolean(allowReorder && isEditable);
@@ -435,10 +441,18 @@ const InventoryTable = ({
                   />
                 </td>
 
-                {/* SQM */}
-                <td>
-                  <input type="number" value={row.sqm ?? ""} readOnly />
-                </td>
+            {/* SQM */}
+<td>
+  <input
+    type="number"
+    value={row.sqm ?? ""}
+    readOnly={!(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"}
+    disabled={!(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"}
+    onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
+    onWheelCapture={handleWheelNoStep}
+  />
+</td>
+
 
                 {/* TOTAL */}
                 <td>

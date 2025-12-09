@@ -276,13 +276,40 @@ const INLINE_INVOICE_CSS = `
    ========================= */
 function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) {
   const {
-    invoiceNumber = "", date = "", customerName = "", customerAddress = "", customerPhone = "",
-    customerAccountNumber = "", customerTaxNumber = "", currencyRate = 1, vatPercentage = 0,
-    totalWithoutVAT = 0, totalVAT = 0, grandTotal = 0, items = [], currencyCode = "USD",
+    invoiceNumber = "",
+    date = "",
+    customerName = "",
+    customerAddress = "",
+    customerPhone = "",
+    customerAccountNumber = "",
+    customerTaxNumber = "",
+    currencyRate = 1,
+    vatPercentage = 11, // default 11%
+    totalWithoutVAT = 0,
+    totalVAT = 0,
+    grandTotal = 0,
+    items = [],
+    currencyCode = "USD",
   } = invoiceData;
 
-  const grandTotalLL = grandTotal * currencyRate;
-  const totalVatLL = totalVAT * currencyRate;
+  // ✅ detect currency FIRST (so we can safely use it below)
+  const currNorm = String(currencyCode ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .trim();
+  const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
+
+  // ✅ numeric safety
+  const rate = Number(currencyRate || 1) || 1;
+
+  // ✅ VAT LBP = VAT only when currency is LL/LBP, otherwise convert VAT to LBP
+  const totalVatLBP = isLLCurrency
+    ? Number(totalVAT || 0)
+    : Number(totalVAT || 0) * rate;
+
+  // keep your existing variable name usage
+  const totalVatLL = totalVatLBP;
+
   const invoiceType = (invoiceData?.invoiceType ?? invoiceData?.type ?? "").toUpperCase(); // "S","RVR","G"
   const hideTaxAccount = invoiceType === "G";
 
@@ -297,7 +324,17 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
           const hasThickness = it.thickness !== undefined && it.thickness !== null && String(it.thickness) !== "";
           const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
           const sheetsPerBox = it.sheetsPerBox ?? it.sheets_per_box ?? it.sheetsPerCarton ?? it.sheets_per_carton;
-          const sheetsCell = isSheet || isSqmPiece ? fmtOpt(it.quantity) : isBox ? fmtOpt(sheetsPerBox) : "";
+
+const qtyNum = Number(it.quantity);
+
+const sheetsCell = isSqmPiece
+  ? (Number.isFinite(qtyNum) && qtyNum !== 0 ? fmtSmart(qtyNum) : "") // ✅ sqm: hide 0
+  : isSheet
+  ? fmtOpt(it.quantity) // sheet: keep your old behavior
+  : isBox
+  ? fmtOpt(sheetsPerBox)
+  : "";
+
           const displayName =
   (it.invoiceItemDisplayName && String(it.invoiceItemDisplayName).trim()) ||
   (it.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
@@ -389,7 +426,8 @@ ${styleTag}
     <div class="invoice-footer" id="source-footer" data-grandtotal="${grandTotal}" data-currency="${currencyCode}">
       <div class="footer-right">
         <div class="footer-row">
-          <span class="footer-label">VAT LBP</span>
+          <span class="footer-label">${isLLCurrency ? "VAT" : "VAT LBP"}</span>
+
           <span class="footer-label">${invoiceType === "G" ? "القيمة" : "المجموع"}</span>
           <span class="footer-value">${fmtSmart(totalWithoutVAT)}</span>
         </div>

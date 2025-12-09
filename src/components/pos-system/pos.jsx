@@ -42,6 +42,8 @@ const POSSystemPage = () => {
 const [invoiceSearch, setInvoiceSearch] = useState("");
 const [requestSearch, setRequestSearch] = useState("");
 const [editingInvoiceType, setEditingInvoiceType] = useState(null);
+
+
 const [cutMode, setCutMode] = useState(false);
 const [customerPreview, setCustomerPreview] = useState({
   customerName: "",
@@ -558,6 +560,28 @@ const handleInputChange = (index, field, value) => {
   const row = newData[index];
 
   const price = parseFloat(row.price) || 0;
+const currRaw = String(customerPreview?.currencyCode ?? "").toUpperCase().trim();
+const currNorm = currRaw.replace(/[^A-Z]/g, "");
+const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
+
+
+              
+
+  // ✅ if user changes dims/qty, go back to auto sqm
+  if (isLLCurrency && ["length", "width", "box", "sheet"].includes(field)) {
+    row._manualSqm = false;
+  }
+  // ✅ LL: allow user to type sqm directly (except unit)
+  if (isLLCurrency && field === "sqm" && String(row.type || "").toLowerCase() !== "unit") {
+    row._manualSqm = true;
+    const sqmNum = parseFloat(value) || 0;
+    row.total = (sqmNum * price).toFixed(2);
+
+    newData[index] = row;
+    setTableData(newData);
+    return;
+  }
+
 
   // ============ SQM ITEMS ============ //
   if (row.type === "sqm") {
@@ -712,6 +736,22 @@ const handleDeleteRow = () => {
     }));
    }
  };
+
+
+
+ const setCurrencyCode = (code) => {
+  const raw = String(code ?? "").toUpperCase().trim();
+  const norm = raw.replace(/[^A-Z]/g, "");
+  const finalCode = norm === "LBP" ? "LL" : norm || "USD"; // keep your UI "LL"
+
+  setCustomerPreview((prev) => ({
+    ...prev,
+    currencyCode: finalCode,
+  }));
+
+  // optional: keep preview invoiceData in sync too
+  setInvoiceData((prev) => (prev ? { ...prev, currencyCode: finalCode } : prev));
+};
 
 
   const handleKeyDown = (e) => {
@@ -1366,6 +1406,8 @@ const handleSaveInvoice = async () => {
              cutMode={cutMode}
              onToggleCutMode={() => setCutMode((prev) => !prev)}
              isEditable={isEditable}
+               currencyCode={customerPreview.currencyCode}
+  onCurrencyCodeChange={setCurrencyCode}
           />
         </div>
         <div className="pos-page-inventory-table-container">
@@ -1379,6 +1421,8 @@ const handleSaveInvoice = async () => {
             selectedRequestId={selectedRequestId}
               onReorder={handleReorder}
                cutMode={cutMode}   
+               currencyCode={customerPreview.currencyCode}
+
           />
         </div>
       </div>
