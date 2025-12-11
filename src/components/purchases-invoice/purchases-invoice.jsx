@@ -231,6 +231,7 @@ const PurchasesInvoicePage = () => {
         itemVariantId: item.dimensionId,
         quantity: item.quantity,
         sqm: item.sqm,
+        sqmOfr: item.sqmOfr,
         unitPrice: item.unitPrice,
         totalAmount: item.total,
         euroPrice: item.euroPrice,
@@ -434,6 +435,7 @@ const PurchasesInvoicePage = () => {
           quantity: i.quantity ?? 1,
           // 👇 your existing numeric fields:
           sqm: Number(i.sqm),
+          sqmOfr: Number(i.sqmOfr ?? 0), 
           unitPrice: Number(i.unitPrice),
           total: Number(i.totalAmount),
           euroPrice: Number(i.euroPrice),
@@ -471,7 +473,9 @@ const PurchasesInvoicePage = () => {
     supplierOfTax: r.supplier?.supplierName || "",
     accNbOfSupplier: r.supplier?.account?.accountNumber || "",
       }))
+      
     );
+    
   }, [fullInvoice]);
 
   const populateFromInvoice = (inv) => {
@@ -506,40 +510,44 @@ const PurchasesInvoicePage = () => {
     setShippingCostInput(Number(inv.shippingCost));
     setFinalCost(Number(inv.finalCost));
     setInvoiceType(inv.type);
-    setItems(
-      inv.items.map((i) => {
-        const v = i.itemVariant;
-        const t = v?.thickness;
-        const it = t?.item;
+   const mapped = (inv.items ?? []).map((i) => {
+  const v = i.itemVariant;
+  const t = v?.thickness;
+  const it = t?.item;
 
-        const thNum = Number(t?.thickness);
-        const thickness = Number.isFinite(thNum) ? thNum : undefined;
-        const baseName = it?.itemName || "";
-        const itemNameCombined =
-          thickness != null ? `${thickness} ملم ${baseName}` : baseName;
-        return {
-          id: i.id,
-          dimensionId: i.itemVariantId,
-          itemName: it.itemName,
-          itemNameCombined,
-          thickness,
-          type: it.type,
-          origin: v.origin,
-          length: Number(v.length),
-          width: Number(v.width),
-          sheetsPerBox: v.sheetsPerBox,
-          quantity: i.quantity ?? 1,
-          sqm: Number(i.sqm),
-          unitPrice: Number(i.unitPrice),
-          total: Number(i.totalAmount),
-          euroPrice: Number(i.euroPrice),
-          euroOfferPrice: Number(i.euroOFRPrice),
-          priceOFR: Number(i.priceOFR),
-          totalOFR: Number(i.totalOFR),
-          numberOfContainers: Number(i.numberOfContainers),
-        };
-      })
-    );
+  const thNum = Number(t?.thickness);
+  const thickness = Number.isFinite(thNum) ? thNum : undefined;
+  const baseName = it?.itemName || "";
+  const itemNameCombined =
+    thickness != null ? `${thickness} ملم ${baseName}` : baseName;
+
+  return {
+    id: i.id,
+    dimensionId: i.itemVariantId,
+    itemName: it?.itemName,
+    itemNameCombined,
+    thickness,
+    type: it?.type,
+    origin: v?.origin,
+    length: Number(v?.length),
+    width: Number(v?.width),
+    sheetsPerBox: v?.sheetsPerBox,
+    quantity: Number(i.quantity ?? 1),
+    sqm: Number(i.sqm),
+    sqmOfr: Number(i.sqmOfr ?? 0), // ✅ IMPORTANT (you were missing this)
+    unitPrice: Number(i.unitPrice),
+    total: Number(i.totalAmount),
+    euroPrice: Number(i.euroPrice),
+    euroOfferPrice: Number(i.euroOFRPrice),
+    priceOFR: Number(i.priceOFR),
+    totalOFR: Number(i.totalOFR),
+    numberOfContainers: Number(i.numberOfContainers),
+  };
+});
+
+setItems(mapped);
+  
+ 
     setUnitPriceRows(
       inv.unitPriceRows.map((r) => ({
         id: r.id,

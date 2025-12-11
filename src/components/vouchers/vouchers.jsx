@@ -9,20 +9,21 @@ const JournalVoucherPage = () => {
   const [isJournalListOpen, setIsJournalListOpen] = useState(false);
   const [journalData, setJournalData] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Header / meta
   const [date, setDate] = useState("");
-  const [type, setType] = useState("");
-  const [viewMode, setViewMode] = useState(false); // kept for compatibility
+  const [type, setType] = useState(""); // S | G | SR | RVR
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+  // Summary list search
   const [summarySeq, setSummarySeq] = useState("");
-  const [searchActive, setSearchActive] = useState(false);
   const searchDebounceRef = useRef();
-  const [kindFilter, setKindFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState(""); // "" | "INVOICE" | "RECEIVABLE" | "JV"
 
   // Edit / saved state
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [isSaved, setIsSaved] = useState(false); // true if JV exists in DB
-
   const [originalDetailIds, setOriginalDetailIds] = useState([]);
 
   // Journal list pagination
@@ -30,12 +31,30 @@ const JournalVoucherPage = () => {
   const [hasMoreSummary, setHasMoreSummary] = useState(true);
   const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
 
+  // Notifications
   const [notification, setNotification] = useState({
     visible: false,
     type: "",
     message: "",
     onConfirm: null,
   });
+
+  // Context menu
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    rowIndex: null,
+    rowRid: null,
+  });
+
+  // Account selection modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentRowIndex, setCurrentRowIndex] = useState(null);
+  const [currentRowRid, setCurrentRowRid] = useState(null);
+
+  // Active row (for highlight)
+  const [activeRowIndex, setActiveRowIndex] = useState(null);
 
   const makeRid = () =>
     `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -73,19 +92,17 @@ const JournalVoucherPage = () => {
     },
   ]);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentRowIndex, setCurrentRowIndex] = useState(null);
-  const [currentRowRid, setCurrentRowRid] = useState(null);
-  const [contextMenu, setContextMenu] = useState({
-    visible: false,
-    x: 0,
-    y: 0,
-    rowIndex: null,
-    rowRid: null,
-  });
-
-  // ---------- READ-ONLY MODE (lock UI when saved & not editing) ----------
+  // ---------- READ-ONLY MODE ----------
   const readOnlyMode = isSaved && !isEditing;
+
+  // Status pill
+  const statusLabel = !isSaved ? "New" : isEditing ? "Editing" : "Saved";
+  const statusClass =
+    !isSaved
+      ? "status-pill status-new"
+      : isEditing
+      ? "status-pill status-editing"
+      : "status-pill status-saved";
 
   // ===== Number helpers =====
   const parseNumber = (value) => {
@@ -97,14 +114,17 @@ const JournalVoucherPage = () => {
 
   const formatNumber = (value) => {
     const n = parseNumber(value);
-    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   // allow user to type freely (digits + single dot)
   const cleanNumericInput = (s = "") =>
     s.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
 
-  // For payload safety (kept)
+  // For payload safety
   const nzNumStr = (v) => {
     if (v === null || v === undefined) return "0";
     const s = String(v).trim();
@@ -125,7 +145,11 @@ const JournalVoucherPage = () => {
 
     const typ =
       entity?.entityType ||
-      (entity?.supplierId ? "supplier" : entity?.customerId ? "customer" : "account");
+      (entity?.supplierId
+        ? "supplier"
+        : entity?.customerId
+        ? "customer"
+        : "account");
 
     const number =
       entity?.accountNumber ??
@@ -149,50 +173,104 @@ const JournalVoucherPage = () => {
     return { id: numericId, type: typ, number, name };
   };
 
-  const handleAddRow = () => {
-    if (readOnlyMode) return;
-    setEntries((e) => [
-      ...e,
-      {
-        rid: makeRid(),
-        detailId: null,
-        originalAccountId: null,
-        originalCustomerId: null,
-        originalSupplierId: null,
+  // ---------- keyboard grid refs & helpers ----------
+  const inputRefs = useRef({});
+  const [pendingFocus, setPendingFocus] = useState(null); // { rowIndex, field }
 
-        accountId: null,
-        customerId: null,
-        supplierId: null,
-        accountNumber: "",
-        accountName: "",
-        currency: "",
-        debit: "",
-        debitOFR: "",
-        credit: "",
-        creditOFR: "",
-        exchangeRate: "1",
-        exchangeRateEURtoUSD: "",
-        debitUSD: "",
-        debitUSDOFR: "",
-        creditUSD: "",
-        creditUSDOFR: "",
-        debitEx: "",
-        debitExOFR: "",
-        creditEx: "",
-        creditExOFR: "",
-        description: "",
-        documentNbr: "",
-      },
-    ]);
+  const registerInputRef = (rowIndex, field) => (el) => {
+    if (!inputRefs.current[rowIndex]) inputRefs.current[rowIndex] = {};
+    if (el) {
+      inputRefs.current[rowIndex][field] = el;
+    } else if (inputRefs.current[rowIndex]) {
+      delete inputRefs.current[rowIndex][field];
+    }
   };
 
-  // ======= CORE: recalcEntry (S+USD mirrors; do NOT format while typing) =======
+  const INPUT_ORDER_BY_TYPE = {
+    S: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+    RVR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+    SR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+    G: ["documentNbr", "description", "currency", "exchangeRate", "debitOFR", "creditOFR"],
+    default: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+  };
+
+  const getInputOrder = () => {
+    const key = type || "S";
+    return INPUT_ORDER_BY_TYPE[key] || INPUT_ORDER_BY_TYPE.default;
+  };
+
+  useEffect(() => {
+    if (!pendingFocus) return;
+    const { rowIndex, field } = pendingFocus;
+
+    const el = inputRefs.current?.[rowIndex]?.[field];
+    if (el && typeof el.focus === "function") {
+      el.focus();
+      if (typeof el.select === "function") el.select();
+      setPendingFocus(null);
+      return;
+    }
+
+    const id = setTimeout(() => {
+      const el2 = inputRefs.current?.[rowIndex]?.[field];
+      if (el2 && typeof el2.focus === "function") {
+        el2.focus();
+        if (typeof el2.select === "function") el2.select();
+        setPendingFocus(null);
+      }
+    }, 0);
+
+    return () => clearTimeout(id);
+  }, [pendingFocus, entries.length]);
+
+  // ---------- ADD ROW with smart defaults ----------
+  const handleAddRow = () => {
+    if (readOnlyMode) return;
+    setEntries((prev) => {
+      const last = prev[prev.length - 1];
+      return [
+        ...prev,
+        {
+          rid: makeRid(),
+          detailId: null,
+          originalAccountId: null,
+          originalCustomerId: null,
+          originalSupplierId: null,
+
+          accountId: null,
+          customerId: null,
+          supplierId: null,
+          accountNumber: "",
+          accountName: "",
+          currency: last?.currency || "",
+          debit: "",
+          debitOFR: "",
+          credit: "",
+          creditOFR: "",
+          exchangeRate: last?.exchangeRate || "1",
+          exchangeRateEURtoUSD: last?.exchangeRateEURtoUSD || "",
+          debitUSD: "",
+          debitUSDOFR: "",
+          creditUSD: "",
+          creditUSDOFR: "",
+          debitEx: "",
+          debitExOFR: "",
+          creditEx: "",
+          creditExOFR: "",
+          description: last?.description || "",
+          documentNbr: last?.documentNbr || "",
+        },
+      ];
+    });
+  };
+
+  // ======= CORE: recalcEntry =======
   const recalcEntry = (entry) => {
     const d = parseNumber(entry.debit);
     const c = parseNumber(entry.credit);
     const r = Math.max(1, parseNumber(entry.exchangeRate || 1)); // guard
 
-    // reset computed fields (keep as numbers internally)
+    // reset computed fields
     entry.debitUSD = 0;
     entry.creditUSD = 0;
     entry.debitEx = 0;
@@ -204,13 +282,12 @@ const JournalVoucherPage = () => {
 
     if (type === "S") {
       if (entry.currency === "USD") {
-        // user types only DR/CR; mirror to everything
-        entry.debit = String(entry.debit);   // keep raw the user typed
-        entry.credit = String(entry.credit); // keep raw
-        // derived values:
+        entry.debit = String(entry.debit);
+        entry.credit = String(entry.credit);
+
         entry.debitUSD = d;
         entry.debitEx = d * r;
-        entry.debitOFR = String(entry.debit); // mirror raw so on blur it formats
+        entry.debitOFR = String(entry.debit);
         entry.debitUSDOFR = d;
         entry.debitExOFR = d * r;
 
@@ -260,6 +337,10 @@ const JournalVoucherPage = () => {
     }
 
     if (type === "SR") {
+      // OFR mirrors the base amounts
+      entry.debitOFR = String(entry.debit);
+      entry.creditOFR = String(entry.credit);
+
       const ofrD = d;
       const ofrC = c;
 
@@ -284,21 +365,71 @@ const JournalVoucherPage = () => {
         entry.debitUSDOFR = ofrD / r;
         entry.creditUSDOFR = ofrC / r;
       }
+      return;
+    }
+
+    if (type === "RVR") {
+      // opposite of G: base amounts are input, OFR stays zero
+      if (entry.currency === "USD") {
+        entry.debit = String(entry.debit);
+        entry.credit = String(entry.credit);
+
+        entry.debitUSD = d;
+        entry.debitEx = d * r;
+        entry.creditUSD = c;
+        entry.creditEx = c * r;
+
+        entry.debitOFR = "0";
+        entry.creditOFR = "0";
+        entry.debitUSDOFR = 0;
+        entry.creditUSDOFR = 0;
+        entry.debitExOFR = 0;
+        entry.creditExOFR = 0;
+      } else if (entry.currency === "LL") {
+        entry.debit = String(entry.debit);
+        entry.credit = String(entry.credit);
+
+        entry.debitEx = d;
+        entry.debitUSD = d / r;
+        entry.creditEx = c;
+        entry.creditUSD = c / r;
+
+        entry.debitOFR = "0";
+        entry.creditOFR = "0";
+        entry.debitUSDOFR = 0;
+        entry.creditUSDOFR = 0;
+        entry.debitExOFR = 0;
+        entry.creditExOFR = 0;
+      }
+      return;
     }
   };
 
   // ====== Input handling ======
   const NUM_FIELDS = new Set([
-    "debit", "credit", "debitOFR", "creditOFR",
-    "exchangeRate", "exchangeRateEURtoUSD",
-    "debitUSD", "creditUSD",
-    "debitUSDOFR", "creditUSDOFR",
-    "debitEx", "creditEx",
-    "debitExOFR", "creditExOFR",
+    "debit",
+    "credit",
+    "debitOFR",
+    "creditOFR",
+    "exchangeRate",
+    "exchangeRateEURtoUSD",
+    "debitUSD",
+    "creditUSD",
+    "debitUSDOFR",
+    "creditUSDOFR",
+    "debitEx",
+    "creditEx",
+    "debitExOFR",
+    "creditExOFR",
   ]);
 
   const EDITABLE_NUM_FIELDS = new Set([
-    "debit", "credit", "debitOFR", "creditOFR", "exchangeRate", "exchangeRateEURtoUSD"
+    "debit",
+    "credit",
+    "debitOFR",
+    "creditOFR",
+    "exchangeRate",
+    "exchangeRateEURtoUSD",
   ]);
 
   const handleInputChange = (index, field, value) => {
@@ -306,13 +437,12 @@ const JournalVoucherPage = () => {
     const updated = [...entries];
     const entry = updated[index];
 
-    // let the user type normally (raw) for editable numeric fields
-    const next =
-      EDITABLE_NUM_FIELDS.has(field) ? cleanNumericInput(value) : value;
+    const next = EDITABLE_NUM_FIELDS.has(field)
+      ? cleanNumericInput(value)
+      : value;
 
     entry[field] = next;
 
-    // Recalculate when numbers or currency change (without formatting)
     if (NUM_FIELDS.has(field) || field === "currency") {
       recalcEntry(entry);
     }
@@ -326,9 +456,64 @@ const JournalVoucherPage = () => {
     const entry = updated[index];
 
     if (EDITABLE_NUM_FIELDS.has(field)) {
-      entry[field] = formatNumber(entry[field]); // format only on blur
+      entry[field] = formatNumber(entry[field]);
     }
     setEntries(updated);
+  };
+
+  const handleCellKeyDown = (e, rowIndex, field) => {
+    if (readOnlyMode) return;
+
+    // Enter navigation
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const order = getInputOrder();
+      const idx = order.indexOf(field);
+      if (idx === -1) return;
+
+      if (idx < order.length - 1) {
+        const nextField = order[idx + 1];
+        setPendingFocus({ rowIndex, field: nextField });
+        return;
+      }
+
+      // last cell in row
+      const isLastRow = rowIndex === entries.length - 1;
+      if (isLastRow) {
+        handleAddRow();
+      }
+      setPendingFocus({ rowIndex: rowIndex + 1, field: order[0] });
+      return;
+    }
+
+    // "+" shortcut (also Shift+"=")
+    if (e.key === "+" || (e.key === "=" && e.shiftKey)) {
+      e.preventDefault();
+      if (rowIndex === 0) return;
+
+      setEntries((prev) => {
+        const copy = [...prev];
+        const prevRow = copy[rowIndex - 1];
+        if (!prevRow) return prev;
+        let cur = { ...copy[rowIndex] };
+
+        if (field === "credit") {
+          cur.credit = prevRow.debit;
+        } else if (field === "debit") {
+          cur.debit = prevRow.credit;
+        } else if (field === "creditOFR") {
+          cur.creditOFR = prevRow.debitOFR;
+        } else if (field === "debitOFR") {
+          cur.debitOFR = prevRow.creditOFR;
+        } else {
+          return prev;
+        }
+
+        recalcEntry(cur);
+        copy[rowIndex] = cur;
+        return copy;
+      });
+    }
   };
 
   const handleAccountSelection = (entity) => {
@@ -373,6 +558,7 @@ const JournalVoucherPage = () => {
   const handleRightClick = (event, rowIndex, rowRid) => {
     if (readOnlyMode) return;
     event.preventDefault();
+    setActiveRowIndex(rowIndex);
     setContextMenu({
       visible: true,
       x: event.clientX,
@@ -386,17 +572,63 @@ const JournalVoucherPage = () => {
     if (readOnlyMode) return;
     if (contextMenu.rowRid) {
       setEntries((prev) => prev.filter((r) => r.rid !== contextMenu.rowRid));
-      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
+      setContextMenu({
+        visible: false,
+        x: 0,
+        y: 0,
+        rowIndex: null,
+        rowRid: null,
+      });
       return;
     }
     if (contextMenu.rowIndex !== null) {
       setEntries((prev) => prev.filter((_, i) => i !== contextMenu.rowIndex));
-      setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
+      setContextMenu({
+        visible: false,
+        x: 0,
+        y: 0,
+        rowIndex: null,
+        rowRid: null,
+      });
     }
   };
 
+  // ---------- DUPLICATE ROW ----------
+  const handleDuplicateRow = () => {
+    if (readOnlyMode) return;
+    if (contextMenu.rowIndex == null) return;
+    setEntries((prev) => {
+      const row = prev[contextMenu.rowIndex];
+      if (!row) return prev;
+      const clone = {
+        ...row,
+        rid: makeRid(),
+        detailId: null,
+        // keep account links as current, original* are for backend logic if you need
+      };
+      return [
+        ...prev.slice(0, contextMenu.rowIndex + 1),
+        clone,
+        ...prev.slice(contextMenu.rowIndex + 1),
+      ];
+    });
+    setContextMenu({
+      visible: false,
+      x: 0,
+      y: 0,
+      rowIndex: null,
+      rowRid: null,
+    });
+  };
+
   const handleCloseContextMenu = () => {
-    setContextMenu({ visible: false, x: 0, y: 0, rowIndex: null, rowRid: null });
+    setContextMenu({
+      visible: false,
+      x: 0,
+      y: 0,
+      rowIndex: null,
+      rowRid: null,
+    });
   };
 
   // ===== Totals =====
@@ -427,22 +659,66 @@ const JournalVoucherPage = () => {
     entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
   );
 
-  
-const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  const round2 = (n) =>
+    Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
+  const isEqualBase =
+    round2(totalDebitBase) === round2(totalCreditBase) &&
+    round2(totalDebitBase) !== 0;
 
-const isEqualBase =
-  round2(totalDebitBase) === round2(totalCreditBase) && round2(totalDebitBase) !== 0;
+  const isEqualOFR =
+    round2(totalDebitOFR) === round2(totalCreditOFR) &&
+    round2(totalDebitOFR) !== 0;
 
-const isEqualOFR =
-  round2(totalDebitOFR) === round2(totalCreditOFR) && round2(totalDebitOFR) !== 0;
   const isUSDEqual = totalDebitUSD === totalCreditUSD;
   const isLLEqual = totalDebitLL === totalCreditLL;
 
+  const diffBase = round2(totalDebitBase - totalCreditBase);
+  const diffOFR = round2(totalDebitOFR - totalCreditOFR);
+
   const submitBlocked =
-    !type ||
-    !date ||
-    (type === "G" ? !isEqualOFR : !isEqualBase);
+    !type || !date || (type === "G" ? !isEqualOFR : !isEqualBase);
+
+  // ---------- BALANCE LAST ROW (Base) ----------
+  const fillBalanceOnLastRow = () => {
+    if (type === "G" || readOnlyMode) return; // G uses OFR, skip
+    setEntries((prev) => {
+      if (!prev.length) return prev;
+
+      const totalDeb = prev.reduce(
+        (sum, e) => sum + parseNumber(e.debit),
+        0
+      );
+      const totalCred = prev.reduce(
+        (sum, e) => sum + parseNumber(e.credit),
+        0
+      );
+      const diff = round2(totalDeb - totalCred);
+      if (diff === 0) return prev;
+
+      const copy = [...prev];
+      const idx = copy.length - 1;
+      const last = { ...copy[idx] };
+
+      const debitVal = parseNumber(last.debit);
+      const creditVal = parseNumber(last.credit);
+
+      // If we need more debit (diff < 0) and last debit is empty
+      if (!debitVal && diff < 0) {
+        last.debit = String(Math.abs(diff));
+      } else if (!creditVal && diff > 0) {
+        // need more credit
+        last.credit = String(Math.abs(diff));
+      } else {
+        // nothing to do, both already filled
+        return prev;
+      }
+
+      recalcEntry(last);
+      copy[idx] = last;
+      return copy;
+    });
+  };
 
   // ---------- payload builders ----------
   const buildCreatePayload = () => {
@@ -513,7 +789,6 @@ const isEqualOFR =
     };
   };
 
-  // PUT mirrors create — no detail ids
   const buildEditPayload = () => {
     const details = entries
       .filter((e) => {
@@ -572,8 +847,7 @@ const isEqualOFR =
         return { ...common, ...baseFields };
       });
 
-    const payload = { date, jvType: type, details };
-    return payload;
+    return { date, jvType: type, details };
   };
 
   // -------- CREATE (POST) --------
@@ -649,17 +923,14 @@ const isEqualOFR =
           onConfirm: null,
         });
 
-        // Stay on the saved JV in read-only mode
         if (created && created.id) {
           setEditingId(created.id);
           setIsSaved(true);
           setIsEditing(false);
-          setViewMode(true);
-          await fetchJournalVoucherById(created.id); // DB truth
+          await fetchJournalVoucherById(created.id);
         } else {
           setIsSaved(true);
           setIsEditing(false);
-          setViewMode(true);
         }
       }
     } catch (error) {
@@ -702,9 +973,7 @@ const isEqualOFR =
         });
 
         setIsEditing(false);
-        setViewMode(true);
         setIsSaved(true);
-
         await fetchJournalVoucherById(editingId);
       }
     } catch (error) {
@@ -720,24 +989,25 @@ const isEqualOFR =
   };
 
   // ====== PAGINATED fetch for the modal list ======
-const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
-  const base = `${baseUrl}/journal-vouchers/v1`;
+  const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
+    const base = `${baseUrl}/journal-vouchers/v1`;
 
-  const seq = (seqArg || "").trim();
-  const kind = (kindArg || "").trim(); // "" | "INVOICE" | "RECEIVABLE" | "JV"
+    const seq = (seqArg || "").replace(/\D+/g, "");
+    const kind = (kindArg || "").trim();
 
-  const qs = new URLSearchParams();
-  qs.set("page", String(pageArg));
-  qs.set("limit", "100");
-  if (kind) qs.set("type", kind); // ✅ backend expects ?type=
-  if (seq) qs.set("seq", seq);
+    const qs = new URLSearchParams();
+    qs.set("page", String(pageArg));
+    qs.set("limit", "100");
+    if (kind) qs.set("type", kind);
+    if (seq) qs.set("seq", seq);
 
-  const url = seq ? `${base}/search-by-seq?${qs.toString()}` : `${base}/list?${qs.toString()}`;
+    const url = seq
+      ? `${base}/search-by-seq?${qs.toString()}`
+      : `${base}/list?${qs.toString()}`;
 
-  const response = await axios.get(url);
-  return response.data;
-};
-
+    const response = await axios.get(url);
+    return response.data;
+  };
 
   useEffect(() => {
     if (isJournalListOpen) {
@@ -746,12 +1016,10 @@ const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
           setLoading(true);
           setSummaryPage(1);
           const digits = (summarySeq || "").replace(/\D+/g, "");
-const res = await fetchJournalData(1, digits, kindFilter);
+          const res = await fetchJournalData(1, digits, kindFilter);
 
           setJournalData(res.data || []);
           setHasMoreSummary(Boolean(res.hasMore));
-          setSearchActive(Boolean(digits));
-
         } catch (error) {
           setJournalData([]);
           setHasMoreSummary(false);
@@ -760,7 +1028,8 @@ const res = await fetchJournalData(1, digits, kindFilter);
         }
       })();
     }
-  }, [isJournalListOpen]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isJournalListOpen]);
 
   const handleSearchSeqChange = (val) => {
     const digits = (val || "").replace(/\D+/g, "");
@@ -771,15 +1040,13 @@ const res = await fetchJournalData(1, digits, kindFilter);
       try {
         setLoading(true);
         setSummaryPage(1);
-      const res = await fetchJournalData(1, digits, kindFilter);
+        const res = await fetchJournalData(1, digits, kindFilter);
 
         setJournalData(res.data || []);
         setHasMoreSummary(Boolean(res.hasMore));
-        setSearchActive(Boolean(digits));
       } catch (e) {
         setJournalData([]);
         setHasMoreSummary(false);
-        setSearchActive(Boolean(digits));
       } finally {
         setLoading(false);
       }
@@ -805,17 +1072,17 @@ const res = await fetchJournalData(1, digits, kindFilter);
     }
   };
 
-  // Fetch a single journal voucher by ID
   const fetchJournalVoucherById = async (id) => {
     try {
-      const { data: jv } = await axios.get(`${baseUrl}/journal-vouchers/${id}`);
+      const { data: jv } = await axios.get(
+        `${baseUrl}/journal-vouchers/${id}`
+      );
 
       setDate(jv.date);
       setType(jv.jvType);
       setEditingId(jv.id);
       setIsSaved(true);
       setIsEditing(false);
-      setViewMode(true);
 
       const rows = (jv.details || []).map((d) => {
         const entityNumber =
@@ -864,12 +1131,15 @@ const res = await fetchJournalData(1, digits, kindFilter);
       });
 
       setEntries(rows);
-      setOriginalDetailIds(rows.filter((r) => r.detailId).map((r) => r.detailId));
+      setOriginalDetailIds(
+        rows.filter((r) => r.detailId).map((r) => r.detailId)
+      );
     } catch (error) {
       setNotification({
         visible: true,
         type: "error",
-        message: "Failed to fetch journal voucher details. Please try again.",
+        message:
+          "Failed to fetch journal voucher details. Please try again.",
         onConfirm: null,
       });
     }
@@ -878,7 +1148,6 @@ const res = await fetchJournalData(1, digits, kindFilter);
   const handleView = (journal) => {
     setIsJournalListOpen(false);
     fetchJournalVoucherById(journal.id);
-    setViewMode(true);
     setIsEditing(false);
     setIsSaved(true);
   };
@@ -920,15 +1189,14 @@ const res = await fetchJournalData(1, digits, kindFilter);
     ]);
 
     setOriginalDetailIds([]);
-    setViewMode(false);
     setIsEditing(false);
     setEditingId(null);
     setCurrentRowRid(null);
     setCurrentRowIndex(null);
-    setIsSaved(false); // new JV (unsaved)
+    setIsSaved(false);
+    setActiveRowIndex(null);
   };
 
-  // start edit
   const handleStartEdit = () => {
     if (!isSaved || !editingId) {
       setNotification({
@@ -940,469 +1208,881 @@ const res = await fetchJournalData(1, digits, kindFilter);
       return;
     }
     setIsEditing(true);
-    setViewMode(false);
   };
 
-  // cancel edit (re-lock)
   const handleCancelEdit = () => {
     if (!editingId) {
       setIsEditing(false);
-      setViewMode(false);
       return;
     }
     setIsEditing(false);
-    setViewMode(true);
     setIsSaved(true);
     fetchJournalVoucherById(editingId);
   };
 
-  // Edit button disabled logic
   const editDisabled = !isSaved || isEditing;
+
+  // ---------- RENDER HELPERS ----------
+  const renderTypeSOrRVR = () => (
+    <table className="general-vouchers-table">
+      <thead>
+        <tr>
+          <th className="column-line">#</th>
+          <th className="column-account-number">Acc Nb</th>
+          <th className="column-account-name">Account Name</th>
+          <th className="column-doc-nbr">Doc</th>
+          <th className="column-description">Description</th>
+          <th className="column-currency">Curr</th>
+          <th className="column-exchange-rate">Rate</th>
+          <th className="column-debit">Debit</th>
+          <th className="column-credit">Credit</th>
+          <th className="column-debit-usd">Dr USD</th>
+          <th className="column-credit-usd">Cr USD</th>
+          <th className="column-debit-ex">Dr LL</th>
+          <th className="column-credit-ex">Cr LL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry, index) => (
+          <tr
+            key={entry.rid}
+            className={index === activeRowIndex ? "row-active" : ""}
+            onClick={() => setActiveRowIndex(index)}
+            onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
+          >
+            <td className="column-line-cell">{index + 1}</td>
+
+            <td
+              className="column-account-number-cell"
+              onClick={() => handleAccountNumberClick(entry.rid)}
+            >
+              <input
+                type="text"
+                value={entry.accountNumber}
+                placeholder="Acc Nb"
+                readOnly
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-account-number"
+              />
+            </td>
+
+            <td className="column-account-name-cell">
+              <input
+                type="text"
+                value={entry.accountName}
+                readOnly
+                disabled={readOnlyMode}
+                placeholder="Account Name"
+                className={`general-vouchers-input account-name-input ${
+                  /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
+                }`}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.documentNbr}
+                placeholder="Doc"
+                onChange={(e) =>
+                  handleInputChange(index, "documentNbr", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
+                ref={registerInputRef(index, "documentNbr")}
+                className="general-vouchers-input column-doc-nbr"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.description}
+                placeholder="Description"
+                onChange={(e) =>
+                  handleInputChange(index, "description", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
+                ref={registerInputRef(index, "description")}
+                className="general-vouchers-input column-description"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <select
+                value={entry.currency}
+                onChange={(e) =>
+                  handleInputChange(index, "currency", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
+                ref={registerInputRef(index, "currency")}
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-currency"
+              >
+                <option value="" disabled hidden>
+                  -
+                </option>
+                <option value="USD">USD</option>
+                <option value="LL">LL</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode
+                    ? formatNumber(entry.exchangeRate)
+                    : entry.exchangeRate
+                }
+                placeholder="Rate"
+                onChange={(e) =>
+                  handleInputChange(index, "exchangeRate", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "exchangeRate")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
+                ref={registerInputRef(index, "exchangeRate")}
+                className="general-vouchers-input column-exchange-rate"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.debit) : entry.debit
+                }
+                placeholder="Debit"
+                onChange={(e) =>
+                  handleInputChange(index, "debit", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "debit")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
+                ref={registerInputRef(index, "debit")}
+                className="general-vouchers-input column-debit"
+                readOnly={readOnlyMode || type === "G"}
+                disabled={readOnlyMode || type === "G"}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.credit) : entry.credit
+                }
+                placeholder="Credit"
+                onChange={(e) =>
+                  handleInputChange(index, "credit", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "credit")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
+                ref={registerInputRef(index, "credit")}
+                className="general-vouchers-input column-credit"
+                readOnly={readOnlyMode || type === "G"}
+                disabled={readOnlyMode || type === "G"}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitUSD)}
+                placeholder="Dr USD"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-usd"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditUSD)}
+                placeholder="Cr USD"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-usd"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitEx)}
+                placeholder="Dr LL"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-ex"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditEx)}
+                placeholder="Cr LL"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-ex"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  const renderTypeG = () => (
+    <table className="general-vouchers-table">
+      <thead>
+        <tr>
+          <th className="column-line">#</th>
+          <th className="column-account-number">Acc Nb</th>
+          <th className="column-account-name">Account Name</th>
+          <th className="column-doc-nbr">Doc</th>
+          <th className="column-description">Description</th>
+          <th className="column-currency">Curr</th>
+          <th className="column-exchange-rate">Rate</th>
+          <th className="column-debit-ofr">Dr OFR</th>
+          <th className="column-credit-ofr">Cr OFR</th>
+          <th className="column-debit-usd-ofr">Dr USD OFR</th>
+          <th className="column-credit-usd-ofr">Cr USD OFR</th>
+          <th className="column-debit-ex-ofr">Dr LL OFR</th>
+          <th className="column-credit-ex-ofr">Cr LL OFR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry, index) => (
+          <tr
+            key={entry.rid}
+            className={index === activeRowIndex ? "row-active" : ""}
+            onClick={() => setActiveRowIndex(index)}
+            onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
+          >
+            <td className="column-line-cell">{index + 1}</td>
+
+            <td
+              className="column-account-number-cell"
+              onClick={() => handleAccountNumberClick(entry.rid)}
+            >
+              <input
+                type="text"
+                value={entry.accountNumber}
+                placeholder="Acc Nb"
+                readOnly
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-account-number"
+              />
+            </td>
+
+            <td className="column-account-name-cell">
+              <input
+                type="text"
+                value={entry.accountName}
+                readOnly
+                disabled={readOnlyMode}
+                placeholder="Account Name"
+                className={`general-vouchers-input account-name-input ${
+                  /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
+                }`}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.documentNbr}
+                placeholder="Doc"
+                onChange={(e) =>
+                  handleInputChange(index, "documentNbr", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
+                ref={registerInputRef(index, "documentNbr")}
+                className="general-vouchers-input column-doc-nbr"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.description}
+                placeholder="Description"
+                onChange={(e) =>
+                  handleInputChange(index, "description", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
+                ref={registerInputRef(index, "description")}
+                className="general-vouchers-input column-description"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <select
+                value={entry.currency}
+                onChange={(e) =>
+                  handleInputChange(index, "currency", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
+                ref={registerInputRef(index, "currency")}
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-currency"
+              >
+                <option value="" disabled hidden>
+                  -
+                </option>
+                <option value="USD">USD</option>
+                <option value="LL">LL</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode
+                    ? formatNumber(entry.exchangeRate)
+                    : entry.exchangeRate
+                }
+                placeholder="Rate"
+                onChange={(e) =>
+                  handleInputChange(index, "exchangeRate", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "exchangeRate")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
+                ref={registerInputRef(index, "exchangeRate")}
+                className="general-vouchers-input column-exchange-rate"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.debitOFR) : entry.debitOFR
+                }
+                placeholder="Dr OFR"
+                onChange={(e) =>
+                  handleInputChange(index, "debitOFR", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "debitOFR")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "debitOFR")}
+                ref={registerInputRef(index, "debitOFR")}
+                className="general-vouchers-input column-debit-ofr"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.creditOFR) : entry.creditOFR
+                }
+                placeholder="Cr OFR"
+                onChange={(e) =>
+                  handleInputChange(index, "creditOFR", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "creditOFR")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "creditOFR")}
+                ref={registerInputRef(index, "creditOFR")}
+                className="general-vouchers-input column-credit-ofr"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitUSDOFR)}
+                placeholder="Dr USD OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-usd-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditUSDOFR)}
+                placeholder="Cr USD OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-usd-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitExOFR)}
+                placeholder="Dr LL OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-ex-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditExOFR)}
+                placeholder="Cr LL OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-ex-ofr"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  const renderTypeSR = () => (
+    <table className="general-vouchers-table">
+      <thead>
+        <tr>
+          <th className="column-line">#</th>
+          <th className="column-account-number">Acc Nb</th>
+          <th className="column-account-name">Account Name</th>
+          <th className="column-doc-nbr">Doc</th>
+          <th className="column-description">Description</th>
+          <th className="column-currency">Curr</th>
+          <th className="column-exchange-rate">Rate</th>
+          <th className="column-debit">Debit</th>
+          <th className="column-debit-ofr">Dr OFR</th>
+          <th className="column-credit">Credit</th>
+          <th className="column-credit-ofr">Cr OFR</th>
+          <th className="column-debit-usd">Dr USD</th>
+          <th className="column-debit-usd-ofr">Dr USD OFR</th>
+          <th className="column-credit-usd">Cr USD</th>
+          <th className="column-credit-usd-ofr">Cr USD OFR</th>
+          <th className="column-debit-ex">Dr LL</th>
+          <th className="column-debit-ex-ofr">Dr LL OFR</th>
+          <th className="column-credit-ex">Cr LL</th>
+          <th className="column-credit-ex-ofr">Cr LL OFR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry, index) => (
+          <tr
+            key={entry.rid}
+            className={index === activeRowIndex ? "row-active" : ""}
+            onClick={() => setActiveRowIndex(index)}
+            onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
+          >
+            <td className="column-line-cell">{index + 1}</td>
+
+            <td
+              className="column-account-number-cell"
+              onClick={() => handleAccountNumberClick(entry.rid)}
+            >
+              <input
+                type="text"
+                value={entry.accountNumber}
+                placeholder="Acc Nb"
+                readOnly
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-account-number"
+              />
+            </td>
+
+            <td className="column-account-name-cell">
+              <input
+                type="text"
+                value={entry.accountName}
+                readOnly
+                disabled={readOnlyMode}
+                placeholder="Account Name"
+                className={`general-vouchers-input account-name-input ${
+                  /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
+                }`}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.documentNbr}
+                placeholder="Doc"
+                onChange={(e) =>
+                  handleInputChange(index, "documentNbr", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
+                ref={registerInputRef(index, "documentNbr")}
+                className="general-vouchers-input column-doc-nbr"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={entry.description}
+                placeholder="Description"
+                onChange={(e) =>
+                  handleInputChange(index, "description", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
+                ref={registerInputRef(index, "description")}
+                className="general-vouchers-input column-description"
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <select
+                value={entry.currency}
+                onChange={(e) =>
+                  handleInputChange(index, "currency", e.target.value)
+                }
+                onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
+                ref={registerInputRef(index, "currency")}
+                disabled={readOnlyMode}
+                className="general-vouchers-input column-currency"
+              >
+                <option value="" disabled hidden>
+                  -
+                </option>
+                <option value="USD">USD</option>
+                <option value="LL">LL</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode
+                    ? formatNumber(entry.exchangeRate)
+                    : entry.exchangeRate
+                }
+                placeholder="Rate"
+                onChange={(e) =>
+                  handleInputChange(index, "exchangeRate", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "exchangeRate")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
+                ref={registerInputRef(index, "exchangeRate")}
+                className="general-vouchers-input column-exchange-rate"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.debit) : entry.debit
+                }
+                placeholder="Debit"
+                onChange={(e) =>
+                  handleInputChange(index, "debit", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "debit")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
+                ref={registerInputRef(index, "debit")}
+                className="general-vouchers-input column-debit"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitOFR)}
+                placeholder="Dr OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={
+                  readOnlyMode ? formatNumber(entry.credit) : entry.credit
+                }
+                placeholder="Credit"
+                onChange={(e) =>
+                  handleInputChange(index, "credit", e.target.value)
+                }
+                onBlur={() => handleInputBlur(index, "credit")}
+                onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
+                ref={registerInputRef(index, "credit")}
+                className="general-vouchers-input column-credit"
+                readOnly={readOnlyMode}
+                disabled={readOnlyMode}
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditOFR)}
+                placeholder="Cr OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitUSD)}
+                placeholder="Dr USD"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-usd"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitUSDOFR)}
+                placeholder="Dr USD OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-usd-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditUSD)}
+                placeholder="Cr USD"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-usd"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditUSDOFR)}
+                placeholder="Cr USD OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-usd-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitEx)}
+                placeholder="Dr LL"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-ex"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.debitExOFR)}
+                placeholder="Dr LL OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-debit-ex-ofr"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditEx)}
+                placeholder="Cr LL"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-ex"
+              />
+            </td>
+
+            <td>
+              <input
+                type="text"
+                value={formatNumber(entry.creditExOFR)}
+                placeholder="Cr LL OFR"
+                readOnly
+                disabled
+                className="general-vouchers-input column-credit-ex-ofr"
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <div>
       <div
-        className={`general-vouchers-container ${isJournalListOpen}`}
+        className="general-vouchers-container"
         onClick={handleCloseContextMenu}
       >
+        {/* Account picker modal */}
         <AccountSelectionModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSelect={handleAccountSelection}
         />
+
+        {/* Journal list modal */}
+        <JournalListsModal
+          isOpen={isJournalListOpen}
+          onClose={() => setIsJournalListOpen(false)}
+          journalData={journalData}
+          onView={handleView}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMoreSummary}
+          loadingMoreSummary={loadingMoreSummary}
+          searchSeq={summarySeq}
+          onSearchSeqChange={handleSearchSeqChange}
+          kindFilter={kindFilter}
+          onKindFilterChange={(val) => {
+            setKindFilter(val);
+            const digits = (summarySeq || "").replace(/\D+/g, "");
+            (async () => {
+              try {
+                setLoading(true);
+                setSummaryPage(1);
+                const res = await fetchJournalData(1, digits, val);
+                setJournalData(res.data || []);
+                setHasMoreSummary(Boolean(res.hasMore));
+              } catch (e) {
+                setJournalData([]);
+                setHasMoreSummary(false);
+              } finally {
+                setLoading(false);
+              }
+            })();
+          }}
+        />
+
+        {/* HEADER */}
         <div className="general-vouchers-header">
-          <h2 className="general-vouchers-title">Journal Voucher</h2>
-        </div>
-        <div className="general-vouchers-date-wrapper">
-          <div className="date-type">
-            <label className="general-vouchers-label">
-              Date:
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                disabled={readOnlyMode}
-                className="general-vouchers-input"
-              />
-            </label>
-            <label className="general-vouchers-label">
-              Type:
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                required
-                disabled={readOnlyMode}
-                className="general-vouchers-input"
-              >
-                <option value="" disabled hidden>
-                  Select Type
-                </option>
-                <option value="S">S</option>
-                <option value="G">G</option>
-                <option value="SR">SR</option>
-              </select>
-            </label>
+          <div className="header-left">
+            <h2 className="general-vouchers-title">Journal Voucher</h2>
+            <span className={statusClass}>{statusLabel}</span>
           </div>
-          <div>
-            <button className="new-btn" onClick={handleReset}>
-              New
-            </button>
 
-            {/* Edit */}
-            <button
-              className="edit-journal-voucher"
-              onClick={handleStartEdit}
-              disabled={editDisabled}
-              title={!isSaved ? "Open or save a voucher first" : ""}
-            >
-              Edit
-            </button>
-
-            {/* Cancel Edit */}
-            {isEditing && (
-              <button className="edit-journal-voucher" onClick={handleCancelEdit}>
-                Cancel Edit
-              </button>
-            )}
-
-            <button
-              className="open-journal-list-btn"
-              onClick={() => setIsJournalListOpen(true)}
-            >
-              Open Journal List
-            </button>
-     <JournalListsModal
-  isOpen={isJournalListOpen}
-  onClose={() => setIsJournalListOpen(false)}
-  journalData={journalData}
-  onView={handleView}
-  onLoadMore={handleLoadMore}
-  hasMore={hasMoreSummary}
-  loadingMoreSummary={loadingMoreSummary}
-  searchSeq={summarySeq}
-  onSearchSeqChange={handleSearchSeqChange}
-
-  // ✅ add these
-  kindFilter={kindFilter}
-  onKindFilterChange={(val) => {
-    setKindFilter(val);
-
-    // re-fetch page 1 with the NEW filter + current seq (debounced not needed here)
-    const digits = (summarySeq || "").replace(/\D+/g, "");
-    (async () => {
-      try {
-        setLoading(true);
-        setSummaryPage(1);
-        const res = await fetchJournalData(1, digits, val); // <-- update fetchJournalData signature
-        setJournalData(res.data || []);
-        setHasMoreSummary(Boolean(res.hasMore));
-        setSearchActive(Boolean(digits));
-      } catch (e) {
-        setJournalData([]);
-        setHasMoreSummary(false);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }}
-/>
-
-
-            {/* Submit vs Save Edit */}
-            {!isSaved && !isEditing ? (
-              <button
-                className="general-vouchers-submit-btn"
-                onClick={handleSubmit}
-                disabled={submitBlocked}
-              >
-                Submit
-              </button>
-            ) : null}
-
-            {isEditing && (
-              <button
-                className="general-vouchers-submit-btn"
-                onClick={handleSaveEdit}
-                disabled={submitBlocked}
-              >
-                Save Edit
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="general-vouchers-table-container">
-          <table className="general-vouchers-table">
-            <thead>
-              <tr>
-                <th className="column-account-number">Acc Nb</th>
-                <th className="column-account-name">Account Name</th>
-                <th className="column-currency">Currency</th>
-                <th className="column-exchange-rate">Exc Rate</th>
-
-                <th className="column-debit">Debit</th>
-                <th className="column-debit-usd">Dr USD</th>
-                <th className="column-debit-ex">Dr LL</th>
-
-                <th className="column-debit-ofr">Dr OFR</th>
-                <th className="column-debit-usd-ofr">Dr USD OFR</th>
-                <th className="column-debit-ex-ofr">Dr LL OFR</th>
-
-                <th className="column-exchange-rate-eur-usd">Exc (EUR to USD)</th>
-
-                <th className="column-credit">Credit</th>
-                <th className="column-credit-usd">Cr USD</th>
-                <th className="column-credit-ex">Cr LL</th>
-                <th className="column-credit-ofr">Cr OFR</th>
-                <th className="column-credit-usd-ofr">Cr USD OFR</th>
-                <th className="column-credit-ex-ofr">Cr LL OFR</th>
-
-                <th className="column-description">Description</th>
-                <th className="column-document-nbr">Doc Nbr</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {entries.map((entry, index) => (
-                <tr
-                  key={entry.rid}
-                  onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
+          <div className="header-right">
+            <div className="date-type">
+              <label className="general-vouchers-label">
+                Date:
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                  disabled={readOnlyMode}
+                  className="general-vouchers-input"
+                />
+              </label>
+              <label className="general-vouchers-label">
+                Type:
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  required
+                  disabled={readOnlyMode}
+                  className="general-vouchers-input"
                 >
-                  <td onClick={() => handleAccountNumberClick(entry.rid)}>
-                    <input
-                      type="text"
-                      value={entry.accountNumber}
-                      placeholder="Acc Nb"
-                      readOnly
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-account-number"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.accountName}
-                      readOnly
-                      disabled={readOnlyMode}
-                      placeholder="Account Name"
-                      className={`general-vouchers-input column-account-name ${
-                        /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
-                      }`}
-                    />
-                  </td>
-                  <td>
-                    <select
-                      value={entry.currency}
-                      onChange={(e) =>
-                        handleInputChange(index, "currency", e.target.value)
-                      }
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-currency"
-                    >
-                      <option value="" disabled hidden>
-                        Select
-                      </option>
-                      <option value="USD">USD</option>
-                      <option value="LL">LL</option>
-                      <option value="EUR">EUR</option>
-                    </select>
-                  </td>
+                  <option value="" disabled hidden>
+                    Select Type
+                  </option>
+                  <option value="S">S – Normal</option>
+                  <option value="G">G – Opening / OFR only</option>
+                  <option value="SR">SR – Revaluation</option>
+                  <option value="RVR">RVR – Reverse OFR</option>
+                </select>
+              </label>
+            </div>
 
-                  {/* Exc Rate */}
-                  <td>
-                    <input
-                      type="text"
-                      value={readOnlyMode ? formatNumber(entry.exchangeRate) : entry.exchangeRate}
-                      placeholder="Exc Rate"
-                      onChange={(e) =>
-                        handleInputChange(index, "exchangeRate", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "exchangeRate")}
-                      className="general-vouchers-input column-exchange-rate"
-                      readOnly={readOnlyMode}
-                      disabled={readOnlyMode}
-                    />
-                  </td>
+            <div className="header-actions">
+              <button className="new-btn" onClick={handleReset}>
+                New
+              </button>
 
-                  {/* Debit */}
-                  <td>
-                    <input
-                      type="text"
-                      value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
-                      placeholder="Debit"
-                      onChange={(e) =>
-                        handleInputChange(index, "debit", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "debit")}
-                      className="general-vouchers-input column-debit"
-                      readOnly={readOnlyMode || type === "G"}
-                      disabled={readOnlyMode || type === "G"}
-                    />
-                  </td>
+              <button
+                className="edit-journal-voucher"
+                onClick={handleStartEdit}
+                disabled={editDisabled}
+                title={!isSaved ? "Open or save a voucher first" : ""}
+              >
+                Edit
+              </button>
 
-                  {/* Dr USD (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitUSD)}
-                      placeholder="Debit USD"
-                      readOnly
-                      disabled
-                      className="general-vouchers-input column-debit-usd"
-                    />
-                  </td>
+              {isEditing && (
+                <button
+                  className="edit-journal-voucher"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel Edit
+                </button>
+              )}
 
-                  {/* Dr LL (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitEx)}
-                      placeholder="Debit LL"
-                      className="general-vouchers-input column-debit-ex"
-                      readOnly
-                      disabled
-                    />
-                  </td>
+              <button
+                className="open-journal-list-btn"
+                onClick={() => setIsJournalListOpen(true)}
+              >
+                Open List
+              </button>
 
-                  {/* Dr OFR */}
-                  <td>
-                    <input
-                      type="text"
-                      value={readOnlyMode ? formatNumber(entry.debitOFR) : entry.debitOFR}
-                      placeholder="Dr OFR"
-                      onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
-                      onBlur={() => handleInputBlur(index, "debitOFR")}
-                      className="general-vouchers-input column-debit-ofr"
-                      readOnly={readOnlyMode || type === "S"}
-                      disabled={readOnlyMode || type === "S"}
-                    />
-                  </td>
+              {!isSaved && !isEditing && (
+                <button
+                  className="general-vouchers-submit-btn"
+                  onClick={handleSubmit}
+                  disabled={submitBlocked}
+                >
+                  Submit
+                </button>
+              )}
 
-                  {/* Dr USD OFR (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitUSDOFR)}
-                      placeholder="Dr USD OFR"
-                      readOnly
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-debit-usd-ofr"
-                    />
-                  </td>
-
-                  {/* Dr LL OFR (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.debitExOFR)}
-                      placeholder="Dr LL OFR"
-                      readOnly
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-debit-ex-ofr"
-                    />
-                  </td>
-
-                  {/* Exc (EUR→USD) */}
-                  <td className="column-exchange-rate-eur-usd">
-                    {entry.currency === "EUR" ? (
-                      <input
-                        type="text"
-                        value={
-                          readOnlyMode
-                            ? formatNumber(entry.exchangeRateEURtoUSD)
-                            : entry.exchangeRateEURtoUSD
-                        }
-                        placeholder="Exc (EUR→USD)"
-                        onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "exchangeRateEURtoUSD",
-                            e.target.value
-                          )
-                        }
-                        onBlur={() =>
-                          handleInputBlur(index, "exchangeRateEURtoUSD")
-                        }
-                        className="general-vouchers-input"
-                        readOnly={readOnlyMode}
-                        disabled={readOnlyMode}
-                      />
-                    ) : (
-                      <div className="disabled-placeholder"></div>
-                    )}
-                  </td>
-
-                  {/* Credit */}
-                  <td>
-                    <input
-                      type="text"
-                      value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
-                      placeholder="Credit"
-                      onChange={(e) =>
-                        handleInputChange(index, "credit", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "credit")}
-                      className="general-vouchers-input column-credit"
-                      readOnly={readOnlyMode || type === "G"}
-                      disabled={readOnlyMode || type === "G"}
-                    />
-                  </td>
-
-                  {/* Cr USD (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.creditUSD)}
-                      placeholder="Credit USD"
-                      className="general-vouchers-input column-credit-usd"
-                      readOnly
-                      disabled
-                    />
-                  </td>
-
-                  {/* Cr LL (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.creditEx)}
-                      placeholder="Credit LL"
-                      readOnly
-                      className="general-vouchers-input column-credit-ex"
-                      disabled
-                    />
-                  </td>
-
-                  {/* Cr OFR */}
-                  <td>
-                    <input
-                      type="text"
-                      value={readOnlyMode ? formatNumber(entry.creditOFR) : entry.creditOFR}
-                      placeholder="Cr OFR"
-                      onChange={(e) =>
-                        handleInputChange(index, "creditOFR", e.target.value)
-                      }
-                      onBlur={() => handleInputBlur(index, "creditOFR")}
-                      className="general-vouchers-input column-credit-ofr"
-                      readOnly={readOnlyMode || type === "S"}
-                      disabled={readOnlyMode || type === "S"}
-                    />
-                  </td>
-
-                  {/* Cr USD OFR (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.creditUSDOFR)}
-                      placeholder="Cr USD OFR"
-                      readOnly
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-credit-usd-ofr"
-                    />
-                  </td>
-
-                  {/* Cr LL OFR (derived; formatted) */}
-                  <td>
-                    <input
-                      type="text"
-                      value={formatNumber(entry.creditExOFR)}
-                      placeholder="Cr LL OFR"
-                      readOnly
-                      disabled={readOnlyMode}
-                      className="general-vouchers-input column-credit-ex-ofr"
-                    />
-                  </td>
-
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.description}
-                      placeholder="Description"
-                      onChange={(e) =>
-                        handleInputChange(index, "description", e.target.value)
-                      }
-                      className="general-vouchers-input column-description"
-                      disabled={readOnlyMode}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      value={entry.documentNbr}
-                      placeholder="Doc Nbr"
-                      onChange={(e) =>
-                        handleInputChange(index, "documentNbr", e.target.value)
-                      }
-                      className="general-vouchers-input column-document-nbr"
-                      disabled={readOnlyMode}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              {isEditing && (
+                <button
+                  className="general-vouchers-submit-btn"
+                  onClick={handleSaveEdit}
+                  disabled={submitBlocked}
+                >
+                  Save
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
+        {/* TABLE AREA */}
+        <div className="general-vouchers-table-container">
+          {(!type || type === "S" || type === "RVR") && renderTypeSOrRVR()}
+          {type === "G" && renderTypeG()}
+          {type === "SR" && renderTypeSR()}
+        </div>
+
+        {/* Add row */}
         <div className="general-vouchers-add-row-container">
           <button
             className="general-vouchers-new-btn"
@@ -1414,88 +2094,175 @@ const res = await fetchJournalData(1, digits, kindFilter);
           </button>
         </div>
 
+        {/* SUMMARY */}
         <div className="general-vouchers-summary">
-          {/* Base totals row (used for S/SR) */}
+          {/* Balance helper */}
+          <div className="summary-row summary-actions-row">
+            <button
+              type="button"
+              className="balance-last-row-button"
+              onClick={fillBalanceOnLastRow}
+              disabled={readOnlyMode || type === "G"}
+            >
+              Balance last row (Base)
+            </button>
+          </div>
+
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit (Base):{" "}
-              <span className={`number ${type === "G" ? "" : isEqualBase ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  type === "G" ? "" : isEqualBase ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalDebitBase)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit (Base):{" "}
-              <span className={`number ${type === "G" ? "" : isEqualBase ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  type === "G" ? "" : isEqualBase ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalCreditBase)}
+              </span>
+            </span>
+            <span className="summary-total-txt">
+              Diff (Base):{" "}
+              <span
+                className={`number ${
+                  diffBase === 0 ? "equal" : "not-equal"
+                }`}
+              >
+                {formatNumber(diffBase)}
               </span>
             </span>
           </div>
 
-          {/* OFR totals row (used for G) */}
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit OFR:{" "}
-              <span className={`number ${type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
+              <span
+                className={`number ${
+                  type === "G"
+                    ? isEqualOFR
+                      ? "equal"
+                      : "not-equal"
+                    : ""
+                }`}
+              >
                 {formatNumber(totalDebitOFR)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit OFR:{" "}
-              <span className={`number ${type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
+              <span
+                className={`number ${
+                  type === "G"
+                    ? isEqualOFR
+                      ? "equal"
+                      : "not-equal"
+                    : ""
+                }`}
+              >
                 {formatNumber(totalCreditOFR)}
+              </span>
+            </span>
+            <span className="summary-total-txt">
+              Diff (OFR):{" "}
+              <span
+                className={`number ${
+                  diffOFR === 0 ? "equal" : "not-equal"
+                }`}
+              >
+                {formatNumber(diffOFR)}
               </span>
             </span>
           </div>
 
-          {/* Extra summaries */}
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit USD:{" "}
-              <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  isUSDEqual ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalDebitUSD)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit USD:{" "}
-              <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  isUSDEqual ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalCreditUSD)}
               </span>
             </span>
           </div>
+
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit LL:{" "}
-              <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  isLLEqual ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalDebitLL)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit LL:{" "}
-              <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
+              <span
+                className={`number ${
+                  isLLEqual ? "equal" : "not-equal"
+                }`}
+              >
                 {formatNumber(totalCreditLL)}
               </span>
             </span>
           </div>
         </div>
 
+        {/* Context menu */}
         {contextMenu.visible && !readOnlyMode && (
           <div
             className="context-menu"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
-            <button className="context-menu-item" onClick={handleDeleteRow}>
-              Delete
+            <button
+              className="context-menu-item"
+              onClick={handleDuplicateRow}
+            >
+              Duplicate row
+            </button>
+            <button
+              className="context-menu-item"
+              onClick={handleDeleteRow}
+            >
+              Delete row
             </button>
           </div>
         )}
+
+        {/* Notifications */}
         {notification.visible && (
           <NotificationModal
             type={notification.type}
             message={notification.message}
-            onClose={() => setNotification({ ...notification, visible: false })}
+            onClose={() =>
+              setNotification({ ...notification, visible: false })
+            }
             onConfirm={notification.onConfirm}
             confirmLabel="OK"
-            cancelLabel={notification.type === "warning" ? "Cancel" : null}
+            cancelLabel={
+              notification.type === "warning" ? "Cancel" : null
+            }
           />
         )}
       </div>

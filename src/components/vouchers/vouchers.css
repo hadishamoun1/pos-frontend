@@ -1,256 +1,343 @@
-/* General Container Styling */
+/* ===========================
+   General Container Styling
+   =========================== */
 .general-vouchers-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  gap: 2rem;
+  padding: 1rem 1rem 2rem;
   background: linear-gradient(135deg, #f3f8fc, #ffffff);
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   overflow-x: auto;
   min-height: 100vh;
   font-family: "Inter", sans-serif;
-  color: #333;
+  color: #1f2933;
   position: relative;
 }
 
-/* Header Styling */
+/* ===========================
+   Header Styling
+   =========================== */
 .general-vouchers-header {
-  text-align: center;
-  border-bottom: 2px solid #e6e9ef;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .general-vouchers-title {
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 800;
-  color: #007bff;
+  color: #0f4f9c;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 1.5px;
 }
 
-/* Date and Submit Button Row Styling */
-.general-vouchers-date-wrapper {
+/* Status pill */
+.status-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-new {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-editing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-saved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* ===========================
+   Date & Type
+   =========================== */
+.date-type {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 .general-vouchers-label {
   font-weight: 600;
-  font-size: 1.2rem;
-  color: #555;
+  font-size: 0.95rem;
+  color: #4b5563;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 5px;
+  gap: 0.4rem;
 }
 
 .general-vouchers-input[type="date"] {
   width: auto;
-  padding: 0.8rem 1rem;
-  font-size: 1rem;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
   background-color: #f9fafb;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-.general-vouchers-input[value="type"] {
-  width: auto;
-  padding: 0.8rem 1rem;
-  font-size: 1rem;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  background-color: #f9fafb;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .general-vouchers-input[type="date"]:focus {
-  border-color: #004085;
-  box-shadow: 0 0 5px rgba(0, 64, 133, 0.5);
+  border-color: #0f4f9c;
+  box-shadow: 0 0 0 2px rgba(15, 79, 156, 0.15);
   outline: none;
 }
 
+/* ===========================
+   Buttons
+   =========================== */
+.general-vouchers-submit-btn,
+.open-journal-list-btn,
+.edit-journal-voucher,
+.new-btn,
+.general-vouchers-new-btn {
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+}
+
+/* Main action buttons */
 .general-vouchers-submit-btn {
-  background-color: #28a745;
-  color: white;
-  font-weight: bold;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
-  margin-left: 10px;
+  background-color: #16a34a;
+  color: #ffffff;
+  padding: 0.6rem 1.3rem;
+  box-shadow: 0 5px 12px rgba(22, 163, 74, 0.2);
 }
 
+.general-vouchers-submit-btn:hover:not(:disabled) {
+  background-color: #15803d;
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.28);
+}
+
+.general-vouchers-submit-btn:disabled {
+  background-color: #9ca3af;
+  color: #f9fafb;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Secondary buttons */
 .open-journal-list-btn {
-  background-color: #02c3c3;
-  color: white;
-  font-weight: bold;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
-  margin-right: 7px;
+  background-color: #0ea5e9;
+  color: #ffffff;
+  padding: 0.55rem 1.1rem;
+  box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2);
 }
 
-.edit-journal-voucher{
-    background-color: #c3a302;
-  color: white;
-  font-weight: bold;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
-  margin-right: 7px;
-}
-
-.edit-journal-voucher:hover{
-   background-color: #9b8101;
-}
 .open-journal-list-btn:hover {
-  background-color: #009d9d;
-  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
-}
-.general-vouchers-submit-btn:hover {
-  background-color: #1e7e34;
-  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+  background-color: #0284c7;
+  box-shadow: 0 5px 14px rgba(14, 165, 233, 0.27);
 }
 
-/* Input Styling */
+.edit-journal-voucher {
+  background-color: #fbbf24;
+  color: #1f2937;
+  padding: 0.55rem 1.1rem;
+  box-shadow: 0 4px 10px rgba(251, 191, 36, 0.2);
+}
+
+.edit-journal-voucher:hover:not(:disabled) {
+  background-color: #f59e0b;
+}
+
+.edit-journal-voucher:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.new-btn {
+  background-color: #0f4f9c;
+  color: #ffffff;
+  padding: 0.55rem 1.1rem;
+  box-shadow: 0 4px 10px rgba(15, 79, 156, 0.2);
+}
+
+.new-btn:hover {
+  background-color: #0b3a74;
+  box-shadow: 0 5px 14px rgba(15, 79, 156, 0.27);
+}
+
+/* Add Row Button */
+.general-vouchers-add-row-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.75rem;
+}
+
+.general-vouchers-new-btn {
+  background-color: #0f4f9c;
+  color: white;
+  font-weight: 600;
+  padding: 0.7rem 1.6rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 5px 12px rgba(15, 79, 156, 0.25);
+  width: auto;
+}
+
+.general-vouchers-new-btn:hover {
+  background-color: #0b3a74;
+  box-shadow: 0 6px 16px rgba(15, 79, 156, 0.32);
+}
+
+/* ===========================
+   Inputs
+   =========================== */
 .general-vouchers-input {
-  width: calc(100% - 1.5rem);
-  padding: 0.7rem;
-  font-size: 1rem;
-  border: 1px solid #ced4da;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
   border-radius: 5px;
   background-color: #f9fafb;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  margin: 0 auto;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
 .general-vouchers-input:focus {
-  border-color: #004085;
+  border-color: #0f4f9c;
   outline: none;
   background-color: #ffffff;
-  box-shadow: 0 0 8px rgba(0, 64, 133, 0.5);
+  box-shadow: 0 0 0 2px rgba(15, 79, 156, 0.15);
 }
 
-/* Table Styling */
+/* Disabled / read-only styling */
+.general-vouchers-input[disabled],
+.general-vouchers-input:disabled {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  cursor: not-allowed;
+}
+
+.general-vouchers-input[readonly] {
+  background-color: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+/* Specific styles for table cells with disabled inputs */
+.general-vouchers-table td input[disabled] {
+  background-color: transparent;
+  color: #111827;
+  border: none;
+  cursor: default;
+}
+
+/* ===========================
+   View Tabs (if used)
+   =========================== */
+.jv-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  padding: 0.2rem;
+  align-self: flex-start;
+  margin-top: 0.6rem;
+}
+
+.jv-tab-button {
+  padding: 0.4rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background-color: transparent;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jv-tab-button:hover {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.jv-tab-button.active {
+  background-color: #ffffff;
+  color: #0f4f9c;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+}
+
+/* ===========================
+   Table Area
+   =========================== */
 .general-vouchers-table-container {
   flex: 1;
   overflow-x: auto;
-  max-height: calc(100vh - 475px);
+  max-height: calc(100vh - 420px);
   width: 100%;
+  margin-top: 0.5rem;
 }
 
 .general-vouchers-table {
   scroll-behavior: smooth;
-  width: 3500px;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   border-radius: 10px;
   overflow-x: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
   background: #ffffff;
 }
 
+/* Table cells */
 .general-vouchers-table th,
 .general-vouchers-table td {
-  padding: 0.9rem;
-  border: 1px solid #e9ecef;
+  padding: 0.6rem 0.45rem;
+  border: 1px solid #e5e7eb;
   text-align: center;
-  font-size: 1rem;
-  color: #555;
+  font-size: 0.85rem;
+  color: #4b5563;
   word-wrap: break-word;
   white-space: normal;
 }
 
-/* Column Widths */
-.general-vouchers-table th.column-account-number,
-.general-vouchers-table td.column-account-number {
-  width: 7%;
-}
-
-.general-vouchers-table th.column-account-name,
-.general-vouchers-table td.column-account-name {
-  width: 10%;
-}
-
-.general-vouchers-table th.column-currency,
-.general-vouchers-table td.column-currency {
-  width: 5%;
-}
-
-.general-vouchers-table th.column-exchange-rate-eur-usd,
-.general-vouchers-table td.column-exchange-rate-eur-usd {
-  width: 7%;
-}
-
-.general-vouchers-table th.column-exchange-rate,
-.general-vouchers-table td.column-exchange-rate {
-  width: 7%;
-}
-
-/* make every debit/credit column 8% wide */
-/* make every debit/credit column 8% wide */
-.general-vouchers-table th.column-debit,
-.general-vouchers-table td.column-debit,
-.general-vouchers-table th.column-credit,
-.general-vouchers-table td.column-credit,
-.general-vouchers-table th.column-debit-usd,
-.general-vouchers-table td.column-debit-usd,
-.general-vouchers-table th.column-credit-usd,
-.general-vouchers-table td.column-credit-usd,
-.general-vouchers-table th.column-debit-ofr,
-.general-vouchers-table td.column-debit-ofr,
-.general-vouchers-table th.column-credit-ofr,
-.general-vouchers-table td.column-credit-ofr,
-.general-vouchers-table th.column-debit-usd-ofr,
-.general-vouchers-table td.column-debit-usd-ofr,
-.general-vouchers-table th.column-credit-usd-ofr,
-.general-vouchers-table td.column-credit-usd-ofr,    /* ← COMMA ADDED HERE */
-.general-vouchers-table th.column-debit-ex,
-.general-vouchers-table td.column-debit-ex,
-.general-vouchers-table th.column-debit-ex-ofr,
-.general-vouchers-table td.column-debit-ex-ofr
-{
-  width: 5% !important;
-}
-
-
-/* target any th or td whose class contains “debit” or “credit” */
-.general-vouchers-table th.column-credit-ex,
-.general-vouchers-table td.column-credit-ex,
-.general-vouchers-table th.column-credit-ex-ofr,
-.general-vouchers-table td.column-credit-ex-ofr {
-  width: 6% !important;
-   /* or adjust to taste */
-}
-
-
-.general-vouchers-table th.column-description,
-.general-vouchers-table td.column-description {
-  width: 10%;
-  min-width: 250px;
-}
-
-.general-vouchers-table th.column-document-nbr,
-.general-vouchers-table td.column-document-nbr {
-  min-width: 120px;
-  max-width: 121px;
-}
-
 .general-vouchers-table th {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  background: linear-gradient(135deg, #0f4f9c, #1d4ed8);
   color: #ffffff;
   text-transform: uppercase;
-  font-weight: bold;
-  letter-spacing: 1px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .general-vouchers-table td {
@@ -258,217 +345,277 @@
 }
 
 .general-vouchers-table tr:nth-child(even) td {
-  background-color: #f1f3f5;
+  background-color: #f3f4f6;
 }
 
 .general-vouchers-table tbody tr:hover td {
-  background-color: #e2f0fb;
-  border: 1px solid #d1e7ff;
+  background-color: #e0f2fe;
+  border-color: #bfdbfe;
 }
 
-/* Add Row Button Styling */
-.general-vouchers-add-row-container {
-  display: flex;
-  justify-content: flex-start;
+/* Active row highlight */
+.row-active td {
+  background-color: #dbeafe !important;
 }
 
-.general-vouchers-new-btn {
-  background-color: #007bff;
-  color: white;
-  font-weight: bold;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(0, 64, 133, 0.2);
-  width: 10%;
-  margin-top: 20px;
+/* ===========================
+   Column widths
+   =========================== */
+.column-line {
+  width: 40px;
 }
 
-.general-vouchers-new-btn:hover {
-  background-color: #0056b3;
-  box-shadow: 0 8px 20px rgba(0, 64, 133, 0.3);
+.column-line-cell {
+  text-align: center;
+  font-weight: 600;
+  color: #6b7280;
 }
 
-/* Summary Section */
+.column-account-number,
+.column-account-number-cell {
+  width: 90px;
+}
+
+/* Account name column: fixed width, input never overflows */
+.column-account-name {
+  width: 220px;
+  max-width: 220px;
+}
+
+.column-account-name-cell {
+  width: 220px;
+  max-width: 220px;
+  overflow: hidden;
+}
+
+.account-name-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Other columns */
+.column-doc-nbr {
+  width: 80px;
+}
+
+.column-description {
+  min-width: 220px;
+}
+
+.column-currency {
+  width: 80px;
+}
+
+.column-exchange-rate {
+  width: 90px;
+}
+
+.column-debit,
+.column-credit,
+.column-debit-usd,
+.column-credit-usd,
+.column-debit-ex,
+.column-credit-ex,
+.column-debit-ofr,
+.column-credit-ofr,
+.column-debit-usd-ofr,
+.column-credit-usd-ofr,
+.column-debit-ex-ofr,
+.column-credit-ex-ofr {
+  width: 110px;
+}
+
+/* ===========================
+   Summary Section (bottom)
+   =========================== */
 .general-vouchers-summary {
   position: sticky;
   bottom: 0;
-  background: rgb(252, 252, 252);
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-  font-size: 1.2rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  font-size: 0.95rem;
   font-weight: 600;
-  border: 3px solid #007bff;
-  padding: 1rem;
+  border: 2px solid #0f4f9c;
+  padding: 0.7rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.4rem;
   z-index: 10;
+  margin-top: 0.8rem;
 }
+
+/* each logical row in the summary */
 .summary-row {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2.5rem;          /* fixed horizontal gap so columns align */
+  flex-wrap: wrap;
 }
 
-/* General text styling for Total Debit and Total Credit */
+/* row that contains the balance button */
+.summary-actions-row {
+  justify-content: flex-end;   /* push button to the right */
+  margin-bottom: 0.35rem;
+}
 
-/* Dynamic styling for numbers */
+/* each text cell in the summary */
+.summary-total-txt {
+  color: #0f4f9c;
+  min-width: 230px;           /* same width for all cells -> alignment */
+  display: flex;
+  align-items: center;
+}
+
 .summary-total-txt .number {
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
-  font-weight: bold;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.4rem;
+  font-weight: 700;
 }
 
 .summary-total-txt .number.equal {
-  color: #0980ff;
-  border: 3px solid #0980ff;
+  color: #0f766e;
+  border: 2px solid #0f766e;
+  background-color: #ecfdf5;
 }
 
 .summary-total-txt .number.not-equal {
-  color: red;
-  border: 3px solid red;
+  color: #b91c1c;
+  border: 2px solid #b91c1c;
+  background-color: #fef2f2;
 }
 
-.general-vouchers-summary span {
-  color: #0980ff;
-  font-weight: bold;
+/* Balance last row button */
+.balance-last-row-button {
+  background-color: #22c55e;
+  color: #ffffff;
+  padding: 0.45rem 1.1rem;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.22);
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
 }
 
-.disabled-input {
-  background-color: #e0e0e0;
-  color: #f3f8fc;
-  border: 1px solid #d0d5da;
+.balance-last-row-button:hover:not(:disabled) {
+  background-color: #16a34a;
+  box-shadow: 0 5px 14px rgba(22, 163, 74, 0.3);
+}
+
+.balance-last-row-button:disabled {
+  background-color: #9ca3af;
+  color: #e5e7eb;
+  box-shadow: none;
   cursor: not-allowed;
 }
-.date-type {
-  display: flex;
-  align-items: center;
-  gap: 50px;
+
+/* ===========================
+   Arabic helper
+   =========================== */
+.is-arabic {
+  direction: rtl;
+  unicode-bidi: plaintext;
+  text-align: right;
+  letter-spacing: normal;
+  font-family: "Noto Naskh Arabic", "Amiri", "Tahoma", "Arial", sans-serif;
 }
 
+/* ===========================
+   Context menu
+   =========================== */
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.3);
+  padding: 0.25rem 0;
+}
+
+.context-menu-item {
+  padding: 0.45rem 1rem;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #111827;
+}
+
+.context-menu-item:hover {
+  background-color: #e5e7eb;
+}
+
+/* ===========================
+   Modal overlay for journal list
+   =========================== */
 .journal-list-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(15, 23, 42, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
 }
 
-/* General styles for disabled inputs */
-.general-vouchers-input[disabled],
-.general-vouchers-input:disabled {
-  background-color: #f9f9f9;
-  color: #333;
-  border: 1px solid #ccc;
-  cursor: not-allowed;
-}
-
-/* Adjust text alignment for read-only inputs */
-.general-vouchers-input[readonly] {
-  background-color: #f9f9f9;
-  color: #333;
-  border: 1px solid #ccc;
-}
-
-/* Specific styles for table cells with disabled inputs */
-.general-vouchers-table td input[disabled] {
-  background-color: transparent;
-  color: #000;
-  border: none;
-  cursor: default;
-}
-.new-btn {
-  background-color: #007bff;
-  color: white;
-  font-weight: bold;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
-  margin-right: 10px;
-}
-
-.new-btn:hover {
-  background-color: #0056b3;
-  box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
-}
-
-  /* Arabic text helper */
-.is-arabic {
-  direction: rtl;          
-  unicode-bidi: plaintext;     
-  text-align: right;           
-  letter-spacing: normal;
-  font-family: "Noto Naskh Arabic", "Amiri", "Tahoma", "Arial", sans-serif;
-  font-size: 1.2rem;
-}
-
-/* Optional: make the input’s placeholder look OK in Arabic too */
-.is-arabic::placeholder {
-  direction: rtl;
-  text-align: right;
-}
-
-/* If your table cells need a bit more height for Arabic script */
-.column-account-name .is-arabic {
-  line-height: 1.4;
-}
-
-/* If you want the same look when it's "logically disabled" via a class */
-.edit-journal-voucher:disabled {
-  background: #94a3b8;
-  color: #e5e7eb;
-  opacity: 0.75;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-  pointer-events: none;
-  filter: saturate(0.6);
-  border: 1px solid rgba(148,163,184,.5);
-}
-
-/* Accessibility: visible focus ring when *not* disabled */
-
-
-
-
-/* Responsive Design */
-@media (max-width: 768px) {
+/* ===========================
+   Responsive
+   =========================== */
+@media (max-width: 900px) {
   .general-vouchers-container {
-    padding: 1.5rem;
+    padding: 0.8rem;
+  }
+
+  .general-vouchers-header {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .header-right {
+    align-items: flex-start;
+  }
+
+  .date-type {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .general-vouchers-title {
-    font-size: 2.2rem;
-    text-align: center;
+    font-size: 1.4rem;
   }
 
   .general-vouchers-table th,
   .general-vouchers-table td {
-    font-size: 1rem;
-    padding: 1rem;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.4rem;
   }
 
   .general-vouchers-summary {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 1.2rem;
+    font-size: 0.85rem;
   }
 
-  .general-vouchers-summary span {
-    margin-top: 0.8rem;
+  .summary-row {
+    gap: 1.2rem;
   }
 
-
-
-
+  .summary-total-txt {
+    min-width: 180px;
+  }
 }
