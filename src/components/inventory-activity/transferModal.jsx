@@ -1,11 +1,12 @@
-import React, { useState, useRef } from "react";
+// src/components/transfers/transferModal.jsx
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import axios from "axios";
 import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
 
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
   "JF",
@@ -18,19 +19,31 @@ const LOCATION_OPTIONS = [
   "Defects",
 ];
 
-export default function TransferModal({ isOpen, onClose }) {
+const toNum = (v, fallback = 0) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+export default function TransferModal({
+  isOpen,
+  onClose,
+  existingTransfer = null,
+  isEdit = false,
+}) {
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [details, setDetails] = useState({
     transferNumber: "",
     date: new Date().toISOString().slice(0, 10),
     type: TYPE_OPTIONS[0],
     location: LOCATION_OPTIONS[0],
   });
+
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // ✅ Extra modal for FJ target box selection
+  // FJ target box selection
   const [boxSearchOpen, setBoxSearchOpen] = useState(false);
   const [boxTargetRowIndex, setBoxTargetRowIndex] = useState(null);
 
@@ -39,7 +52,141 @@ export default function TransferModal({ isOpen, onClose }) {
     type: "",
     message: "",
   });
+
   const wrapperRef = useRef();
+
+  // editing id (works for edit opened from page OR edit from preview list inside modal)
+  const [editingId, setEditingId] = useState(existingTransfer?.id ?? null);
+  const [reloadKey, setReloadKey] = useState(0); // bump to refetch preview
+
+  const isEditing = !!editingId;
+
+  // ✅ Keys must match what search modal uses: `${variantId}-${batchId}`
+  const existingKeys = useMemo(() => {
+    const s = new Set();
+    for (const r of rows) {
+      const vid = r?.itemVariantId ?? null;
+      const bid = r?.itemBatchId ?? null;
+      if (vid && bid) s.add(`${vid}-${bid}`);
+    }
+    return s;
+  }, [rows]);
+
+  // ✅ Hydrate full transfer so itemBatchId is always available in edit mode
+  const fetchFullTransfer = async (id) => {
+    if (!id) return null;
+    const res = await axios.get(`${baseUrl}/transfers/${id}`);
+    return res.data;
+  };
+
+  // ✅ Normalize / merge itemBatchId from whichever shape we got (details vs full)
+  const mergeBatchIds = (transferLike, fullTransfer) => {
+    const fullItemsById = new Map(
+      (fullTransfer?.items || []).map((it) => [Number(it.id), it])
+    );
+
+    const mergedItems = (transferLike?.items || []).map((i) => {
+      const fullIt = fullItemsById.get(Number(i.id));
+      const itemBatchId =
+        i.itemBatchId ??
+        i.batchId ??
+        i.itemBatch?.id ??
+        fullIt?.itemBatchId ??
+        fullIt?.itemBatch?.id ??
+        null;
+
+      const itemVariantId =
+        i.itemVariantId ??
+        i.variantId ??
+        i.itemVariant?.id ??
+        fullIt?.itemVariantId ??
+        fullIt?.itemVariant?.id ??
+        null;
+
+      return { ...i, itemBatchId, itemVariantId };
+    });
+
+    return { ...(transferLike || {}), ...(fullTransfer || {}), items: mergedItems };
+  };
+
+  // Helper to load a transfer into the form + rows
+  const loadTransferIntoForm = (transfer) => {
+    if (!transfer) return;
+
+    setDetails({
+      transferNumber: transfer.transferNumber || "",
+      date: transfer.date
+        ? String(transfer.date).slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+      type: transfer.type || TYPE_OPTIONS[0],
+      location: transfer.location || LOCATION_OPTIONS[0],
+    });
+
+    const mappedRows = (transfer.items || []).map((i) => {
+      const itemBatchId =
+        i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null;
+      const itemVariantId =
+        i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? null;
+
+      return {
+        // ✅ keep ids (critical for payload + duplicate prevention)
+        itemBatchId,
+        itemVariantId,
+
+        name: i.name ?? `${i.thickness} ملم ${i.itemName}`,
+        origin: i.origin,
+        type: i.itemType ?? i.type,
+
+        length: i.length,
+        width: i.width,
+        sheetsPerBox: i.sheetsPerBox,
+
+        condition: i.condition,
+        dateReceived: i.dateReceived,
+        balanceOFR: i.balanceOFR,
+
+        quantity: i.quantity ?? 0,
+        sqm: i.sqm ?? 0,
+        price: i.price ?? 0,
+
+        // FJ target
+        toItemVariantId: i.toItemVariantId || null,
+        toBoxLabel: i.toBoxLabel || "",
+        toSheetsPerBox: i.toSheetsPerBox || null,
+      };
+    });
+
+    setRows(mappedRows);
+  };
+
+  // ✅ Prefill when opened in edit mode from TransfersPage (hydrate full transfer first)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // create mode reset
+    if (!isEdit || !existingTransfer) return;
+
+    (async () => {
+      try {
+        setEditingId(existingTransfer.id);
+
+        // existingTransfer often comes from /transfers/v1/details (display shape)
+        // so we hydrate from /transfers/:id to guarantee itemBatchId exists
+        const full = await fetchFullTransfer(existingTransfer.id);
+        const merged = mergeBatchIds(existingTransfer, full);
+        loadTransferIntoForm(merged);
+      } catch (err) {
+        console.error("Failed to hydrate transfer for edit", err);
+        const msg =
+          err.response?.data?.message ||
+          err.response?.data ||
+          err.message ||
+          "Failed to load transfer for edit.";
+        setNotif({ open: true, type: "error", message: String(msg) });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isEdit, existingTransfer]);
 
   if (!isOpen) return null;
 
@@ -52,6 +199,7 @@ export default function TransferModal({ isOpen, onClose }) {
     });
     setRows([]);
     setPreviewing(false);
+    setEditingId(null);
   };
 
   const handleDetailChange = (e) => {
@@ -59,34 +207,54 @@ export default function TransferModal({ isOpen, onClose }) {
   };
 
   const handleSelectItems = (items) => {
-    const mapped = items.map((i) => ({
-      itemBatchId: i.batchId,
-      itemVariantId: i.itemVariantId, // keep in case needed
-      name: `${i.thickness} ملم ${i.itemName}`,
-      origin: i.origin,
-      type: i.itemVariantType,
-      length: i.length,
-      width: i.width,
-      sheetsPerBox: i.sheetsPerBox,
-      condition: i.condition,
-      dateReceived: i.dateReceived,
-      balanceOFR: i.balanceOFR,
-      quantity: 0,
-      sqm: 0,
-      price: 0,
-      // FJ target box info
-      toItemVariantId: null,
-      toBoxLabel: "",
-      toSheetsPerBox: null,
-    }));
-    setRows((prev) => [...prev, ...mapped]);
+    const mapped = (items || []).map((i) => {
+      const itemBatchId = i.itemBatchId ?? i.batchId ?? null;
+      const itemVariantId = i.itemVariantId ?? i.variantId ?? null;
+
+      return {
+        itemBatchId,
+        itemVariantId,
+
+        name: `${i.thickness} ملم ${i.itemName}`,
+        origin: i.origin,
+        type: i.itemVariantType,
+
+        length: i.length,
+        width: i.width,
+        sheetsPerBox: i.sheetsPerBox,
+        condition: i.condition,
+        dateReceived: i.dateReceived,
+        balanceOFR: i.balanceOFR,
+
+        quantity: 0,
+        sqm: 0,
+        price: 0,
+
+        toItemVariantId: null,
+        toBoxLabel: "",
+        toSheetsPerBox: null,
+      };
+    });
+
+    // ✅ de-dupe by `${variantId}-${batchId}`
+    setRows((prev) => {
+      const next = [...prev];
+      for (const r of mapped) {
+        const k = r.itemVariantId && r.itemBatchId ? `${r.itemVariantId}-${r.itemBatchId}` : null;
+        if (!k) continue;
+        if (next.some((x) => `${x.itemVariantId}-${x.itemBatchId}` === k)) continue;
+        next.push(r);
+      }
+      return next;
+    });
+
     setSearchOpen(false);
   };
 
   const getDimensionDisplay = (row) => {
-    const len = Math.floor(row.length);
-    const wid = Math.floor(row.width);
-    if (row.type === "box") return `${len}x${wid}-${row.sheetsPerBox}`;
+    const len = Math.floor(toNum(row.length, 0));
+    const wid = Math.floor(toNum(row.width, 0));
+    if (row.type === "box") return `${len}x${wid}-${toNum(row.sheetsPerBox, 0)}`;
     if (row.type === "sheet") return `${len}x${wid}`;
     return `0x0`;
   };
@@ -96,25 +264,21 @@ export default function TransferModal({ isOpen, onClose }) {
       const copy = [...rs];
       const row = { ...copy[idx], [field]: value };
 
-      const len = parseFloat(row.length) || 0;
-      const wid = parseFloat(row.width) || 0;
+      const len = toNum(row.length, 0);
+      const wid = toNum(row.width, 0);
       const m2 = (len / 100) * (wid / 100);
-      const qty = parseFloat(row.quantity) || 0;
+      const qty = toNum(row.quantity, 0);
 
       if (field === "quantity") {
-        // ✅ Special case for FJ: quantity = number of boxes,
-        // and sqm is based on chosen BOX's sheetsPerBox
         if (details.location === "FJ" && row.type === "sheet") {
           if (row.toSheetsPerBox) {
-            row.sqm = (m2 * row.toSheetsPerBox * qty).toFixed(2);
+            row.sqm = (m2 * toNum(row.toSheetsPerBox, 0) * qty).toFixed(2);
           } else {
-            // user didn't choose a box yet
             row.sqm = "";
           }
         } else {
-          // normal behavior for all other locations
           if (row.type === "box") {
-            row.sqm = (m2 * row.sheetsPerBox * qty).toFixed(2);
+            row.sqm = (m2 * toNum(row.sheetsPerBox, 0) * qty).toFixed(2);
           } else if (row.type === "sheet") {
             row.sqm = (m2 * qty).toFixed(2);
           } else if (row.type === "sqm") {
@@ -132,13 +296,11 @@ export default function TransferModal({ isOpen, onClose }) {
     if (notif.type === "success") onClose();
   };
 
-  // 🔹 FJ: open the box-picker for a specific row
   const handleOpenBoxPicker = (rowIndex) => {
     setBoxTargetRowIndex(rowIndex);
     setBoxSearchOpen(true);
   };
 
-  // 🔹 FJ: when a box is chosen for a row
   const handleSelectBoxForRow = (items) => {
     const selected = items && items[0];
     if (!selected || boxTargetRowIndex == null) {
@@ -150,21 +312,19 @@ export default function TransferModal({ isOpen, onClose }) {
       const copy = [...prev];
       const row = { ...copy[boxTargetRowIndex] };
 
-      const len = parseFloat(row.length) || 0;
-      const wid = parseFloat(row.width) || 0;
+      const len = toNum(row.length, 0);
+      const wid = toNum(row.width, 0);
       const m2 = (len / 100) * (wid / 100);
-      const qty = parseFloat(row.quantity) || 0;
+      const qty = toNum(row.quantity, 0);
 
-      const sheetsPerBox = selected.sheetsPerBox || 0;
+      const sheetsPerBox = toNum(selected.sheetsPerBox, 0);
 
       row.toItemVariantId = selected.itemVariantId;
       row.toSheetsPerBox = sheetsPerBox;
-
       row.toBoxLabel = `${selected.thickness} ملم ${selected.itemName} - ${Math.floor(
-        selected.length || 0
-      )}x${Math.floor(selected.width || 0)}-${sheetsPerBox}`;
+        toNum(selected.length, 0)
+      )}x${Math.floor(toNum(selected.width, 0))}-${sheetsPerBox}`;
 
-      // recompute sqm if quantity already set
       if (details.location === "FJ" && row.type === "sheet" && qty > 0) {
         row.sqm = (m2 * sheetsPerBox * qty).toFixed(2);
       }
@@ -180,11 +340,9 @@ export default function TransferModal({ isOpen, onClose }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // ✅ Extra checks for FJ
       if (details.location === "FJ") {
-        const withQty = rows.filter((r) => Number(r.quantity) > 0);
+        const withQty = rows.filter((r) => toNum(r.quantity, 0) > 0);
 
-        // only sheet rows allowed
         const badTypes = withQty.filter((r) => r.type !== "sheet");
         if (badTypes.length > 0) {
           setNotif({
@@ -196,7 +354,6 @@ export default function TransferModal({ isOpen, onClose }) {
           return;
         }
 
-        // every row with quantity must have a chosen target box
         const missingBox = withQty.filter((r) => !r.toItemVariantId);
         if (missingBox.length > 0) {
           setNotif({
@@ -211,17 +368,21 @@ export default function TransferModal({ isOpen, onClose }) {
       }
 
       const payloadItems = rows
-        .filter((r) => Number(r.quantity) > 0)
-        .map((r) => ({
-          itemBatchId: r.itemBatchId,
-          quantity: Number(r.quantity),
-          sqm: Number(r.sqm) || 0,
-          price: Number(r.price) || 0,
-          // send target box variant for FJ
-          ...(details.location === "FJ" && r.toItemVariantId
-            ? { toItemVariantId: r.toItemVariantId }
-            : {}),
-        }));
+        .filter((r) => toNum(r.quantity, 0) > 0)
+        .map((r, idx) => {
+          if (!r.itemBatchId) {
+            throw new Error(`Row #${idx + 1} is missing itemBatchId (edit payload cannot work).`);
+          }
+          return {
+            itemBatchId: Number(r.itemBatchId),
+            quantity: toNum(r.quantity, 0),
+            sqm: toNum(r.sqm, 0),
+            price: toNum(r.price, 0),
+            ...(details.location === "FJ" && r.toItemVariantId
+              ? { toItemVariantId: Number(r.toItemVariantId) }
+              : {}),
+          };
+        });
 
       if (payloadItems.length === 0) {
         setNotif({
@@ -233,18 +394,29 @@ export default function TransferModal({ isOpen, onClose }) {
         return;
       }
 
-      await axios.post(`${baseUrl}/transfers`, {
+      const payload = {
         date: details.date,
         type: details.type,
         location: details.location,
         items: payloadItems,
-      });
+      };
 
-      setNotif({
-        open: true,
-        type: "success",
-        message: "Transfer saved successfully!",
-      });
+      if (isEditing) {
+        await axios.patch(`${baseUrl}/transfers/${editingId}`, payload);
+        setNotif({
+          open: true,
+          type: "success",
+          message: "Transfer updated successfully!",
+        });
+      } else {
+        await axios.post(`${baseUrl}/transfers`, payload);
+        setNotif({
+          open: true,
+          type: "success",
+          message: "Transfer saved successfully!",
+        });
+      }
+
       resetAll();
     } catch (err) {
       console.error("Failed to save transfer", err);
@@ -256,48 +428,87 @@ export default function TransferModal({ isOpen, onClose }) {
       setNotif({
         open: true,
         type: "error",
-        message: serverMsg,
+        message: String(serverMsg),
       });
     } finally {
       setSaving(false);
     }
   };
 
+  // ✅ Edit from the autoFetch preview INSIDE this modal:
+  // hydrate using /transfers/:id before loading so itemBatchId exists.
+  const handlePreviewEdit = async (transfer) => {
+    if (!transfer?.id) return;
+    try {
+      setSaving(true);
+      setEditingId(transfer.id);
+
+      const full = await fetchFullTransfer(transfer.id);
+      const merged = mergeBatchIds(transfer, full);
+      loadTransferIntoForm(merged);
+
+      setPreviewing(false);
+    } catch (err) {
+      console.error("Failed to open transfer for edit from preview", err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Failed to open transfer for edit.";
+      setNotif({ open: true, type: "error", message: String(msg) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePreviewDelete = async (id) => {
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to delete this transfer?")) return;
+
+    try {
+      await axios.delete(`${baseUrl}/transfers/${id}`);
+      setNotif({
+        open: true,
+        type: "success",
+        message: "Transfer deleted successfully!",
+      });
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      console.error("Failed to delete transfer from modal preview", err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data ||
+        err.message ||
+        "Delete failed — please try again.";
+      setNotif({
+        open: true,
+        type: "error",
+        message: String(msg),
+      });
+    }
+  };
+
   return (
     <>
-      <div
-        className="transfer-modal-overlay"
-        onClick={onClose}
-        ref={wrapperRef}
-      >
-        <div
-          className="transfer-modal-content"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="transfer-modal-close"
-            onClick={onClose}
-            disabled={saving}
-          >
+      <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
+        <div className="transfer-modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="transfer-modal-close" onClick={onClose} disabled={saving}>
             &times;
           </button>
 
-          <h2 className="transfer-txt">Transfer Inventory</h2>
+          <h2 className="transfer-txt">{isEditing ? "Edit Transfer" : "Transfer Inventory"}</h2>
+
           <div className="transfer-modal-header">
             <div className="transfer-action-buttons">
               <button
-                className={`btn transfer-action-btn ${
-                  !previewing ? "active" : ""
-                }`}
+                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
-                Create Transfer
+                {isEditing ? "Edit Form" : "Create Transfer"}
               </button>
               <button
-                className={`btn transfer-action-btn ${
-                  previewing ? "active" : ""
-                }`}
+                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(true)}
                 disabled={saving}
               >
@@ -308,11 +519,7 @@ export default function TransferModal({ isOpen, onClose }) {
 
           {!previewing && (
             <div className="detail-actions">
-              <button
-                className="btn transfer-reset-btn"
-                onClick={resetAll}
-                disabled={saving}
-              >
+              <button className="btn transfer-reset-btn" onClick={resetAll} disabled={saving}>
                 Reset
               </button>
               <button
@@ -320,13 +527,22 @@ export default function TransferModal({ isOpen, onClose }) {
                 onClick={handleSave}
                 disabled={saving || rows.length === 0}
               >
-                {saving ? "Saving…" : "Save"}
+                {saving ? "Saving…" : isEditing ? "Update" : "Save"}
               </button>
             </div>
           )}
 
           {previewing ? (
-            <PreviewTransferTable rows={rows} />
+            rows.length > 0 ? (
+              <PreviewTransferTable rows={rows} />
+            ) : (
+              <PreviewTransferTable
+                autoFetch
+                onEdit={handlePreviewEdit}
+                onDelete={handlePreviewDelete}
+                reloadKey={reloadKey}
+              />
+            )
           ) : (
             <div className="transfer-modal-body">
               <div className="transfer-details">
@@ -341,6 +557,7 @@ export default function TransferModal({ isOpen, onClose }) {
                     disabled={saving}
                   />
                 </label>
+
                 <label>
                   Type
                   <br />
@@ -357,6 +574,7 @@ export default function TransferModal({ isOpen, onClose }) {
                     ))}
                   </select>
                 </label>
+
                 <label>
                   Location
                   <br />
@@ -393,10 +611,7 @@ export default function TransferModal({ isOpen, onClose }) {
                       <th>Dimension</th>
                       <th>Origin</th>
                       <th>Type</th>
-                      {/* extra col for FJ */}
-                      {details.location === "FJ" && (
-                        <th className="target-box-col">Target Box</th>
-                      )}
+                      {details.location === "FJ" && <th className="target-box-col">Target Box</th>}
                       <th>Quantity</th>
                       <th>SQM</th>
                       <th>Condition</th>
@@ -404,6 +619,7 @@ export default function TransferModal({ isOpen, onClose }) {
                       <th>Item Price</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
@@ -416,37 +632,20 @@ export default function TransferModal({ isOpen, onClose }) {
                       </tr>
                     ) : (
                       rows.map((r, i) => (
-                        <tr key={i}>
+                        <tr key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.name}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.name} readOnly />
                           </td>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={getDimensionDisplay(r)}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={getDimensionDisplay(r)} readOnly />
                           </td>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.origin}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.origin} readOnly />
                           </td>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.type}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.type} readOnly />
                           </td>
 
-                          {/* FJ target box column */}
                           {details.location === "FJ" && (
                             <td className="target-box-col">
                               <button
@@ -457,11 +656,7 @@ export default function TransferModal({ isOpen, onClose }) {
                               >
                                 {r.toBoxLabel ? "Change Box" : "Choose Box"}
                               </button>
-                              {r.toBoxLabel && (
-                                <div className="transfer-box-label">
-                                  {r.toBoxLabel}
-                                </div>
-                              )}
+                              {r.toBoxLabel && <div className="transfer-box-label">{r.toBoxLabel}</div>}
                             </td>
                           )}
 
@@ -470,41 +665,29 @@ export default function TransferModal({ isOpen, onClose }) {
                               type="number"
                               className="transfer-input transfer-col-small"
                               value={r.quantity}
-                              onChange={(e) =>
-                                updateRowField(i, "quantity", e.target.value)
-                              }
+                              onChange={(e) => updateRowField(i, "quantity", e.target.value)}
                               disabled={saving}
                             />
                           </td>
+
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.sqm}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.sqm} readOnly />
                           </td>
+
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.condition || ""}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.condition || ""} readOnly />
                           </td>
+
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.dateReceived || ""}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.dateReceived || ""} readOnly />
                           </td>
+
                           <td>
                             <input
                               className="transfer-input"
                               type="number"
                               value={r.price}
-                              onChange={(e) =>
-                                updateRowField(i, "price", e.target.value)
-                              }
+                              onChange={(e) => updateRowField(i, "price", e.target.value)}
                               disabled={saving}
                             />
                           </td>
@@ -522,7 +705,7 @@ export default function TransferModal({ isOpen, onClose }) {
             isOpen={searchOpen}
             onClose={() => setSearchOpen(false)}
             onSelect={handleSelectItems}
-            existingKeys={new Set(rows.map((r) => `${r.itemBatchId}`))}
+            existingKeys={existingKeys} // ✅ correct keys now
           />
 
           {/* FJ box picker (which box to transfer TO) */}
@@ -530,7 +713,7 @@ export default function TransferModal({ isOpen, onClose }) {
             isOpen={boxSearchOpen}
             onClose={() => setBoxSearchOpen(false)}
             onSelect={handleSelectBoxForRow}
-            existingKeys={new Set()} // allow any
+            existingKeys={new Set()}
             singleSelect={true}
           />
         </div>

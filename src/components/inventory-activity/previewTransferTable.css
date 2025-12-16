@@ -88,3 +88,33 @@
   text-align: center;
   padding: 1rem;
 }
+/* Actions column */
+.transfer-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.transfer-btn-edit,
+.transfer-btn-delete {
+  border: none;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #fff;
+}
+
+.transfer-btn-edit {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+.transfer-btn-edit:hover {
+  background: linear-gradient(135deg, #1e7e34, #155724);
+}
+
+.transfer-btn-delete {
+  background: linear-gradient(135deg, #dc3545, #a71d2a);
+}
+.transfer-btn-delete:hover {
+  background: linear-gradient(135deg, #a71d2a, #79151e);
+}

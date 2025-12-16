@@ -12,7 +12,8 @@ const TransferSearchModal = ({
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSet, setSelectedSet] = useState(new Set());
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+  const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -20,7 +21,6 @@ const TransferSearchModal = ({
     axios
       .get(`${baseUrl}/items/v2/filtered-items`)
       .then((res) => {
-        // v2 shape: { page, limit, totalRows, totalPages, hasMore, data: [...] }
         setItems(res.data?.data || []);
       })
       .catch(console.error);
@@ -31,7 +31,7 @@ const TransferSearchModal = ({
 
   if (!isOpen) return null;
 
-  // v2: each entry in `items` is already a row with variant + batch + realDescription
+  // v2: each entry is already a flattened row with variant + batch + realDescription
   const rows = (items || []).map((item) => {
     const realDesc = item.realDescription || {};
 
@@ -39,6 +39,7 @@ const TransferSearchModal = ({
 
     return {
       key,
+
       // item / variant info
       itemId: item.itemId,
       itemName: item.itemName,
@@ -56,8 +57,9 @@ const TransferSearchModal = ({
       categoryName: realDesc.categoryName,
       subCategory: realDesc.subCategory,
 
-      // batch info
+      // ✅ batch info
       batchId: item.batchId,
+      itemBatchId: item.batchId, // ✅ IMPORTANT: alias used everywhere else
       condition: item.condition,
       dateReceived: item.dateReceived,
       balance: item.balance ?? null,
@@ -65,11 +67,14 @@ const TransferSearchModal = ({
     };
   });
 
-  const filtered = rows.filter(
-    (r) =>
-      r.itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.condition?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = rows.filter((r) => {
+    const s = searchTerm.toLowerCase();
+    return (
+      r.itemName?.toLowerCase().includes(s) ||
+      r.condition?.toLowerCase().includes(s) ||
+      r.origin?.toLowerCase().includes(s)
+    );
+  });
 
   const toggleSelect = (row) => {
     if (existingKeys.has(row.key)) return;
@@ -130,9 +135,7 @@ const TransferSearchModal = ({
             <tbody>
               {filtered.map((r) => {
                 const already = existingKeys.has(r.key);
-                const checked = singleSelect
-                  ? false
-                  : already || selectedSet.has(r.key);
+                const checked = singleSelect ? false : already || selectedSet.has(r.key);
 
                 return (
                   <tr key={r.key}>
