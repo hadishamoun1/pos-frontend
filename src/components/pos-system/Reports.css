@@ -1,16 +1,4 @@
-
-/* ===== Generic Reports page shell + tabs ===== */
-
-:root {
-  --rp-bg: #f6f7fb;
-  --rp-surface: #ffffff;
-  --rp-text: #0f172a;
-  --rp-muted: #6b7280;
-  --rp-primary: #2563eb;
-  --rp-border: #e5e7eb;
-  --rp-radius: 12px;
-  --rp-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
-}
+/* ===== Generic Reports page shell + tabs (no :root) ===== */
 
 .reports-page {
   display: flex;
@@ -28,14 +16,14 @@
 .reports-title {
   font-size: 22px;
   font-weight: 800;
-  color: var(--rp-text);
+  color: #0f172a;
 }
 
 /* --- Tabs --- */
 .reports-tabs {
   display: flex;
   gap: 6px;
-  border-bottom: 1px solid var(--rp-border);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .reports-tab {
@@ -44,103 +32,149 @@
   border: none;
   padding: 10px 14px;
   font-weight: 700;
-  color: var(--rp-muted);
+  color: #6b7280;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
   border-radius: 8px 8px 0 0;
 }
 
 .reports-tab:hover {
-  color: var(--rp-text);
+  color: #0f172a;
   background: #f3f4f6;
 }
 
 .reports-tab.active {
-  color: var(--rp-text);
-  border-bottom-color: var(--rp-primary);
+  color: #0f172a;
+  border-bottom-color: #2563eb;
 }
 
-/* --- Content area --- */
-.reports-content {
-  background: var(--rp-surface);
-  border: 1px solid var(--rp-border);
+/* Disabled tab */
+.reports-tab:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --- Content / Panel area --- */
+/* Your JSX uses .reports-panel, keep it styled */
+.reports-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 0 12px 12px 12px;
-  box-shadow: var(--rp-shadow);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+  padding: 16px;
+}
+
+/* If you also use .reports-content elsewhere, keep it consistent */
+.reports-content {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 12px 12px 12px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
   padding: 16px;
 }
 
 /* Utility card layout if you need sub-sections inside tabs */
 .reports-section {
   background: #fff;
-  border: 1px solid var(--rp-border);
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 16px;
-  box-shadow: var(--rp-shadow);
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
 }
 
-/* Generic buttons (you can reuse for multiple tabs) */
-.reports-btn {
-  border: 1px solid var(--rp-border);
+/* Coming soon panel (your JSX uses this) */
+.reports-coming-soon {
+  text-align: center;
+  color: #6b7280;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
+  padding: 28px 14px;
   background: #fff;
-  color: var(--rp-text);
+}
+
+/* Generic buttons */
+.reports-btn {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #0f172a;
   border-radius: 8px;
   padding: 8px 12px;
   font-weight: 600;
   cursor: pointer;
 }
-.reports-btn:hover { background: #f9fafb; }
+.reports-btn:hover {
+  background: #f9fafb;
+}
 
 .reports-btn-primary {
-  background: var(--rp-primary);
+  background: #2563eb;
   color: #fff;
-  border-color: var(--rp-primary);
+  border-color: #2563eb;
 }
-.reports-btn-primary:hover { filter: brightness(0.98); }
+.reports-btn-primary:hover {
+  filter: brightness(0.98);
+}
 
-/* Input base style for consistency across tabs */
+/* Input base style */
 .reports-input,
 .reports-select {
   appearance: none;
   width: 100%;
-  border: 1px solid var(--rp-border);
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--rp-text);
+  color: #0f172a;
   background: #fff;
   outline: none;
 }
+
 .reports-input:focus,
 .reports-select:focus {
   border-color: #c7d2fe;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-/* Tables (if you want a generic table style for other tabs) */
+/* Tables */
 .reports-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  border: 1px solid var(--rp-border);
+  border: 1px solid #e5e7eb;
 }
+
 .reports-table thead th {
   background: #f3f4f6;
   font-weight: 700;
   text-align: left;
   padding: 10px 10px;
-  border-bottom: 1px solid var(--rp-border);
+  border-bottom: 1px solid #e5e7eb;
 }
+
 .reports-table td {
   padding: 9px 10px;
-  border-top: 1px solid var(--rp-border);
+  border-top: 1px solid #e5e7eb;
 }
-.reports-table tbody tr:nth-child(even) { background: #fafafa; }
-.reports-table tbody tr:hover { background: #eef2ff; }
+
+.reports-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.reports-table tbody tr:hover {
+  background: #eef2ff;
+}
 
 /* Responsive */
 @media (max-width: 640px) {
-  .reports-title { font-size: 18px; }
-  .reports-tab { padding: 8px 10px; }
-  .reports-content { padding: 12px; }
+  .reports-title {
+    font-size: 18px;
+  }
+  .reports-tab {
+    padding: 8px 10px;
+  }
+  .reports-panel,
+  .reports-content {
+    padding: 12px;
+  }
 }

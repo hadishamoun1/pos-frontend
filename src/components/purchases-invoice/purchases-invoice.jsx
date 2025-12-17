@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect, useRef } from "react";
+
 import SupplierInput from "./SupplierInput";
 import ItemsTable from "./ItemsTable";
 import ItemModal from "./ItemModel";
@@ -14,6 +14,9 @@ import "./styles/summary.css";
 import "./styles/invoiceModel.css";
 import axios from "axios";
 import AlternativeSummarySection from "./AlternativeSummarySection";
+import NotificationModal from "../recievables/NotificationModal";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -42,7 +45,7 @@ const PurchasesInvoicePage = () => {
   const [totalChargesOFR, setTotalChargesOFR] = useState(0);
 
   const [numberOfContainers, setNumberOfContainers] = useState(0);
-  const [vatRate, setVatRate] = useState(11);
+  const [vatRate, setVatRate] = useState(0);
   const [finalCost, setFinalCost] = useState(0);
   const [showUnitPriceModal, setShowUnitPriceModal] = useState(false);
   const [status, setStatus] = useState("Pending");
@@ -53,7 +56,7 @@ const PurchasesInvoicePage = () => {
   const [selectedType, setSelectedType] = useState("");
   const [activeSummary, setActiveSummary] = useState("main");
   const [currency, setCurrency] = useState("USD");
-  const [exchangeRate, setExchangeRate] = useState(1.5);
+  const [exchangeRate, setExchangeRate] = useState(89500);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [unitPriceRows, setUnitPriceRows] = useState([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
@@ -69,29 +72,57 @@ const PurchasesInvoicePage = () => {
   const [invoiceType, setInvoiceType] = useState("S");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
   const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
+const saveLockRef = useRef(false);
+const [isSaving, setIsSaving] = useState(false);
+const queryClient = useQueryClient();
 
+const resetFields = () => {
+  const today = new Date().toISOString().slice(0, 10);
 
-  const resetFields = () => {
-    setSupplierName("");
-    setInvoiceDate(new Date().toISOString().slice(0, 10));
-    setItems([]);
-    setPotentialCost(0);
+  // 🔹 Header fields
+  setSupplierName("");
+  setSelectedSupplierId(null);
+  setInvoiceNumber("");
+  setStatus("Pending");
+  setInvoiceType("S");
+  setCurrency("USD");
+  setExchangeRate(89500);
+  setVatRate(0);
 
-    setShippingCostInput(0);
-    setNumberOfContainers(0);
-    setVatRate(0);
-    setStatus("Pending");
-    setSearchQuery("");
-    setSelectedItems([]);
-    setCurrency("USD");
-    setExchangeRate(1.5);
-    setInvoiceNumber("");
-    setFinalCost(0);
-    setInvoiceType("S");
-    setPoDate(new Date().toISOString().slice(0, 10));
-    setJvDate(new Date().toISOString().slice(0, 10));
+  // 🔹 Dates
+  setInvoiceDate(today);
+  setinputedDate(today);
+  setPoDate(today);
+  setJvDate(today);
 
-  };
+  // 🔹 Items & totals
+  setItems([]);
+  setNumberOfContainers(0);
+  setShippingCostInput(0);
+  setTotalCharges(0);
+  setPotentialCost(0);
+  setFinalCost(0);
+
+  // 🔹 Summary / alt summary & extra header
+  setActiveSummary("main");
+  setShippingLine("");
+  setEtd("");
+  setAltContainers(0);
+  setBlNumber("");
+
+  // 🔹 Unit price / modals
+  setShowUnitPriceModal(false);
+  setUnitPriceRows([]);
+  setShowItemModal(false);
+
+  // 🔹 OFR-related
+  setShippingCostComputed(0);
+  setShippingCostOFR(0);
+  setTotalChargesOFR(0);
+
+  setShowTypePopup(false);
+};
+
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
 
@@ -219,14 +250,48 @@ const PurchasesInvoicePage = () => {
     setIsEditMode(false);
   }, [selectedInvoiceId]);
 
-  const saveInvoice = async (type) => {
+
+   const [notif, setNotif] = useState({
+    open: false,
+    type: "success",
+    message: "",
+    confirmLabel: "OK",
+    cancelLabel: null,
+  });
+
+  const openNotif = (type, message, opts = {}) => {
+    setNotif({
+      open: true,
+      type,
+      message: String(message || ""),
+      confirmLabel: opts.confirmLabel ?? "OK",
+      cancelLabel: opts.cancelLabel ?? null,
+    });
+  };
+  const closeNotif = () => setNotif((p) => ({ ...p, open: false }));
+
+ const saveInvoice = async (type) => {
+    if (saveLockRef.current || isSaving) return;
+    saveLockRef.current = true;
+    setIsSaving(true);
+
+    // ✅ basic validation
+    if (!selectedSupplierId || !invoiceNumber || items.length === 0) {
+      openNotif(
+        "warning",
+        "Please fill all required fields (Supplier, Invoice Number, Items)"
+      );
+      saveLockRef.current = false;
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const supplierId = selectedSupplierId;
       const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
       const calculatedVatAmount = totalAmount * (vatRate / 100);
       const grandTotal = totalAmount + calculatedVatAmount;
 
-      // ⬇️ build enrichedItems with the four computed fields ⬇️
       const enrichedItems = items.map((item) => ({
         itemVariantId: item.dimensionId,
         quantity: item.quantity,
@@ -239,8 +304,6 @@ const PurchasesInvoicePage = () => {
         priceOFR: item.priceOFR,
         totalOFR: item.totalOFR,
         numberOfContainers: item.numberOfContainers,
-
-        // these four use the same functions your UI used:
         cfr: parseFloat(normalCfrFn(item).toFixed(6)),
         finalCost: parseFloat(normalFinalFn(item).toFixed(6)),
         cfrOFR: parseFloat(ofrCfrFn(item).toFixed(6)),
@@ -251,8 +314,8 @@ const PurchasesInvoicePage = () => {
         invoiceNumber,
         date: inputedDate,
         expectedArrivalDate: invoiceDate,
-        jvDate: jvDate,  
-        poDate: poDate,
+        jvDate,
+        poDate,
         type,
         supplierId,
         vatAmount: calculatedVatAmount.toFixed(2),
@@ -260,10 +323,10 @@ const PurchasesInvoicePage = () => {
         grandAmount: grandTotal,
         exchangeRate,
         status,
-        shippingLine: shippingLine,
-        etd: etd,
+        shippingLine,
+        etd,
         numberOfContainers: altContainers,
-        blNumber: blNumber,
+        blNumber,
         potentialCost,
         shippingCostInput,
         finalCost,
@@ -276,7 +339,7 @@ const PurchasesInvoicePage = () => {
           chargeType: row.chargeType,
           value: row.value,
           valueOFR: row.valueOFR,
-          currency: row.currency.toUpperCase(),
+          currency: row.currency?.toUpperCase(),
           valueExch: row.valueExch,
           valueExchOFR: row.valueExchOFR,
           addToItemCost: row.addToItemCost,
@@ -285,32 +348,46 @@ const PurchasesInvoicePage = () => {
           shipping: row.shipping,
         })),
       };
-      console.log(invoiceData);
+
       let res;
       if (isInvoiceSelected) {
-        // editing existing invoice
-        console.log(
-          "PUT /purchase-invoices payload:",
-          JSON.stringify(invoiceData, null, 2)
-        );
-        res = await axios.put(
-          `${baseUrl}/purchase-invoices/${selectedInvoiceId}`,
-          invoiceData
-        );
-        alert(`Invoice updated successfully: ${res.data.invoiceNumber}`);
+        res = await axios.put(`${baseUrl}/purchase-invoices/${selectedInvoiceId}`, invoiceData);
+        openNotif("success", `Invoice updated successfully: ${res.data.invoiceNumber}`);
         setIsEditMode(false);
       } else {
-        // creating new invoice
         res = await axios.post(`${baseUrl}/purchase-invoices`, invoiceData);
-        alert(`Invoice saved successfully: ${res.data.invoiceNumber}`);
+        openNotif("success", `Invoice saved successfully: ${res.data.invoiceNumber}`);
       }
-      resetFields();
-      setShowTypePopup(false);
+if (isInvoiceSelected) {
+  res = await axios.put(`${baseUrl}/purchase-invoices/${selectedInvoiceId}`, invoiceData);
+  openNotif("success", `Invoice updated successfully: ${res.data.invoiceNumber}`);
+  setIsEditMode(false);
+} else {
+  res = await axios.post(`${baseUrl}/purchase-invoices`, invoiceData);
+  openNotif("success", `Invoice saved successfully: ${res.data.invoiceNumber}`);
+}
+
+// ⬇️ add this after the above:
+await queryClient.invalidateQueries({ queryKey: ["minimal-invoices"] });
+await queryClient.invalidateQueries({ queryKey: ["invoice"] });
+
+// then your existing:
+resetFields();
+setShowTypePopup(false);
+
     } catch (err) {
       console.error("Error saving invoice", err);
-      alert("Failed to save invoice");
+      const serverMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to save invoice";
+      openNotif("error", serverMsg);
+    } finally {
+      saveLockRef.current = false;
+      setIsSaving(false);
     }
   };
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -786,19 +863,20 @@ setItems(mapped);
             {isInvoiceSelected ? (
               isEditMode ? (
                 <>
-                  <button
-                    className="save-button"
-                    onClick={() => saveInvoice(invoiceType)}
-                  >
-                    Save
-                  </button>
+          <button
+  className="save-button"
+  onClick={() => saveInvoice(invoiceType)}
+  disabled={isSaving}
+>
+  {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
+</button>
                   <button className="cancel-button" onClick={handleCancelEdit}>
                     Cancel
                   </button>
                 </>
               ) : (
                 <button
-                  className="edit-button"
+                  className="edit-purch-button"
                   onClick={() => setIsEditMode(true)}
                 >
                   Edit Invoice
@@ -820,6 +898,8 @@ setItems(mapped);
                 setSelectedInvoiceId(null);
                 setIsEditMode(false);
                 setUnitPriceRows([]);
+                  setShowUnitPriceModal(false);
+  setActiveSummary("main");
               }}
             >
               New
@@ -891,6 +971,7 @@ setItems(mapped);
                 value={currency}
                 onChange={handleCurrencyChange}
                 disabled={!canEdit}
+                className="field-compact field-currency"
               >
                 <option value="USD">USD</option>
                 <option value="EURO">EURO</option>
@@ -921,6 +1002,7 @@ setItems(mapped);
                 disabled={!canEdit}
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
+                className="field-compact field-date"
               />
             </label>
 
@@ -931,6 +1013,7 @@ setItems(mapped);
                 value={poDate}
                 onChange={(e) => setPoDate(e.target.value)}
                 disabled={!canEdit}
+                className="field-compact field-date"
               />
             </label>
 
@@ -939,7 +1022,8 @@ setItems(mapped);
               <select
                 value={invoiceType}
                 onChange={(e) => setInvoiceType(e.target.value)}
-                disabled={!canEdit}
+                className="field-compact field-type"
+                disabled={!canEdit || isInvoiceSelected}
               >
                 <option value="S">S</option>
                 <option value="G">G</option>
@@ -956,6 +1040,7 @@ setItems(mapped);
                 value={vatRate}
                 onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
                 disabled={!canEdit}
+                className="field-compact field-vat"
               />
             </label>
           </div>
@@ -1114,7 +1199,24 @@ setItems(mapped);
           )}
         </div>
       </div>
+      
+    <div className="main-container">
+      {/* ... your existing header, fields, modals, etc ... */}
+
+      {/* ✅ Notification Modal */}
+      {notif.open && (
+        <NotificationModal
+          type={notif.type}
+          message={notif.message}
+          onClose={closeNotif}
+          onConfirm={closeNotif}
+          confirmLabel={notif.confirmLabel}
+          cancelLabel={notif.cancelLabel}
+        />
+      )}
     </div>
+    </div>
+    
   );
 };
 

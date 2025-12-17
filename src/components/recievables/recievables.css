@@ -249,7 +249,7 @@
 /* 7th col: “Date” */
 .accounting-table th:nth-child(7),
 .accounting-table td:nth-child(7) {
-  width: 7%;
+  width: 9%;
 }
 
 /* 8th col: “Ref Invoice” */

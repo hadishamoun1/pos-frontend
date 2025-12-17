@@ -442,7 +442,7 @@ min-width:0;
 }
 
 input:disabled {
-  background: #353434;
+  background: #e3e3e3;
   cursor: not-allowed;
 }
 

@@ -1,277 +1,370 @@
+/* ===============================
+   Unit Price Modal (improved)
+   - cleaner layout
+   - sticky header + sticky table head
+   - better inputs/selects
+   - nicer actions + context menu
+   - responsive
+================================ */
+
 .unit-price-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 5000;
+  padding: 14px;
 }
 
 .unit-price-modal-content {
-  background: white;
-  border-radius: 10px;
-  padding: 20px;
-  width: 100%;
-  max-width: 1800px;
-  height: 90vh;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  width: min(1800px, 98vw);
+  height: min(90vh, 920px);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(226, 232, 240, 0.9);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
-.unit-price-table-container {
-  flex: 1;
-  overflow-y: auto;
-  margin-bottom: 20px;
-}
+
+/* ===== Header (sticky) ===== */
 .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  gap: 12px;
 }
 
 .modal-header h3 {
-  font-size: 1.5rem;
-  color: #333;
-}
-
-.unit-price-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-  table-layout: fixed;
-}
-
-.unit-price-table th,
-.unit-price-table td {
-  padding: 10px;
-  text-align: left;
-  border: 1px solid #ddd;
-  height: auto;
-  word-wrap: break-word;
-}
-
-.unit-price-table th {
-  background: linear-gradient(to right, #007bff, #0056b3);
-  color: white;
-  font-weight: bold;
-  white-space: normal;
-  word-wrap: break-word;
-  text-align: center;
-}
-
-.unit-price-table td input,
-.unit-price-table td select {
-  width: 100%;
-  height: 50px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-size: 1.1rem;
-}
-
-.unit-price-table td {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Close button */
+.close-button {
+  appearance: none;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #0f172a;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.close-button:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+/* ===== Table container ===== */
+.unit-price-table-container {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 12px 0;
+  background: #fbfdff;
+}
+
+/* ===== Table ===== */
+.unit-price-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden; /* keeps rounded corners */
+}
+
+/* sticky table head */
+.unit-price-table thead th {
+  position: sticky;
+  top: 0; /* sticks inside scroll container */
+  z-index: 10;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 12px 10px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  white-space: normal;
+}
+
+/* cells */
+.unit-price-table td {
+  padding: 10px 10px;
+  border-top: 1px solid #eef2f7;
   text-align: center;
   vertical-align: middle;
+  background: #ffffff;
 }
 
-.table-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+/* zebra + hover */
+.unit-price-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
 }
 
-.add-row-button,
-.save-button,
-.close-button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.unit-price-table tbody tr:hover td {
+  background: #eef6ff;
 }
 
-.add-row-button {
-  background-color: #28a745;
-  color: white;
+/* ===== Inputs / Selects ===== */
+.unit-price-table td input,
+.unit-price-table td select {
+  width: 100%;
+  height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #d6dde7;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
-.save-button {
-  background-color: #007bff;
-  color: white;
+.unit-price-table td input:focus,
+.unit-price-table td select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
-.close-button {
-  background-color: #ff4d4d;
-  color: white;
+/* disabled */
+.unit-price-table td input:disabled,
+.unit-price-table td select:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+  opacity: 1; /* keep readable */
+  -webkit-text-fill-color: #64748b;
+  box-shadow: none;
 }
+
+/* numeric fields: nicer alignment */
+.unit-price-table td input[type="number"] {
+  text-align: center;
+}
+
+/* ===== Checkbox (bigger + clean) ===== */
 .unit-price-table td input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 30px;
-  height: 30px;
-  border: 2px solid #007bff;
-  border-radius: 4px;
-  background-color: #fff;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #2563eb;
+  border-radius: 8px;
+  background: #ffffff;
   cursor: pointer;
-  display: inline-block;
-  position: relative;
-  transition: all 0.3s ease;
+  display: inline-grid;
+  place-items: center;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.unit-price-table td input[type="checkbox"]:hover {
+  transform: translateY(-1px);
+  border-color: #1d4ed8;
 }
 
 .unit-price-table td input[type="checkbox"]:checked {
-  background-color: #007bff;
-  border-color: #0056b3;
+  background: #2563eb;
+  border-color: #1d4ed8;
 }
 
 .unit-price-table td input[type="checkbox"]:checked::after {
-  content: "✔";
-  font-size: 16px;
-  color: white;
-  display: block;
-  text-align: center;
-  line-height: 1.2;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  content: "✓";
+  color: #fff;
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .unit-price-table td input[type="checkbox"]:focus {
   outline: none;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
+.unit-price-table td input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
+/* ===== Column sizing (keeps your intent, fixes wrong max-widths) ===== */
 .unit-price-table th:nth-child(1),
-.unit-price-table td:nth-child(1) {
-  width: 130px; 
-  max-width: 130px;
-}
+.unit-price-table td:nth-child(1) { width: 150px; }
+
 .unit-price-table th:nth-child(2),
-.unit-price-table td:nth-child(2) {
-  width: 150px; 
-  max-width: 150px;
-}
+.unit-price-table td:nth-child(2) { width: 260px; }
+
 .unit-price-table th:nth-child(3),
-.unit-price-table td:nth-child(3) {
-  width: 100px;
-  max-width: 100px;
-}
+.unit-price-table td:nth-child(3) { width: 110px; }
+
 .unit-price-table th:nth-child(4),
-.unit-price-table td:nth-child(4) {
-  width: 130px;
-  max-width: 130px;
-}
+.unit-price-table td:nth-child(4) { width: 140px; }
 
-
-
-/* tighten up the Currency column */
 .unit-price-table th:nth-child(5),
-.unit-price-table td:nth-child(5) {
-  width: 130px; 
-  max-width: 1300px;
-}
+.unit-price-table td:nth-child(5) { width: 140px; }
 
 .unit-price-table th:nth-child(6),
-.unit-price-table td:nth-child(6) {
-  width: 80px;
-  max-width: 80px;
-}
+.unit-price-table td:nth-child(6) { width: 110px; }
 
-
-/* tighten up the Exch. OFR (if that’s 7th) */
 .unit-price-table th:nth-child(7),
-.unit-price-table td:nth-child(7) {
-  width: 140px;
-  max-width: 140px;
-}
-
+.unit-price-table td:nth-child(7) { width: 140px; }
 
 .unit-price-table th:nth-child(8),
-.unit-price-table td:nth-child(8) {
-  width: 130px; 
-  max-width: 1300px;
-}
-
-.unit-price-table th:nth-child(11),
-.unit-price-table td:nth-child(11) {
-  width: 150px;
-  max-width: 150px;
-}
+.unit-price-table td:nth-child(8) { width: 140px; }
 
 .unit-price-table th:nth-child(9),
-.unit-price-table td:nth-child(9) {
-  width: 50px;
-  max-width: 50px;
-}
+.unit-price-table td:nth-child(9) { width: 90px; }
 
-/* make the supplier‐of‐tax dropdown narrower (10th) */
 .unit-price-table th:nth-child(10),
-.unit-price-table td:nth-child(10) {
-  width: 130px;
-  max-width: 130px;
-}
+.unit-price-table td:nth-child(10) { width: 130px; }
 
-/* shrink the Shipping checkbox column (12th) */
+.unit-price-table th:nth-child(11),
+.unit-price-table td:nth-child(11) { width: 220px; }
+
 .unit-price-table th:nth-child(12),
-.unit-price-table td:nth-child(12) {
-  width: 100px;
-  max-width: 100px;
-}
+.unit-price-table td:nth-child(12) { width: 140px; }
 
 .unit-price-table th:nth-child(13),
-.unit-price-table td:nth-child(13) {
-  width: 70px;
-  max-width: 70px;
+.unit-price-table td:nth-child(13) { width: 120px; }
+
+/* ===== Actions (sticky footer) ===== */
+.table-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
 }
 
-
-
-/* Add Row button */
-.unit-price-add-row-button {
-  padding: 0.7rem 1rem;
-  font-size: 0.9rem;
-  background-color: #029202;
-  color: #fff;
+/* Modern buttons */
+.unit-price-add-row-button,
+.unit-price-save-button {
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  font-weight: 900;
+  font-size: 14px;
+  padding: 10px 14px;
+  min-height: 42px;
+  transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
 }
 
-.unit-price-add-row-button:hover {
-  background-color: #015801;
-}
-
-.unit-price-add-row-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.unit-price-add-row-button {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
 }
 
 .unit-price-save-button {
-  padding: 0.7rem 1rem;
-  font-size: 0.9rem;
-  background-color: #004ea7;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
 }
 
+.unit-price-add-row-button:hover,
 .unit-price-save-button:hover {
-  background-color: #002c52;
+  transform: translateY(-1px);
+  filter: brightness(0.97);
 }
 
+.unit-price-add-row-button:disabled,
 .unit-price-save-button:disabled {
-  background-color: #ccc;
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+/* ===== Context menu (your class name) ===== */
+.context-menu-purchases {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  padding: 6px;
+  min-width: 160px;
+}
+
+.context-menu-purchases button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 10px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  font-weight: 800;
+  color: #b91c1c;
+}
+
+.context-menu-purchases button:hover {
+  background: rgba(185, 28, 28, 0.08);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .unit-price-modal-content {
+    width: 100%;
+    height: 92vh;
+    border-radius: 12px;
+  }
+
+  .unit-price-table-container {
+    padding: 10px 10px 0;
+  }
+
+  .table-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .unit-price-add-row-button,
+  .unit-price-save-button {
+    flex: 1;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 520px) {
+  .modal-header h3 {
+    font-size: 16px;
+  }
+
+  .unit-price-add-row-button,
+  .unit-price-save-button {
+    width: 100%;
+  }
 }

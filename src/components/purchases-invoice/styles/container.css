@@ -1,127 +1,231 @@
-/* Wrapper for the Two Containers */
+/* =========================
+   Layout: Left + Right Panels
+========================= */
+
 .main-container {
   display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
+  gap: 14px;
+  align-items: stretch;
   width: 100%;
-  margin: 0 auto;
-  padding: 0;
+  padding: 10px;
+  box-sizing: border-box;
+
+  /* ✅ if screen is small -> allow wrap */
+  flex-wrap: wrap;
 }
 
-/* Left Container (Purchase Invoice) */
+/* =========================
+   Left Panel (Purchase Invoice)
+========================= */
+
 .purchase-invoice-container {
-  flex: 3;
-  height: 91vh;
-  background-color: #f9fafb;
-  padding: 30px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  font-family: Arial, sans-serif;
+  flex: 1 1 980px;         /* ✅ grows, but can shrink */
+  min-width: 720px;        /* ✅ safe minimum (change if you want) */
+  height: calc(100vh - 40px);
+
+  background: #f9fafb;
+  border: 1px solid rgba(255, 196, 0, 0.75);
+  border-radius: 14px;
+
+  padding: 18px;
+  margin: 0;
+
   display: flex;
   flex-direction: column;
-  min-width: 1400px;
-  border: 1px solid rgb(255, 196, 0);
-  box-shadow: 0 4px 20px rgb(255, 196, 0);
-  margin: 10px;
+  box-sizing: border-box;
+
+  box-shadow: 0 10px 26px rgba(255, 196, 0, 0.20);
+  overflow: hidden; /* ✅ prevents inner sections from overflowing */
 }
 
-/* Right Container (Additional Section) */
+/* If you need scrolling inside the left page, scroll the content wrapper */
+.purchase-invoice-container > * {
+  min-width: 0;
+}
+
+/* =========================
+   Right Panel (Additional Section)
+========================= */
+
 .additional-container {
-  flex: 1;
-  height: 93vh;
-  background-color: #ffffff;
-  padding: 20px;
-  border: 1px solid rgb(0, 140, 255);
-  border-radius: 10px;
-  font-family: Arial, sans-serif;
+  flex: 0 0 380px;        /* ✅ fixed comfortable width */
+  max-width: 420px;
+  min-width: 320px;
+
+  height: calc(100vh - 40px);
+
+  background: #ffffff;
+  border: 1px solid rgba(0, 140, 255, 0.65);
+  border-radius: 14px;
+
+  padding: 14px;
+  margin: 0;
+
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 20px rgb(0, 140, 255);
-  margin: 10px;
-  overflow-y: auto; /* ✅ scroll if there are many cards */
+  box-sizing: border-box;
+
+  box-shadow: 0 10px 26px rgba(0, 140, 255, 0.14);
+
+  overflow-y: auto; /* ✅ scroll for many cards */
+  overflow-x: hidden;
 }
+
+/* =========================
+   Cards Wrapper
+========================= */
 
 .purchase-invoice-cards-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
-/* Invoice Card */
+/* =========================
+   Invoice Card
+========================= */
+
 .purchase-invoice-card {
   position: relative;
-  background: white;
-  border-radius: 12px;
-  padding: 16px 16px 16px 20px; /* extra padding left for line */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  padding: 14px 14px 14px 18px; /* left padding for accent line */
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .purchase-invoice-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0, 140, 255, 0.3);
+  transform: translateY(-2px);
+  border-color: rgba(0, 140, 255, 0.35);
+  box-shadow: 0 14px 30px rgba(0, 140, 255, 0.16);
 }
 
 /* Colored Side Line */
 .purchase-invoice-card::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 10px;
+  bottom: 10px;
   left: 0;
-  height: 100%;
-  width: 5px;
+
+  width: 6px;
+  border-radius: 14px;
   background: linear-gradient(135deg, #007bff, #0056b3);
-  border-top-left-radius: 10px;
-  border-bottom-left-radius: 10px;
 }
 
 /* Header (Invoice Number + Date) */
 .purchase-invoice-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 10px;
   margin-bottom: 8px;
 }
+
+/* Supplier Name */
 .supplier-name {
-  font-weight: bold;
-  font-size: 18px;
-  color: black;
-}
-.invoice-number {
-  font-size: 18px;
-  color: #007bff;
-  font-weight: 600;
+  font-weight: 900;
+  font-size: 16px;
+  color: #0f172a;
+
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* Invoice Number */
+.invoice-number {
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 900;
+
+  white-space: nowrap;
+}
+
+/* Body */
 .purchase-invoice-card-body {
-  margin-top: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
+
 .purchase-invoice-card-date {
-  margin-top: 12px;
-  font-size: 16px;
-  color: #888;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: rgba(15, 23, 42, 0.55);
   text-align: right;
+  white-space: nowrap;
 }
+
 /* Footer (Grand Total) */
 .purchase-invoice-card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   margin-top: 12px;
-  padding-top: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
 }
 
 .grand-total {
-  font-size: 18px;
-  font-weight: bolder;
-  color: #333;
+  font-size: 14px;
+  font-weight: 900;
+  color: #0f172a;
+  white-space: nowrap;
 }
+
+/* Title label */
 .tittle-label {
-  border-bottom: 1px solid #333;
+  font-weight: 900;
+  font-size: 14px;
+  color: #0f172a;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
   margin-bottom: 10px;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 1200px) {
+  .purchase-invoice-container {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .additional-container {
+    flex: 1 1 100%;
+    max-width: none;
+    height: auto;
+    max-height: 55vh;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-container {
+    padding: 8px;
+  }
+
+  .purchase-invoice-container,
+  .additional-container {
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .supplier-name {
+    max-width: 60%;
+  }
 }

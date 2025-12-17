@@ -1,17 +1,6 @@
 /* ===== Trial Balance (screen styles) ===== */
 
-:root {
-  --tb-bg: #0b1220;                /* page bg (if you use it) */
-  --tb-surface: #ffffff;
-  --tb-text: #0f172a;
-  --tb-muted: #6b7280;
-  --tb-primary: #2563eb;
-  --tb-border: #e5e7eb;
-  --tb-accent: #f3f4f6;
-  --tb-radius: 12px;
-  --tb-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
-}
-
+/* --- Wrapper --- */
 .tb-wrap {
   display: flex;
   flex-direction: column;
@@ -20,10 +9,10 @@
 
 /* --- Toolbar / Filters --- */
 .tb-toolbar {
-  background: var(--tb-surface);
-  border: 1px solid var(--tb-border);
-  border-radius: var(--tb-radius);
-  box-shadow: var(--tb-shadow);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
   padding: 16px;
 }
 
@@ -42,39 +31,40 @@
 }
 
 @media (max-width: 1024px) {
-  .tb-field { grid-column: span 6; }
+  .tb-field {
+    grid-column: span 6;
+  }
 }
 @media (max-width: 640px) {
-  .tb-field { grid-column: 1 / -1; }
+  .tb-field {
+    grid-column: 1 / -1;
+  }
 }
 
 .tb-field > label,
 .tb-field > span {
   font-size: 12px;
   font-weight: 600;
-  color: var(--tb-muted);
+  color: #6b7280;
 }
 
-.tb-field input[type="date"]
-{
-  border: 1px solid var(--tb-border);
+.tb-field input[type="date"] {
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--tb-text);
+  color: #0f172a;
   background: #fff;
   outline: none;
 }
 
-
 .tb-field select {
-
-width: 100%;
-  border: 1px solid var(--tb-border);
+  width: 100%;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--tb-text);
+  color: #0f172a;
   background: #fff;
   outline: none;
 }
@@ -82,7 +72,7 @@ width: 100%;
 .tb-field input[type="date"]:focus,
 .tb-field select:focus {
   border-color: #c7d2fe;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* Actions (right side) */
@@ -95,24 +85,28 @@ width: 100%;
 }
 
 .tb-btn {
-  border: 1px solid var(--tb-border);
+  border: 1px solid #e5e7eb;
   background: #fff;
-  color: var(--tb-text);
+  color: #0f172a;
   border-radius: 8px;
   padding: 8px 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
-.tb-btn:hover { background: #f9fafb; }
-
-.tb-btn-primary {
-  background: var(--tb-primary);
-  color: #fff;
-  border-color: var(--tb-primary);
+.tb-btn:hover {
+  background: #f9fafb;
 }
 
-.tb-btn-primary:hover { filter: brightness(0.98); }
+.tb-btn-primary {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.tb-btn-primary:hover {
+  filter: brightness(0.98);
+}
 
 /* --- Errors & Empty --- */
 .tb-error {
@@ -125,19 +119,19 @@ width: 100%;
 
 .tb-empty {
   text-align: center;
-  color: var(--tb-muted);
-  border: 2px dashed var(--tb-border);
-  border-radius: var(--tb-radius);
+  color: #6b7280;
+  border: 2px dashed #e5e7eb;
+  border-radius: 12px;
   padding: 28px 14px;
   background: #fff;
 }
 
 /* --- “Paper” preview area (screen only) --- */
 .tb-paper {
-  background: var(--tb-surface);
-  border: 1px solid var(--tb-border);
-  border-radius: var(--tb-radius);
-  box-shadow: var(--tb-shadow);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
   padding: 16px;
 }
 
@@ -145,7 +139,7 @@ width: 100%;
 .tb-a4 {
   margin: 0 auto;
   background: #fff;
-  border: 1px solid var(--tb-border);
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 16px;
 }
@@ -155,7 +149,7 @@ width: 100%;
   text-align: center;
   font-weight: 800;
   font-size: 20px;
-  color: var(--tb-text);
+  color: #0f172a;
   margin-bottom: 8px;
 }
 
@@ -164,7 +158,7 @@ width: 100%;
   gap: 18px 28px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: var(--tb-muted);
+  color: #6b7280;
   margin-bottom: 12px;
 }
 
@@ -173,20 +167,20 @@ width: 100%;
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
-  border: 1px solid var(--tb-border);
+  border: 1px solid #e5e7eb;
 }
 
 .tb-table thead th {
-  background: var(--tb-accent);
+  background: #f3f4f6;
   font-weight: 700;
   text-align: center;
   padding: 10px 10px;
-  border-bottom: 1px solid var(--tb-border);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .tb-table td {
   padding: 9px 10px;
-  border-top: 1px solid var(--tb-border);
+  border-top: 1px solid #e5e7eb;
   align-self: center;
 }
 
@@ -213,48 +207,46 @@ width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  /* keep on one line when there's space; wrap gracefully on small screens */
   flex-wrap: wrap;
 }
 
 .tb-label-row .tb-label {
   font-size: 15px;
   font-weight: 700;
-  color: var(--tb-muted);
+  color: #6b7280;
 }
 
 /* the small hint text inline with the label */
 .tb-hint-inline {
   font-size: 11px;
-  color: var(--tb-muted);
+  color: #6b7280;
   opacity: 0.9;
 }
 
 /* make the text input look like the date/select controls */
 .tb-field input[type="text"] {
   appearance: none;
-
-  border: 1px solid var(--tb-border);
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--tb-text);
+  color: #0f172a;
   background: #fff;
   outline: none;
 }
 
 .tb-field input[type="text"]:focus {
   border-color: #c7d2fe;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, .15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* ===== Disabled controls (selects, inputs) ===== */
 .tb-field select:disabled,
 .tb-field input:disabled {
-  opacity: 1;                           /* override UA dimming so our colors apply */
-  color: var(--tb-muted);
+  opacity: 1;
+  color: #6b7280;
   background: #f9fafb;
-  border: 1px solid var(--tb-border);
+  border: 1px solid #e5e7eb;
   cursor: not-allowed;
 }
 
@@ -273,25 +265,22 @@ width: 100%;
 /* Safari text color fix for disabled inputs */
 .tb-field input:disabled,
 .tb-field select:disabled {
-  -webkit-text-fill-color: var(--tb-muted);
+  -webkit-text-fill-color: #6b7280;
 }
 
-/* Dim the label/hint when the field contains a disabled control
-   (Works in modern Chrome/Safari; if you need broader support,
-   add a .is-disabled class to .tb-field instead.) */
+/* Dim the label/hint when the field contains a disabled control */
 .tb-field:has(:disabled) .tb-label,
 .tb-field:has(:disabled) .tb-hint-inline {
   color: #9ca3af;
 }
 
 /* --- Optional: class-based fallback if :has() isn't supported --- */
-/* Add `className="tb-field is-disabled"` from React when you disable the control */
 .tb-field.is-disabled select,
 .tb-field.is-disabled input {
   opacity: 1;
-  color: var(--tb-muted);
+  color: #6b7280;
   background: #f9fafb;
-  border-color: var(--tb-border);
+  border-color: #e5e7eb;
   cursor: not-allowed;
 }
 .tb-field.is-disabled .tb-label,
@@ -299,25 +288,26 @@ width: 100%;
   color: #9ca3af;
 }
 
-
 /* Center all table header/data cells */
 .tb-table th,
 .tb-table td {
   text-align: center;
-  vertical-align: middle; /* vertical centering */
+  vertical-align: middle;
 }
 
 /* Override the old right-aligned .num */
 .tb-table .num {
-  text-align: center; /* or remove the .num class from your JSX */
+  text-align: center;
 }
+
+/* ===== Loading overlay ===== */
 .tb-loading-overlay {
   position: fixed;
   inset: 0;
   background: rgba(255, 255, 255, 0.8);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
-  z-index: 9999;              /* above everything */
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -331,7 +321,7 @@ width: 100%;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px 18px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   font-size: 14px;
   color: #111827;
 }
@@ -341,27 +331,39 @@ width: 100%;
   height: 22px;
   border-radius: 50%;
   border: 3px solid #e5e7eb;
-  border-top-color: #3b82f6;   /* primary */
-  animation: tb-spin .8s linear infinite;
+  border-top-color: #3b82f6;
+  animation: tb-spin 0.8s linear infinite;
 }
 
 @keyframes tb-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tb-loading-text {
   font-weight: 600;
 }
 
-
-
 /* Small screens */
 @media (max-width: 640px) {
-  .tb-title { font-size: 18px; }
-  .tb-table { font-size: 13px; }
+  .tb-title {
+    font-size: 18px;
+  }
+  .tb-table {
+    font-size: 13px;
+  }
 }
 
-/* (Optional) nice scrollbar on webkit for large result sets */
-.tb-paper::-webkit-scrollbar { height: 10px; width: 10px; }
-.tb-paper::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
-.tb-paper::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+/* nice scrollbar on webkit for large result sets */
+.tb-paper::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.tb-paper::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+.tb-paper::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

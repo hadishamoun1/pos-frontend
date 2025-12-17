@@ -212,17 +212,19 @@ const AccountingPage = () => {
       return;
     }
 
-    const t = term.toLowerCase();
-    const quick = data.filter(
-      (r) =>
-        (r.customerName || "").toLowerCase().includes(t) ||
-        (r.refInvoice || "").toLowerCase().includes(t) ||
-        (r.invoiceNumber || "").toLowerCase().includes(t) ||
-        (r.comments || "").toLowerCase().includes(t) ||
-        (r.pmtType || "").toLowerCase().includes(t)
-    );
-    setFilteredData(quick);
+const norm = (v) => String(v ?? "").toLowerCase();
 
+const t = norm(term);
+const quick = data.filter(
+  (r) =>
+    norm(r.customerName).includes(t) ||
+    norm(r.refInvoice).includes(t) ||      
+    norm(r.invoiceNumber).includes(t) ||
+    norm(r.comments).includes(t) ||
+    norm(r.pmtType).includes(t)
+);
+
+setFilteredData(quick);
     if (term.length < 2) return;
 
     const timeout = setTimeout(async () => {

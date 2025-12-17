@@ -1,5 +1,11 @@
 // UnitPriceModal.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  useCallback,
+} from "react";
 import axios from "axios";
 import "./styles/unitPriceModel.css";
 
@@ -8,9 +14,9 @@ export default function UnitPriceModal({
   onClose,
   onSave,
   isEditable,
-  invoiceId,        
-  rows,               
-  onRowsChange,     
+  invoiceId,
+  rows,
+  onRowsChange,
 }) {
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -26,6 +32,9 @@ export default function UnitPriceModal({
   });
 
   const safeRows = rows ?? [];
+
+  // 🔹 ref for keyboard navigation
+  const tableRef = useRef(null);
 
   // ───────────────────────────── helpers ─────────────────────────────
   const setRows = (updater) => {
@@ -223,7 +232,11 @@ export default function UnitPriceModal({
       e.target.selectedOptions[0]?.getAttribute("data-account-number") || "";
     setRows((prev) => {
       const copy = [...(prev || [])];
-      copy[i] = { ...copy[i], accountId: +acctId || null, accountNumber: acctNumber };
+      copy[i] = {
+        ...copy[i],
+        accountId: +acctId || null,
+        accountNumber: acctNumber,
+      };
       return copy;
     });
   };
@@ -244,6 +257,37 @@ export default function UnitPriceModal({
   // Small perf: memoize suppliers map for select
   const supplierOptions = useMemo(() => suppliers || [], [suppliers]);
 
+  // 🔹 ENTER navigation across inputs & selects
+  const handleEnterNav = useCallback(
+    (e) => {
+      if (e.key !== "Enter") return;
+
+      e.preventDefault();
+
+      const root = tableRef.current;
+      if (!root) return;
+
+      const focusable = Array.from(
+        root.querySelectorAll(
+          "input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+        )
+      ).filter((el) => el.tabIndex !== -1);
+
+      const idx = focusable.indexOf(e.target);
+      if (idx === -1) return;
+
+      const next = focusable[idx + 1];
+      if (next) {
+        next.focus();
+      }
+      // If you want to loop back to the first:
+      // else if (focusable.length > 0) {
+      //   focusable[0].focus();
+      // }
+    },
+    []
+  );
+
   if (!isVisible) return null;
 
   return (
@@ -260,7 +304,10 @@ export default function UnitPriceModal({
         </div>
 
         <div className="unit-price-table-container">
-          <table className="unit-price-table">
+          <table
+            className="unit-price-table"
+            ref={tableRef} // 🔹 ref for Enter navigation
+          >
             <thead>
               <tr>
                 <th>Charge Name</th>
@@ -285,7 +332,10 @@ export default function UnitPriceModal({
                     <input
                       disabled={!isEditable}
                       value={r.chargeName || ""}
-                      onChange={(e) => handleInput(i, "chargeName", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "chargeName", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -294,7 +344,10 @@ export default function UnitPriceModal({
                     <select
                       disabled={!isEditable}
                       value={r.accountId || ""}
-                      onChange={(e) => handleAccountChange(i, e.target.value, e)}
+                      onChange={(e) =>
+                        handleAccountChange(i, e.target.value, e)
+                      }
+                      onKeyDown={handleEnterNav}
                     >
                       <option value="">Select Account</option>
                       {renderAccountOptions(accounts)}
@@ -305,7 +358,10 @@ export default function UnitPriceModal({
                     <select
                       disabled={!isEditable}
                       value={r.chargeType || "amount"}
-                      onChange={(e) => handleInput(i, "chargeType", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "chargeType", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     >
                       <option value="amount">Amount</option>
                       <option value="percent">Percent</option>
@@ -318,6 +374,7 @@ export default function UnitPriceModal({
                       type="number"
                       value={r.value ?? 0}
                       onChange={(e) => handleInput(i, "value", e.target.value)}
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -326,7 +383,10 @@ export default function UnitPriceModal({
                       disabled={!isEditable}
                       type="number"
                       value={r.valueOFR ?? 0}
-                      onChange={(e) => handleInput(i, "valueOFR", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "valueOFR", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -334,7 +394,10 @@ export default function UnitPriceModal({
                     <select
                       disabled={!isEditable}
                       value={(r.currency || "usd").toLowerCase()}
-                      onChange={(e) => handleInput(i, "currency", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "currency", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     >
                       <option value="usd">USD</option>
                       <option value="euro">Euro</option>
@@ -347,7 +410,10 @@ export default function UnitPriceModal({
                       disabled={!isEditable}
                       type="number"
                       value={r.valueExch ?? 0}
-                      onChange={(e) => handleInput(i, "valueExch", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "valueExch", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -356,7 +422,10 @@ export default function UnitPriceModal({
                       disabled={!isEditable}
                       type="number"
                       value={r.valueExchOFR ?? 0}
-                      onChange={(e) => handleInput(i, "valueExchOFR", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "valueExchOFR", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -366,6 +435,7 @@ export default function UnitPriceModal({
                       type="checkbox"
                       checked={!!r.addToItemCost}
                       onChange={() => handleToggle(i, "addToItemCost")}
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -373,7 +443,10 @@ export default function UnitPriceModal({
                     <input
                       disabled={!isEditable}
                       value={r.invoiceNbTax || ""}
-                      onChange={(e) => handleInput(i, "invoiceNbTax", e.target.value)}
+                      onChange={(e) =>
+                        handleInput(i, "invoiceNbTax", e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
 
@@ -381,7 +454,10 @@ export default function UnitPriceModal({
                     <select
                       disabled={!isEditable}
                       value={r.supplierId || ""}
-                      onChange={(e) => handleSupplierChange(i, e.target.value)}
+                      onChange={(e) =>
+                        handleSupplierChange(i, e.target.value)
+                      }
+                      onKeyDown={handleEnterNav}
                     >
                       <option value="">-- select --</option>
                       {supplierOptions.map((s) => (
@@ -393,7 +469,12 @@ export default function UnitPriceModal({
                   </td>
 
                   <td>
-                    <input readOnly value={r.accNbOfSupplier || ""} placeholder="Acct #" />
+                    <input
+                      readOnly
+                      value={r.accNbOfSupplier || ""}
+                      placeholder="Acct #"
+                      onKeyDown={handleEnterNav}
+                    />
                   </td>
 
                   <td>
@@ -402,6 +483,7 @@ export default function UnitPriceModal({
                       type="checkbox"
                       checked={!!r.shipping}
                       onChange={() => handleToggle(i, "shipping")}
+                      onKeyDown={handleEnterNav}
                     />
                   </td>
                 </tr>

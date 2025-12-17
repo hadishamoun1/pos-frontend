@@ -1,18 +1,37 @@
-/* Header Section */
+/* =========================================================
+   Page Header (Create Purchase Invoice)
+   - clean title + right actions
+   - responsive (buttons wrap nicely)
+========================================================= */
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  gap: 14px;
+
+
+  padding: 12px 14px;
+
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
 }
 
 /* Title */
 .header h2 {
-  color: #333;
-  font-size: 1.5rem;
-  font-weight: 600;
   margin: 0;
-  width: 100%;
+
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+
+  /* keeps title from pushing buttons off-screen */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Buttons Wrapper */
@@ -20,59 +39,111 @@
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  width: 100%;
+  align-items: center;
+  flex-wrap: wrap; /* ✅ allows wrap on smaller screens */
 }
 
-/* Save Button */
-.save-button {
-  padding: 12px 24px;
-  background-color: #007bff;
-  color: #fff;
+/* Shared button base (add .edit-button here) */
+.save-button,
+.new-button,
+.cancel-button,
+.edit-purch-button {
   border: none;
-  border-radius: 5px;
+  border-radius: 12px;
   cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s;
-  font-size: 1rem;
+
+  font-weight: 900;
+  font-size: 14px;
+
+  padding: 10px 16px;
+  min-height: 42px;
+
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+
+  transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease;
 }
 
-.save-button:hover {
-  background-color: #0056b3;
+.save-button:hover,
+.new-button:hover,
+.cancel-button:hover,
+.edit-purch-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.96);
 }
 
-/* New Button */
-.new-button {
-  background-color: #01b94e;
-  color: white;
-  border: 1px solid #ddd;
-  padding: 12px 24px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 1rem;
+/* ✅ Edit button style */
+.edit-purch-button {
+  background: linear-gradient(to right, #f59e0b, #d97706);
 }
 
-.new-button:hover {
-  background-color: #038f3d;
-}
-.cancel-button {
-  background-color: #e53e3e;
-  color: white; /* a strong red for “cancel” */
-  border: 1px solid #e53e3e;
-  padding: 0.5rem 1rem; /* adjust for button size */
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-.cancel-button:hover {
-  background-color: #a10000;
-  border: 1px solid #a10000;
-  color: #fff;
-}
-
-.cancel-button:disabled {
-  opacity: 0.6;
+/* Disabled (add .edit-button here) */
+.save-button:disabled,
+.new-button:disabled,
+.cancel-button:disabled,
+.edit-purch-button:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+
+
+/* Specific colors */
+.save-button {
+  background: linear-gradient(to right, #2563eb, #1d4ed8);
+}
+
+.new-button {
+  background: linear-gradient(to right, #16a34a, #15803d);
+}
+
+.cancel-button {
+  background: linear-gradient(to right, #ef4444, #b91c1c);
+}
+
+/* Disabled */
+.save-button:disabled,
+.new-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+/* Responsive (add .edit-button here too) */
+@media (max-width: 720px) {
+  .save-button,
+  .new-button,
+  .cancel-button,
+  .edit-button {
+    width: 100%;
+  }
+}
+
+  .button-container {
+    justify-content: flex-start;
+  }
+
+  .save-button,
+  .new-button,
+  .cancel-button {
+    width: 100%; /* ✅ full width buttons on mobile */
+  }
+
+  .header h2 {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
 }

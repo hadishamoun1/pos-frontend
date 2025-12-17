@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import "./styles/summary.css";
 
 const SummarySection = ({
@@ -18,13 +18,13 @@ const SummarySection = ({
   shippingCostComputed,
   computedCostPercentageForDisplay,
 
-  // ← new props:
   selectedItems,
   calculatePriceCFR,
   calculateFinalCost,
   calculatePriceCFROFR,
   calculateFinalCostOFR,
 }) => {
+  const [collapsed, setCollapsed] = useState(false);
 
   // ✅ Helper: pick the best thickness on the row
   const getThickness = (it) => {
@@ -42,7 +42,6 @@ const SummarySection = ({
 
   // ✅ Helper: label with thickness if available
   const displayItemLabel = (it) => {
-    // if the parent already passed a combined label, honor it
     if (typeof it?.itemNameCombined === "string" && it.itemNameCombined.trim()) {
       return it.itemNameCombined;
     }
@@ -51,178 +50,184 @@ const SummarySection = ({
     return th != null ? `${th} ملم ${base}` : base;
   };
 
+  // small helper
+  const safeMoney = (n) => {
+    const x = Number(n);
+    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
+  };
+
+  const costHeaders = useMemo(() => {
+    if (invoiceType === "S") {
+      return ["FOB Price", "Price CFR", "Final Cost", "FOB OFR", "CFR OFR", "Final OFR"];
+    }
+    if (invoiceType === "G") {
+      return ["FOB OFR", "CFR OFR", "Final OFR"];
+    }
+    if (invoiceType === "SR") {
+      return ["FOB Price", "Price CFR", "Final Cost", "FOB OFR", "CFR OFR", "Final OFR"];
+    }
+    if (invoiceType === "RVR") {
+      return ["FOB Price", "Price CFR", "Final Cost"];
+    }
+    return [];
+  }, [invoiceType]);
+
   return (
-    <div className="summary-section">
-      {/* ─── INPUTS ─── */}
-      <div className="fields">
-        <div className="row">
-          <label>
-            Potential Cost
-            <input
-              type="number"
-              value={
-                status === "Recieved" && typeof computedCostPercentageForDisplay === "number"
-                  ? computedCostPercentageForDisplay
-                  : potentialCost
-              }
-              onChange={(e) => setPotentialCost(Number(e.target.value))}
-              // lock it when Recieved
-              disabled={!isEditable || status === "Recieved"}
-             />
-          </label>
-          <label className="important-field">
-            Final Cost
-            <input
-              type="number"
-              value={finalCost}
-              readOnly
-              onClick={openItemModal}
-              className="final-cost-clickable"
-              placeholder="Click to calculate"
-            />
-          </label>
-        </div>
-        <div className="column">
-          <label>
-            Shipping Cost
-            <input
-              type="number"
-              value={
-                status === "Recieved" ? shippingCostComputed : shippingCost
-              }
-              onChange={(e) => setShippingCost(Number(e.target.value))}
-              disabled={!isEditable || status === "Recieved"}
-            />
-          </label>
+    <div className={`summary-section ${collapsed ? "is-collapsed" : ""}`}>
+      {/* ✅ Sticky bar + toggle */}
+      <div className="summary-topbar">
+        <h4 className="summary-title">Summary</h4>
 
-          <label>
-            Nb of Containers
-            <input
-              type="number"
-              value={numberOfContainers}
-              onChange={(e) => setNumberOfContainers(Number(e.target.value))}
-              disabled={!isEditable}
-            />
-          </label>
-        </div>
+        <button
+          type="button"
+          className="summary-toggle-btn"
+          onClick={() => setCollapsed((v) => !v)}
+        >
+          {collapsed ? "Show Summary" : "Hide Summary"}
+        </button>
       </div>
 
-      {/* ─── COST-PER-ITEM TABLE ─── */}
-      <div className="cost-table-container">
-        <table className="cost-table">
-          <thead>
-            <tr>
-              <th>Cost per Item</th>
-              {invoiceType === "S" && (
-                <>
-                  <th>FOB Price</th>
-                  <th>Price CFR</th>
-                  <th>Final Cost</th>
-                  <th>FOB OFR</th>
-                  <th>CFR OFR</th>
-                  <th>Final OFR</th>
-                </>
-              )}
-              {invoiceType === "G" && (
-                <>
-                  <th>FOB OFR</th>
-                  <th>CFR OFR</th>
-                  <th>Final OFR</th>
-                </>
-              )}
-              {invoiceType === "SR" && status !== "Recieved" && (
-                <>
-                  <th>FOB Price</th>
-                  <th>Price CFR</th>
-                  <th>Final Cost</th>
-                  <th>FOB OFR</th>
-                  <th>CFR OFR</th>
-                  <th>Final OFR</th>
-                </>
-              )}
-              {invoiceType === "SR" && status === "Recieved" && (
-                <>
-                  <th>FOB Price</th>
-                  <th>Price CFR</th>
-                  <th>Final Cost</th>
-                  <th>FOB OFR</th>
-                  <th>CFR OFR</th>
-                  <th>Final OFR</th>
-                </>
-              )}
+      {/* ✅ Collapsible body */}
+      <div className="summary-body">
+        <div className="summary-grid">
+          {/* ───────── LEFT: INPUTS ───────── */}
+          <div className="fields">
+            <label>
+              Potential Cost
+              <input
+                type="number"
+                value={
+                  status === "Recieved" &&
+                  typeof computedCostPercentageForDisplay === "number"
+                    ? computedCostPercentageForDisplay
+                    : potentialCost
+                }
+                onChange={(e) => setPotentialCost(Number(e.target.value))}
+                disabled={!isEditable || status === "Recieved"}
+              />
+            </label>
 
-              {invoiceType === "RVR" && (
-                <>
-                  <th>FOB Price</th>
-                  <th>Price CFR</th>
-                  <th>Final Cost</th>
-                </>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {selectedItems.map((item, idx) => {
-              // standard
-              const cfr = calculatePriceCFR(item) || 0;
-              const final = calculateFinalCost(item) || 0;
-              // SR+Recieved
-              const cfrOFR = calculatePriceCFROFR(item) || 0;
-              const finalOFR = calculateFinalCostOFR(item) || 0;
+            <label className="important-field">
+              Final Cost
+              <input
+                type="number"
+                value={finalCost}
+                readOnly
+                onClick={openItemModal}
+                className="final-cost-clickable"
+                placeholder="Click to calculate"
+              />
+            </label>
 
-              return (
-                <tr key={idx}>
-                  {/* ✅ show “thickness ملم itemName” */}
-                  <td style={{ direction: "rtl", textAlign: "right" }}>
-                    {displayItemLabel(item)}
-                  </td>
+            <label>
+              Shipping Cost
+              <input
+                type="number"
+                value={status === "Recieved" ? shippingCostComputed : shippingCost}
+                onChange={(e) => setShippingCost(Number(e.target.value))}
+                disabled={!isEditable || status === "Recieved"}
+              />
+            </label>
 
-                  {invoiceType === "S" && (
-                    <>
-                      <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
-                      <td>{cfr.toFixed(2)}</td>
-                      <td>{final.toFixed(2)}</td>
-                      <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
-                      <td>{cfrOFR.toFixed(2)}</td>
-                      <td>{finalOFR.toFixed(2)}</td>
-                    </>
-                  )}
+            <label>
+              Nb of Containers
+              <input
+                type="number"
+                value={numberOfContainers}
+                onChange={(e) => setNumberOfContainers(Number(e.target.value))}
+                disabled={!isEditable}
+              />
+            </label>
+          </div>
 
-                  {invoiceType === "G" && (
-                    <>
-                      <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
-                      <td>{cfrOFR.toFixed(2)}</td>
-                      <td>{finalOFR.toFixed(2)}</td>
-                    </>
-                  )}
-
-                  {invoiceType === "SR" && (
-                    <>
-                      <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
-                      <td>{cfr.toFixed(2)}</td>
-                      <td>{final.toFixed(2)}</td>
-                      <td>{item.priceOFR?.toFixed(2) || "0.00"}</td>
-                      <td>{cfrOFR.toFixed(2)}</td>
-                      <td>{finalOFR.toFixed(2)}</td>
-                    </>
-                  )}
-                  {invoiceType === "RVR" && (
-                    <>
-                      <td>{item.unitPrice?.toFixed(2) || "0.00"}</td>
-                      <td>{cfr.toFixed(2)}</td>
-                      <td>{final.toFixed(2)}</td>
-                    </>
-                  )}
+          {/* ───────── CENTER: COST TABLE ───────── */}
+          <div className="cost-table-container">
+            <table className="cost-table">
+              <thead>
+                <tr>
+                  <th>Cost per Item</th>
+                  {costHeaders.map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
 
-      {/* ─── TOTALS ─── */}
-      <div className="totals">
-        <p>Total Amount: ${totalAmount.toFixed(2)}</p>
-        <p>Offer Amount: ${totalOfferAmount.toFixed(2)}</p>
+              <tbody>
+                {selectedItems?.length ? (
+                  selectedItems.map((item, idx) => {
+                    const cfr = calculatePriceCFR?.(item) || 0;
+                    const final = calculateFinalCost?.(item) || 0;
+
+                    const cfrOFR = calculatePriceCFROFR?.(item) || 0;
+                    const finalOFR = calculateFinalCostOFR?.(item) || 0;
+
+                    return (
+                      <tr key={idx}>
+                        <td style={{ direction: "rtl", textAlign: "right" }}>
+                          {displayItemLabel(item)}
+                        </td>
+
+                        {/* S */}
+                        {invoiceType === "S" && (
+                          <>
+                            <td>{safeMoney(item.unitPrice)}</td>
+                            <td>{safeMoney(cfr)}</td>
+                            <td>{safeMoney(final)}</td>
+                            <td>{safeMoney(item.priceOFR)}</td>
+                            <td>{safeMoney(cfrOFR)}</td>
+                            <td>{safeMoney(finalOFR)}</td>
+                          </>
+                        )}
+
+                        {/* G */}
+                        {invoiceType === "G" && (
+                          <>
+                            <td>{safeMoney(item.priceOFR)}</td>
+                            <td>{safeMoney(cfrOFR)}</td>
+                            <td>{safeMoney(finalOFR)}</td>
+                          </>
+                        )}
+
+                        {/* SR */}
+                        {invoiceType === "SR" && (
+                          <>
+                            <td>{safeMoney(item.unitPrice)}</td>
+                            <td>{safeMoney(cfr)}</td>
+                            <td>{safeMoney(final)}</td>
+                            <td>{safeMoney(item.priceOFR)}</td>
+                            <td>{safeMoney(cfrOFR)}</td>
+                            <td>{safeMoney(finalOFR)}</td>
+                          </>
+                        )}
+
+                        {/* RVR */}
+                        {invoiceType === "RVR" && (
+                          <>
+                            <td>{safeMoney(item.unitPrice)}</td>
+                            <td>{safeMoney(cfr)}</td>
+                            <td>{safeMoney(final)}</td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={1 + costHeaders.length} style={{ textAlign: "center", opacity: 0.7 }}>
+                      No selected items yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ───────── RIGHT: TOTALS ───────── */}
+          <div className="totals">
+            <p>Total Amount: ${safeMoney(totalAmount)}</p>
+            <p>Offer Amount: ${safeMoney(totalOfferAmount)}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
