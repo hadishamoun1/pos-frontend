@@ -6,14 +6,34 @@ import "./CostAnalysis.css";
 const rawBase = process.env.REACT_APP_API_BASE_URL || "";
 const baseUrl = rawBase.replace(/\/+$/, "");
 
-// small number formatter
+// number formatter
 const fmt2 = (n) => {
   const v = Number(n);
   if (!Number.isFinite(v)) return "";
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 };
 
-// All possible columns for VARIANT mode (toggleable)
+// normalize date fields coming from API
+const getRowDate = (row) => {
+  const raw =
+    row?.dateForEachInvoice || row?.transactionDate || null;
+  if (!raw) return "";
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(); 
+};
+
+
+// 🔹 Event columns (always visible)
+const EVENT_COLUMNS = [
+  { key: "transactionType", label: "Type" },
+  { key: "sqm", label: "SQM" },
+  { key: "sqmofr", label: "SQM OFR" },
+  { key: "finalcost", label: "Final Cost" },
+  { key: "finalcostofr", label: "Final Cost OFR" },
+];
+
+// 🔹 Toggleable cost columns (with checkboxes) – same as before
 const VARIANT_COLUMNS = [
   { key: "previousQuantity", label: "Prev Qty" },
   { key: "previousQuantityC", label: "Prev Qty C" },
@@ -45,12 +65,11 @@ export default function CostAnalysis() {
   const [mode, setMode] = useState("variant"); // 'variant' | 'description'
   const isVariantMode = mode === "variant";
 
-  // which columns are visible in VARIANT mode (by key)
+  // toggleable variant columns
   const [visibleVariantCols, setVisibleVariantCols] = useState(
     () => VARIANT_COLUMNS.map((c) => c.key) // default: all ON
   );
 
-  // refs for printing via iframe
   const printAreaRef = useRef(null);
   const printFrameRef = useRef(null);
 
@@ -101,7 +120,6 @@ export default function CostAnalysis() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, searchTokens]);
 
   // -------- Search input handlers (chips) ---------- //
@@ -125,7 +143,7 @@ export default function CostAnalysis() {
     setSearchTokens((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // toggle a single variant column
+  // toggle a single variant column (checkbox)
   const toggleVariantColumn = (key) => {
     setVisibleVariantCols((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
@@ -158,9 +176,8 @@ export default function CostAnalysis() {
 
   // apply filters
   const filteredRows = useMemo(() => {
-    if (!isVariantMode) {
-      return rows;
-    }
+    if (!isVariantMode) return rows;
+
     return rows.filter((r) => {
       if (thicknessFilter && Number(r.thickness) !== Number(thicknessFilter)) {
         return false;
@@ -178,12 +195,13 @@ export default function CostAnalysis() {
 
     for (const r of filteredRows) {
       if (isVariantMode) {
-        const key = r.variantId;
+        const key = r.itemVariantId; // align with API
+        if (!key) continue;
+
         if (!map.has(key)) {
           map.set(key, {
-            variantId: r.variantId,
-            realDescriptionId: r.realDescriptionId,
-            sheetsPerBox: r.sheetsPerBox, 
+            variantId: key,
+            itemVariantId: key,
             itemName: r.itemName,
             thickness: r.thickness,
             length: r.length,
@@ -201,9 +219,10 @@ export default function CostAnalysis() {
         map.get(key).history.push(r);
       } else {
         const key = r.realDescriptionId;
+        if (!key) continue;
         if (!map.has(key)) {
           map.set(key, {
-            realDescriptionId: r.realDescriptionId,
+            realDescriptionId: key,
             itemName: r.itemName,
             categoryName: r.categoryName,
             subCategory: r.subCategory,
@@ -264,9 +283,10 @@ export default function CostAnalysis() {
       }
     });
 
+    // sort each variant's history by normalized date
     arr.forEach((v) => {
       v.history.sort((ra, rb) =>
-        String(ra.invoiceDate).localeCompare(String(rb.invoiceDate))
+        String(getRowDate(ra)).localeCompare(String(getRowDate(rb)))
       );
     });
 
@@ -276,25 +296,24 @@ export default function CostAnalysis() {
   const totalHistoryRows = filteredRows.length;
 
   // ---------- PRINT HANDLER (iframe) ---------- //
-const handlePrint = () => {
-  const frame = printFrameRef.current;
-  if (!frame) return;
+  const handlePrint = () => {
+    const frame = printFrameRef.current;
+    if (!frame) return;
 
-  const doc = frame.contentDocument || frame.contentWindow?.document;
-  if (!doc) return;
+    const doc = frame.contentDocument || frame.contentWindow?.document;
+    if (!doc) return;
 
-  const escapeHtml = (s) =>
-    String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    const escapeHtml = (s) =>
+      String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
 
-  // 🔹 Only columns that are currently visible in the UI (variant mode)
-  const activeVariantColumns = VARIANT_COLUMNS.filter((col) =>
-    visibleVariantCols.includes(col.key)
-  );
+    const activeVariantColumns = VARIANT_COLUMNS.filter((col) =>
+      visibleVariantCols.includes(col.key)
+    );
 
-  let html = `
+    let html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -317,60 +336,67 @@ const handlePrint = () => {
   </div>
 `;
 
-  groupedVariants.forEach((v) => {
-    // ----- title -----
-    let title = "";
-    if (isVariantMode) {
-      const parts = [];
-      if (v.itemName) parts.push(v.itemName);
-      if (v.thickness != null) parts.push(`${v.thickness} ملم`);
-      title = parts.join(" ");
-    } else {
-      const parts = [];
-      if (v.itemName) parts.push(v.itemName);
-      if (v.thickness != null) parts.push(`${v.thickness} ملم`);
-      if (v.categoryName) parts.push(v.categoryName);
-      if (v.colorName) parts.push(v.colorName);
-      if (v.designName) parts.push(v.designName);
-      title = parts.join(" - ");
-    }
+    groupedVariants.forEach((v) => {
+      let title = "";
+      if (isVariantMode) {
+        const parts = [];
+        if (v.itemName) parts.push(v.itemName);
+        if (v.thickness != null) parts.push(`${v.thickness} ملم`);
+        if (parts.length === 0 && v.variantId != null) {
+          parts.push(`Variant #${v.variantId}`);
+        }
+        title = parts.join(" ");
+      } else {
+        const parts = [];
+        if (v.itemName) parts.push(v.itemName);
+        if (v.thickness != null) parts.push(`${v.thickness} ملم`);
+        if (v.categoryName) parts.push(v.categoryName);
+        if (v.colorName) parts.push(v.colorName);
+        if (v.designName) parts.push(v.designName);
+        title = parts.join(" - ");
+      }
 
-const baseDims =
-  isVariantMode && v.length && v.width
-    ? `${Math.floor(Number(v.length))} × ${Math.floor(Number(v.width))}`
-    : "";
+      const baseDims =
+        isVariantMode && v.length && v.width
+          ? `${Math.floor(Number(v.length))} × ${Math.floor(
+              Number(v.width)
+            )}`
+          : "";
 
-const dims =
-  baseDims && v.sheetsPerBox
-    ? `${baseDims} (${v.sheetsPerBox} sheets/box)`
-    : baseDims || "-";
+      const dims =
+        baseDims && v.sheetsPerBox
+          ? `${baseDims} (${v.sheetsPerBox} sheets/box)`
+          : baseDims || "-";
 
-if (isVariantMode) {
-  const metaParts = [];
-  if (v.categoryName) {
-    metaParts.push(
-      `${v.categoryName}${v.subCategory ? ` / ${v.subCategory}` : ""}`
-    );
-  }
-  if (v.origin) {
-    metaParts.push(`Origin: ${v.origin}`);
-  }
-  if (dims !== "-") {
-    metaParts.push(`Size: ${dims}`);
-  }
-  if (metaParts.length > 0) {
-    html += `<div class="meta">${escapeHtml(metaParts.join(" | "))}</div>`;
-  }
-}
+      if (isVariantMode) {
+        const metaParts = [];
+        if (v.categoryName) {
+          metaParts.push(
+            `${v.categoryName}${v.subCategory ? ` / ${v.subCategory}` : ""}`
+          );
+        }
+        if (v.origin) {
+          metaParts.push(`Origin: ${v.origin}`);
+        }
+        if (dims !== "-") {
+          metaParts.push(`Size: ${dims}`);
+        }
+        if (metaParts.length > 0) {
+          html += `<div class="meta">${escapeHtml(
+            metaParts.join(" | ")
+          )}</div>`;
+        }
+      }
 
-    // ---------- TABLES ----------
-    if (isVariantMode) {
-      // 🔹 VARIANT MODE: follow visible columns
-      html += `
+      if (isVariantMode) {
+        html += `
 <table>
   <thead>
     <tr>
       <th>Date / التاريخ</th>
+      ${EVENT_COLUMNS.map(
+        (col) => `<th>${escapeHtml(col.label)}</th>`
+      ).join("")}
       ${activeVariantColumns
         .map((col) => `<th>${escapeHtml(col.label)}</th>`)
         .join("")}
@@ -378,25 +404,25 @@ if (isVariantMode) {
   </thead>
   <tbody>
 `;
-
-      v.history.forEach((h) => {
-        html += `
+        v.history.forEach((h) => {
+          html += `
     <tr>
-      <td>${escapeHtml(h.invoiceDate)}</td>
+      <td>${escapeHtml(getRowDate(h))}</td>
+      ${EVENT_COLUMNS.map(
+        (col) => `<td>${fmt2(h[col.key] ?? h[col.key] ?? "")}</td>`
+      ).join("")}
       ${activeVariantColumns
         .map((col) => `<td>${fmt2(h[col.key])}</td>`)
         .join("")}
     </tr>
 `;
-      });
-
-      html += `
+        });
+        html += `
   </tbody>
 </table>
 `;
-    } else {
-      // 🔹 DESCRIPTION MODE: fixed columns
-      html += `
+      } else {
+        html += `
 <table>
   <thead>
     <tr>
@@ -412,10 +438,10 @@ if (isVariantMode) {
   </thead>
   <tbody>
 `;
-      v.history.forEach((h) => {
-        html += `
+        v.history.forEach((h) => {
+          html += `
     <tr>
-      <td>${escapeHtml(h.invoiceDate)}</td>
+      <td>${escapeHtml(getRowDate(h))}</td>
       <td>${fmt2(h.openingQuantityC)}</td>
       <td>${fmt2(h.openingQuantityVM)}</td>
       <td>${fmt2(h.previousQuantityC)}</td>
@@ -425,29 +451,28 @@ if (isVariantMode) {
       <td>${fmt2(h.finalCostOFR)}</td>
     </tr>
 `;
-      });
-
-      html += `
+        });
+        html += `
   </tbody>
 </table>
 `;
-    }
-  });
+      }
+    });
 
-  html += `
+    html += `
 </body>
 </html>
 `;
 
-  doc.open();
-  doc.write(html);
-  doc.close();
+    doc.open();
+    doc.write(html);
+    doc.close();
 
-  if (frame.contentWindow) {
-    frame.contentWindow.focus();
-    frame.contentWindow.print();
-  }
-};
+    if (frame.contentWindow) {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    }
+  };
 
   return (
     <div className="cost-analysis-container">
@@ -456,7 +481,7 @@ if (isVariantMode) {
           <h2>Cost Analysis / تحليل الكلفة</h2>
           <p className="cost-analysis-subtitle">
             {isVariantMode
-              ? "Track the evolution of average cost for each item variant over time based on your purchase invoices."
+              ? "Track the evolution of cost events (Opening, Purchase, Transfer) and average costs for each item variant."
               : "View cost history grouped by Real Description (category / color / design) across all related variants."}
           </p>
         </div>
@@ -633,16 +658,16 @@ if (isVariantMode) {
       )}
 
       {!loading && !error && groupedVariants.length > 0 && (
-        <div
-          className="cost-analysis-variants-list"
-          ref={printAreaRef}
-        >
+        <div className="cost-analysis-variants-list" ref={printAreaRef}>
           {groupedVariants.map((v) => {
             let title = "";
             if (isVariantMode) {
               const parts = [];
               if (v.itemName) parts.push(v.itemName);
               if (v.thickness != null) parts.push(`${v.thickness} ملم`);
+              if (parts.length === 0 && v.variantId != null) {
+                parts.push(`Variant #${v.variantId}`);
+              }
               title = parts.join(" ");
             } else {
               const parts = [];
@@ -663,9 +688,7 @@ if (isVariantMode) {
 
             return (
               <div
-                key={
-                  isVariantMode ? v.variantId : v.realDescriptionId ?? title
-                }
+                key={isVariantMode ? v.variantId : v.realDescriptionId ?? title}
                 className="cost-analysis-card"
               >
                 <div className="cost-analysis-card-header">
@@ -707,6 +730,9 @@ if (isVariantMode) {
                       {isVariantMode ? (
                         <tr>
                           <th>Date / التاريخ</th>
+                          {EVENT_COLUMNS.map((col) => (
+                            <th key={col.key}>{col.label}</th>
+                          ))}
                           {VARIANT_COLUMNS.map(
                             (col) =>
                               visibleVariantCols.includes(col.key) && (
@@ -731,7 +757,14 @@ if (isVariantMode) {
                       {v.history.map((h, idx) =>
                         isVariantMode ? (
                           <tr key={idx}>
-                            <td>{h.invoiceDate}</td>
+                            <td>{getRowDate(h)}</td>
+                            {EVENT_COLUMNS.map((col) => (
+                              <td key={col.key}>
+                                {col.key === "transactionType"
+                                  ? h[col.key] ?? ""
+                                  : fmt2(h[col.key])}
+                              </td>
+                            ))}
                             {VARIANT_COLUMNS.map(
                               (col) =>
                                 visibleVariantCols.includes(col.key) && (
@@ -741,7 +774,7 @@ if (isVariantMode) {
                           </tr>
                         ) : (
                           <tr key={idx}>
-                            <td>{h.invoiceDate}</td>
+                            <td>{getRowDate(h)}</td>
                             <td>{fmt2(h.openingQuantityC)}</td>
                             <td>{fmt2(h.openingQuantityVM)}</td>
                             <td>{fmt2(h.previousQuantityC)}</td>

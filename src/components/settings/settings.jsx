@@ -15,6 +15,7 @@ import StockTotalsAudit from "./StockTotalsAudit";
 
 
 import "./settings.css";
+import InventoryAuditPage from "./Inventory-Audit";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -40,13 +41,15 @@ const SettingsPage = () => {
       case "descriptions-editor":
         return <DescriptionEditor />;
       case "year-settings":
-        return <YearSettings />;           // ← NEW
+        return <YearSettings />;           
       case "currency-settings":
         return <CurrencySettings />;  
          case "invoice-display-name-settings":
         return <InvoiceDisplayNamesPanel />;      
       case "stock-totals-audit":
         return <StockTotalsAudit />;
+           case "inventory-audit":
+        return <InventoryAuditPage />;
 
       default:
         return <GeneralSettings />;
@@ -138,6 +141,13 @@ const SettingsPage = () => {
             onClick={() => setActiveTab("stock-totals-audit")}
           >
              Stock Totals / Audit
+          </li>
+
+              <li
+            className={activeTab === "inventory-audit" ? "active" : ""}
+            onClick={() => setActiveTab("inventory-audit")}
+          >
+             Inventory Audit
           </li>
 
         </ul>
