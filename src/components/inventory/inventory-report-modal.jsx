@@ -421,8 +421,10 @@ function useGroupedByDescription(
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
 
-              averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
-              lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
+              averageCost:
+                b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
+              lastCost:
+                b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
 
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
@@ -541,6 +543,8 @@ function buildPrintHTML({
   showAvgCostC = false,
   showLastCostC = false,
   showLastCostCVM = false,
+  showSqmAmount = false,
+  showSqmAmountTotals = false,
   mode = "real",
   grandTotals = null,
 }) {
@@ -578,6 +582,30 @@ function buildPrintHTML({
         (showLastCostC ? 1 : 0) +
         (showLastCostCVM ? 1 : 0)
       : 0;
+
+  // ✅ Amount helpers (print)
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const costForAmount = (r) => {
+    // REAL mode uses row averageCost (regardless of showing the cost column)
+    if (mode === "real") return num(r.averageCost);
+
+    // NAME mode uses description-level avg costs
+    if (mode === "name") {
+      if (showAvgCostCVM) return num(r.averageCostCVM);
+      if (showAvgCostC) return num(r.averageCostC);
+      return num(r.averageCostCVM) || num(r.averageCostC) || 0;
+    }
+
+    return num(r.averageCost) || num(r.averageCostCVM) || num(r.averageCostC) || 0;
+  };
+  const sqmAmountOfRow = (r) => num(r.sqmTotal) * costForAmount(r);
+
+  const showAmountCol = !!showSqmAmount;
+  const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
+  const amountColCount = showAmountCol ? 1 : 0;
 
   const groupBlocks = (groups || [])
     .map((g) => {
@@ -631,6 +659,13 @@ function buildPrintHTML({
               <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
               ${costNameCells}
               <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
+              ${
+                showAmountCol
+                  ? `<td class="tr">${
+                      r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""
+                    }</td>`
+                  : ""
+              }
             </tr>`;
           }
 
@@ -693,17 +728,26 @@ function buildPrintHTML({
             <td class="tr">${r.qtyBox ? fmt2(r.qtyBox) : ""}</td>
             <td class="tr">${r.qtySheet ? fmt2(r.qtySheet) : ""}</td>
             <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
+            ${
+              showAmountCol
+                ? `<td class="tr">${
+                    r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""
+                  }</td>`
+                : ""
+            }
           </tr>`;
         })
         .join("");
 
       let totBox = 0,
         totSheet = 0,
-        totSqm = 0;
+        totSqm = 0,
+        totAmount = 0;
       for (const r of g.rows || []) {
         totBox += Number(r.qtyBox || 0);
         totSheet += Number(r.qtySheet || 0);
         totSqm += Number(r.sqmTotal || 0);
+        totAmount += sqmAmountOfRow(r);
       }
 
       const thead = transferMode
@@ -726,6 +770,7 @@ function buildPrintHTML({
                    : ""
                }
                <th class="tr">SQM (Total)</th>
+               ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
              </tr>
            </thead>`
         : mode === "real"
@@ -740,6 +785,7 @@ function buildPrintHTML({
                <th class="tr">Qty (Box)</th>
                <th class="tr">Qty (Sheet)</th>
                <th class="tr">SQM (Total)</th>
+               ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
              </tr>
            </thead>`
         : `<thead>
@@ -758,6 +804,7 @@ function buildPrintHTML({
                <th class="tr">Qty (Box)</th>
                <th class="tr">Qty (Sheet)</th>
                <th class="tr">SQM (Total)</th>
+               ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
              </tr>
            </thead>`;
 
@@ -771,6 +818,13 @@ function buildPrintHTML({
              <td class="tr" style="font-weight:700;background:#fafafa">${
                totSqm ? fmt2(totSqm) : ""
              }</td>
+             ${
+               showAmountCol
+                 ? `<td class="tr" style="font-weight:700;background:#fafafa">${
+                     showAmountTotals ? fmt2(totAmount) : ""
+                   }</td>`
+                 : ""
+             }
            </tr>`;
         }
         if (mode === "real") {
@@ -787,6 +841,13 @@ function buildPrintHTML({
              <td class="tr" style="font-weight:700;background:#fafafa">${
                totSqm ? fmt2(totSqm) : ""
              }</td>
+             ${
+               showAmountCol
+                 ? `<td class="tr" style="font-weight:700;background:#fafafa">${
+                     showAmountTotals ? fmt2(totAmount) : ""
+                   }</td>`
+                 : ""
+             }
            </tr>`;
         }
 
@@ -804,18 +865,25 @@ function buildPrintHTML({
              <td class="tr" style="font-weight:700;background:#fafafa">${
                totSqm ? fmt2(totSqm) : ""
              }</td>
+             ${
+               showAmountCol
+                 ? `<td class="tr" style="font-weight:700;background:#fafafa">${
+                     showAmountTotals ? fmt2(totAmount) : ""
+                   }</td>`
+                 : ""
+             }
            </tr>`;
       })();
 
       const totalColsForEmpty = (() => {
         if (transferMode) {
           const nameCostCols = mode === "name" ? costColsName : 0;
-          return 3 + nameCostCols;
+          return 3 + nameCostCols + amountColCount;
         }
-        if (mode === "real") return 7 + costColsReal;
+        if (mode === "real") return 7 + costColsReal + amountColCount;
 
         // ✅ name-mode now has 2 extra columns (Dim+Origin)
-        return 7 + costColsName;
+        return 7 + costColsName + amountColCount;
       })();
 
       return `
@@ -840,6 +908,15 @@ function buildPrintHTML({
   const gtSheets = grand ? Number(grand.sheets || 0) : 0;
   const gtSqm = grand ? Number(grand.sqm || 0) : 0;
 
+  const gtAmount = showAmountTotals
+    ? (groups || []).reduce((sumG, g) => {
+        return (
+          sumG +
+          (g.rows || []).reduce((sumR, r) => sumR + sqmAmountOfRow(r), 0)
+        );
+      }, 0)
+    : 0;
+
   const grandTotalBlock = `
     <section class="group">
       <div class="g-head">
@@ -852,6 +929,7 @@ function buildPrintHTML({
             <th class="tr">Boxes</th>
             <th class="tr">Sheets</th>
             <th class="tr">SQM</th>
+            ${showAmountTotals ? `<th class="tr">Total Amount</th>` : ""}
           </tr>
         </thead>
         <tbody>
@@ -865,6 +943,13 @@ function buildPrintHTML({
             <td class="tr" style="font-weight:800;background:#fafafa">${fmt2(
               gtSqm
             )}</td>
+            ${
+              showAmountTotals
+                ? `<td class="tr" style="font-weight:800;background:#fafafa">${fmt2(
+                    gtAmount
+                  )}</td>`
+                : ""
+            }
           </tr>
         </tbody>
       </table>
@@ -950,6 +1035,10 @@ export default function ReportModal({
   const [showLastCostC, setShowLastCostC] = useState(false);
   const [showLastCostCVM, setShowLastCostCVM] = useState(false);
 
+  // ✅ ADDED: sqm amount toggles
+  const [showSqmAmount, setShowSqmAmount] = useState(false);
+  const [showSqmAmountTotals, setShowSqmAmountTotals] = useState(false);
+
   useEffect(() => {
     setTransferToSqm(false);
     if (mode !== "real") {
@@ -967,6 +1056,25 @@ export default function ReportModal({
   const displayGroups = useTransferredGroups(groups, transferToSqm, mode);
   const transferMode = transferToSqm && mode === "name";
 
+  // ✅ Amount helpers (preview)
+  const safeNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const costForAmount = (row) => {
+    if (mode === "real") return safeNum(row?.averageCost);
+    if (mode === "name") {
+      if (showAvgCostCVM) return safeNum(row?.averageCostCVM);
+      if (showAvgCostC) return safeNum(row?.averageCostC);
+      return safeNum(row?.averageCostCVM) || safeNum(row?.averageCostC) || 0;
+    }
+    return safeNum(row?.averageCost) || safeNum(row?.averageCostCVM) || safeNum(row?.averageCostC) || 0;
+  };
+  const sqmAmountOfRow = (row) => safeNum(row?.sqmTotal) * costForAmount(row);
+
+  const showAmountCol = !!showSqmAmount;
+  const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
+
   const grandTotals = useMemo(() => {
     let boxes = 0;
     let sheets = 0;
@@ -982,6 +1090,17 @@ export default function ReportModal({
 
     return { boxes, sheets, sqm };
   }, [groups]);
+
+  const grandAmount = useMemo(() => {
+    if (!showAmountTotals) return 0;
+    let amt = 0;
+    (displayGroups || []).forEach((g) => {
+      (g.rows || []).forEach((r) => {
+        amt += sqmAmountOfRow(r);
+      });
+    });
+    return amt;
+  }, [displayGroups, showAmountTotals, mode, showAvgCostCVM, showAvgCostC]);
 
   useEffect(() => {
     if (!open) return;
@@ -1014,6 +1133,8 @@ export default function ReportModal({
       showAvgCostC,
       showLastCostC,
       showLastCostCVM,
+      showSqmAmount,
+      showSqmAmountTotals,
       mode,
       grandTotals,
     });
@@ -1192,6 +1313,32 @@ export default function ReportModal({
               </div>
             )}
 
+            {/* ✅ ADDED: SQM Amount + Totals toggles */}
+            <div className="row" style={{ gap: 16 }}>
+              <label className="invb-chk">
+                <input
+                  type="checkbox"
+                  checked={showSqmAmount}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setShowSqmAmount(v);
+                    if (!v) setShowSqmAmountTotals(false);
+                  }}
+                />
+                Total Amount (SQM × Avg Cost)
+              </label>
+
+              <label className="invb-chk" style={{ opacity: showSqmAmount ? 1 : 0.55 }}>
+                <input
+                  type="checkbox"
+                  disabled={!showSqmAmount}
+                  checked={showSqmAmountTotals}
+                  onChange={(e) => setShowSqmAmountTotals(e.target.checked)}
+                />
+                Show Amount Totals (group + grand)
+              </label>
+            </div>
+
             <div className="row">
               <button className="invb-btn" onClick={handlePrint}>
                 🖨️ Print
@@ -1215,11 +1362,13 @@ export default function ReportModal({
                 (displayGroups || []).map((g) => {
                   let totBox = 0,
                     totSheet = 0,
-                    totSqm = 0;
+                    totSqm = 0,
+                    totAmount = 0;
                   for (const r of g.rows) {
                     totBox += Number(r.qtyBox || 0);
                     totSheet += Number(r.qtySheet || 0);
                     totSqm += Number(r.sqmTotal || 0);
+                    totAmount += sqmAmountOfRow(r);
                   }
 
                   const nameCostCols =
@@ -1250,9 +1399,16 @@ export default function ReportModal({
                         </div>
                         <div className="report-group-totals">
                           {transferMode ? (
-                            <span className="u-muted">
-                              SQM: <strong>{fmt2(totSqm)}</strong>
-                            </span>
+                            <>
+                              <span className="u-muted">
+                                SQM: <strong>{fmt2(totSqm)}</strong>
+                              </span>
+                              {showAmountTotals && (
+                                <span className="u-muted">
+                                  Amount: <strong>{fmt2(totAmount)}</strong>
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <>
                               <span>
@@ -1264,6 +1420,11 @@ export default function ReportModal({
                               <span className="u-muted">
                                 SQM: <strong>{fmt2(totSqm)}</strong>
                               </span>
+                              {showAmountTotals && (
+                                <span className="u-muted">
+                                  Amount: <strong>{fmt2(totAmount)}</strong>
+                                </span>
+                              )}
                             </>
                           )}
                         </div>
@@ -1291,6 +1452,9 @@ export default function ReportModal({
                                 <th className="ta-right">Last Cost CVM</th>
                               )}
                               <th className="ta-right">SQM (Total)</th>
+                              {showAmountCol && (
+                                <th className="ta-right">Total Amount</th>
+                              )}
                             </tr>
                           ) : (
                             <tr>
@@ -1330,6 +1494,9 @@ export default function ReportModal({
                               <th className="ta-right">Qty (Box)</th>
                               <th className="ta-right">Qty (Sheet)</th>
                               <th className="ta-right">SQM (Total)</th>
+                              {showAmountCol && (
+                                <th className="ta-right">Total Amount</th>
+                              )}
                             </tr>
                           )}
                         </thead>
@@ -1377,6 +1544,12 @@ export default function ReportModal({
                                 <td className="ta-right u-muted">
                                   {row.sqmTotal ? fmt2(row.sqmTotal) : ""}
                                 </td>
+
+                                {showAmountCol && (
+                                  <td className="ta-right u-muted">
+                                    {row.sqmTotal ? fmt2(sqmAmountOfRow(row)) : ""}
+                                  </td>
+                                )}
                               </tr>
                             ) : (
                               <tr key={row.idKey}>
@@ -1450,6 +1623,12 @@ export default function ReportModal({
                                 <td className="ta-right u-muted">
                                   {row.sqmTotal ? fmt2(row.sqmTotal) : ""}
                                 </td>
+
+                                {showAmountCol && (
+                                  <td className="ta-right u-muted">
+                                    {row.sqmTotal ? fmt2(sqmAmountOfRow(row)) : ""}
+                                  </td>
+                                )}
                               </tr>
                             )
                           )}
@@ -1475,6 +1654,18 @@ export default function ReportModal({
                               >
                                 {totSqm ? fmt2(totSqm) : ""}
                               </td>
+
+                              {showAmountCol && (
+                                <td
+                                  className="ta-right"
+                                  style={{
+                                    fontWeight: 700,
+                                    background: "#fafafa",
+                                  }}
+                                >
+                                  {showAmountTotals ? fmt2(totAmount) : ""}
+                                </td>
+                              )}
                             </tr>
                           ) : (
                             <tr>
@@ -1515,6 +1706,18 @@ export default function ReportModal({
                               >
                                 {totSqm ? fmt2(totSqm) : ""}
                               </td>
+
+                              {showAmountCol && (
+                                <td
+                                  className="ta-right"
+                                  style={{
+                                    fontWeight: 700,
+                                    background: "#fafafa",
+                                  }}
+                                >
+                                  {showAmountTotals ? fmt2(totAmount) : ""}
+                                </td>
+                              )}
                             </tr>
                           )}
                         </tbody>
@@ -1546,6 +1749,11 @@ export default function ReportModal({
                       <span className="u-muted">
                         SQM: <strong>{fmt2(grandTotals.sqm)}</strong>
                       </span>
+                      {showAmountTotals && (
+                        <span className="u-muted">
+                          Amount: <strong>{fmt2(grandAmount)}</strong>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1555,6 +1763,9 @@ export default function ReportModal({
                         <th className="ta-right">Boxes</th>
                         <th className="ta-right">Sheets</th>
                         <th className="ta-right">SQM</th>
+                        {showAmountTotals && (
+                          <th className="ta-right">Total Amount</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -1577,6 +1788,15 @@ export default function ReportModal({
                         >
                           {fmt2(grandTotals.sqm)}
                         </td>
+
+                        {showAmountTotals && (
+                          <td
+                            className="ta-right u-muted"
+                            style={{ fontWeight: 800, background: "#fafafa" }}
+                          >
+                            {fmt2(grandAmount)}
+                          </td>
+                        )}
                       </tr>
                     </tbody>
                   </table>
