@@ -12,7 +12,7 @@ const typeOf = (t) => String(t || "").toLowerCase();
 const buildNameThkAr = (itemName, thicknessNum) => {
   const thk = Number.isFinite(thicknessNum) ? thicknessNum : "";
   if (!thk) return String(itemName || "").trim();
-  return `${thk} ملم ${itemName || ""}`.trim(); // 3 ملم ابيض
+  return `${thk} ملم ${itemName || ""}`.trim(); // 5.5 ملم ابيض
 };
 
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
@@ -55,12 +55,6 @@ const prettyDimsWithSPB = (L, W, spb) => {
   const s = Number(spb);
   return `${base}-${Number.isFinite(s) && s > 0 ? pad3(s) : "000"}`;
 };
-
-const normNum = (x) => {
-  const n = Number(x);
-  return Number.isFinite(n) ? Math.floor(n) : 0;
-};
-const normOrigin = (s) => String(s ?? "").trim();
 
 /** STRICT mode-aware balance derivation */
 const deriveBalances = (row, mode) => {
@@ -143,11 +137,6 @@ function useGroupedByDescription(
     const n = Number(t);
     return Number.isFinite(n) ? n.toFixed(1) : "0";
   };
-
-  const prettyDimsSPB = (L, W, spb) =>
-    Number(spb) > 0
-      ? prettyDimsWithSPB(L, W, spb)
-      : `${prettyDimsBase(L, W)}-000`;
 
   // normalized itemName key so grouping treats different names separately
   const normItemNameKey = (s) => String(s || "").trim().toLowerCase();
@@ -258,13 +247,13 @@ function useGroupedByDescription(
           boxQtyPerSpb: new Map(),
           boxSqmPerSpb: new Map(),
 
-          // ✅ FIX: costs stored PER SPB (so 13 != 14)
+          // costs stored PER SPB
           avgCostPerSpb: new Map(),
           lastCostPerSpb: new Map(),
           fallbackAvgCost: null,
           fallbackLastCost: null,
 
-          // ✅ ADDED: sheet costs (for sheet-only items)
+          // sheet costs (for sheet-only items)
           sheetAvgCost: null,
           sheetLastCost: null,
 
@@ -300,7 +289,6 @@ function useGroupedByDescription(
         b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
         b.boxSqmPerSpb.set(spb, (b.boxSqmPerSpb.get(spb) || 0) + s);
 
-        // ✅ FIX: store variant-level costs per SPB (real mode)
         const avg = Number(r.averageCost);
         if (Number.isFinite(avg) && spb > 0) b.avgCostPerSpb.set(spb, avg);
         else if (Number.isFinite(avg)) b.fallbackAvgCost = avg;
@@ -312,7 +300,6 @@ function useGroupedByDescription(
         b.sheetQty += q;
         b.sheetSqm += s;
 
-        // ✅ ADDED: if no box avgCost exists, use sheet avgCost
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -326,7 +313,6 @@ function useGroupedByDescription(
       } else if (t === "sqm") {
         b.sheetSqm += s;
 
-        // ✅ ADDED: sqm-only items can also carry costs (same fallback behavior)
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -361,7 +347,6 @@ function useGroupedByDescription(
       g.order.forEach((bucketKey) => {
         const b = g.buckets.get(bucketKey);
 
-        // itemNameKey included in the exact key for SPB lookup
         const exactKey = `${g.descId}|${b.itemNameKey}|${b.thicknessKey}|${b.length}x${b.width}|${b.origin}`;
         const spbSetExact = exactSpbIndex.get(exactKey);
         const spbsFromIndex = spbSetExact
@@ -374,6 +359,7 @@ function useGroupedByDescription(
         let spbs = Array.from(
           new Set([...spbsFromIndex, ...spbsFromBoxData])
         ).sort((a, b) => a - b);
+
         if (spbs.length === 0) {
           const modalSpb = pickModalSpb(g.descId, b.itemNameKey, b.thicknessKey);
           if (modalSpb > 0) spbs = [modalSpb];
@@ -413,11 +399,9 @@ function useGroupedByDescription(
               qtySheet: attachSheets ? Number(b.sheetQty || 0) : 0,
               sqmTotal: Number(sqmBox + (attachSheets ? b.sheetSqm || 0 : 0)),
 
-              // ✅ FIX: cost per SPB + fallback now can come from SHEETS too
               averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(spb) ?? b.fallbackLastCost ?? null,
 
-              // name-mode costs (still ok)
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -437,7 +421,6 @@ function useGroupedByDescription(
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
 
-              // ✅ FIX: fallback now can come from SHEETS too
               averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
 
@@ -448,7 +431,6 @@ function useGroupedByDescription(
             });
           }
         } else {
-          // no spbs at all
           if ((b.sheetQty || 0) > 0 || (b.sheetSqm || 0) > 0) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:0`,
@@ -461,7 +443,6 @@ function useGroupedByDescription(
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
 
-              // ✅ now sheet-only rows show their own cost
               averageCost: b.fallbackAvgCost ?? null,
               lastCost: b.fallbackLastCost ?? null,
 
@@ -535,7 +516,7 @@ function useTransferredGroups(groups, transferToSqm, mode) {
         qtyBox: 0,
         qtySheet: 0,
         sqmTotal: totalSqm,
-        // carry over cost from the group (same description)
+
         averageCost: firstRow.averageCost ?? null,
         lastCost: firstRow.lastCost ?? null,
         averageCostCVM: firstRow.averageCostCVM ?? null,
@@ -652,15 +633,19 @@ function buildPrintHTML({
               <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
             </tr>`;
           }
+
+          // ✅ non-transfer: now name-mode ALSO shows Dimension + Origin columns
+          const dimOriginCells =
+            mode === "real" || mode === "name"
+              ? `<td class="tc">${escape(r.dim)}</td>
+                 <td class="origin">${escape(r.origin || "")}</td>`
+              : "";
+
           return `<tr>
           <td class="tc">${escape(r.itemNumber || "")}</td>
           <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
-            ${
-              mode === "real"
-                ? `<td class="tc">${escape(r.dim)}</td>
-                   <td class="origin">${escape(r.origin || "")}</td>`
-                : ""
-            }
+          ${dimOriginCells}
+
             ${
               mode === "real" && showAvgCost
                 ? `<td class="tr">${
@@ -675,6 +660,7 @@ function buildPrintHTML({
                   }</td>`
                 : ""
             }
+
             ${
               mode === "name" && showAvgCostCVM
                 ? `<td class="tr">${
@@ -703,6 +689,7 @@ function buildPrintHTML({
                   }</td>`
                 : ""
             }
+
             <td class="tr">${r.qtyBox ? fmt2(r.qtyBox) : ""}</td>
             <td class="tr">${r.qtySheet ? fmt2(r.qtySheet) : ""}</td>
             <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
@@ -759,6 +746,11 @@ function buildPrintHTML({
              <tr>
                <th class="tc">Item No.</th>
                <th class="tc col-ar">Name+Thk (AR)</th>
+
+               <!-- ✅ ADDED in name-mode -->
+               <th class="tc">Dimension</th>
+               <th>Origin</th>
+
                ${showAvgCostCVM ? `<th class="tr">Avg Cost CVM</th>` : ""}
                ${showAvgCostC ? `<th class="tr">Avg Cost C</th>` : ""}
                ${showLastCostC ? `<th class="tr">Last Cost C</th>` : ""}
@@ -797,9 +789,11 @@ function buildPrintHTML({
              }</td>
            </tr>`;
         }
+
+        // ✅ name-mode now has 4 non-cost columns before cost columns (ItemNo, Name, Dim, Origin)
         return `<tr>
              <td colspan="${
-               2 + costColsName
+               4 + costColsName
              }" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${
                totBox ? fmt2(totBox) : ""
@@ -819,7 +813,9 @@ function buildPrintHTML({
           return 3 + nameCostCols;
         }
         if (mode === "real") return 7 + costColsReal;
-        return 5 + costColsName;
+
+        // ✅ name-mode now has 2 extra columns (Dim+Origin)
+        return 7 + costColsName;
       })();
 
       return `
@@ -938,13 +934,14 @@ export default function ReportModal({
 }) {
   const rowsForSpbIndex =
     spbSourceRows && spbSourceRows.length ? spbSourceRows : rows;
+
   const { groups } = useGroupedByDescription(rows, mode, {
     debug,
     rowsForSpbIndex,
   });
 
   const [transferToSqm, setTransferToSqm] = useState(false);
-  // cost toggles
+
   const [showAvgCost, setShowAvgCost] = useState(false);
   const [showLastCost, setShowLastCost] = useState(false);
 
@@ -1020,6 +1017,7 @@ export default function ReportModal({
       mode,
       grandTotals,
     });
+
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
     iframe.style.right = "0";
@@ -1048,6 +1046,7 @@ export default function ReportModal({
         }, 1000);
       }
     };
+
     if (doc.readyState === "complete") doPrint();
     else iframe.onload = doPrint;
   };
@@ -1095,7 +1094,9 @@ export default function ReportModal({
                       attaches to the primary SPB row.
                     </>
                   ) : (
-                    <>One row per <em>(BOX SPB)</em> bucket in each description.</>
+                    <>
+                      One row per <em>(BOX SPB)</em> bucket in each description.
+                    </>
                   )}
                   {debug && (
                     <span
@@ -1132,6 +1133,7 @@ export default function ReportModal({
                     Transfer to SQM (collapse per group)
                   </label>
                 </div>
+
                 <div className="row" style={{ gap: 16 }}>
                   <label className="invb-chk">
                     <input
@@ -1226,9 +1228,10 @@ export default function ReportModal({
                     (showLastCostC ? 1 : 0) +
                     (showLastCostCVM ? 1 : 0);
 
+                  // ✅ UPDATED: in non-transfer view, name-mode now has Dim+Origin too
                   const nonCostBeforeQty = transferMode
                     ? 2
-                    : mode === "real"
+                    : mode === "real" || mode === "name"
                     ? 4
                     : 2;
 
@@ -1238,10 +1241,7 @@ export default function ReportModal({
                         <div
                           className="report-group-title"
                           title={`Description ID: ${g.descId}`}
-                          style={{
-                            direction: "rtl",
-                            textAlign: "right",
-                          }}
+                          style={{ direction: "rtl", textAlign: "right" }}
                         >
                           {g.headerTitle || ""}{" "}
                           <span className="u-muted" style={{ fontWeight: 600 }}>
@@ -1299,18 +1299,21 @@ export default function ReportModal({
                                 Name+Thk (AR)
                               </th>
 
-                              {mode === "real" && (
+                              {/* ✅ ADDED: show Dim + Origin in NAME mode too */}
+                              {(mode === "real" || mode === "name") && (
                                 <>
                                   <th className="ta-center">Dimension</th>
                                   <th>Origin</th>
                                 </>
                               )}
+
                               {mode === "real" && showAvgCost && (
                                 <th className="ta-right">Avg Cost</th>
                               )}
                               {mode === "real" && showLastCost && (
                                 <th className="ta-right">Last Cost</th>
                               )}
+
                               {mode === "name" && showAvgCostCVM && (
                                 <th className="ta-right">Avg Cost CVM</th>
                               )}
@@ -1323,12 +1326,14 @@ export default function ReportModal({
                               {mode === "name" && showLastCostCVM && (
                                 <th className="ta-right">Last Cost CVM</th>
                               )}
+
                               <th className="ta-right">Qty (Box)</th>
                               <th className="ta-right">Qty (Sheet)</th>
                               <th className="ta-right">SQM (Total)</th>
                             </tr>
                           )}
                         </thead>
+
                         <tbody>
                           {g.rows.map((row) =>
                             transferMode ? (
@@ -1368,6 +1373,7 @@ export default function ReportModal({
                                       : ""}
                                   </td>
                                 )}
+
                                 <td className="ta-right u-muted">
                                   {row.sqmTotal ? fmt2(row.sqmTotal) : ""}
                                 </td>
@@ -1381,7 +1387,8 @@ export default function ReportModal({
                                   {row.nameThkAr || ""}
                                 </td>
 
-                                {mode === "real" && (
+                                {/* ✅ ADDED: name-mode shows Dim + Origin cells too */}
+                                {(mode === "real" || mode === "name") && (
                                   <>
                                     <td className="ta-center">{row.dim}</td>
                                     <td className="truncate">
@@ -1389,6 +1396,7 @@ export default function ReportModal({
                                     </td>
                                   </>
                                 )}
+
                                 {mode === "real" && showAvgCost && (
                                   <td className="ta-right u-muted">
                                     {row.averageCost != null
@@ -1403,6 +1411,7 @@ export default function ReportModal({
                                       : ""}
                                   </td>
                                 )}
+
                                 {mode === "name" && showAvgCostCVM && (
                                   <td className="ta-right u-muted">
                                     {row.averageCostCVM != null
@@ -1431,6 +1440,7 @@ export default function ReportModal({
                                       : ""}
                                   </td>
                                 )}
+
                                 <td className="ta-right">
                                   {row.qtyBox ? fmt2(row.qtyBox) : ""}
                                 </td>
@@ -1516,7 +1526,10 @@ export default function ReportModal({
               {!loading && displayGroups && displayGroups.length > 0 && (
                 <div className="report-group" key="grand-total">
                   <div className="report-group-head">
-                    <div className="report-group-title" style={{ fontWeight: 800 }}>
+                    <div
+                      className="report-group-title"
+                      style={{ fontWeight: 800 }}
+                    >
                       Grand Total
                       <span className="u-muted" style={{ fontWeight: 600 }}>
                         {" "}
@@ -1592,10 +1605,7 @@ export default function ReportModal({
             <button className="invb-btn" disabled>
               Generate PDF
             </button>
-            <button
-              className="invb-btn invb-btn--ghost"
-              onClick={onClose}
-            >
+            <button className="invb-btn invb-btn--ghost" onClick={onClose}>
               Close
             </button>
           </div>
