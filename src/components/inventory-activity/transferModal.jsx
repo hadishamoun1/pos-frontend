@@ -4,9 +4,8 @@ import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added
+import { axiosClient } from "../api/axiosClient"; 
 
-const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
   "JF",
@@ -75,7 +74,7 @@ export default function TransferModal({
   // ✅ Hydrate full transfer so itemBatchId is always available in edit mode
   const fetchFullTransfer = async (id) => {
     if (!id) return null;
-    const res = await axiosClient.get(`${baseUrl}/transfers/${id}`); // ✅ axiosClient
+    const res = await axiosClient.get(`/transfers/${id}`); // ✅ FIX: relative only
     return res.data;
   };
 
@@ -406,14 +405,14 @@ export default function TransferModal({
       };
 
       if (isEditing) {
-        await axiosClient.patch(`${baseUrl}/transfers/${editingId}`, payload); // ✅ axiosClient
+        await axiosClient.patch(`/transfers/${editingId}`, payload); // ✅ FIX: relative only
         setNotif({
           open: true,
           type: "success",
           message: "Transfer updated successfully!",
         });
       } else {
-        await axiosClient.post(`${baseUrl}/transfers`, payload); // ✅ axiosClient
+        await axiosClient.post(`/transfers`, payload); // ✅ FIX: relative only
         setNotif({
           open: true,
           type: "success",
@@ -470,7 +469,7 @@ export default function TransferModal({
     if (!window.confirm("Are you sure you want to delete this transfer?")) return;
 
     try {
-      await axiosClient.delete(`${baseUrl}/transfers/${id}`); // ✅ axiosClient
+      await axiosClient.delete(`/transfers/${id}`); // ✅ FIX: relative only
       setNotif({
         open: true,
         type: "success",
@@ -514,18 +513,14 @@ export default function TransferModal({
           <div className="transfer-modal-header">
             <div className="transfer-action-buttons">
               <button
-                className={`btn transfer-action-btn ${
-                  !previewing ? "active" : ""
-                }`}
+                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
                 {isEditing ? "Edit Form" : "Create Transfer"}
               </button>
               <button
-                className={`btn transfer-action-btn ${
-                  previewing ? "active" : ""
-                }`}
+                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
                 onClick={() => setPreviewing(true)}
                 disabled={saving}
               >
@@ -655,15 +650,9 @@ export default function TransferModal({
                       </tr>
                     ) : (
                       rows.map((r, i) => (
-                        <tr
-                          key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}
-                        >
+                        <tr key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.name}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.name} readOnly />
                           </td>
                           <td>
                             <input
@@ -673,18 +662,10 @@ export default function TransferModal({
                             />
                           </td>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.origin}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.origin} readOnly />
                           </td>
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.type}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.type} readOnly />
                           </td>
 
                           {details.location === "FJ" && (
@@ -698,9 +679,7 @@ export default function TransferModal({
                                 {r.toBoxLabel ? "Change Box" : "Choose Box"}
                               </button>
                               {r.toBoxLabel && (
-                                <div className="transfer-box-label">
-                                  {r.toBoxLabel}
-                                </div>
+                                <div className="transfer-box-label">{r.toBoxLabel}</div>
                               )}
                             </td>
                           )}
@@ -718,11 +697,7 @@ export default function TransferModal({
                           </td>
 
                           <td>
-                            <input
-                              className="transfer-input"
-                              value={r.sqm}
-                              readOnly
-                            />
+                            <input className="transfer-input" value={r.sqm} readOnly />
                           </td>
 
                           <td>
@@ -746,9 +721,7 @@ export default function TransferModal({
                               className="transfer-input"
                               type="number"
                               value={r.price}
-                              onChange={(e) =>
-                                updateRowField(i, "price", e.target.value)
-                              }
+                              onChange={(e) => updateRowField(i, "price", e.target.value)}
                               disabled={saving}
                             />
                           </td>
@@ -766,7 +739,7 @@ export default function TransferModal({
             isOpen={searchOpen}
             onClose={() => setSearchOpen(false)}
             onSelect={handleSelectItems}
-            existingKeys={existingKeys} // ✅ correct keys now
+            existingKeys={existingKeys}
           />
 
           {/* FJ box picker (which box to transfer TO) */}
