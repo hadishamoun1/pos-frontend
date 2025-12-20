@@ -1,7 +1,7 @@
 // TransferSearchModal.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./transferSearchModal.css";
-import { axiosClient } from "../api/axiosClient"; 
+import { axiosClient } from "../api/axiosClient"; // adjust path if needed
 
 /** format numbers: remove trailing .00 */
 function fmtNum(v) {
@@ -9,7 +9,6 @@ function fmtNum(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return String(v);
   if (Number.isInteger(n)) return String(n);
-  // keep up to 2 decimals but trim zeros
   return n.toFixed(2).replace(/\.?0+$/, "");
 }
 
@@ -27,7 +26,9 @@ const TransferSearchModal = ({
   const [defaultItems, setDefaultItems] = useState([]);
   const [searchItems, setSearchItems] = useState([]);
 
-  const [selectedSet, setSelectedSet] = useState(new Set());
+  // ✅ NEW: persistent selections across pages/search/mode
+  // Map<key, rowObject>
+  const [selectedByKey, setSelectedByKey] = useState(() => new Map());
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(null);
@@ -89,7 +90,6 @@ const TransferSearchModal = ({
 
   const fetchSearchPage = useCallback(
     async (pageToLoad, { replace } = { replace: false }) => {
-      // if nothing pinned yet, don’t search
       if (!qChip && !dimsChip) return;
 
       setLoading(true);
@@ -103,7 +103,6 @@ const TransferSearchModal = ({
           },
         });
 
-        // your search api returns an array (based on what you pasted)
         const pageData = Array.isArray(res?.data?.data)
           ? res.data.data
           : Array.isArray(res?.data)
@@ -142,7 +141,6 @@ const TransferSearchModal = ({
     if (!isOpen) return;
 
     setInputValue("");
-    setSelectedSet(new Set());
 
     setQChip("");
     setDimsChip("");
@@ -150,15 +148,18 @@ const TransferSearchModal = ({
     setDefaultItems([]);
     setSearchItems([]);
 
+    // ✅ reset selections on open (fresh modal)
+    setSelectedByKey(new Map());
+
     resetPaging();
     fetchDefaultPage(1, { replace: true });
   }, [isOpen, fetchDefaultPage, resetPaging]);
 
   // when switching between modes (chips on/off), refetch from page 1
+  // ✅ DO NOT clear selectedByKey هنا (we want to keep selections)
   useEffect(() => {
     if (!isOpen) return;
 
-    setSelectedSet(new Set());
     resetPaging();
 
     if (isSearchMode) {
@@ -188,7 +189,7 @@ const TransferSearchModal = ({
           origin: item.origin,
           itemVariantType: item.type,
           itemVariantId: item.variantId,
-          variantId: item.variantId, // keep both
+          variantId: item.variantId,
           itemNameDescriptionId: realDesc.id,
           categoryName: realDesc.categoryName,
           subCategory: realDesc.subCategory,
@@ -231,11 +232,8 @@ const TransferSearchModal = ({
             out.push({
               key,
 
-              // ✅ IMPORTANT FIX (so parent can merge like non-search mode)
               itemVariantId: variantId,
               variantId: variantId,
-
-              // keep item id too (doesn't hurt)
               itemId,
 
               itemName,
@@ -266,28 +264,28 @@ const TransferSearchModal = ({
       if (!r?.key) return;
       if (existingKeys.has(r.key)) return;
 
-      setSelectedSet((prev) => {
-        const next = new Set(prev);
+      // ✅ singleSelect (used for FJ box picker): select immediately and close
+      if (singleSelect) {
+        onSelect([r]);
+        onClose();
+        return;
+      }
 
-        if (singleSelect) {
-          // single select means: only allow one, and unselect if clicked again
-          if (next.has(r.key)) return new Set();
-          return new Set([r.key]);
-        }
-
+      setSelectedByKey((prev) => {
+        const next = new Map(prev);
         if (next.has(r.key)) next.delete(r.key);
-        else next.add(r.key);
+        else next.set(r.key, r); // ✅ store the row object
         return next;
       });
     },
-    [existingKeys, singleSelect]
+    [existingKeys, singleSelect, onSelect, onClose]
   );
 
   const handleOk = useCallback(() => {
-    const chosen = rows.filter((r) => selectedSet.has(r.key));
+    const chosen = Array.from(selectedByKey.values());
     onSelect(chosen);
     onClose();
-  }, [rows, selectedSet, onSelect, onClose]);
+  }, [selectedByKey, onSelect, onClose]);
 
   const onLoadMore = useCallback(() => {
     if (loading || !hasMore) return;
@@ -299,10 +297,6 @@ const TransferSearchModal = ({
     const raw = String(inputValue || "").trim();
     if (!raw) return;
 
-    // behavior:
-    // - first Enter => qChip
-    // - second Enter => dimsChip
-    // - third Enter => replace qChip and clear dimsChip (forces new search flow)
     if (qChip && dimsChip) {
       setQChip(raw);
       setDimsChip("");
@@ -419,9 +413,8 @@ const TransferSearchModal = ({
             <tbody>
               {rows.map((r) => {
                 const already = existingKeys.has(r.key);
-                const checked = singleSelect
-                  ? false
-                  : already || selectedSet.has(r.key);
+                const selected = selectedByKey.has(r.key);
+                const checked = singleSelect ? false : already || selected;
 
                 return (
                   <tr key={r.key} className={already ? "row-disabled" : ""}>
@@ -477,7 +470,8 @@ const TransferSearchModal = ({
             <div className="transfer-search-modal-meta">
               Page {page}
               {totalPages ? ` / ${totalPages}` : ""} • Loaded {rows.length}
-              {typeof totalRows === "number" ? ` / ${totalRows}` : ""}
+              {typeof totalRows === "number" ? ` / ${totalRows}` : ""} • Selected{" "}
+              {selectedByKey.size}
             </div>
 
             <div className="transfer-search-modal-actions">
@@ -493,9 +487,9 @@ const TransferSearchModal = ({
               <button
                 className="transfer-search-modal-btn primary"
                 onClick={handleOk}
-                disabled={selectedSet.size === 0}
+                disabled={selectedByKey.size === 0}
               >
-                OK ({selectedSet.size})
+                OK ({selectedByKey.size})
               </button>
             </div>
           </div>

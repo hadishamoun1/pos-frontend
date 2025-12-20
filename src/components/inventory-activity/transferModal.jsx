@@ -1,5 +1,5 @@
 // src/components/transfers/transferModal.jsx
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
 import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
@@ -54,13 +54,11 @@ export default function TransferModal({
 
   const wrapperRef = useRef();
 
-  // editing id (works for edit opened from page OR edit from preview list inside modal)
   const [editingId, setEditingId] = useState(existingTransfer?.id ?? null);
   const [reloadKey, setReloadKey] = useState(0); // bump to refetch preview
-
   const isEditing = !!editingId;
 
-  // ✅ Keys must match what search modal uses: `${variantId}-${batchId}`
+  // ✅ Keys must match search modal: `${variantId}-${batchId}`
   const existingKeys = useMemo(() => {
     const s = new Set();
     for (const r of rows) {
@@ -71,14 +69,14 @@ export default function TransferModal({
     return s;
   }, [rows]);
 
-  // ✅ Hydrate full transfer so itemBatchId is always available in edit mode
+  // ✅ hydrate full transfer to ensure itemBatchId exists
   const fetchFullTransfer = async (id) => {
     if (!id) return null;
     const res = await axiosClient.get(`/transfers/${id}`); // ✅ FIX: relative only
     return res.data;
   };
 
-  // ✅ Normalize / merge itemBatchId from whichever shape we got (details vs full)
+  // merge batch ids from details+full
   const mergeBatchIds = (transferLike, fullTransfer) => {
     const fullItemsById = new Map(
       (fullTransfer?.items || []).map((it) => [Number(it.id), it])
@@ -86,6 +84,7 @@ export default function TransferModal({
 
     const mergedItems = (transferLike?.items || []).map((i) => {
       const fullIt = fullItemsById.get(Number(i.id));
+
       const itemBatchId =
         i.itemBatchId ??
         i.batchId ??
@@ -108,7 +107,6 @@ export default function TransferModal({
     return { ...(transferLike || {}), ...(fullTransfer || {}), items: mergedItems };
   };
 
-  // Helper to load a transfer into the form + rows
   const loadTransferIntoForm = (transfer) => {
     if (!transfer) return;
 
@@ -127,7 +125,6 @@ export default function TransferModal({
         i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? null;
 
       return {
-        // ✅ keep ids (critical for payload + duplicate prevention)
         itemBatchId,
         itemVariantId,
 
@@ -157,19 +154,15 @@ export default function TransferModal({
     setRows(mappedRows);
   };
 
-  // ✅ Prefill when opened in edit mode from TransfersPage (hydrate full transfer first)
+  // Prefill when opened in edit mode
   useEffect(() => {
     if (!isOpen) return;
-
-    // create mode reset
     if (!isEdit || !existingTransfer) return;
 
     (async () => {
       try {
         setEditingId(existingTransfer.id);
 
-        // existingTransfer often comes from /transfers/v1/details (display shape)
-        // so we hydrate from /transfers/:id to guarantee itemBatchId exists
         const full = await fetchFullTransfer(existingTransfer.id);
         const merged = mergeBatchIds(existingTransfer, full);
         loadTransferIntoForm(merged);
@@ -405,14 +398,14 @@ export default function TransferModal({
       };
 
       if (isEditing) {
-        await axiosClient.patch(`/transfers/${editingId}`, payload); // ✅ FIX: relative only
+        await axiosClient.patch(`/transfers/${editingId}`, payload); // ✅ FIX
         setNotif({
           open: true,
           type: "success",
           message: "Transfer updated successfully!",
         });
       } else {
-        await axiosClient.post(`/transfers`, payload); // ✅ FIX: relative only
+        await axiosClient.post(`/transfers`, payload); // ✅ FIX
         setNotif({
           open: true,
           type: "success",
@@ -438,8 +431,6 @@ export default function TransferModal({
     }
   };
 
-  // ✅ Edit from the autoFetch preview INSIDE this modal:
-  // hydrate using /transfers/:id before loading so itemBatchId exists.
   const handlePreviewEdit = async (transfer) => {
     if (!transfer?.id) return;
     try {
@@ -469,7 +460,7 @@ export default function TransferModal({
     if (!window.confirm("Are you sure you want to delete this transfer?")) return;
 
     try {
-      await axiosClient.delete(`/transfers/${id}`); // ✅ FIX: relative only
+      await axiosClient.delete(`/transfers/${id}`); // ✅ FIX
       setNotif({
         open: true,
         type: "success",
@@ -650,7 +641,9 @@ export default function TransferModal({
                       </tr>
                     ) : (
                       rows.map((r, i) => (
-                        <tr key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}>
+                        <tr
+                          key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}
+                        >
                           <td>
                             <input className="transfer-input" value={r.name} readOnly />
                           </td>
