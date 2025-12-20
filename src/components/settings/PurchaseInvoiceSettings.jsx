@@ -1,6 +1,6 @@
 // src/components/.../PurchaseInvoiceSettings.jsx
 import React, { useEffect, useState } from "react";
-import { axiosClient } from "../../api/axiosClient"; // ✅ adjust path if your folder level differs
+import { axiosClient } from "../api/axiosClient"; // ✅ adjust path if your folder level differs
 import NotificationModal from "../recievables/NotificationModal";
 import "./styles/PurchaseinvoiceSettings.css";
 
