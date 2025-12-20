@@ -1,10 +1,7 @@
 // ItemModal.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./styles/model.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added (named export)
-
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, ""); // e.g. http://192.168.68.105:3000
+import { axiosClient } from "../api/axiosClient"; // ✅ named export
 
 const DEBOUNCE_MS = 300;
 
@@ -193,8 +190,6 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
   // ---------- row builders ----------
   const buildRow = (rec) => {
-    // Unified builder that tolerates both search/list records
-    // (variantId or id) + (itemName, type, thickness, origin, length, width, sheetsPerBox)
     const variantId = Number(rec.variantId ?? rec.id);
     const thicknessVal = Number(rec.thickness ?? 0);
     const itemName = rec.itemName || "";
@@ -226,8 +221,6 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   };
 
   const flattenGrouped = (groups) => {
-    // groups: [{ realDescription: {...}, variants: [ {...} ] }, ...]
-    // We flatten to flat variant records; you can keep rd on each row if you want later
     const out = [];
     for (const g of groups || []) {
       const rd = g?.realDescription || null;
@@ -239,7 +232,6 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   };
 
   const flattenOldNested = (itemsLike) => {
-    // old: items -> thicknesses -> variants
     const out = [];
     for (const item of itemsLike || []) {
       const itemName = item?.itemName ?? "";
@@ -267,66 +259,55 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   };
 
   // ---------- normalizers ----------
-  const normalizeListToRows = useCallback(
-    (json) => {
-      // Accept either:
-      // - old list shape: { data: [ {id,itemName,type, thicknesses:[ {id, thickness, variants:[...] } ] } ] }
-      // - new grouped shape: { data: [ { realDescription:{...}, variants:[...] }, ... ] }
-      let more = false;
-      let flat = [];
+  const normalizeListToRows = useCallback((json) => {
+    let more = false;
+    let flat = [];
 
-      if (json && typeof json === "object") {
-        const data = Array.isArray(json.data) ? json.data : [];
-        more = Boolean(json.hasMore);
+    if (json && typeof json === "object") {
+      const data = Array.isArray(json.data) ? json.data : [];
+      more = Boolean(json.hasMore);
 
-        const looksGrouped =
-          data.length > 0 &&
-          typeof data[0] === "object" &&
-          ("realDescription" in data[0] ||
-            ("variants" in data[0] && !("thicknesses" in data[0])));
+      const looksGrouped =
+        data.length > 0 &&
+        typeof data[0] === "object" &&
+        ("realDescription" in data[0] ||
+          ("variants" in data[0] && !("thicknesses" in data[0])));
 
-        if (looksGrouped) {
-          flat = flattenGrouped(data);
-        } else {
-          flat = flattenOldNested(data);
-        }
+      if (looksGrouped) {
+        flat = flattenGrouped(data);
+      } else {
+        flat = flattenOldNested(data);
       }
+    }
 
-      return { rows: flat, hasMore: more };
-    },
-    []
-  );
+    return { rows: flat, hasMore: more };
+  }, []);
 
-  const normalizeSearchToRows = useCallback(
-    (json) => {
-      // Accept either flat or grouped search response
-      let more = false;
-      let flat = [];
+  const normalizeSearchToRows = useCallback((json) => {
+    let more = false;
+    let flat = [];
 
-      if (json && typeof json === "object") {
-        const data = Array.isArray(json.data) ? json.data : [];
-        more = Boolean(
-          json.hasMore ?? (json.page * json.limit < (json.totalRows || 0))
-        );
+    if (json && typeof json === "object") {
+      const data = Array.isArray(json.data) ? json.data : [];
+      more = Boolean(
+        json.hasMore ?? (json.page * json.limit < (json.totalRows || 0))
+      );
 
-        const looksGrouped =
-          data.length > 0 &&
-          typeof data[0] === "object" &&
-          ("realDescription" in data[0] ||
-            ("variants" in data[0] && !("itemId" in data[0])));
+      const looksGrouped =
+        data.length > 0 &&
+        typeof data[0] === "object" &&
+        ("realDescription" in data[0] ||
+          ("variants" in data[0] && !("itemId" in data[0])));
 
-        if (looksGrouped) {
-          flat = flattenGrouped(data);
-        } else {
-          // already flat search results
-          flat = data.map(buildRow);
-        }
+      if (looksGrouped) {
+        flat = flattenGrouped(data);
+      } else {
+        flat = data.map(buildRow);
       }
+    }
 
-      return { rows: flat, hasMore: more };
-    },
-    []
-  );
+    return { rows: flat, hasMore: more };
+  }, []);
 
   // ---------- API calls ----------
   const fetchListPage = useCallback(
@@ -334,9 +315,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const url = `${baseUrl}/items/v1/filtered-items?page=${targetPage}&limit=${limit}&includeEmpty=0`;
 
-        // ✅ replaced fetch with axiosClient
+        // ✅ FIX: RELATIVE URL (NO baseUrl, NO /api here)
+        const url = `/items/v1/filtered-items?page=${targetPage}&limit=${limit}&includeEmpty=0`;
+
         const res = await axiosClient.get(url, { signal });
         const json = res.data;
 
@@ -372,9 +354,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         if (typeof lengthOnly === "number") parts.push(`length=${lengthOnly}`);
         if (typeof widthOnly === "number") parts.push(`width=${widthOnly}`);
 
-        const url = `${baseUrl}/items/v1/variant-search?${parts.join("&")}`;
+        // ✅ FIX: RELATIVE URL (NO baseUrl, NO /api here)
+        const url = `/items/v1/variant-search?${parts.join("&")}`;
 
-        // ✅ replaced fetch with axiosClient
         const res = await axiosClient.get(url, { signal });
         const json = res.data;
 
@@ -415,7 +397,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
     if (!hasAny) {
       setMode("list");
-      setRows([]); // will refill from list call
+      setRows([]);
       setSearchPage(1);
       fetchListPage(1);
       return;
@@ -432,6 +414,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         typeof dimsInfo.width === "number" ? dimsInfo.width : undefined
       );
     }, DEBOUNCE_MS);
+
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qSansDims, dimsInfo]);
@@ -463,6 +446,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     (r) => {
       const payloadItem = { ...r.payloadItem, combinedName: r.combinedName };
       const payloadVariant = { ...r.payloadVariant };
+
       console.log(
         "%c[MODAL->PARENT] handleCheckboxChange payloadItem",
         "color:#0A84FF;font-weight:bold;",
@@ -473,6 +457,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         "color:#0A84FF;font-weight:bold;",
         payloadVariant
       );
+
       handleCheckboxChange(payloadItem, payloadVariant);
     },
     [handleCheckboxChange]
@@ -481,6 +466,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   // load more
   const onLoadMore = useCallback(() => {
     if (loading || !hasMore) return;
+
     if (mode === "search") {
       const hasAny =
         Boolean(qSansDims) ||
@@ -488,6 +474,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         typeof dimsInfo.length === "number" ||
         typeof dimsInfo.width === "number";
       if (!hasAny) return;
+
       fetchSearchPage(
         searchPage + 1,
         qSansDims,
@@ -531,6 +518,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
               }
             }}
           />
+
           {pinnedTerms.length > 0 && (
             <div className="pinned-chips">
               {pinnedTerms.map((term) => (
@@ -603,7 +591,12 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
         {/* Pagination controls */}
         <div
-          style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 16px" }}
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            margin: "12px 16px",
+          }}
         >
           <button
             disabled={loading || !hasMore}

@@ -1,7 +1,9 @@
 // src/api/axiosClient.js
 import axios from "axios";
 
-const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+// ✅ If you use Nginx /api proxy, this should be "/api" in production.
+// If env is set, we use it; otherwise we fallback to "/api".
+const API_BASE = (process.env.REACT_APP_API_BASE_URL || "/api").replace(/\/+$/, "");
 
 export const axiosClient = axios.create({
   baseURL: API_BASE,
@@ -22,7 +24,6 @@ axiosClient.interceptors.response.use(
     const status = err?.response?.status;
     if (status === 401) {
       sessionStorage.removeItem("token");
-      // send user back to login
       window.location.href = "/";
     }
     return Promise.reject(err);

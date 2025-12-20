@@ -1,7 +1,7 @@
 // src/components/pos-system/AccountStatement.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import "./Reports.css"; // reuse your styles
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const BASE_URL =
   (typeof import.meta !== "undefined" &&
@@ -68,7 +68,8 @@ export default function AccountStatement() {
   // helpers to show "Opening Balance" in Arabic
   const looksLikeOpening = (txt = "") =>
     /opening\s*balance/i.test(txt) || /رصيد\s*سابق/.test(txt);
-  const displayDesc = (txt = "") => (looksLikeOpening(txt) ? "رصيد سابق" : txt || "");
+  const displayDesc = (txt = "") =>
+    looksLikeOpening(txt) ? "رصيد سابق" : txt || "";
 
   // fetch accounts
   useEffect(() => {
@@ -77,7 +78,9 @@ export default function AccountStatement() {
       setAccLoading(true);
       setAccError("");
       try {
-        const res = await axios.get(ENDPOINTS.arrangedAccounts);
+        // ✅ axios -> axiosClient
+        const res = await axiosClient.get(ENDPOINTS.arrangedAccounts);
+
         if (cancelled) return;
         const tree = Array.isArray(res.data) ? res.data : res.data?.rows || [];
         setAccTree(tree);
@@ -127,7 +130,8 @@ export default function AccountStatement() {
             label: `${indent}${code} — ${name}`,
           });
         }
-        if (Array.isArray(n.children) && n.children.length) walk(n.children, depth + 1);
+        if (Array.isArray(n.children) && n.children.length)
+          walk(n.children, depth + 1);
       });
     };
     walk(nodes, 0);
@@ -163,7 +167,10 @@ export default function AccountStatement() {
         to,
       });
 
-      const res = await axios.get(ENDPOINTS.accountStatementOFR, { params });
+      // ✅ axios -> axiosClient
+      const res = await axiosClient.get(ENDPOINTS.accountStatementOFR, {
+        params,
+      });
 
       const data = res.data || {};
       setMeta({
@@ -839,7 +846,10 @@ export default function AccountStatement() {
                   <td className="footer-spacer">&nbsp;</td>
                   <td className="footer-spacer">&nbsp;</td>
                   <td className="footer-spacer">&nbsp;</td>
-                  <td className="footer-label" style={{ textAlign: "center", fontWeight: 700, fontSize: "14px" }}>
+                  <td
+                    className="footer-label"
+                    style={{ textAlign: "center", fontWeight: 700, fontSize: "14px" }}
+                  >
                     رصيد
                   </td>
                   <td className="num footer-amount">{fmt(closingBalance)}</td>
