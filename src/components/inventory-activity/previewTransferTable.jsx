@@ -1,7 +1,7 @@
 // src/components/transfers/previewTransferTable.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "./previewTransferTable.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
@@ -12,8 +12,8 @@ export default function PreviewTransferTable({
   onDelete,
   loading,
   error,
-  autoFetch = false,   // 🔹 when true & no transfers, we fetch from API
-  reloadKey = 0,       // 🔹 bump this from parent to re-fetch (e.g. after delete)
+  autoFetch = false, // 🔹 when true & no transfers, we fetch from API
+  reloadKey = 0, // 🔹 bump this from parent to re-fetch (e.g. after delete)
 }) {
   const isRowsMode = Array.isArray(rows);
 
@@ -23,13 +23,13 @@ export default function PreviewTransferTable({
   const [internalError, setInternalError] = useState("");
 
   useEffect(() => {
-    if (isRowsMode) return;                  // inside TransferModal rows preview
+    if (isRowsMode) return; // inside TransferModal rows preview
     if (transfers && transfers.length) return; // parent already provided data
-    if (!autoFetch) return;                  // only fetch if asked to
+    if (!autoFetch) return; // only fetch if asked to
 
     setInternalLoading(true);
-    axios
-      .get(`${baseUrl}/transfers/v1/details`)
+    axiosClient
+      .get(`${baseUrl}/transfers/v1/details`) // ✅ axiosClient instead of axios
       .then((res) => {
         setInternalTransfers(res.data || []);
         setInternalError("");
@@ -108,9 +108,7 @@ export default function PreviewTransferTable({
   const effectiveLoading = loading ?? internalLoading;
   const effectiveError = error ?? internalError;
   const dataTransfers =
-    Array.isArray(transfers) && transfers.length
-      ? transfers
-      : internalTransfers;
+    Array.isArray(transfers) && transfers.length ? transfers : internalTransfers;
 
   if (effectiveLoading) {
     return <div className="preview-transfer-loading">Loading…</div>;

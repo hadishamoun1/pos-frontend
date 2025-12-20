@@ -1,6 +1,7 @@
 // ItemModal.jsx
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./styles/model.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added (named export)
 
 const rawBase = process.env.REACT_APP_API_BASE_URL || "";
 const baseUrl = rawBase.replace(/\/+$/, ""); // e.g. http://192.168.68.105:3000
@@ -27,7 +28,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     return [...pinnedTerms, ...(live ? [live] : [])].join(" ").trim();
   }, [pinnedTerms, searchText]);
 
-  const preferPlainAsLength = useMemo(() => pinnedTerms.length > 0, [pinnedTerms]);
+  const preferPlainAsLength = useMemo(
+    () => pinnedTerms.length > 0,
+    [pinnedTerms]
+  );
 
   // ---------- helpers: parse dims ----------
   const extractDimsParts = useCallback((text, preferLengthPlain) => {
@@ -45,7 +49,8 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
     // Full L*W(-SPB)
     const reFull = /(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g;
-    let m, lastFull = null;
+    let m,
+      lastFull = null;
     while ((m = reFull.exec(t)) !== null) {
       const L = m[1];
       const W = m[2];
@@ -66,27 +71,59 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     const tokens = t.split(/\s+/).filter(Boolean);
     let single = null;
     for (const tok of tokens) {
-      const w1 = tok.match(/^\*\s*(\d{2,5})$/);                 // *321
-      const w2 = tok.match(/^(?:w|W|عرض)\s*:?(\d{2,5})$/);      // W321 / عرض321 / W:321
-      const w3 = tok.match(/^(\d{2,5})(?:w|W)$/);               // 321W
+      const w1 = tok.match(/^\*\s*(\d{2,5})$/); // *321
+      const w2 = tok.match(/^(?:w|W|عرض)\s*:?(\d{2,5})$/); // W321 / عرض321 / W:321
+      const w3 = tok.match(/^(\d{2,5})(?:w|W)$/); // 321W
       if (w1 || w2 || w3) {
-        const W = Number((w1?.[1] || w2?.[1] || w3?.[1]));
-        single = { dims: null, length: null, width: W, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+        const W = Number(w1?.[1] || w2?.[1] || w3?.[1]);
+        single = {
+          dims: null,
+          length: null,
+          width: W,
+          spb: null,
+          isBox: false,
+          foundSingle: true,
+          tokenToStrip: tok,
+        };
         continue;
       }
-      const l1 = tok.match(/^(\d{2,5})\*$/);                    // 225*
+      const l1 = tok.match(/^(\d{2,5})\*$/); // 225*
       if (l1) {
         const L = Number(l1[1]);
-        single = { dims: null, length: L, width: null, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+        single = {
+          dims: null,
+          length: L,
+          width: null,
+          spb: null,
+          isBox: false,
+          foundSingle: true,
+          tokenToStrip: tok,
+        };
         continue;
       }
-      const plain = tok.match(/^(\d{2,5})$/);                   // 225
+      const plain = tok.match(/^(\d{2,5})$/); // 225
       if (plain) {
         const n = Number(plain[1]);
         if (preferLengthPlain) {
-          single = { dims: null, length: n, width: null, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+          single = {
+            dims: null,
+            length: n,
+            width: null,
+            spb: null,
+            isBox: false,
+            foundSingle: true,
+            tokenToStrip: tok,
+          };
         } else {
-          single = { dims: null, length: null, width: n, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+          single = {
+            dims: null,
+            length: null,
+            width: n,
+            spb: null,
+            isBox: false,
+            foundSingle: true,
+            tokenToStrip: tok,
+          };
         }
         continue;
       }
@@ -96,7 +133,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
   const stripDims = useCallback((text, tokenToStrip) => {
     if (!text) return "";
-    let out = text.replace(/(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g, " ");
+    let out = text.replace(
+      /(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g,
+      " "
+    );
     if (tokenToStrip) {
       const esc = tokenToStrip.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`(^|\\s)${esc}(?=\\s|$)`, "g");
@@ -144,7 +184,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
   // ---------- request cancel ----------
   const cancelInFlight = () => {
-    try { abortRef.current?.abort(); } catch {}
+    try {
+      abortRef.current?.abort();
+    } catch {}
     abortRef.current = new AbortController();
     return abortRef.current.signal;
   };
@@ -157,7 +199,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     const thicknessVal = Number(rec.thickness ?? 0);
     const itemName = rec.itemName || "";
     const type = rec.type || "";
-    const combinedName = `${Number.isFinite(thicknessVal) ? thicknessVal : 0} ملم ${itemName}`;
+    const combinedName = `${
+      Number.isFinite(thicknessVal) ? thicknessVal : 0
+    } ملم ${itemName}`;
 
     return {
       key: `${rec.itemId ?? "x"}-${variantId}`,
@@ -223,54 +267,66 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   };
 
   // ---------- normalizers ----------
-  const normalizeListToRows = useCallback((json) => {
-    // Accept either:
-    // - old list shape: { data: [ {id,itemName,type, thicknesses:[ {id, thickness, variants:[...] } ] } ] }
-    // - new grouped shape: { data: [ { realDescription:{...}, variants:[...] }, ... ] }
-    let more = false;
-    let flat = [];
+  const normalizeListToRows = useCallback(
+    (json) => {
+      // Accept either:
+      // - old list shape: { data: [ {id,itemName,type, thicknesses:[ {id, thickness, variants:[...] } ] } ] }
+      // - new grouped shape: { data: [ { realDescription:{...}, variants:[...] }, ... ] }
+      let more = false;
+      let flat = [];
 
-    if (json && typeof json === "object") {
-      const data = Array.isArray(json.data) ? json.data : [];
-      more = Boolean(json.hasMore);
+      if (json && typeof json === "object") {
+        const data = Array.isArray(json.data) ? json.data : [];
+        more = Boolean(json.hasMore);
 
-      const looksGrouped =
-        data.length > 0 && typeof data[0] === "object" &&
-        (("realDescription" in data[0]) || ("variants" in data[0] && !("thicknesses" in data[0])));
+        const looksGrouped =
+          data.length > 0 &&
+          typeof data[0] === "object" &&
+          ("realDescription" in data[0] ||
+            ("variants" in data[0] && !("thicknesses" in data[0])));
 
-      if (looksGrouped) {
-        flat = flattenGrouped(data);
-      } else {
-        flat = flattenOldNested(data);
+        if (looksGrouped) {
+          flat = flattenGrouped(data);
+        } else {
+          flat = flattenOldNested(data);
+        }
       }
-    }
 
-    return { rows: flat, hasMore: more };
-  }, []);
+      return { rows: flat, hasMore: more };
+    },
+    []
+  );
 
-  const normalizeSearchToRows = useCallback((json) => {
-    // Accept either flat or grouped search response
-    let more = false;
-    let flat = [];
+  const normalizeSearchToRows = useCallback(
+    (json) => {
+      // Accept either flat or grouped search response
+      let more = false;
+      let flat = [];
 
-    if (json && typeof json === "object") {
-      const data = Array.isArray(json.data) ? json.data : [];
-      more = Boolean(json.hasMore ?? (json.page * json.limit < (json.totalRows || 0)));
+      if (json && typeof json === "object") {
+        const data = Array.isArray(json.data) ? json.data : [];
+        more = Boolean(
+          json.hasMore ?? (json.page * json.limit < (json.totalRows || 0))
+        );
 
-      const looksGrouped =
-        data.length > 0 && typeof data[0] === "object" &&
-        (("realDescription" in data[0]) || ("variants" in data[0] && !("itemId" in data[0])));
+        const looksGrouped =
+          data.length > 0 &&
+          typeof data[0] === "object" &&
+          ("realDescription" in data[0] ||
+            ("variants" in data[0] && !("itemId" in data[0])));
 
-      if (looksGrouped) {
-        flat = flattenGrouped(data);
-      } else {
-        // already flat search results
-        flat = data.map(buildRow);
+        if (looksGrouped) {
+          flat = flattenGrouped(data);
+        } else {
+          // already flat search results
+          flat = data.map(buildRow);
+        }
       }
-    }
 
-    return { rows: flat, hasMore: more };
-  }, []);
+      return { rows: flat, hasMore: more };
+    },
+    []
+  );
 
   // ---------- API calls ----------
   const fetchListPage = useCallback(
@@ -279,16 +335,18 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
       try {
         const signal = cancelInFlight();
         const url = `${baseUrl}/items/v1/filtered-items?page=${targetPage}&limit=${limit}&includeEmpty=0`;
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const json = await res.json();
+
+        // ✅ replaced fetch with axiosClient
+        const res = await axiosClient.get(url, { signal });
+        const json = res.data;
+
         const { rows: pageRows, hasMore: more } = normalizeListToRows(json);
         if (targetPage === 1) setRows(pageRows || []);
         else setRows((prev) => [...prev, ...(pageRows || [])]);
         setHasMore(Boolean(more));
         setPage(targetPage);
       } catch (e) {
-        if (e?.name !== "AbortError") {
+        if (e?.name !== "AbortError" && e?.code !== "ERR_CANCELED") {
           console.error("Fetch list page failed:", e);
           setHasMore(false);
         }
@@ -315,9 +373,10 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         if (typeof widthOnly === "number") parts.push(`width=${widthOnly}`);
 
         const url = `${baseUrl}/items/v1/variant-search?${parts.join("&")}`;
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const json = await res.json();
+
+        // ✅ replaced fetch with axiosClient
+        const res = await axiosClient.get(url, { signal });
+        const json = res.data;
 
         const { rows: pageRows, hasMore: more } = normalizeSearchToRows(json);
         if (targetPage === 1) setRows(pageRows || []);
@@ -325,7 +384,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         setHasMore(Boolean(more));
         setSearchPage(targetPage);
       } catch (e) {
-        if (e?.name !== "AbortError") {
+        if (e?.name !== "AbortError" && e?.code !== "ERR_CANCELED") {
           console.error("Fetch search page failed:", e);
           setHasMore(false);
         }
@@ -340,7 +399,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
   useEffect(() => {
     fetchListPage(1);
     return () => {
-      try { abortRef.current?.abort(); } catch {}
+      try {
+        abortRef.current?.abort();
+      } catch {}
     };
   }, [fetchListPage]);
 
@@ -354,7 +415,7 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
     if (!hasAny) {
       setMode("list");
-      setRows([]);            // will refill from list call
+      setRows([]); // will refill from list call
       setSearchPage(1);
       fetchListPage(1);
       return;
@@ -402,8 +463,16 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     (r) => {
       const payloadItem = { ...r.payloadItem, combinedName: r.combinedName };
       const payloadVariant = { ...r.payloadVariant };
-      console.log("%c[MODAL->PARENT] handleCheckboxChange payloadItem", "color:#0A84FF;font-weight:bold;", payloadItem);
-      console.log("%c[MODAL->PARENT] handleCheckboxChange payloadVariant", "color:#0A84FF;font-weight:bold;", payloadVariant);
+      console.log(
+        "%c[MODAL->PARENT] handleCheckboxChange payloadItem",
+        "color:#0A84FF;font-weight:bold;",
+        payloadItem
+      );
+      console.log(
+        "%c[MODAL->PARENT] handleCheckboxChange payloadVariant",
+        "color:#0A84FF;font-weight:bold;",
+        payloadVariant
+      );
       handleCheckboxChange(payloadItem, payloadVariant);
     },
     [handleCheckboxChange]
@@ -430,7 +499,17 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
     } else {
       fetchListPage(page + 1);
     }
-  }, [loading, hasMore, mode, qSansDims, dimsInfo, searchPage, page, fetchSearchPage, fetchListPage]);
+  }, [
+    loading,
+    hasMore,
+    mode,
+    qSansDims,
+    dimsInfo,
+    searchPage,
+    page,
+    fetchSearchPage,
+    fetchListPage,
+  ]);
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true">
@@ -496,7 +575,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
                       onChange={() => onToggle(r)}
                     />
                   </td>
-                  <td style={{ direction: "rtl", textAlign: "right" }}>{r.combinedName}</td>
+                  <td style={{ direction: "rtl", textAlign: "right" }}>
+                    {r.combinedName}
+                  </td>
                   <td>{r.type}</td>
                   <td>{r.origin}</td>
                   <td>{r.length}</td>
@@ -507,7 +588,11 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
 
               {!loading && filteredRows.length === 0 && (
                 <tr className="empty-row">
-                  <td className="empty-cell" colSpan={7} style={{ textAlign: "center", opacity: 0.7 }}>
+                  <td
+                    className="empty-cell"
+                    colSpan={7}
+                    style={{ textAlign: "center", opacity: 0.7 }}
+                  >
                     لا توجد نتائج.
                   </td>
                 </tr>
@@ -517,7 +602,9 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
         </div>
 
         {/* Pagination controls */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 16px" }}>
+        <div
+          style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 16px" }}
+        >
           <button
             disabled={loading || !hasMore}
             onClick={onLoadMore}
@@ -526,7 +613,8 @@ const ItemModal = ({ selectedItems, handleCheckboxChange, closeItemModal }) => {
             {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
           </button>
           <span style={{ fontSize: 12, opacity: 0.7 }}>
-            {mode === "search" ? `Search page ${searchPage}` : `Page ${page}`} • Showing {filteredRows.length} rows
+            {mode === "search" ? `Search page ${searchPage}` : `Page ${page}`} •
+            Showing {filteredRows.length} rows
           </span>
         </div>
 

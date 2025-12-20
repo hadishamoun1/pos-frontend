@@ -1,8 +1,10 @@
 // PreviewTable.jsx
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
 import EditCountModal from "./editModal";
 import "./previewTable.css";
+
+// ✅ API client (named export)
+import { axiosClient } from "../api/axiosClient";
 
 /* =========================
    Helpers
@@ -140,7 +142,7 @@ const PreviewTable = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axios.get(`${baseUrl}/inventory-count/v1/filtered`);
+      const { data } = await axiosClient.get(`${baseUrl}/inventory-count/v1/filtered`);
       const mapped = Array.isArray(data) ? data.map(mapFilteredRowToView) : [];
       setRows(mapped);
     } catch (e) {
@@ -157,7 +159,7 @@ const PreviewTable = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axios.get(`${baseUrl}/inventory-count/v1/search`, {
+      const { data } = await axiosClient.get(`${baseUrl}/inventory-count/v1/search`, {
         params: {
           ...(params.q ? { q: params.q } : {}),
           ...(params.itemName ? { itemName: params.itemName } : {}),
@@ -244,7 +246,7 @@ const PreviewTable = () => {
     try {
       // NOTE: Adjust URL to match your NestJS route
       // Expected payload: { ids: number[] }
-      await axios.post(`${baseUrl}/inventory-count/v1/delete-counts-strict`, { ids });
+      await axiosClient.post(`${baseUrl}/inventory-count/v1/delete-counts-strict`, { ids });
 
       // remove from UI immediately
       setRows((prev) => prev.filter((r) => !selected.has(r.id)));

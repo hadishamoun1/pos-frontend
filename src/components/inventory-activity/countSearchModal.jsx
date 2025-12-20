@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import "./countSearchModal.css";
+
+// ✅ use your axios client (named export)
+import { axiosClient } from "../api/axiosClient"; // <-- adjust path if needed
 
 const CountSearchModal = ({
   isOpen,
@@ -12,12 +14,12 @@ const CountSearchModal = ({
   const [items, setItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSet, setSelectedSet] = useState(new Set());
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     if (!isOpen) return;
-    axios
-      .get(`${baseUrl}/items/v1/filtered-items`)
+
+    axiosClient
+      .get("/items/v1/filtered-items")
       .then((res) => setItems(res.data || []))
       .catch(console.error);
 
@@ -26,6 +28,7 @@ const CountSearchModal = ({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
   const rows = items.flatMap((item) => {
     return (item.thicknesses || []).flatMap((thickness) => {
       return (thickness.variants || []).flatMap((variant) => {
@@ -62,6 +65,7 @@ const CountSearchModal = ({
 
   const toggleSelect = (row) => {
     if (existingKeys.has(row.key)) return;
+
     if (singleSelect) {
       onSelect([row]);
       onClose();

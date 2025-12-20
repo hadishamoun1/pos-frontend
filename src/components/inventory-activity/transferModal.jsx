@@ -1,10 +1,10 @@
 // src/components/transfers/transferModal.jsx
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import axios from "axios";
 import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 const TYPE_OPTIONS = ["G"];
@@ -75,7 +75,7 @@ export default function TransferModal({
   // ✅ Hydrate full transfer so itemBatchId is always available in edit mode
   const fetchFullTransfer = async (id) => {
     if (!id) return null;
-    const res = await axios.get(`${baseUrl}/transfers/${id}`);
+    const res = await axiosClient.get(`${baseUrl}/transfers/${id}`); // ✅ axiosClient
     return res.data;
   };
 
@@ -123,8 +123,7 @@ export default function TransferModal({
     });
 
     const mappedRows = (transfer.items || []).map((i) => {
-      const itemBatchId =
-        i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null;
+      const itemBatchId = i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null;
       const itemVariantId =
         i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? null;
 
@@ -240,7 +239,10 @@ export default function TransferModal({
     setRows((prev) => {
       const next = [...prev];
       for (const r of mapped) {
-        const k = r.itemVariantId && r.itemBatchId ? `${r.itemVariantId}-${r.itemBatchId}` : null;
+        const k =
+          r.itemVariantId && r.itemBatchId
+            ? `${r.itemVariantId}-${r.itemBatchId}`
+            : null;
         if (!k) continue;
         if (next.some((x) => `${x.itemVariantId}-${x.itemBatchId}` === k)) continue;
         next.push(r);
@@ -371,7 +373,9 @@ export default function TransferModal({
         .filter((r) => toNum(r.quantity, 0) > 0)
         .map((r, idx) => {
           if (!r.itemBatchId) {
-            throw new Error(`Row #${idx + 1} is missing itemBatchId (edit payload cannot work).`);
+            throw new Error(
+              `Row #${idx + 1} is missing itemBatchId (edit payload cannot work).`
+            );
           }
           return {
             itemBatchId: Number(r.itemBatchId),
@@ -402,14 +406,14 @@ export default function TransferModal({
       };
 
       if (isEditing) {
-        await axios.patch(`${baseUrl}/transfers/${editingId}`, payload);
+        await axiosClient.patch(`${baseUrl}/transfers/${editingId}`, payload); // ✅ axiosClient
         setNotif({
           open: true,
           type: "success",
           message: "Transfer updated successfully!",
         });
       } else {
-        await axios.post(`${baseUrl}/transfers`, payload);
+        await axiosClient.post(`${baseUrl}/transfers`, payload); // ✅ axiosClient
         setNotif({
           open: true,
           type: "success",
@@ -466,7 +470,7 @@ export default function TransferModal({
     if (!window.confirm("Are you sure you want to delete this transfer?")) return;
 
     try {
-      await axios.delete(`${baseUrl}/transfers/${id}`);
+      await axiosClient.delete(`${baseUrl}/transfers/${id}`); // ✅ axiosClient
       setNotif({
         open: true,
         type: "success",
@@ -491,24 +495,37 @@ export default function TransferModal({
   return (
     <>
       <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
-        <div className="transfer-modal-content" onClick={(e) => e.stopPropagation()}>
-          <button className="transfer-modal-close" onClick={onClose} disabled={saving}>
+        <div
+          className="transfer-modal-content"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="transfer-modal-close"
+            onClick={onClose}
+            disabled={saving}
+          >
             &times;
           </button>
 
-          <h2 className="transfer-txt">{isEditing ? "Edit Transfer" : "Transfer Inventory"}</h2>
+          <h2 className="transfer-txt">
+            {isEditing ? "Edit Transfer" : "Transfer Inventory"}
+          </h2>
 
           <div className="transfer-modal-header">
             <div className="transfer-action-buttons">
               <button
-                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${
+                  !previewing ? "active" : ""
+                }`}
                 onClick={() => setPreviewing(false)}
                 disabled={saving}
               >
                 {isEditing ? "Edit Form" : "Create Transfer"}
               </button>
               <button
-                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
+                className={`btn transfer-action-btn ${
+                  previewing ? "active" : ""
+                }`}
                 onClick={() => setPreviewing(true)}
                 disabled={saving}
               >
@@ -519,7 +536,11 @@ export default function TransferModal({
 
           {!previewing && (
             <div className="detail-actions">
-              <button className="btn transfer-reset-btn" onClick={resetAll} disabled={saving}>
+              <button
+                className="btn transfer-reset-btn"
+                onClick={resetAll}
+                disabled={saving}
+              >
                 Reset
               </button>
               <button
@@ -611,7 +632,9 @@ export default function TransferModal({
                       <th>Dimension</th>
                       <th>Origin</th>
                       <th>Type</th>
-                      {details.location === "FJ" && <th className="target-box-col">Target Box</th>}
+                      {details.location === "FJ" && (
+                        <th className="target-box-col">Target Box</th>
+                      )}
                       <th>Quantity</th>
                       <th>SQM</th>
                       <th>Condition</th>
@@ -632,18 +655,36 @@ export default function TransferModal({
                       </tr>
                     ) : (
                       rows.map((r, i) => (
-                        <tr key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}>
+                        <tr
+                          key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}
+                        >
                           <td>
-                            <input className="transfer-input" value={r.name} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.name}
+                              readOnly
+                            />
                           </td>
                           <td>
-                            <input className="transfer-input" value={getDimensionDisplay(r)} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={getDimensionDisplay(r)}
+                              readOnly
+                            />
                           </td>
                           <td>
-                            <input className="transfer-input" value={r.origin} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.origin}
+                              readOnly
+                            />
                           </td>
                           <td>
-                            <input className="transfer-input" value={r.type} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.type}
+                              readOnly
+                            />
                           </td>
 
                           {details.location === "FJ" && (
@@ -656,7 +697,11 @@ export default function TransferModal({
                               >
                                 {r.toBoxLabel ? "Change Box" : "Choose Box"}
                               </button>
-                              {r.toBoxLabel && <div className="transfer-box-label">{r.toBoxLabel}</div>}
+                              {r.toBoxLabel && (
+                                <div className="transfer-box-label">
+                                  {r.toBoxLabel}
+                                </div>
+                              )}
                             </td>
                           )}
 
@@ -665,21 +710,35 @@ export default function TransferModal({
                               type="number"
                               className="transfer-input transfer-col-small"
                               value={r.quantity}
-                              onChange={(e) => updateRowField(i, "quantity", e.target.value)}
+                              onChange={(e) =>
+                                updateRowField(i, "quantity", e.target.value)
+                              }
                               disabled={saving}
                             />
                           </td>
 
                           <td>
-                            <input className="transfer-input" value={r.sqm} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.sqm}
+                              readOnly
+                            />
                           </td>
 
                           <td>
-                            <input className="transfer-input" value={r.condition || ""} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.condition || ""}
+                              readOnly
+                            />
                           </td>
 
                           <td>
-                            <input className="transfer-input" value={r.dateReceived || ""} readOnly />
+                            <input
+                              className="transfer-input"
+                              value={r.dateReceived || ""}
+                              readOnly
+                            />
                           </td>
 
                           <td>
@@ -687,7 +746,9 @@ export default function TransferModal({
                               className="transfer-input"
                               type="number"
                               value={r.price}
-                              onChange={(e) => updateRowField(i, "price", e.target.value)}
+                              onChange={(e) =>
+                                updateRowField(i, "price", e.target.value)
+                              }
                               disabled={saving}
                             />
                           </td>

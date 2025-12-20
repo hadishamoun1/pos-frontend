@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./suppliersModal.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -10,11 +11,8 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
     // Fetch suppliers from API
     const fetchSuppliers = async () => {
       try {
-        const response = await fetch(
-          `${baseUrl}/suppliers/v1/filtered`
-        );
-        const data = await response.json();
-        setSuppliers(data);
+        const res = await axiosClient.get(`${baseUrl}/suppliers/v1/filtered`);
+        setSuppliers(res.data || []);
       } catch (error) {
         console.error("Error fetching suppliers:", error);
       }

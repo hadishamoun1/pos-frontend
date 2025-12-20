@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import NotificationModal from "../recievables/NotificationModal";
 import "./openingCountModal.css";
 import CountOpeningSearchModal from "./countOpeningSearchModal";
+import { axiosClient } from "../api/axiosClient"; // ✅ added (named export)
 
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 // ✅ Defaults
 const DEFAULT_TYPE = "RVR";
-const DEFAULT_DATE_ISO = "2025-10-31"; 
+const DEFAULT_DATE_ISO = "2025-10-31";
 
 const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
   const [saving, setSaving] = useState(false);
@@ -121,13 +122,8 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
 
         console.log("Sending payload:", payload);
 
-        await fetch(`${baseUrl}/inventory-count/v1/opening`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        // ✅ ONLY changed this: fetch -> axiosClient.post
+        await axiosClient.post(`${baseUrl}/inventory-count/v1/opening`, payload);
       }
 
       setNotif({
@@ -184,7 +180,8 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
 
   const ensureRef = (rowIndex, field) => {
     if (!cellRefs.current[rowIndex]) cellRefs.current[rowIndex] = {};
-    if (!cellRefs.current[rowIndex][field]) cellRefs.current[rowIndex][field] = React.createRef();
+    if (!cellRefs.current[rowIndex][field])
+      cellRefs.current[rowIndex][field] = React.createRef();
     return cellRefs.current[rowIndex][field];
   };
 
@@ -196,14 +193,16 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
     if (["G", "SR"].includes(row.type || DEFAULT_TYPE)) fields.push("finalCostOfr");
     fields.push("dateReceivedInput", "condition");
     return fields;
-    };
+  };
 
   const focusCell = (rowIndex, field) => {
     const ref = cellRefs.current?.[rowIndex]?.[field];
     if (ref && ref.current) {
       ref.current.focus();
       if (ref.current.select) {
-        try { ref.current.select(); } catch {}
+        try {
+          ref.current.select();
+        } catch {}
       }
     }
   };
@@ -381,9 +380,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                             className="opening-count-input"
                             value={
                               r.unit === "box"
-                                ? `${r.dimension}${
-                                    r.sheetsPerBox ? `-0${r.sheetsPerBox}` : ""
-                                  }`
+                                ? `${r.dimension}${r.sheetsPerBox ? `-0${r.sheetsPerBox}` : ""}`
                                 : r.dimension
                             }
                             readOnly
@@ -410,9 +407,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                             type="date"
                             className="opening-count-input"
                             value={r.date || DEFAULT_DATE_ISO}
-                            onChange={(e) =>
-                              updateCell(i, "date", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "date", e.target.value)}
                             onKeyDown={(e) => onCellKeyDown(e, i, "date")}
                             onWheel={blockWheel}
                             disabled={saving}
@@ -443,9 +438,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                             ref={refType}
                             className="opening-count-input"
                             value={r.type || DEFAULT_TYPE}
-                            onChange={(e) =>
-                              updateCell(i, "type", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "type", e.target.value)}
                             onKeyDown={(e) => onCellKeyDown(e, i, "type")}
                             disabled={saving}
                           >
@@ -468,11 +461,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                                 className="opening-count-input"
                                 value={r.countOFR}
                                 onChange={(e) =>
-                                  updateCell(
-                                    i,
-                                    "countOFR",
-                                    normalizeDecimal(e.target.value)
-                                  )
+                                  updateCell(i, "countOFR", normalizeDecimal(e.target.value))
                                 }
                                 onKeyDown={(e) => onCellKeyDown(e, i, "countOFR")}
                                 onWheel={blockWheel}
@@ -496,11 +485,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                                 className="opening-count-input"
                                 value={r.finalCost}
                                 onChange={(e) =>
-                                  updateCell(
-                                    i,
-                                    "finalCost",
-                                    normalizeDecimal(e.target.value)
-                                  )
+                                  updateCell(i, "finalCost", normalizeDecimal(e.target.value))
                                 }
                                 onKeyDown={(e) => onCellKeyDown(e, i, "finalCost")}
                                 onWheel={blockWheel}
@@ -524,11 +509,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                                 className="opening-count-input"
                                 value={r.finalCostOfr}
                                 onChange={(e) =>
-                                  updateCell(
-                                    i,
-                                    "finalCostOfr",
-                                    normalizeDecimal(e.target.value)
-                                  )
+                                  updateCell(i, "finalCostOfr", normalizeDecimal(e.target.value))
                                 }
                                 onKeyDown={(e) => onCellKeyDown(e, i, "finalCostOfr")}
                                 onWheel={blockWheel}
@@ -566,9 +547,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                             ref={refCondition}
                             className="opening-count-input"
                             value={r.condition}
-                            onChange={(e) =>
-                              updateCell(i, "condition", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "condition", e.target.value)}
                             onKeyDown={(e) => onCellKeyDown(e, i, "condition")}
                             disabled={saving}
                           >
@@ -584,6 +563,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
                 )}
               </tbody>
             </table>
+
             {deleteMenu.visible && (
               <div
                 className="context-menu-opening"
@@ -612,6 +592,7 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
               </div>
             )}
           </div>
+
           <button
             className="opening-count-modal-btn search-btn"
             onClick={() => setSearchOpen(true)}

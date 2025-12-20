@@ -3,6 +3,8 @@ import "./payments.css";
 import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
 import NotificationModal from "../recievables/NotificationModal";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
+
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const PaymentsPage = () => {
@@ -34,17 +36,20 @@ const PaymentsPage = () => {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch(
-        `${baseUrl}/payment-vouchers/v1/formatted`
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch payment vouchers");
-      }
-      const data = await response.json();
+
+      // ✅ replaced fetch with axiosClient
+      const res = await axiosClient.get(`${baseUrl}/payment-vouchers/v1/formatted`);
+      const data = res.data;
+
       setTableData(data);
       setFilteredData(data); // Set both tableData and filteredData
     } catch (err) {
-      setError(err.message);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Failed to fetch payment vouchers";
+      setError(String(msg));
     } finally {
       setLoading(false);
     }
@@ -66,15 +71,14 @@ const PaymentsPage = () => {
         limit: pageSize,
       }).toString();
 
-      const response = await fetch(
+      // ✅ replaced fetch with axiosClient
+      const res = await axiosClient.get(
         `${baseUrl}/payment-vouchers/v1/filter?${queryString}`
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch filtered payment vouchers");
-      }
-
-      const { data, total } = await response.json(); // Assuming API provides `total`.
+      const payload = res.data || {};
+      const data = payload.data || [];
+      const total = payload.total || 0;
 
       setTotalPages(Math.ceil(total / pageSize)); // Calculate the total number of pages.
 
@@ -86,7 +90,12 @@ const PaymentsPage = () => {
         setFilteredData(data);
       }
     } catch (err) {
-      setError(err.message);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Failed to fetch filtered payment vouchers";
+      setError(String(msg));
     } finally {
       setLoading(false);
     }
@@ -124,22 +133,13 @@ const PaymentsPage = () => {
 
   const handleSaveEdit = async (updatedRow) => {
     try {
-      const response = await fetch(
+      // ✅ replaced fetch with axiosClient
+      const res = await axiosClient.patch(
         `${baseUrl}/payment-vouchers/${updatedRow.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updatedRow),
-        }
+        updatedRow
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to update payment voucher");
-      }
-
-      const updatedData = await response.json();
+      const updatedData = res.data;
 
       setTableData((prevData) =>
         prevData.map((row) =>
@@ -159,9 +159,14 @@ const PaymentsPage = () => {
         message: "Payment voucher updated successfully!",
       });
     } catch (error) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Failed to update payment voucher.";
       setNotification({
         type: "error",
-        message: error.message || "Failed to update payment voucher.",
+        message: String(msg),
       });
     }
   };
@@ -186,12 +191,9 @@ const PaymentsPage = () => {
 
   const handleDelete = async () => {
     try {
+      // ✅ replaced fetch with axiosClient
       await Promise.all(
-        selectedRows.map((id) =>
-          fetch(`${baseUrl}/payment-vouchers/${id}`, {
-            method: "DELETE",
-          })
-        )
+        selectedRows.map((id) => axiosClient.delete(`${baseUrl}/payment-vouchers/${id}`))
       );
 
       setTableData((prevData) =>
@@ -208,9 +210,14 @@ const PaymentsPage = () => {
         message: "Selected payment voucher(s) deleted successfully!",
       });
     } catch (error) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Failed to delete payment voucher(s).";
       setNotification({
         type: "error",
-        message: error.message || "Failed to delete payment voucher(s).",
+        message: String(msg),
       });
     }
   };
@@ -430,9 +437,9 @@ const PaymentsPage = () => {
       )}
       {currentPage < totalPages && (
         <div className="load-more-container">
-        <button className="load-more-btn" onClick={handleLoadMore}>
-          Load More
-        </button>
+          <button className="load-more-btn" onClick={handleLoadMore}>
+            Load More
+          </button>
         </div>
       )}
       {contextMenu.visible && (

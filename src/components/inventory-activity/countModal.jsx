@@ -1,14 +1,15 @@
-// CountModal.jsx (final with DateCountInput integrated)
+// CountModal.jsx (with axiosClient + save/rebuild locks + spread fixes)
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+
+// ✅ use your axios client (adjust path)
+import { axiosClient } from "../api/axiosClient";
+
 import CountSearchModal from "./countSearchModal";
 import PreviewTable from "./previewTable";
 import NotificationModal from "../recievables/NotificationModal";
 import DateCountInput from "./inventoryDataEntry";
 import OpeningCountModal from "./openingCountModal";
 import "./countModal.css";
-
-const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
 
 const CountModal = ({ isOpen, onClose }) => {
   const [rows, setRows] = useState([]);
@@ -18,7 +19,10 @@ const CountModal = ({ isOpen, onClose }) => {
   const [view, setView] = useState("create");
   const [dateCountOpen, setDateCountOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
+  // ✅ Locks to prevent double-call (fast double-click before React disables button)
+  const saveLockRef = useRef(false);
+  const rebuildLockRef = useRef(false);
 
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
@@ -26,7 +30,8 @@ const CountModal = ({ isOpen, onClose }) => {
     y: 0,
     rowIndex: null,
   });
-  const tableWrapperRef = useRef();
+
+  const tableWrapperRef = useRef(null);
 
   useEffect(() => {
     const onClick = () =>
@@ -40,9 +45,14 @@ const CountModal = ({ isOpen, onClose }) => {
   const resetAll = () => {
     setView("create");
     setRows([]);
+    setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   };
+
   const handleSave = async () => {
+    if (saveLockRef.current || saving) return;
     if (!rows.length) return onClose();
+
+    saveLockRef.current = true;
     setSaving(true);
 
     try {
@@ -50,7 +60,7 @@ const CountModal = ({ isOpen, onClose }) => {
 
       const payload = {
         itemBatchId: firstRow.itemBatchId,
-        itemType: firstRow.unit?.toLowerCase(), // 'box', 'sheet', 'sqm'
+        itemType: (firstRow.unit || "").toLowerCase(), // 'box', 'sheet', 'sqm'
         length: Number(firstRow.length),
         width: Number(firstRow.width),
         sheetsPerBox: Number(firstRow.sheetsPerBox),
@@ -58,15 +68,14 @@ const CountModal = ({ isOpen, onClose }) => {
           count: Number(r.count),
           receivedDate: r.dateReceived,
           status: r.status,
+          // If your backend expects "date", add: date: r.date
         })),
       };
 
       console.log("✅ Payload being sent:", payload);
 
-      await axios.post(
-        `${baseUrl}/inventory-count/v1/inventory-check`,
-        payload
-      );
+      // ✅ axiosClient (relative URL)
+      await axiosClient.post("/inventory-count/v1/inventory-check", payload);
 
       setNotif({
         open: true,
@@ -74,69 +83,77 @@ const CountModal = ({ isOpen, onClose }) => {
         message: "✅ Inventory check saved successfully!",
       });
 
-      // Optional: Clear form after success
       resetAll();
     } catch (err) {
       console.error("❌ Error saving inventory check", err);
       setNotif({
         open: true,
         type: "error",
-        message: "❌ Failed to save inventory check. Please try again.",
+        message:
+          err?.response?.data?.message ||
+          "❌ Failed to save inventory check. Please try again.",
       });
     } finally {
+      saveLockRef.current = false;
       setSaving(false);
     }
   };
 
+  const handleRebuildOpeningCounts = async () => {
+    if (rebuildLockRef.current || saving) return;
 
-
-    const handleRebuildOpeningCounts = async () => {
+    rebuildLockRef.current = true;
     setSaving(true);
+
     try {
       const payload = {
         keepDate: "2025-11-29",
         deleteDate: "2025-10-31",
       };
 
-      await axios.post(`${baseUrl}/inventory-count/opening/rebuild`, payload);
+      // ✅ axiosClient (relative URL)
+      await axiosClient.post("/inventory-count/opening/rebuild", payload);
 
       setNotif({
         open: true,
         type: "success",
-        message: "✅ Opening counts rebuilt (kept 29-11-2025, deleted 31-10-2025).",
+        message:
+          "✅ Opening counts rebuilt (kept 29-11-2025, deleted 31-10-2025).",
       });
-
-      // optional: clear local rows if you want
-      // resetAll();
     } catch (err) {
       console.error("❌ Error rebuilding opening counts", err);
       setNotif({
         open: true,
         type: "error",
-        message: "❌ Failed to rebuild opening counts. Check server logs.",
+        message:
+          err?.response?.data?.message ||
+          "❌ Failed to rebuild opening counts. Check server logs.",
       });
     } finally {
+      rebuildLockRef.current = false;
       setSaving(false);
     }
   };
-
 
   const updateCell = (idx, field, value) => {
     setRows((prev) => {
       const copy = [...prev];
       copy[idx] = { ...copy[idx], [field]: value };
+
+      // If you change type, clear dependent fields (keep your behavior)
       if (field === "type") {
         copy[idx].count = "";
         copy[idx].countOFR = "";
         copy[idx].finalCost = "";
         copy[idx].finalCostOfr = "";
       }
+
       return copy;
     });
   };
 
   const handleSelectItems = (items) => {
-    console.log("Selected items:", items); // ✅
+    console.log("Selected items:", items);
     setSelectedItems(items);
     setDateCountOpen(true);
     setSearchOpen(false);
@@ -169,7 +186,9 @@ const CountModal = ({ isOpen, onClose }) => {
       });
     });
 
+    // ✅ fixed spread
     setRows((prev) => [...prev, ...newRows]);
+
     setDateCountOpen(false);
     setSelectedItems([]);
   };
@@ -181,6 +200,8 @@ const CountModal = ({ isOpen, onClose }) => {
 
   const onRowContextMenu = (e, i) => {
     e.preventDefault();
+    if (!tableWrapperRef.current) return;
+
     const rect = tableWrapperRef.current.getBoundingClientRect();
     setDeleteMenu({
       visible: true,
@@ -207,9 +228,11 @@ const CountModal = ({ isOpen, onClose }) => {
           <button className="count-modal-close" onClick={onClose}>
             &times;
           </button>
-          {/* Header Buttons */}
+
+          {/* Header */}
           <div className="count-modal-header">
             <h2>Count Inventory</h2>
+
             <div className="action-buttons">
               {["create", "preview", "opening"].map((v) => (
                 <button
@@ -225,9 +248,9 @@ const CountModal = ({ isOpen, onClose }) => {
                     : "Opening Count"}
                 </button>
               ))}
-
             </div>
-                        {view === "opening" && (
+
+            {view === "opening" && (
               <div className="header-buttons">
                 <button
                   className="count-modal-btn save-btn"
@@ -260,7 +283,7 @@ const CountModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          {/* Body Content */}
+          {/* Body */}
           {view === "preview" ? (
             <PreviewTable rows={rows} onClose={() => setView("create")} />
           ) : view === "opening" ? (
@@ -272,7 +295,6 @@ const CountModal = ({ isOpen, onClose }) => {
           ) : (
             <>
               <div className="count-modal-table-wrapper" ref={tableWrapperRef}>
-                {/* Table rendering */}
                 <table className="count-modal-table">
                   <thead>
                     <tr>
@@ -289,6 +311,7 @@ const CountModal = ({ isOpen, onClose }) => {
                       {showFinalCostOfr && <th>Final Cost OFR</th>}
                     </tr>
                   </thead>
+
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
@@ -309,6 +332,7 @@ const CountModal = ({ isOpen, onClose }) => {
                               readOnly
                             />
                           </td>
+
                           <td>
                             <input
                               className="count-input"
@@ -316,17 +340,15 @@ const CountModal = ({ isOpen, onClose }) => {
                               readOnly
                             />
                           </td>
+
                           <td>
-                            <select
-                              className="count-input"
-                              value={r.unit}
-                              disabled
-                            >
+                            <select className="count-input" value={r.unit} disabled>
                               <option>Box</option>
                               <option>Sheet</option>
                               <option>SQM</option>
                             </select>
                           </td>
+
                           <td>
                             <input
                               type="date"
@@ -346,6 +368,7 @@ const CountModal = ({ isOpen, onClose }) => {
                               readOnly
                             />
                           </td>
+
                           <td>
                             <input
                               type="number"
@@ -357,6 +380,7 @@ const CountModal = ({ isOpen, onClose }) => {
                               disabled={saving}
                             />
                           </td>
+
                           <td>
                             <select
                               className="count-input"
@@ -419,6 +443,7 @@ const CountModal = ({ isOpen, onClose }) => {
                   </div>
                 )}
               </div>
+
               <button
                 className="count-modal-add-row"
                 onClick={() => setSearchOpen(true)}
@@ -437,6 +462,7 @@ const CountModal = ({ isOpen, onClose }) => {
         onSelect={handleSelectItems}
         existingKeys={existingKeys}
       />
+
       {dateCountOpen && selectedItems.length > 0 && (
         <div
           className="date-count-overlay"
@@ -445,24 +471,21 @@ const CountModal = ({ isOpen, onClose }) => {
             setSelectedItems([]);
           }}
         >
-          {/* Let the component handle its internal layout */}
           <div onClick={(e) => e.stopPropagation()}>
-            {selectedItems.length > 0 && (
-              <DateCountInput
-                onSave={handleDateCountConfirm}
-                onCancel={() => {
-                  setDateCountOpen(false);
-                  setSelectedItems([]);
-                }}
-                unit={selectedItems[0].itemVariantType} // 'Box', 'Sheet', or 'SQM'
-                length={selectedItems[0].length}
-                width={selectedItems[0].width}
-                sheetsPerBox={selectedItems[0].sheetsPerBox}
-                originalBalance={selectedItems[0].balanceOFR} // in sqm
-                thickness={selectedItems[0].thickness} // in mm
-                itemName={selectedItems[0].itemName}
-              />
-            )}
+            <DateCountInput
+              onSave={handleDateCountConfirm}
+              onCancel={() => {
+                setDateCountOpen(false);
+                setSelectedItems([]);
+              }}
+              unit={selectedItems[0].itemVariantType}
+              length={selectedItems[0].length}
+              width={selectedItems[0].width}
+              sheetsPerBox={selectedItems[0].sheetsPerBox}
+              originalBalance={selectedItems[0].balanceOFR}
+              thickness={selectedItems[0].thickness}
+              itemName={selectedItems[0].itemName}
+            />
           </div>
         </div>
       )}

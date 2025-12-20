@@ -229,7 +229,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={rowData.checkNumber}
                   onChange={handleInputChange}
                   placeholder="Enter Check Number"
-                  disabled={row.paymentType?.includes("Cash")}
+                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
                 />
               </td>
               <td>
@@ -239,7 +239,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={rowData.bankName}
                   onChange={handleInputChange}
                   placeholder="Enter Bank Name"
-                  disabled={row.paymentType?.includes("Cash")}
+                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
                 />
               </td>
               <td>
@@ -248,7 +248,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   name="dueDate"
                   value={rowData.dueDate}
                   onChange={handleInputChange}
-                  disabled={row.paymentType?.includes("Cash")}
+                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
                 />
               </td>
               <td>

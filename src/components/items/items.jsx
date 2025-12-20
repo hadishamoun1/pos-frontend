@@ -1,6 +1,7 @@
 // UniqueItemsPage.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import "./items.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const PAGE_SIZE = 50;
 
@@ -347,8 +348,9 @@ const UniqueItemsPage = () => {
   const refreshItems = async () => {
     try {
       const url = endpoints.list[descMode](1, PAGE_SIZE);
-      const res = await fetch(url);
-      const json = await res.json().catch(() => null);
+      const res = await axiosClient.get(url);
+      const json = res?.data ?? null;
+
       const arr = normalizeItems(json);
       setItems(arr);
       setItemsPage(1);
@@ -376,8 +378,9 @@ const UniqueItemsPage = () => {
     const nextPage = itemsPage + 1;
     try {
       const url = endpoints.list[descMode](nextPage, PAGE_SIZE);
-      const res = await fetch(url);
-      const json = await res.json().catch(() => null);
+      const res = await axiosClient.get(url);
+      const json = res?.data ?? null;
+
       const arr = normalizeItems(json);
 
       setItems((prev) => [...prev, ...arr]);
@@ -415,10 +418,9 @@ const UniqueItemsPage = () => {
       const base = endpoints.search[descMode];
       const url = `${base}?q=${encodeURIComponent(queryString)}&limit=200`;
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+      const res = await axiosClient.get(url);
+      const json = res?.data ?? null;
 
-      const json = await res.json();
       const rows = Array.isArray(json?.data) ? json.data : [];
       setSearchResults(rows);
     } catch (e) {
@@ -615,23 +617,19 @@ const UniqueItemsPage = () => {
 
     try {
       const url = endpoints.create[descMode];
-      const response = await fetch(url, {
-        method: "POST",
+
+      await axiosClient.post(url, payload, {
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idemKeyRef.current,
         },
-        body: JSON.stringify(payload),
       });
-      if (response.ok) {
-        await refreshItems();
-        setModalType("success");
-        idemKeyRef.current = `${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}`;
-      } else {
-        setModalType("error");
-      }
+
+      await refreshItems();
+      setModalType("success");
+      idemKeyRef.current = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
     } catch {
       setModalType("error");
     } finally {
@@ -770,11 +768,9 @@ const UniqueItemsPage = () => {
   const deleteVariantById = async (variantId) => {
     const key = (variantId ?? "").toString();
     if (!key) throw new Error("Invalid variant id");
-    const res = await fetch(
-      `${baseUrl}/items/variants/${encodeURIComponent(key)}`,
-      { method: "DELETE" }
+    await axiosClient.delete(
+      `${baseUrl}/items/variants/${encodeURIComponent(key)}`
     );
-    if (!res.ok) throw new Error(`Delete failed for variant ${key}`);
   };
 
   const selectedVariantIds = useMemo(() => {
@@ -1013,15 +1009,10 @@ const UniqueItemsPage = () => {
     setLastSentPayload(payload);
     try {
       const url = endpoints.edit[descMode]; // PUT /items/v1/full
-      const res = await fetch(url, {
-        method: "PUT",
+      await axiosClient.put(url, payload, {
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Update failed");
-      }
+
       if (tokens.length > 0) await runTokenSearch();
       else await refreshItems();
       setModalType("success");
@@ -1221,12 +1212,12 @@ const UniqueItemsPage = () => {
                     <td className="ar-rtl">{d.subCategory ?? "—"}</td>
                     <td className="ar-rtl">{d.colorName ?? "—"}</td>
                     <td className="ar-rtl">{d.designName ?? "—"}</td>
-                   <td className="ar-rtl">
-  {String(r.type || "").toLowerCase() === "unit" ||
-  String(r.type || "").toLowerCase() === "sqm"
-    ? (r.itemName ?? "—")
-    : `${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
-</td>
+                    <td className="ar-rtl">
+                      {String(r.type || "").toLowerCase() === "unit" ||
+                      String(r.type || "").toLowerCase() === "sqm"
+                        ? (r.itemName ?? "—")
+                        : `${r.thickness ?? ""} ملم ${r.itemName ?? ""}`}
+                    </td>
 
                     <td>{t || "—"}</td>
 
@@ -1242,7 +1233,9 @@ const UniqueItemsPage = () => {
                       </>
                     )}
 
-                    <td className="ltr">{t === "box" ? r.sheetsPerBox ?? "—" : "—"}</td>
+                    <td className="ltr">
+                      {t === "box" ? r.sheetsPerBox ?? "—" : "—"}
+                    </td>
                     <td className="ar-rtl">{r.origin ?? "—"}</td>
                   </tr>
                 );
@@ -1254,7 +1247,9 @@ const UniqueItemsPage = () => {
         {/* Search results counter */}
         {inSearchMode && (
           <div style={{ padding: "8px 0", fontSize: 12, opacity: 0.75 }}>
-            {searching ? "Searching…" : `Showing ${searchResults?.length ?? 0} results`}
+            {searching
+              ? "Searching…"
+              : `Showing ${searchResults?.length ?? 0} results`}
           </div>
         )}
 
@@ -1271,7 +1266,11 @@ const UniqueItemsPage = () => {
                 {loadingMore ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <button type="button" className="items-creation-loadmore-btn" disabled>
+              <button
+                type="button"
+                className="items-creation-loadmore-btn"
+                disabled
+              >
                 All items loaded{" "}
                 {Number.isFinite(totalItems)
                   ? `(${items.length}/${totalItems})`
@@ -1287,7 +1286,10 @@ const UniqueItemsPage = () => {
         <div className="items-creation-modal">
           <div className="items-creation-modal-content">
             <h2>Create New Item</h2>
-            <form onSubmit={handleFormSubmit} className="items-creation-form-grid">
+            <form
+              onSubmit={handleFormSubmit}
+              className="items-creation-form-grid"
+            >
               <label>
                 Item Name:
                 <input
@@ -1609,7 +1611,14 @@ const UniqueItemsPage = () => {
 
             {/* Optional debug */}
             {lastSentPayload && (
-              <pre style={{ marginTop: 12, fontSize: 11, opacity: 0.7, overflowX: "auto" }}>
+              <pre
+                style={{
+                  marginTop: 12,
+                  fontSize: 11,
+                  opacity: 0.7,
+                  overflowX: "auto",
+                }}
+              >
                 {JSON.stringify(lastSentPayload, null, 2)}
               </pre>
             )}
@@ -1636,9 +1645,7 @@ const UniqueItemsPage = () => {
               </>
             ) : (
               <>
-                <h2 className="items-creation-modal-error-text">
-                  Action Failed
-                </h2>
+                <h2 className="items-creation-modal-error-text">Action Failed</h2>
                 <div className="items-creation-modal-icon">✖</div>
               </>
             )}

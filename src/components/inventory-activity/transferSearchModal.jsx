@@ -1,7 +1,7 @@
 // TransferSearchModal.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import "./transferSearchModal.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ added (named export)
 
 /** format numbers: remove trailing .00 */
 function fmtNum(v) {
@@ -52,7 +52,7 @@ const TransferSearchModal = ({
     async (pageToLoad, { replace } = { replace: false }) => {
       setLoading(true);
       try {
-        const res = await axios.get(`${baseUrl}/items/v2/filtered-items`, {
+        const res = await axiosClient.get(`${baseUrl}/items/v2/filtered-items`, {
           params: {
             page: pageToLoad,
             limit,
@@ -69,7 +69,9 @@ const TransferSearchModal = ({
           res?.data?.total != null ? Number(res.data.total) : null;
 
         const hasMoreFromApi =
-          totalPagesFromApi != null ? pageFromApi < Number(totalPagesFromApi) : false;
+          totalPagesFromApi != null
+            ? pageFromApi < Number(totalPagesFromApi)
+            : false;
 
         setHasMore(Boolean(hasMoreFromApi));
         setPage(pageFromApi);
@@ -94,7 +96,7 @@ const TransferSearchModal = ({
 
       setLoading(true);
       try {
-        const res = await axios.get(`${baseUrl}/items/pos/search-modal-instock`, {
+        const res = await axiosClient.get(`${baseUrl}/items/pos/search-modal-instock`, {
           params: {
             q: qChip || undefined,
             dims: dimsChip || undefined,
@@ -117,7 +119,9 @@ const TransferSearchModal = ({
           res?.data?.total != null ? Number(res.data.total) : null;
 
         const hasMoreFromApi =
-          totalPagesFromApi != null ? pageFromApi < Number(totalPagesFromApi) : false;
+          totalPagesFromApi != null
+            ? pageFromApi < Number(totalPagesFromApi)
+            : false;
 
         setHasMore(Boolean(hasMoreFromApi));
         setPage(pageFromApi);
@@ -335,7 +339,10 @@ const TransferSearchModal = ({
 
   return (
     <div className="transfer-search-modal-overlay" onClick={onClose}>
-      <div className="transfer-search-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="transfer-search-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="transfer-search-modal-close" onClick={onClose}>
           &times;
         </button>
@@ -367,7 +374,11 @@ const TransferSearchModal = ({
                 <span className="pin-chip" title={qChip}>
                   <span className="pin-chip-label">Q:</span>
                   <span className="pin-chip-text">{qChip}</span>
-                  <button className="pin-chip-x" onClick={() => removeChip("q")} type="button">
+                  <button
+                    className="pin-chip-x"
+                    onClick={() => removeChip("q")}
+                    type="button"
+                  >
                     ×
                   </button>
                 </span>
@@ -377,7 +388,11 @@ const TransferSearchModal = ({
                 <span className="pin-chip" title={dimsChip}>
                   <span className="pin-chip-label">DIMS:</span>
                   <span className="pin-chip-text">{dimsChip}</span>
-                  <button className="pin-chip-x" onClick={() => removeChip("dims")} type="button">
+                  <button
+                    className="pin-chip-x"
+                    onClick={() => removeChip("dims")}
+                    type="button"
+                  >
                     ×
                   </button>
                 </span>
@@ -406,7 +421,9 @@ const TransferSearchModal = ({
             <tbody>
               {rows.map((r) => {
                 const already = existingKeys.has(r.key);
-                const checked = singleSelect ? false : already || selectedSet.has(r.key);
+                const checked = singleSelect
+                  ? false
+                  : already || selectedSet.has(r.key);
 
                 return (
                   <tr key={r.key} className={already ? "row-disabled" : ""}>
@@ -419,7 +436,10 @@ const TransferSearchModal = ({
                       />
                     </td>
 
-                    <td className="cell-name" style={{ direction: "rtl", textAlign: "right" }}>
+                    <td
+                      className="cell-name"
+                      style={{ direction: "rtl", textAlign: "right" }}
+                    >
                       {`${fmtNum(r.thickness)} ملم ${r.itemName ?? ""}`.trim()}
                     </td>
 

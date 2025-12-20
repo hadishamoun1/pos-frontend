@@ -2,8 +2,8 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./countOpeningSearchModal.css";
 
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
+// ✅ named export (matches your compiler error message)
+import { axiosClient } from "../api/axiosClient";
 
 const DEBOUNCE_MS = 300;
 
@@ -12,20 +12,39 @@ const normalizeDigits = (s) => {
   if (!s) return "";
   const map = {
     // Arabic-Indic
-    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4","٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
+    "٠": "0",
+    "١": "1",
+    "٢": "2",
+    "٣": "3",
+    "٤": "4",
+    "٥": "5",
+    "٦": "6",
+    "٧": "7",
+    "٨": "8",
+    "٩": "9",
     // Extended Arabic-Indic (Persian/Urdu)
-    "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4","۵":"5","۶":"6","۷":"7","۸":"8","۹":"9",
+    "۰": "0",
+    "۱": "1",
+    "۲": "2",
+    "۳": "3",
+    "۴": "4",
+    "۵": "5",
+    "۶": "6",
+    "۷": "7",
+    "۸": "8",
+    "۹": "9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
 
 const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
-  const [items, setItems] = useState([]);        // flat rows for list mode
-  const [flatRows, setFlatRows] = useState([]);  // flat rows from /variant-search
+  const [items, setItems] = useState([]); // flat rows for list mode
+  const [flatRows, setFlatRows] = useState([]); // flat rows from /variant-search
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const abortRef = useRef();
 
   // 🔎 search UI state
@@ -66,7 +85,8 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
     // Full L*W(-SPB)
     const reFull = /(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g;
-    let m, lastFull = null;
+    let m,
+      lastFull = null;
     while ((m = reFull.exec(t)) !== null) {
       const L = m[1];
       const W = m[2];
@@ -91,23 +111,55 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       const w2 = tok.match(/^(?:w|W|عرض)\s*:?(\d{2,5})$/);
       const w3 = tok.match(/^(\d{2,5})(?:w|W)$/);
       if (w1 || w2 || w3) {
-        const W = Number((w1?.[1] || w2?.[1] || w3?.[1]));
-        single = { dims: null, length: null, width: W, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+        const W = Number(w1?.[1] || w2?.[1] || w3?.[1]);
+        single = {
+          dims: null,
+          length: null,
+          width: W,
+          spb: null,
+          isBox: false,
+          foundSingle: true,
+          tokenToStrip: tok,
+        };
         continue;
       }
       const l1 = tok.match(/^(\d{2,5})\*$/);
       if (l1) {
         const L = Number(l1[1]);
-        single = { dims: null, length: L, width: null, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+        single = {
+          dims: null,
+          length: L,
+          width: null,
+          spb: null,
+          isBox: false,
+          foundSingle: true,
+          tokenToStrip: tok,
+        };
         continue;
       }
       const plain = tok.match(/^(\d{2,5})$/);
       if (plain) {
         const n = Number(plain[1]);
         if (preferLengthPlain) {
-          single = { dims: null, length: n, width: null, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+          single = {
+            dims: null,
+            length: n,
+            width: null,
+            spb: null,
+            isBox: false,
+            foundSingle: true,
+            tokenToStrip: tok,
+          };
         } else {
-          single = { dims: null, length: null, width: n, spb: null, isBox: false, foundSingle: true, tokenToStrip: tok };
+          single = {
+            dims: null,
+            length: null,
+            width: n,
+            spb: null,
+            isBox: false,
+            foundSingle: true,
+            tokenToStrip: tok,
+          };
         }
       }
     }
@@ -116,8 +168,10 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   const stripDims = useCallback((text, tokenToStrip) => {
     if (!text) return "";
-    let out = text
-      .replace(/(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g, " ");
+    let out = text.replace(
+      /(\d{2,5})\s*\*\s*(\d{2,5})(?:\s*-\s*0*(\d{1,4}))?/g,
+      " "
+    );
     if (tokenToStrip) {
       const esc = tokenToStrip.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const re = new RegExp(`(^|\\s)${esc}(?=\\s|$)`, "g");
@@ -126,11 +180,11 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     return out.replace(/\s+/g, " ").trim();
   }, []);
 
-  // Parse combined query (already digit-normalized by computed combinedQuery)
   const dimsInfo = useMemo(
     () => extractDimsParts(combinedQuery, preferPlainAsLength),
     [combinedQuery, preferPlainAsLength, extractDimsParts]
   );
+
   const qSansDims = useMemo(
     () => stripDims(combinedQuery, dimsInfo.tokenToStrip),
     [combinedQuery, dimsInfo.tokenToStrip, stripDims]
@@ -143,13 +197,16 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     setPinnedTerms((prev) => (prev.includes(t) ? prev : [...prev, t]));
     setSearchText("");
   }, []);
+
   const unpinTerm = useCallback((term) => {
     setPinnedTerms((prev) => prev.filter((x) => x !== term));
   }, []);
 
   // Cancel in-flight
   const cancelInFlight = () => {
-    try { abortRef.current?.abort(); } catch {}
+    try {
+      abortRef.current?.abort();
+    } catch {}
     abortRef.current = new AbortController();
     return abortRef.current.signal;
   };
@@ -173,7 +230,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
           length: Number(v.length ?? 0),
           width: Number(v.width ?? 0),
           sheetsPerBox: Number(v.sheetsPerBox ?? 0) || "",
-          // 🆕 optionally present when using "name" APIs
           itemNumber: v.itemNumber ?? null,
           subCategory: v.subCategory ?? null,
         });
@@ -186,36 +242,46 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const normalizeSearchResponse = useCallback((json) => {
     if (json && typeof json === "object") {
       const data = Array.isArray(json.data) ? json.data : [];
-      const more = Boolean(json.hasMore ?? (json.page * json.limit < (json.totalRows || 0)));
+      const more = Boolean(
+        json.hasMore ?? (json.page * json.limit < (json.totalRows || 0))
+      );
       return { data, hasMore: more };
     }
     return { data: [], hasMore: false };
   }, []);
 
-  // ---------- API calls ----------
+  const isCanceled = (e) =>
+    e?.name === "AbortError" ||
+    e?.code === "ERR_CANCELED" ||
+    String(e?.message || "").toLowerCase().includes("canceled");
+
+  // ---------- API calls (axiosClient) ----------
   const fetchListPage = useCallback(
     async (targetPage) => {
       setLoading(true);
       try {
         const signal = cancelInFlight();
 
-        // 🔁 Choose endpoint based on toggle
         const endpoint =
           descriptionSource === "real"
             ? "/items/v1/filtered-items"
             : "/items/v1/filtered-items-by-name";
 
-        const url = `${baseUrl}${endpoint}?page=${targetPage}&limit=${limit}&includeEmpty=0`;
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const json = await res.json();
+        const res = await axiosClient.get(endpoint, {
+          params: { page: targetPage, limit, includeEmpty: 0 },
+          signal,
+        });
+
+        const json = res?.data;
         const { rows: pageRows, hasMore: more } = normalizeListResponse(json);
+
         if (targetPage === 1) setItems(pageRows || []);
         else setItems((prev) => [...prev, ...(pageRows || [])]);
+
         setHasMore(Boolean(more));
         setPage(targetPage);
       } catch (e) {
-        if (e?.name !== "AbortError") {
+        if (!isCanceled(e)) {
           console.error("Fetch list page failed:", e);
           setHasMore(false);
         }
@@ -231,33 +297,34 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const parts = [
-          `q=${encodeURIComponent(qNoDims || "")}`,
-          `page=${targetPage}`,
-          `limit=${limit}`,
-        ];
-        if (dims) parts.push(`dims=${encodeURIComponent(dims)}`);
-        if (isBox) parts.push(`type=box`);
-        if (typeof lengthOnly === "number") parts.push(`length=${lengthOnly}`);
-        if (typeof widthOnly === "number") parts.push(`width=${widthOnly}`);
 
-        // 🔁 Choose search endpoint based on toggle
         const searchEndpoint =
           descriptionSource === "real"
             ? "/items/v1/variant-search"
             : "/items/v1/variant-search-by-name";
 
-        const url = `${baseUrl}${searchEndpoint}?${parts.join("&")}`;
-        const res = await fetch(url, { signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        const json = await res.json();
+        const params = {
+          q: qNoDims || "",
+          page: targetPage,
+          limit,
+        };
+        if (dims) params.dims = dims;
+        if (isBox) params.type = "box";
+        if (typeof lengthOnly === "number") params.length = lengthOnly;
+        if (typeof widthOnly === "number") params.width = widthOnly;
+
+        const res = await axiosClient.get(searchEndpoint, { params, signal });
+
+        const json = res?.data;
         const { data: pageData, hasMore: more } = normalizeSearchResponse(json);
+
         if (targetPage === 1) setFlatRows(pageData || []);
         else setFlatRows((prev) => [...prev, ...(pageData || [])]);
+
         setHasMore(Boolean(more));
         setSearchPage(targetPage);
       } catch (e) {
-        if (e?.name !== "AbortError") {
+        if (!isCanceled(e)) {
           console.error("Fetch search page failed:", e);
           setHasMore(false);
         }
@@ -268,23 +335,30 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     [limit, normalizeSearchResponse, descriptionSource]
   );
 
-  // Load first page when the modal opens OR when descriptionSource changes
+  // Load first page when the modal opens
   useEffect(() => {
     if (!isOpen) return;
+
     setSearchText("");
     setPinnedTerms([]);
     setFlatRows([]);
     setMode("list");
     setPage(1);
     setSearchPage(1);
+
     fetchListPage(1);
+
     return () => {
-      try { abortRef.current?.abort(); } catch {}
+      try {
+        abortRef.current?.abort();
+      } catch {}
     };
   }, [isOpen, fetchListPage]);
 
   // ---------- debounce search vs list ----------
   useEffect(() => {
+    if (!isOpen) return;
+
     const hasAny =
       Boolean(qSansDims) ||
       Boolean(dimsInfo.dims) ||
@@ -310,15 +384,14 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         typeof dimsInfo.width === "number" ? dimsInfo.width : undefined
       );
     }, DEBOUNCE_MS);
+
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qSansDims, dimsInfo]);
+  }, [isOpen, qSansDims, dimsInfo]);
 
   // ---------- rows ----------
-  // LIST MODE: items are already flat rows
   const listRows = useMemo(() => items || [], [items]);
 
-  // SEARCH MODE: map server rows to table rows
   const searchRows = useMemo(() => {
     return (flatRows || []).map((r) => {
       const thicknessVal = Number(r.thickness ?? 0);
@@ -332,7 +405,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         length: Number(r.length ?? 0),
         width: Number(r.width ?? 0),
         sheetsPerBox: Number(r.sheetsPerBox ?? 0) || "",
-        // 🆕 also available on variant-search-by-name
         itemNumber: r.itemNumber ?? null,
         subCategory: r.subCategory ?? null,
       };
@@ -341,7 +413,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   const rows = mode === "search" ? searchRows : listRows;
 
-  // Client-side filter (list mode only; search mode is server-driven)
   const filteredRows = useMemo(() => {
     const q = String(combinedQuery || "").trim().toLowerCase();
     if (!q) return rows;
@@ -384,7 +455,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     return {
       itemVariantId: r.variantId,
       origin: r.origin,
-      item: r.combinedName, // "5.5 ملم ابيض"
+      item: r.combinedName,
       type: r.type,
       length: Math.floor(Number(r.length)),
       width: Math.floor(Number(r.width)),
@@ -393,9 +464,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
       sheet,
       sqm,
       uniqueId: r.key,
-      // if someday you want them in payload:
-      // itemNumber: r.itemNumber ?? null,
-      // subCategory: r.subCategory ?? null,
     };
   };
 
@@ -414,7 +482,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     setSelectedKeys(next);
   };
 
-  // Refresh cached snapshots with fresher rows (if they reappear)
   useEffect(() => {
     if (!rows?.length || selectedKeys.size === 0) return;
     const byKey = new Map(rows.map((r) => [r.key, r]));
@@ -424,7 +491,6 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     }
   }, [rows, selectedKeys]);
 
-  // OK handler → use cache+current rows for all selections
   const handleOk = () => {
     const allKeys = Array.from(selectedKeys);
     const byKey = new Map(rows.map((r) => [r.key, r]));
@@ -437,9 +503,9 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     onClose();
   };
 
-  // Load more (list or search)
   const onLoadMore = useCallback(() => {
     if (loading || !hasMore) return;
+
     if (mode === "search") {
       const hasAny =
         Boolean(qSansDims) ||
@@ -447,6 +513,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
         typeof dimsInfo.length === "number" ||
         typeof dimsInfo.width === "number";
       if (!hasAny) return;
+
       fetchSearchPage(
         searchPage + 1,
         qSansDims,
@@ -458,22 +525,28 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
     } else {
       fetchListPage(page + 1);
     }
-  }, [loading, hasMore, mode, qSansDims, dimsInfo, searchPage, page, fetchSearchPage, fetchListPage]);
+  }, [
+    loading,
+    hasMore,
+    mode,
+    qSansDims,
+    dimsInfo,
+    searchPage,
+    page,
+    fetchSearchPage,
+    fetchListPage,
+  ]);
 
   if (!isOpen) return null;
 
   return (
     <div className="count-opening-search-modal-overlay" role="dialog" aria-modal="true">
       <div className="count-opening-search-modal-content">
-
         {/* Header */}
         <div className="count-opening-search-modal-header">
           <h2 className="count-opening-search-modal-title">Search</h2>
           <div className="count-opening-search-modal-buttons">
-            <button
-              className="count-opening-search-modal-close-button"
-              onClick={onClose}
-            >
+            <button className="count-opening-search-modal-close-button" onClick={onClose}>
               Close
             </button>
             <button
@@ -486,7 +559,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         </div>
 
-        {/* Sticky input bar — chips + toggle in same row */}
+        {/* Sticky input bar */}
         <div className="count-opening-search-modal-inputbar">
           <input
             className="count-opening-search-modal-input rtl-mixed"
@@ -501,6 +574,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
               }
             }}
           />
+
           <div className="count-opening-search-modal-pins">
             {pinnedTerms.map((term) => (
               <span className="count-opening-search-modal-chip" key={term} title={term}>
@@ -529,16 +603,16 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
             >
               Real
             </span>
+
             <label className="count-opening-search-modal-toggle-switch">
               <input
                 type="checkbox"
                 checked={descriptionSource === "name"}
-                onChange={(e) =>
-                  setDescriptionSource(e.target.checked ? "name" : "real")
-                }
+                onChange={(e) => setDescriptionSource(e.target.checked ? "name" : "real")}
               />
               <span className="count-opening-search-modal-toggle-slider" />
             </label>
+
             <span
               className={
                 "count-opening-search-modal-toggle-label" +
@@ -550,7 +624,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         </div>
 
-        {/* Scroll table */}
+        {/* Table */}
         <div className="count-opening-search-modal-scrollarea">
           <table className="count-opening-search-modal-table">
             <thead>
@@ -569,7 +643,10 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
             <tbody>
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={descriptionSource === "name" ? 9 : 7} style={{ textAlign: "center", opacity: 0.7 }}>
+                  <td
+                    colSpan={descriptionSource === "name" ? 9 : 7}
+                    style={{ textAlign: "center", opacity: 0.7 }}
+                  >
                     لا توجد نتائج.
                   </td>
                 </tr>
@@ -584,12 +661,8 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
                         onChange={() => toggleSelect(r.key)}
                       />
                     </td>
-                    {descriptionSource === "name" && (
-                      <td>{r.itemNumber || ""}</td>
-                    )}
-                    {descriptionSource === "name" && (
-                      <td>{r.subCategory || ""}</td>
-                    )}
+                    {descriptionSource === "name" && <td>{r.itemNumber || ""}</td>}
+                    {descriptionSource === "name" && <td>{r.subCategory || ""}</td>}
                     <td>{r.origin}</td>
                     <td style={{ direction: "rtl", textAlign: "right" }}>{r.combinedName}</td>
                     <td>{r.type}</td>
@@ -602,7 +675,7 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
             </tbody>
           </table>
 
-          {/* Load more bar */}
+          {/* Load more */}
           <div className="count-opening-search-modal-loadmore">
             <button
               disabled={loading || !hasMore}
@@ -614,11 +687,11 @@ const CountOpeningSearchModal = ({ isOpen, onClose, onSelectItems }) => {
               {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
             </button>
             <span className="count-opening-search-modal-pagehint">
-              {mode === "search" ? `Search page ${searchPage}` : `Page ${page}`} • Showing {filteredRows.length} rows
+              {mode === "search" ? `Search page ${searchPage}` : `Page ${page}`} • Showing{" "}
+              {filteredRows.length} rows
             </span>
           </div>
         </div>
-
       </div>
     </div>
   );

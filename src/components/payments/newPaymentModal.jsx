@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+import { axiosClient } from "../api/axiosClient"; // ✅ added
+
+const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([
@@ -106,7 +108,6 @@ const PaymentsModal = ({ onClose }) => {
         checkNumber: "",
         bankName: "",
         dueDate: "",
-       
         comments: "",
         paymentType: "",
       },
@@ -138,7 +139,6 @@ const PaymentsModal = ({ onClose }) => {
       const payload = rows.map((row) => ({
         supplierId: row.supplierId,
         date: row.date,
-       
         invoiceId: "",
         paymentType: row.paymentType,
         type: row.type,
@@ -157,25 +157,20 @@ const PaymentsModal = ({ onClose }) => {
         ],
       }));
 
-      const response = await fetch(
-        `${baseUrl}/payment-vouchers/v1/bulk`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to create payment voucher");
-      }
+      // ✅ replaced fetch with axiosClient
+      await axiosClient.post(`${baseUrl}/payment-vouchers/v1/bulk`, payload);
 
       setNotificationData({
         type: "success",
         message: "Payment voucher created successfully!",
       });
     } catch (error) {
-      setNotificationData({ type: "error", message: error.message });
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Failed to create payment voucher";
+      setNotificationData({ type: "error", message: String(msg) });
     } finally {
       setIsNotificationVisible(true);
     }
@@ -218,7 +213,7 @@ const PaymentsModal = ({ onClose }) => {
               <th className="payment-voucher-modal-check-number">Check #</th>
               <th className="payment-voucher-modal-bank-name">Bank Name</th>
               <th className="payment-voucher-modal-due-date">Due Date</th>
-              
+
               <th className="payment-voucher-modal-comments">Comment</th>
             </tr>
           </thead>
@@ -332,7 +327,7 @@ const PaymentsModal = ({ onClose }) => {
                     onChange={(e) => handleInputChange(index, e)}
                   />
                 </td>
-                
+
                 <td>
                   <input
                     type="text"

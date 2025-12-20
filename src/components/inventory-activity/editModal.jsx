@@ -1,12 +1,13 @@
 // EditCountModal.jsx
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import CountSearchModal from "./countSearchModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./editModal.css";
 
+// ✅ use your axios client (named export)
+import { axiosClient } from "../api/axiosClient"; // <-- adjust path if needed
+
 const TYPE_OPTIONS = ["S", "G", "SR", "RVR"];
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
 const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const [rows, setRows] = useState([]);
@@ -14,12 +15,17 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const [searchKey, setSearchKey] = useState(0);
   const [activeRow, setActiveRow] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // ✅ lock to prevent double save
+  const saveLockRef = useRef(false);
+
   const [notification, setNotification] = useState({
     open: false,
     type: "success",
     message: "",
     onConfirm: null,
   });
+
   const [deleteMenu, setDeleteMenu] = useState({
     visible: false,
     x: 0,
@@ -40,16 +46,16 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   const tableWrapperRef = useRef();
   const wrapperRef = useRef();
 
-  // ← make sure you have this function
-
   // Normalize incoming rows
   useEffect(() => {
     setRows(
-      initialRows.map((r) => {
+      (initialRows || []).map((r) => {
         const itemName = `${r.thickness} ملم ${r.itemVariantName}`;
         let dimension = `${r.length}×${r.width}`;
         if (r.itemVariantType === "box") dimension += `-0${r.sheetsPerBox}`;
+
         const key = `${r.itemVariantGroupId}-${r.thickness}-${r.itemVariantId}-${r.itemBatchId}`;
+
         return {
           ...r,
           name: itemName,
@@ -71,17 +77,21 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
   if (!isOpen) return null;
 
   const handleSave = async () => {
+    if (saveLockRef.current || saving) return;
+
     if (!rows.length) {
       onClose();
       return;
     }
+
+    saveLockRef.current = true;
     setSaving(true);
 
     try {
       await Promise.all(
         rows.map((r) => {
           const body = {
-            itemBatchId: r.itemBatchId, // ✅ now included
+            itemBatchId: r.itemBatchId, // ✅ keep as you had
             date: r.date,
             count: r.count === "" ? 0 : Number(r.count),
             unit: r.unit,
@@ -90,14 +100,12 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
             finalCost: r.finalCost === "" ? 0 : Number(r.finalCost),
             finalCostOfr: r.finalCostOfr === "" ? 0 : Number(r.finalCostOfr),
           };
-          return axios.patch(
-            `${baseUrl}/inventory-count/${r.id}`,
-            body
-          );
+
+          // ✅ axiosClient (no baseUrl)
+          return axiosClient.patch(`/inventory-count/${r.id}`, body);
         })
       );
 
-      // on success, show notification, then close everything
       setNotification({
         open: true,
         type: "success",
@@ -112,10 +120,13 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       setNotification({
         open: true,
         type: "error",
-        message: "Failed to update counts. Please try again.",
+        message:
+          err?.response?.data?.message ||
+          "Failed to update counts. Please try again.",
         onConfirm: () => setNotification((n) => ({ ...n, open: false })),
       });
     } finally {
+      saveLockRef.current = false;
       setSaving(false);
     }
   };
@@ -139,13 +150,19 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       setSearchOpen(false);
       return;
     }
+
     const sel = items[0];
+
+    // NOTE: this assumes your CountSearchModal returns these fields.
+    // If your CountSearchModal returns different names, tell me what it returns and I’ll align it.
     const itemName = `${parseFloat(sel.thickness)} ملم ${sel.itemName}`;
     let dimension = `${Math.floor(sel.length)}×${Math.floor(sel.width)}`;
     if (sel.type === "box") dimension += `-0${sel.sheetsPerBox}`;
+
     setRows((prev) => {
       const copy = [...prev];
       const key = `${sel.itemVariantGroupId}-${sel.thickness}-${sel.itemVariantId}-${sel.batchId}`;
+
       copy[activeRow] = {
         ...copy[activeRow],
         name: itemName,
@@ -159,6 +176,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
       };
       return copy;
     });
+
     setSearchOpen(false);
   };
 
@@ -216,17 +234,14 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                   <th>Date</th>
                   <th className="edit-count">Count</th>
                   <th>Type</th>
-                  {showCountOfr && (
-                    <th className="edit-count-ofr">Count OFR</th>
-                  )}
-                  {showFinalCost && (
-                    <th className="edit-final-cost">Final Cost</th>
-                  )}
+                  {showCountOfr && <th className="edit-count-ofr">Count OFR</th>}
+                  {showFinalCost && <th className="edit-final-cost">Final Cost</th>}
                   {showFinalCostOfr && (
                     <th className="edit-final-cost-ofr">Final Cost OFR</th>
                   )}
                 </tr>
               </thead>
+
               <tbody>
                 {rows.map((r, i) => (
                   <tr key={r.key} onContextMenu={(e) => onRowContextMenu(e, i)}>
@@ -243,6 +258,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         }}
                       />
                     </td>
+
                     <td>
                       <input
                         type="text"
@@ -256,18 +272,16 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         }}
                       />
                     </td>
+
                     <td>
-                      <select
-                        className="edit-count-input"
-                        value={r.unit}
-                        disabled
-                      >
+                      <select className="edit-count-input" value={r.unit} disabled>
                         <option value="">Unit</option>
                         <option value="box">Box</option>
                         <option value="sheet">Sheet</option>
                         <option value="sqm">SQM</option>
                       </select>
                     </td>
+
                     <td>
                       <input
                         type="date"
@@ -277,6 +291,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         disabled={saving}
                       />
                     </td>
+
                     <td className="count-col">
                       <input
                         type="number"
@@ -286,6 +301,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         disabled={saving}
                       />
                     </td>
+
                     <td>
                       <select
                         className="edit-count-input"
@@ -300,6 +316,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         ))}
                       </select>
                     </td>
+
                     {showCountOfr && (
                       <td>
                         {r.type === "SR" ? (
@@ -307,9 +324,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                             type="number"
                             className="edit-count-input"
                             value={r.countOFR}
-                            onChange={(e) =>
-                              updateCell(i, "countOFR", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "countOFR", e.target.value)}
                             disabled={saving}
                           />
                         ) : (
@@ -317,6 +332,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         )}
                       </td>
                     )}
+
                     {showFinalCost && (
                       <td>
                         {["S", "SR", "RVR"].includes(r.type) ? (
@@ -324,9 +340,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                             type="number"
                             className="edit-count-input"
                             value={r.finalCost}
-                            onChange={(e) =>
-                              updateCell(i, "finalCost", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "finalCost", e.target.value)}
                             disabled={saving}
                           />
                         ) : (
@@ -334,6 +348,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                         )}
                       </td>
                     )}
+
                     {showFinalCostOfr && (
                       <td>
                         {["G", "SR"].includes(r.type) ? (
@@ -341,9 +356,7 @@ const EditCountModal = ({ isOpen, onClose, initialRows }) => {
                             type="number"
                             className="edit-count-input"
                             value={r.finalCostOfr}
-                            onChange={(e) =>
-                              updateCell(i, "finalCostOfr", e.target.value)
-                            }
+                            onChange={(e) => updateCell(i, "finalCostOfr", e.target.value)}
                             disabled={saving}
                           />
                         ) : (

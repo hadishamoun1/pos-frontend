@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import TransferModal from "./transferModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./TransfersPage.css";
 
-const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
+// ✅ use your axios client (named export)
+import { axiosClient } from "../api/axiosClient"; // <-- adjust path if needed
 
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState([]);
@@ -18,15 +18,15 @@ export default function TransfersPage() {
   const fetchTransfers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${baseUrl}/transfers/v1/details`);
+      const res = await axiosClient.get("/transfers/v1/details");
       setTransfers(res.data || []);
       setError("");
     } catch (err) {
       console.error("Failed to load transfers", err);
       const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
         "Failed to load transfers";
       setError(msg);
     } finally {
@@ -50,7 +50,7 @@ export default function TransfersPage() {
       if (!id) return;
 
       // fetch full entity transfer (items contain itemBatchId)
-      const fullRes = await axios.get(`${baseUrl}/transfers/${id}`);
+      const fullRes = await axiosClient.get(`/transfers/${id}`);
       const full = fullRes.data;
 
       const fullItemsById = new Map(
@@ -62,7 +62,11 @@ export default function TransfersPage() {
         const fullIt = fullItemsById.get(Number(it.id));
         return {
           ...it,
-          itemBatchId: it.itemBatchId ?? it.batchId ?? it.itemBatch?.id ?? fullIt?.itemBatchId,
+          itemBatchId:
+            it.itemBatchId ??
+            it.batchId ??
+            it.itemBatch?.id ??
+            fullIt?.itemBatchId,
         };
       });
 
@@ -77,9 +81,9 @@ export default function TransfersPage() {
     } catch (err) {
       console.error("Failed to load transfer for edit", err);
       const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
         "Failed to open transfer for edit";
       setNotif({ open: true, type: "error", message: msg });
     }
@@ -88,7 +92,7 @@ export default function TransfersPage() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this transfer?")) return;
     try {
-      await axios.delete(`${baseUrl}/transfers/${id}`);
+      await axiosClient.delete(`/transfers/${id}`);
       setNotif({
         open: true,
         type: "success",
@@ -98,9 +102,9 @@ export default function TransfersPage() {
     } catch (err) {
       console.error("Failed to delete transfer", err);
       const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
         "Delete failed — please try again.";
       setNotif({
         open: true,

@@ -20,34 +20,12 @@ import TransferModal from "./transferModal";
 import "./inventory-activity.css";
 import { io } from "socket.io-client";
 
+// ✅ use your axios client (named export)
+import { axiosClient } from "../api/axiosClient"; // <-- adjust path if needed
+
 /** ---------- API URL helper (supports base with optional path prefix) ---------- */
 const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
 const isAbs = (s) => /^https?:\/\//i.test(String(s || ""));
-
-const apiUrl = (path) => {
-  const cleanPath = String(path || "").startsWith("/") ? String(path || "") : `/${path || ""}`;
-
-  // no env base => relative to current origin
-  if (!RAW_API_BASE) return new URL(cleanPath, window.location.origin);
-
-  // absolute base: may include pathname prefix (/api)
-  if (isAbs(RAW_API_BASE)) {
-    const base = new URL(RAW_API_BASE);
-    const prefix = (base.pathname || "/").replace(/\/+$/, "");
-    base.pathname = `${prefix}${cleanPath}`.replace(/\/{2,}/g, "/");
-    return base;
-  }
-
-  // relative base (ex: "/api")
-  const u = new URL(cleanPath, window.location.origin);
-  const prefix = RAW_API_BASE.replace(/\/+$/, "");
-  u.pathname = `${prefix}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
-};
-
-
-
 
 /** ---------- Small helpers ---------- */
 const toNum = (v) => {
@@ -67,7 +45,6 @@ const normalizeUnit = (u) => {
   if (t === "box") return "box";
   if (t === "sheet") return "sheet";
   if (t === "sqm" || t === "m2") return "sqm";
-  // your UI uses Box/Sheet/SQM labels
   if (t === "sq m" || t === "sq") return "sqm";
   return t;
 };
@@ -133,11 +110,12 @@ export default function InventoryActivityPage() {
 
   const [sortConfig, setSortConfig] = useState({ column: null, direction: null });
 
-   const visibleIds = useMemo(
+  const visibleIds = useMemo(
     () => (rows || []).map((r) => r?.id).filter(Boolean),
     [rows]
   );
-   // ✅ Row selection for delete
+
+  // ✅ Row selection for delete
   const [selectedTxIds, setSelectedTxIds] = useState(() => new Set());
   const [deleting, setDeleting] = useState(false);
 
@@ -150,18 +128,21 @@ export default function InventoryActivityPage() {
     });
   }, []);
 
-
-  const toggleAllVisible = useCallback((checked) => {
-    setSelectedTxIds((prev) => {
-      const next = new Set(prev);
-      visibleIds.forEach((id) => {
-        if (checked) next.add(id);
-        else next.delete(id);
+  const toggleAllVisible = useCallback(
+    (checked) => {
+      setSelectedTxIds((prev) => {
+        const next = new Set(prev);
+        visibleIds.forEach((id) => {
+          if (checked) next.add(id);
+          else next.delete(id);
+        });
+        return next;
       });
-      return next;
-    });
-  }, [visibleIds]);
+    },
+    [visibleIds]
+  );
 
+  // ✅ NOW uses axiosClient instead of fetch
   const deleteSelected = async () => {
     if (selectedTxIds.size === 0) return;
 
@@ -170,20 +151,12 @@ export default function InventoryActivityPage() {
 
     setDeleting(true);
     try {
-      // delete sequentially (simpler, safer)
       for (const id of Array.from(selectedTxIds)) {
-        const u = apiUrl(`/inventory-transactions/${id}`);
-        const res = await fetch(u.toString(), { method: "DELETE" });
-        if (!res.ok) throw new Error(`Delete failed for id=${id}`);
+        await axiosClient.delete(`/inventory-transactions/${id}`);
       }
 
-      // remove from UI locally
       setRows((prev) => prev.filter((r) => !selectedTxIds.has(r.id)));
-
-      // clear selection
       setSelectedTxIds(new Set());
-
-      // Optional: refetch to recalc totals precisely
       setPage(1);
     } catch (e) {
       console.error(e);
@@ -193,11 +166,9 @@ export default function InventoryActivityPage() {
     }
   };
 
-    useEffect(() => {
+  useEffect(() => {
     setSelectedTxIds(new Set());
   }, [activeFilters, sortConfig, page]);
-
-
 
   /** Cell right-click menu (kept, for quick “Add this exact value”) */
   const [contextMenu, setContextMenu] = useState({
@@ -221,7 +192,7 @@ export default function InventoryActivityPage() {
   const [promptBox, setPromptBox] = useState({
     open: false,
     columnId: null,
-    op: "contains", // contains|eq|gt|lt|before|after
+    op: "contains",
     label: "",
     placeholder: "",
     value: "",
@@ -290,9 +261,6 @@ export default function InventoryActivityPage() {
     ],
     [selectedTxIds, visibleIds, toggleAllVisible, toggleTx]
   );
-
-
-
 
   /** ---------- react-table setup ---------- */
   const data = useMemo(() => {
@@ -419,13 +387,13 @@ export default function InventoryActivityPage() {
   /** Column meta -> maps UI column to API query key + how to treat it */
   const COL_META = useMemo(
     () => ({
-      category: { type: "textLike", api: "category" }, // already LIKE in API
-      subCategory: { type: "textLike", api: "subCategory" }, // already LIKE in API
-      name: { type: "nameContains", api: "nameContains" }, // YOU must add in API
-      condition: { type: "textLike", api: "condition" }, // LIKE
-      batchDate: { type: "date", api: "batchDate" }, // equals not implemented in your API for dateReceived, but you have batchDate exact in code
-      dimension: { type: "dimension", api: "dimension" }, // exact parse in API
-      origin: { type: "textLike", api: "origin" }, // LIKE
+      category: { type: "textLike", api: "category" },
+      subCategory: { type: "textLike", api: "subCategory" },
+      name: { type: "nameContains", api: "nameContains" },
+      condition: { type: "textLike", api: "condition" },
+      batchDate: { type: "date", api: "batchDate" },
+      dimension: { type: "dimension", api: "dimension" },
+      origin: { type: "textLike", api: "origin" },
       quantity: { type: "number", api: "quantity" },
       quantityofr: { type: "number", api: "quantityofr" },
       sqm: { type: "number", api: "sqm" },
@@ -434,10 +402,9 @@ export default function InventoryActivityPage() {
       finalcostofr: { type: "number", api: "finalcostofr" },
       unit: { type: "unit", api: "unit" },
       status: { type: "status", api: "status" },
-      date: { type: "dateInvoice", api: "date" }, // API uses query.date, dateGt, dateLt on effective COALESCE
-      invoiceNo: { type: "textLike", api: "invoiceNumber" }, // LIKE in API
+      date: { type: "dateInvoice", api: "date" },
+      invoiceNo: { type: "textLike", api: "invoiceNumber" },
 
-      // PII numeric (already supported by your piiFields loop)
       previousQuantity: { type: "number", api: "previousQuantity" },
       previousQuantityC: { type: "number", api: "previousQuantityC" },
       previousQuantityVM: { type: "number", api: "previousQuantityVM" },
@@ -462,15 +429,12 @@ export default function InventoryActivityPage() {
       const val = String(rawValue ?? "").trim();
       if (!val) return;
 
-      // Special cases
       if (meta.type === "dimension") {
-        // Treat "contain" as exact dimension input (normalize x -> ×)
         upsertFilter("dimension", normalizeDimInput(val));
         return;
       }
 
       if (meta.type === "unit") {
-        // treat contain as equals for unit
         upsertFilter("unit", normalizeUnit(val));
         return;
       }
@@ -487,7 +451,6 @@ export default function InventoryActivityPage() {
       }
 
       if (meta.type === "date") {
-        // your API uses batchDate as equals; (if you later add batchDateGt/Lt you can expand)
         upsertFilter("batchDate", val);
         return;
       }
@@ -502,22 +465,20 @@ export default function InventoryActivityPage() {
       }
 
       if (meta.type === "textLike") {
-        // your API already uses LIKE for these keys
         return upsertFilter(meta.api, val);
       }
 
       if (meta.type === "nameContains") {
-        // needs API support (example: qb.andWhere('(item.itemName LIKE ... OR thickness.thickness LIKE ...)', ...))
         return upsertFilter(meta.api, val);
       }
 
-      // fallback
       upsertFilter(meta.api, val);
     },
     [COL_META, upsertFilter]
   );
 
   /** ---------- Fetching ---------- */
+  // ✅ NOW uses axiosClient instead of fetch/apiUrl
   const fetchData = useCallback(
     async (append = false) => {
       const params = new URLSearchParams();
@@ -536,14 +497,12 @@ export default function InventoryActivityPage() {
           ? "/inventory-transactions/activity/v1/filtered"
           : "/inventory-transactions/activity";
 
-      const u = apiUrl(basePath);
-      u.search = params.toString();
-
-      const res = await fetch(u.toString());
-      const js = await res.json();
+      const res = await axiosClient.get(`${basePath}?${params.toString()}`);
+      const js = res?.data;
 
       if (Array.isArray(js?.data)) {
         setRows((prev) => (append ? [...prev, ...js.data] : js.data));
+
         if (js.totals) {
           setTotals({
             totalQuantity: Number(js.totals.totalQuantity) || 0,
@@ -552,6 +511,7 @@ export default function InventoryActivityPage() {
             totalSQMOFR: Number(js.totals.totalSQMOFR) || 0,
           });
         }
+
         setTotalRecords(js.totalRecords ?? 0);
 
         const shown = append ? rows.length + js.data.length : js.data.length;
@@ -616,13 +576,9 @@ export default function InventoryActivityPage() {
 
   /** ---------- Cell right-click: quick “Add this value” ---------- */
   const addFilterFromCell = (column, value, record, op = "eq") => {
-    // ignore blank placeholder
     if (value === "—" || value == null) return;
 
-    // special mapping for some UI columns
     if (column === "name") {
-      // keep your existing EXACT mechanism for cell-click filters:
-      // record.name = "<th> ملم <item>"
       const [thStr, itemStr] = String(record.name || "").split(" ملم ");
       if (thStr && itemStr) {
         return upsertFilter("itemNameWithThickness", `${thStr}|${itemStr}`);
@@ -639,7 +595,6 @@ export default function InventoryActivityPage() {
       return upsertFilter("date", value);
     }
 
-    // numeric columns: support gt/lt
     const n = toNum(value);
     if (n != null) {
       if (op === "Gt") return upsertFilter(`${column}Gt`, n);
@@ -647,7 +602,6 @@ export default function InventoryActivityPage() {
       return upsertFilter(column, n);
     }
 
-    // text columns: your API uses LIKE for these keys, so same key works
     return upsertFilter(column === "invoiceNo" ? "invoiceNumber" : column, String(value));
   };
 
@@ -700,14 +654,13 @@ export default function InventoryActivityPage() {
             Clear All
           </button>
           <button
-  className="inventory-activity-btn-transfers"
-  onClick={deleteSelected}
-  disabled={deleting || selectedTxIds.size === 0}
-  title={selectedTxIds.size === 0 ? "Select rows to delete" : "Delete selected rows"}
->
-  {deleting ? "Deleting..." : `Delete (${selectedTxIds.size})`}
-</button>
-
+            className="inventory-activity-btn-transfers"
+            onClick={deleteSelected}
+            disabled={deleting || selectedTxIds.size === 0}
+            title={selectedTxIds.size === 0 ? "Select rows to delete" : "Delete selected rows"}
+          >
+            {deleting ? "Deleting..." : `Delete (${selectedTxIds.size})`}
+          </button>
         </div>
       </div>
 
@@ -718,7 +671,9 @@ export default function InventoryActivityPage() {
           {activeFilters.map((f, idx) => (
             <span key={idx} className="active-filters-tag">
               {f.key}: {f.value}
-              <button onClick={() => setActiveFilters(activeFilters.filter((_, i) => i !== idx))}>×</button>
+              <button onClick={() => setActiveFilters(activeFilters.filter((_, i) => i !== idx))}>
+                ×
+              </button>
             </span>
           ))}
         </div>
@@ -769,6 +724,7 @@ export default function InventoryActivityPage() {
           >
             Greater than…
           </div>
+
           <div
             style={{ padding: "6px", cursor: "pointer" }}
             onClick={() => {
@@ -784,7 +740,6 @@ export default function InventoryActivityPage() {
           <div
             style={{ padding: "6px", cursor: "pointer" }}
             onClick={() => {
-              // Date sorting shortcut (only meaningful if you later change to sort chosen column)
               setSortConfig({ column: "date", direction: "asc" });
               setColMenu((v) => ({ ...v, visible: false }));
               setPage(1);
@@ -819,71 +774,63 @@ export default function InventoryActivityPage() {
         </div>
       )}
 
-{promptBox.open && (
-  <div
-    className="inv-prompt-overlay"
-    onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
-  >
-    <div className="inv-prompt-card" onClick={(e) => e.stopPropagation()}>
-      <div className="inv-prompt-header">
-        <div>
-          <div className="inv-prompt-title">
-            {/* same title logic you already have */}
-            Filter — column: {promptBox.label}
+      {promptBox.open && (
+        <div
+          className="inv-prompt-overlay"
+          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
+        >
+          <div className="inv-prompt-card" onClick={(e) => e.stopPropagation()}>
+            <div className="inv-prompt-header">
+              <div>
+                <div className="inv-prompt-title">Filter — column: {promptBox.label}</div>
+                <div className="inv-prompt-subtitle">Press Enter to apply • Esc to close</div>
+              </div>
+
+              <button
+                className="inv-prompt-close"
+                onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
+                aria-label="Close"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="inv-prompt-body">
+              <input
+                className="inv-prompt-input"
+                autoFocus
+                value={promptBox.value}
+                placeholder={promptBox.placeholder}
+                onChange={(e) => setPromptBox((p) => ({ ...p, value: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setPromptBox((p) => ({ ...p, open: false }));
+                  if (e.key === "Enter") {
+                    applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
+                    setPromptBox((p) => ({ ...p, open: false }));
+                  }
+                }}
+              />
+            </div>
+
+            <div className="inv-prompt-footer">
+              <button className="inv-prompt-btn" onClick={() => setPromptBox((p) => ({ ...p, open: false }))} type="button">
+                Cancel
+              </button>
+              <button
+                className="inv-prompt-btn inv-prompt-btn-primary"
+                onClick={() => {
+                  applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
+                  setPromptBox((p) => ({ ...p, open: false }));
+                }}
+                type="button"
+              >
+                Apply
+              </button>
+            </div>
           </div>
-          <div className="inv-prompt-subtitle">Press Enter to apply • Esc to close</div>
         </div>
-
-        <button
-          className="inv-prompt-close"
-          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
-          aria-label="Close"
-          type="button"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="inv-prompt-body">
-        <input
-          className="inv-prompt-input"
-          autoFocus
-          value={promptBox.value}
-          placeholder={promptBox.placeholder}
-          onChange={(e) => setPromptBox((p) => ({ ...p, value: e.target.value }))}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setPromptBox((p) => ({ ...p, open: false }));
-            if (e.key === "Enter") {
-              applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
-              setPromptBox((p) => ({ ...p, open: false }));
-            }
-          }}
-        />
-      </div>
-
-      <div className="inv-prompt-footer">
-        <button
-          className="inv-prompt-btn"
-          onClick={() => setPromptBox((p) => ({ ...p, open: false }))}
-          type="button"
-        >
-          Cancel
-        </button>
-        <button
-          className="inv-prompt-btn inv-prompt-btn-primary"
-          onClick={() => {
-            applyPrompt(promptBox.columnId, promptBox.op, promptBox.value);
-            setPromptBox((p) => ({ ...p, open: false }));
-          }}
-          type="button"
-        >
-          Apply
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
 
       {/* Cell right-click menu (quick add) */}
       {contextMenu.visible && (
@@ -1004,7 +951,6 @@ export default function InventoryActivityPage() {
                   })}
                 </tbody>
 
-                {/* Totals aligned dynamically */}
                 <tfoot>
                   <tr>
                     {headerGroups?.[0]?.headers?.map((col, idx) => {
