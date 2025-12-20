@@ -1,6 +1,7 @@
 // src/components/accounts/AccountsPage.jsx
 import React, { useState, useEffect } from "react";
 import "./accounts.css";
+import { axiosClient } from "../api/axiosClient";
 
 const AccountsPage = () => {
   const [data, setData] = useState([]);
@@ -11,37 +12,23 @@ const AccountsPage = () => {
     parentNumber: "",
     accessible: true,
   });
+
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
 
-  const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-  const baseUrl = rawBase.replace(/\/+$/, ""); // remove trailing /
-
-  // ---------- Helpers ----------
-
+  // ✅ Helper to find parent name
   const getParentName = (account, allAccounts) => {
     if (!account.parentNumber) return "Main Account";
-    const parent = allAccounts.find(
-      (a) => a.accountNumber === account.parentNumber
-    );
+    const parent = allAccounts.find((a) => a.accountNumber === account.parentNumber);
     return parent?.accountName || parent?.arabicAccountName || "N/A";
   };
 
-  // ---------- Fetch data on mount ----------
+  // ✅ Load accounts once
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
-        const response = await fetch(`${baseUrl}/accounts/v1/combined`);
-        // If your working endpoint is /accounts, use:
-        // const response = await fetch(`${baseUrl}/accounts`);
-
-        if (!response.ok) {
-          console.error("Failed to fetch combined accounts", response.status);
-          return;
-        }
-
-        const combinedData = await response.json();
-        console.log("Combined accounts from API:", combinedData);
+        const res = await axiosClient.get("/accounts/v1/combined"); // ✅ token auto
+        const combinedData = res?.data;
         setData(Array.isArray(combinedData) ? combinedData : []);
       } catch (error) {
         console.error("Error fetching combined data:", error);
@@ -49,39 +36,29 @@ const AccountsPage = () => {
     };
 
     fetchCombinedData();
-  }, [baseUrl]);
+  }, []);
 
-  // ---------- Form handlers ----------
+  // ✅ Form change
   const handleInputChange = (e) => {
     const { name, value, checked, type } = e.target;
-    setFormData((prevState) => ({
-      ...prevState,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
+  // ✅ Create account
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${baseUrl}/accounts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const res = await axiosClient.post("/accounts", formData); // ✅ token auto
+      const newAccount = res?.data;
 
-      if (response.ok) {
-        const newAccount = await response.json();
-        const safeAccount = {
-          ...newAccount,
-          children: newAccount.children || [],
-        };
-        setData((prevState) => [...prevState, safeAccount]);
-        setModalType("success");
-      } else {
-        setModalType("error");
-      }
+      // keep consistent structure if backend doesn't include children
+      const safeAccount = { ...newAccount, children: newAccount?.children || [] };
+
+      setData((prev) => [...prev, safeAccount]);
+      setModalType("success");
     } catch (error) {
       console.error("Error creating account:", error);
       setModalType("error");
@@ -92,7 +69,7 @@ const AccountsPage = () => {
 
   const closeModal = () => setModalContent(false);
 
-  // ---------- Flat renderer (no hiding by parentNumber) ----------
+  // ✅ Render all accounts + customers/suppliers under special accounts
   const renderAccounts = (accounts) => {
     if (!accounts || !accounts.length) {
       return (
@@ -106,10 +83,9 @@ const AccountsPage = () => {
 
     return accounts
       .slice()
-      .sort((a, b) => a.accountNumber.localeCompare(b.accountNumber))
+      .sort((a, b) => String(a.accountNumber).localeCompare(String(b.accountNumber)))
       .map((account) => (
         <React.Fragment key={`acc-${account.id}`}>
-          {/* Main account row */}
           <tr>
             <td>{account.accountNumber}</td>
             <td>{account.accountName || "—"}</td>
@@ -128,7 +104,7 @@ const AccountsPage = () => {
             <td>{getParentName(account, accounts)}</td>
           </tr>
 
-          {/* Customer accounts (if backend added them as children with isCustomer flag) */}
+          {/* Customers under 4111 */}
           {account.accountNumber === "4111" &&
             Array.isArray(account.children) &&
             account.children
@@ -156,7 +132,7 @@ const AccountsPage = () => {
                 </tr>
               ))}
 
-          {/* Supplier accounts (if backend added them as children with isSupplier flag) */}
+          {/* Suppliers under 4011 */}
           {account.accountNumber === "4011" &&
             Array.isArray(account.children) &&
             account.children
@@ -191,12 +167,11 @@ const AccountsPage = () => {
     <div className="accounts-page">
       <h2 className="accounts-heading">Accounts Management</h2>
 
-      {/* Tiny debug: see if data is actually loaded */}
       <p style={{ fontSize: "0.8rem", color: "#666", marginBottom: "0.5rem" }}>
         Loaded accounts: {data.length}
       </p>
 
-      {/* ---------- Create Account Form ---------- */}
+      {/* ✅ Create Account Form */}
       <div className="accounts-form">
         <form onSubmit={handleFormSubmit}>
           <label>
@@ -244,13 +219,13 @@ const AccountsPage = () => {
               <option value="">Select Parent Account</option>
               {data
                 .slice()
-                .sort((a, b) => a.accountNumber.localeCompare(b.accountNumber))
+                .sort((a, b) =>
+                  String(a.accountNumber).localeCompare(String(b.accountNumber))
+                )
                 .map((account) => (
                   <option key={account.id} value={account.accountNumber}>
                     {account.accountNumber} -{" "}
-                    {account.accountName ||
-                      account.arabicAccountName ||
-                      "Unnamed"}
+                    {account.accountName || account.arabicAccountName || "Unnamed"}
                   </option>
                 ))}
             </select>
@@ -271,7 +246,7 @@ const AccountsPage = () => {
         </form>
       </div>
 
-      {/* ---------- Accounts Preview Table ---------- */}
+      {/* ✅ Accounts Preview Table */}
       <div className="accounts-preview">
         <h3 className="accounts-preview-heading">Accounts Preview</h3>
         <table className="accounts-table">
@@ -288,7 +263,7 @@ const AccountsPage = () => {
         </table>
       </div>
 
-      {/* ---------- Modal ---------- */}
+      {/* ✅ Modal */}
       {modalContent && (
         <div className="modal">
           <div
@@ -298,9 +273,7 @@ const AccountsPage = () => {
           >
             {modalType === "success" ? (
               <>
-                <h2 className="modal-success-text">
-                  Account Created Successfully
-                </h2>
+                <h2 className="modal-success-text">Account Created Successfully</h2>
                 <div className="modal-icon">✔</div>
               </>
             ) : (

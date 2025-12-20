@@ -12,19 +12,18 @@ import "./styles/table.css";
 import "./styles/model.css";
 import "./styles/summary.css";
 import "./styles/invoiceModel.css";
-import axios from "axios";
 import AlternativeSummarySection from "./AlternativeSummarySection";
 import NotificationModal from "../recievables/NotificationModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+// ✅ use axiosClient (auto token)
+import { axiosClient } from "../api/axiosClient";
 
 const fetchSuppliersByQuery = async (query) => {
-  const response = await fetch(
-    `${baseUrl}/suppliers/v1/search?query=${query}`
-  );
-  return response.json();
+  const { data } = await axiosClient.get(`/suppliers/v1/search`, {
+    params: { query },
+  });
+  return data;
 };
 
 const PurchasesInvoicePage = () => {
@@ -72,57 +71,56 @@ const PurchasesInvoicePage = () => {
   const [invoiceType, setInvoiceType] = useState("S");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
   const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
-const saveLockRef = useRef(false);
-const [isSaving, setIsSaving] = useState(false);
-const queryClient = useQueryClient();
+  const saveLockRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
 
-const resetFields = () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const resetFields = () => {
+    const today = new Date().toISOString().slice(0, 10);
 
-  // 🔹 Header fields
-  setSupplierName("");
-  setSelectedSupplierId(null);
-  setInvoiceNumber("");
-  setStatus("Pending");
-  setInvoiceType("S");
-  setCurrency("USD");
-  setExchangeRate(89500);
-  setVatRate(0);
+    // 🔹 Header fields
+    setSupplierName("");
+    setSelectedSupplierId(null);
+    setInvoiceNumber("");
+    setStatus("Pending");
+    setInvoiceType("S");
+    setCurrency("USD");
+    setExchangeRate(89500);
+    setVatRate(0);
 
-  // 🔹 Dates
-  setInvoiceDate(today);
-  setinputedDate(today);
-  setPoDate(today);
-  setJvDate(today);
+    // 🔹 Dates
+    setInvoiceDate(today);
+    setinputedDate(today);
+    setPoDate(today);
+    setJvDate(today);
 
-  // 🔹 Items & totals
-  setItems([]);
-  setNumberOfContainers(0);
-  setShippingCostInput(0);
-  setTotalCharges(0);
-  setPotentialCost(0);
-  setFinalCost(0);
+    // 🔹 Items & totals
+    setItems([]);
+    setNumberOfContainers(0);
+    setShippingCostInput(0);
+    setTotalCharges(0);
+    setPotentialCost(0);
+    setFinalCost(0);
 
-  // 🔹 Summary / alt summary & extra header
-  setActiveSummary("main");
-  setShippingLine("");
-  setEtd("");
-  setAltContainers(0);
-  setBlNumber("");
+    // 🔹 Summary / alt summary & extra header
+    setActiveSummary("main");
+    setShippingLine("");
+    setEtd("");
+    setAltContainers(0);
+    setBlNumber("");
 
-  // 🔹 Unit price / modals
-  setShowUnitPriceModal(false);
-  setUnitPriceRows([]);
-  setShowItemModal(false);
+    // 🔹 Unit price / modals
+    setShowUnitPriceModal(false);
+    setUnitPriceRows([]);
+    setShowItemModal(false);
 
-  // 🔹 OFR-related
-  setShippingCostComputed(0);
-  setShippingCostOFR(0);
-  setTotalChargesOFR(0);
+    // 🔹 OFR-related
+    setShippingCostComputed(0);
+    setShippingCostOFR(0);
+    setTotalChargesOFR(0);
 
-  setShowTypePopup(false);
-};
-
+    setShowTypePopup(false);
+  };
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
 
@@ -250,8 +248,7 @@ const resetFields = () => {
     setIsEditMode(false);
   }, [selectedInvoiceId]);
 
-
-   const [notif, setNotif] = useState({
+  const [notif, setNotif] = useState({
     open: false,
     type: "success",
     message: "",
@@ -270,7 +267,7 @@ const resetFields = () => {
   };
   const closeNotif = () => setNotif((p) => ({ ...p, open: false }));
 
- const saveInvoice = async (type) => {
+  const saveInvoice = async (type) => {
     if (saveLockRef.current || isSaving) return;
     saveLockRef.current = true;
     setIsSaving(true);
@@ -351,30 +348,27 @@ const resetFields = () => {
 
       let res;
       if (isInvoiceSelected) {
-        res = await axios.put(`${baseUrl}/purchase-invoices/${selectedInvoiceId}`, invoiceData);
-        openNotif("success", `Invoice updated successfully: ${res.data.invoiceNumber}`);
+        res = await axiosClient.put(
+          `/purchase-invoices/${selectedInvoiceId}`,
+          invoiceData
+        );
+        openNotif(
+          "success",
+          `Invoice updated successfully: ${res.data.invoiceNumber}`
+        );
         setIsEditMode(false);
       } else {
-        res = await axios.post(`${baseUrl}/purchase-invoices`, invoiceData);
+        res = await axiosClient.post(`/purchase-invoices`, invoiceData);
         openNotif("success", `Invoice saved successfully: ${res.data.invoiceNumber}`);
       }
-if (isInvoiceSelected) {
-  res = await axios.put(`${baseUrl}/purchase-invoices/${selectedInvoiceId}`, invoiceData);
-  openNotif("success", `Invoice updated successfully: ${res.data.invoiceNumber}`);
-  setIsEditMode(false);
-} else {
-  res = await axios.post(`${baseUrl}/purchase-invoices`, invoiceData);
-  openNotif("success", `Invoice saved successfully: ${res.data.invoiceNumber}`);
-}
 
-// ⬇️ add this after the above:
-await queryClient.invalidateQueries({ queryKey: ["minimal-invoices"] });
-await queryClient.invalidateQueries({ queryKey: ["invoice"] });
+      // ⬇️ add this after the above:
+      await queryClient.invalidateQueries({ queryKey: ["minimal-invoices"] });
+      await queryClient.invalidateQueries({ queryKey: ["invoice"] });
 
-// then your existing:
-resetFields();
-setShowTypePopup(false);
-
+      // then your existing:
+      resetFields();
+      setShowTypePopup(false);
     } catch (err) {
       console.error("Error saving invoice", err);
       const serverMsg =
@@ -387,7 +381,6 @@ setShowTypePopup(false);
       setIsSaving(false);
     }
   };
-
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -418,23 +411,34 @@ setShowTypePopup(false);
       setFilteredSuppliers([]);
     }
   };
+
+  // ✅ use axiosClient (token)
   const fetchFullInvoice = async (id) => {
-    const res = await fetch(`${baseUrl}/purchase-invoices/${id}`);
-    if (!res.ok) throw new Error("Error fetching invoice");
-    return res.json();
+    const res = await axiosClient.get(`/purchase-invoices/${id}`);
+    return res.data;
   };
 
+  // ✅ use axiosClient (token)
   const fetchMinimalInvoices = async () => {
-    const response = await fetch(
-      `${baseUrl}/purchase-invoices/v1/minimal`
-    );
-    return response.json();
+    const response = await axiosClient.get(`/purchase-invoices/v1/minimal`);
+    const json = response.data;
+
+    // ✅ always return an array no matter what backend shape is
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json?.data)) return json.data;
+    if (Array.isArray(json?.items)) return json.items;
+    if (Array.isArray(json?.rows)) return json.rows;
+    if (Array.isArray(json?.invoices)) return json.invoices;
+
+    return [];
   };
 
   const { data: minimalInvoices = [] } = useQuery({
     queryKey: ["minimal-invoices"],
     queryFn: fetchMinimalInvoices,
   });
+
+  const minimalInvoicesArr = Array.isArray(minimalInvoices) ? minimalInvoices : [];
 
   // ✅ object signature
   const {
@@ -457,7 +461,7 @@ setShowTypePopup(false);
     setInvoiceNumber(fullInvoice.invoiceNumber);
     setinputedDate(toYMD(fullInvoice.date));
     setInvoiceDate(fullInvoice.expectedArrivalDate?.slice(0, 10) || "");
-    setJvDate(toYMD(fullInvoice.jvDate) || toYMD(fullInvoice.date)); 
+    setJvDate(toYMD(fullInvoice.jvDate) || toYMD(fullInvoice.date));
 
     // 3) status, currency, etc…
     setStatus(fullInvoice.status);
@@ -512,7 +516,7 @@ setShowTypePopup(false);
           quantity: i.quantity ?? 1,
           // 👇 your existing numeric fields:
           sqm: Number(i.sqm),
-          sqmOfr: Number(i.sqmOfr ?? 0), 
+          sqmOfr: Number(i.sqmOfr ?? 0),
           unitPrice: Number(i.unitPrice),
           total: Number(i.totalAmount),
           euroPrice: Number(i.euroPrice),
@@ -543,16 +547,14 @@ setShowTypePopup(false);
         addToItemCost: r.addToItemCost,
         invoiceNbTax: r.invoiceNbTax,
         shipping: r.shipping,
-         accountId: r.accountId ?? null,
-    accountNumber: r.account?.accountNumber || "",
+        accountId: r.accountId ?? null,
+        accountNumber: r.account?.accountNumber || "",
 
-    supplierId: r.supplierId ?? null,
-    supplierOfTax: r.supplier?.supplierName || "",
-    accNbOfSupplier: r.supplier?.account?.accountNumber || "",
+        supplierId: r.supplierId ?? null,
+        supplierOfTax: r.supplier?.supplierName || "",
+        accNbOfSupplier: r.supplier?.account?.accountNumber || "",
       }))
-      
     );
-    
   }, [fullInvoice]);
 
   const populateFromInvoice = (inv) => {
@@ -587,44 +589,43 @@ setShowTypePopup(false);
     setShippingCostInput(Number(inv.shippingCost));
     setFinalCost(Number(inv.finalCost));
     setInvoiceType(inv.type);
-   const mapped = (inv.items ?? []).map((i) => {
-  const v = i.itemVariant;
-  const t = v?.thickness;
-  const it = t?.item;
+    const mapped = (inv.items ?? []).map((i) => {
+      const v = i.itemVariant;
+      const t = v?.thickness;
+      const it = t?.item;
 
-  const thNum = Number(t?.thickness);
-  const thickness = Number.isFinite(thNum) ? thNum : undefined;
-  const baseName = it?.itemName || "";
-  const itemNameCombined =
-    thickness != null ? `${thickness} ملم ${baseName}` : baseName;
+      const thNum = Number(t?.thickness);
+      const thickness = Number.isFinite(thNum) ? thNum : undefined;
+      const baseName = it?.itemName || "";
+      const itemNameCombined =
+        thickness != null ? `${thickness} ملم ${baseName}` : baseName;
 
-  return {
-    id: i.id,
-    dimensionId: i.itemVariantId,
-    itemName: it?.itemName,
-    itemNameCombined,
-    thickness,
-    type: it?.type,
-    origin: v?.origin,
-    length: Number(v?.length),
-    width: Number(v?.width),
-    sheetsPerBox: v?.sheetsPerBox,
-    quantity: Number(i.quantity ?? 1),
-    sqm: Number(i.sqm),
-    sqmOfr: Number(i.sqmOfr ?? 0), // ✅ IMPORTANT (you were missing this)
-    unitPrice: Number(i.unitPrice),
-    total: Number(i.totalAmount),
-    euroPrice: Number(i.euroPrice),
-    euroOfferPrice: Number(i.euroOFRPrice),
-    priceOFR: Number(i.priceOFR),
-    totalOFR: Number(i.totalOFR),
-    numberOfContainers: Number(i.numberOfContainers),
-  };
-});
+      return {
+        id: i.id,
+        dimensionId: i.itemVariantId,
+        itemName: it?.itemName,
+        itemNameCombined,
+        thickness,
+        type: it?.type,
+        origin: v?.origin,
+        length: Number(v?.length),
+        width: Number(v?.width),
+        sheetsPerBox: v?.sheetsPerBox,
+        quantity: Number(i.quantity ?? 1),
+        sqm: Number(i.sqm),
+        sqmOfr: Number(i.sqmOfr ?? 0), // ✅ IMPORTANT (you were missing this)
+        unitPrice: Number(i.unitPrice),
+        total: Number(i.totalAmount),
+        euroPrice: Number(i.euroPrice),
+        euroOfferPrice: Number(i.euroOFRPrice),
+        priceOFR: Number(i.priceOFR),
+        totalOFR: Number(i.totalOFR),
+        numberOfContainers: Number(i.numberOfContainers),
+      };
+    });
 
-setItems(mapped);
-  
- 
+    setItems(mapped);
+
     setUnitPriceRows(
       inv.unitPriceRows.map((r) => ({
         id: r.id,
@@ -640,17 +641,18 @@ setItems(mapped);
         invoiceNbTax: r.invoiceNbTax,
         supplierId: r.supplierId,
         shipping: r.shipping,
-            // 🔹 account fields (needed for dropdown pre-select)
-    accountId: r.accountId ?? null,
-    accountNumber: r.account?.accountNumber || "",
+        // 🔹 account fields (needed for dropdown pre-select)
+        accountId: r.accountId ?? null,
+        accountNumber: r.account?.accountNumber || "",
 
-    // 🔹 supplier fields (for Supplier of Tax + Acc. Nb)
-    supplierId: r.supplierId ?? null,
-    supplierOfTax: r.supplier?.supplierName || "",
-    accNbOfSupplier: r.supplier?.account?.accountNumber || "",
+        // 🔹 supplier fields (for Supplier of Tax + Acc. Nb)
+        supplierId: r.supplierId ?? null,
+        supplierOfTax: r.supplier?.supplierName || "",
+        accNbOfSupplier: r.supplier?.account?.accountNumber || "",
       }))
     );
   };
+
   useEffect(() => {
     if (fullInvoice) {
       populateFromInvoice(fullInvoice);
@@ -676,7 +678,6 @@ setItems(mapped);
       return ccfr;
     }
   };
-  
 
   // 2️⃣ Final cost per item:
   const calculateFinalCost = (item) => {
@@ -684,10 +685,9 @@ setItems(mapped);
       const cfr = calculatePriceCFR(item);
       const fc = cfr * (potentialCost / 100 + 1);
       console.log(fc);
-      return fc
+      return fc;
     }
   };
-  
 
   const calculatePriceCFROFR = (item) => {
     if (
@@ -754,16 +754,11 @@ setItems(mapped);
     return (shippingCostComputed / poAmount + 1) * fob;
   };
 
-
   // 4️⃣ Compute your cost percentage once per render:
   const getCostPercentage = () => {
-    const base =
-      (itemsTotalAmount || 0) +
-      (shippingCostComputed || 0);
+    const base = (itemsTotalAmount || 0) + (shippingCostComputed || 0);
     if (base <= 0) return 0;
     const ratio = totalCharges / base;
-    // Optional debug:
-    // console.log("ATC total:", totalCharges, "Base:", base, "Ratio:", ratio);
     return ratio;
   };
 
@@ -774,7 +769,6 @@ setItems(mapped);
     return cfr * (1 + cp);
   };
 
-
   const realCalculatePriceCFROFR = (item) => {
     const poAmount = totalOfferAmount || 0;
     if (poAmount === 0) return 0;
@@ -784,9 +778,7 @@ setItems(mapped);
 
   // 4️⃣ Compute your cost percentage once per render:
   const getCostPercentageOFR = () => {
-    const base =
-      (totalOfferAmount || 0) +
-      (shippingCostOFR || 0);
+    const base = (totalOfferAmount || 0) + (shippingCostOFR || 0);
     if (base <= 0) return 0;
     return totalChargesOFR / base;
   };
@@ -801,8 +793,7 @@ setItems(mapped);
   const computedCostPercentageForDisplay = React.useMemo(() => {
     if (status !== "Recieved") return null;
 
-    const ratio =
-      invoiceType === "G" ? getCostPercentageOFR() : getCostPercentage();
+    const ratio = invoiceType === "G" ? getCostPercentageOFR() : getCostPercentage();
     if (!isFinite(ratio)) return 0;
     return +(ratio * 100).toFixed(2);
   }, [
@@ -863,13 +854,13 @@ setItems(mapped);
             {isInvoiceSelected ? (
               isEditMode ? (
                 <>
-          <button
-  className="save-button"
-  onClick={() => saveInvoice(invoiceType)}
-  disabled={isSaving}
->
-  {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
-</button>
+                  <button
+                    className="save-button"
+                    onClick={() => saveInvoice(invoiceType)}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
+                  </button>
                   <button className="cancel-button" onClick={handleCancelEdit}>
                     Cancel
                   </button>
@@ -898,8 +889,8 @@ setItems(mapped);
                 setSelectedInvoiceId(null);
                 setIsEditMode(false);
                 setUnitPriceRows([]);
-                  setShowUnitPriceModal(false);
-  setActiveSummary("main");
+                setShowUnitPriceModal(false);
+                setActiveSummary("main");
               }}
             >
               New
@@ -930,15 +921,14 @@ setItems(mapped);
               />
             </label>
             <label>
-  JV Date (تاريخ المعاملة)
-  <input
-    type="date"
-    value={jvDate}
-    onChange={(e) => setJvDate(e.target.value)}
-    disabled={!canEdit}
-  />
-</label>
-
+              JV Date (تاريخ المعاملة)
+              <input
+                type="date"
+                value={jvDate}
+                onChange={(e) => setJvDate(e.target.value)}
+                disabled={!canEdit}
+              />
+            </label>
 
             <label>
               Invoice Number
@@ -956,9 +946,7 @@ setItems(mapped);
                 type="number"
                 step="0.0001"
                 value={exchangeRate}
-                onChange={(e) =>
-                  setExchangeRate(parseFloat(e.target.value) || 0)
-                }
+                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
                 disabled={!canEdit}
               />
             </label>
@@ -1136,9 +1124,7 @@ setItems(mapped);
             invoiceType={invoiceType}
             status={status}
             shippingCostComputed={getCorrectShippingCost()}
-            computedCostPercentageForDisplay={
-              computedCostPercentageForDisplay
-            }
+            computedCostPercentageForDisplay={computedCostPercentageForDisplay}
           />
         ) : (
           <AlternativeSummarySection
@@ -1159,7 +1145,7 @@ setItems(mapped);
           <UnitPriceModal
             isVisible={showUnitPriceModal}
             onClose={() => setShowUnitPriceModal(false)}
-            onSave={handleModalSave}     
+            onSave={handleModalSave}
             isEditable={canEdit}
             invoiceId={isInvoiceSelected ? selectedInvoiceId : null}
             rows={unitPriceRows}
@@ -1170,10 +1156,10 @@ setItems(mapped);
       <div className="additional-container">
         <h3 className="tittle-label">Purchase Invoices</h3>
         <div className="purchase-invoice-cards-wrapper">
-          {minimalInvoices.length === 0 ? (
+          {minimalInvoicesArr.length === 0 ? (
             <p>No invoices found.</p>
           ) : (
-            minimalInvoices.map((invoice) => (
+            minimalInvoicesArr.map((invoice) => (
               <div
                 key={invoice.id}
                 className="purchase-invoice-card"
@@ -1199,24 +1185,21 @@ setItems(mapped);
           )}
         </div>
       </div>
-      
-    <div className="main-container">
-      {/* ... your existing header, fields, modals, etc ... */}
 
-      {/* ✅ Notification Modal */}
-      {notif.open && (
-        <NotificationModal
-          type={notif.type}
-          message={notif.message}
-          onClose={closeNotif}
-          onConfirm={closeNotif}
-          confirmLabel={notif.confirmLabel}
-          cancelLabel={notif.cancelLabel}
-        />
-      )}
+      <div className="main-container">
+        {/* ✅ Notification Modal */}
+        {notif.open && (
+          <NotificationModal
+            type={notif.type}
+            message={notif.message}
+            onClose={closeNotif}
+            onConfirm={closeNotif}
+            confirmLabel={notif.confirmLabel}
+            cancelLabel={notif.cancelLabel}
+          />
+        )}
+      </div>
     </div>
-    </div>
-    
   );
 };
 

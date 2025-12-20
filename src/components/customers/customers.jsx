@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import "./customers.css";
+import { axiosClient } from "../api/axiosClient";
 
 const CreatePreviewCustomers = () => {
   const [customers, setCustomers] = useState([]);
@@ -28,40 +28,39 @@ const CreatePreviewCustomers = () => {
   const [hasMore, setHasMore] = useState(true);
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
-        const response = await axios.get(
-          `${baseUrl}/currency/v1/dropdown/currencycodes`
-        );
-        setCurrencyCodes(response.data);
+        const res = await axiosClient.get("/currency/v1/dropdown/currencycodes");
+        setCurrencyCodes(res.data);
       } catch (error) {
         console.error("Error fetching currency codes:", error);
       }
     };
     fetchCurrencyCodes();
-  }, [baseUrl]);
+  }, []);
 
   const fetchCustomers = async (currentPage) => {
     if (loading || !hasMore) return;
 
     setLoading(true);
     try {
-      const response = await axios.get(
-        `${baseUrl}/customers/v1/paginated?page=${currentPage}&limit=50`
+      const res = await axiosClient.get(
+        `/customers/v1/paginated?page=${currentPage}&limit=50`
       );
 
       setCustomers((prevCustomers) => {
-        const newCustomers = response.data.customers.filter(
+        const newCustomers = res.data.customers.filter(
           (newCustomer) =>
-            !prevCustomers.some((existingCustomer) => existingCustomer.id === newCustomer.id)
+            !prevCustomers.some(
+              (existingCustomer) => existingCustomer.id === newCustomer.id
+            )
         );
         return [...prevCustomers, ...newCustomers];
       });
 
-      setHasMore(response.data.customers.length > 0);
+      setHasMore(res.data.customers.length > 0);
     } catch (error) {
       console.error("Error fetching customers:", error);
     } finally {
@@ -110,9 +109,9 @@ const CreatePreviewCustomers = () => {
         location: formData.location || undefined,
       };
 
-      const response = await axios.post(`${baseUrl}/customers`, newCustomer);
+      const res = await axiosClient.post("/customers", newCustomer);
 
-      setCustomers((prevCustomers) => [...prevCustomers, response.data]);
+      setCustomers((prevCustomers) => [...prevCustomers, res.data]);
 
       setFormData({
         customerName: "",
@@ -240,7 +239,11 @@ const CreatePreviewCustomers = () => {
             <tr>
               <td>
                 <label>VAT</label>
-                <select name="vat" value={formData.vat} onChange={handleInputChange}>
+                <select
+                  name="vat"
+                  value={formData.vat}
+                  onChange={handleInputChange}
+                >
                   <option value="">Select VAT</option>
                   <option value="0">0%</option>
                   <option value="6">6%</option>
@@ -308,7 +311,10 @@ const CreatePreviewCustomers = () => {
 
             <tr>
               <td colSpan="4">
-                <button className="btn-primary add-customer-btn" onClick={handleAddCustomer}>
+                <button
+                  className="btn-primary add-customer-btn"
+                  onClick={handleAddCustomer}
+                >
                   Add Customer
                 </button>
               </td>
@@ -320,7 +326,6 @@ const CreatePreviewCustomers = () => {
       <div className="customers-card customers-preview">
         <div className="card-title">Customer Preview</div>
 
-        {/* ✅ Horizontal scroll wrapper */}
         <div className="table-scroll">
           <table className="customers-table">
             <thead>
@@ -384,7 +389,11 @@ const CreatePreviewCustomers = () => {
 
       {modalContent && (
         <div className="modal">
-          <div className={`cus-modal-content ${modalType === "success" ? "success-modal" : "error-modal"}`}>
+          <div
+            className={`cus-modal-content ${
+              modalType === "success" ? "success-modal" : "error-modal"
+            }`}
+          >
             {modalType === "success" ? (
               <>
                 <h2 className="modal-success-text">Customer Added Successfully</h2>

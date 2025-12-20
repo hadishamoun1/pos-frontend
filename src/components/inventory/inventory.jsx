@@ -2,18 +2,33 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import ReportModal from "./inventory-report-modal";
 import "./inventory.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (token attached automatically)
 
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
 const LOW_STOCK_THRESHOLD = 5;
 
 const normalizeDigits = (s) => {
   if (!s) return "";
   const map = {
-    "٠":"0","١":"1","٢":"2","٣":"3","٤":"4",
-    "٥":"5","٦":"6","٧":"7","٨":"8","٩":"9",
-    "۰":"0","۱":"1","۲":"2","۳":"3","۴":"4",
-    "۵":"5","۶":"6","۷":"۷","۸":"8","۹":"9",
+    "٠": "0",
+    "١": "1",
+    "٢": "2",
+    "٣": "3",
+    "٤": "4",
+    "٥": "5",
+    "٦": "6",
+    "٧": "7",
+    "٨": "8",
+    "٩": "9",
+    "۰": "0",
+    "۱": "1",
+    "۲": "2",
+    "۳": "3",
+    "۴": "4",
+    "۵": "5",
+    "۶": "6",
+    "۷": "۷",
+    "۸": "8",
+    "۹": "9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
@@ -23,7 +38,9 @@ const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
 function useCancelableFetch() {
   const abortRef = useRef();
   const cancel = () => {
-    try { abortRef.current?.abort(); } catch {}
+    try {
+      abortRef.current?.abort();
+    } catch {}
     abortRef.current = new AbortController();
     return abortRef.current.signal;
   };
@@ -34,7 +51,8 @@ const prettyDims = (L, W, SPB) => {
   const l = Math.floor(Number(L) || 0);
   const w = Math.floor(Number(W) || 0);
   const spb = Number(SPB) || 0;
-  if (l && w) return spb ? `${l}×${w}-${String(spb).padStart(3,"0")}` : `${l}×${w}`;
+  if (l && w)
+    return spb ? `${l}×${w}-${String(spb).padStart(3, "0")}` : `${l}×${w}`;
   return "-";
 };
 const fmt2 = (n) => {
@@ -46,7 +64,8 @@ const fmt2 = (n) => {
 // helpers for sqm ↔ qty conversions (box/sheet <-> sqm)
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 const perSheetSqmOf = (lengthCm, widthCm) => {
-  const L = toNum(lengthCm), W = toNum(widthCm);
+  const L = toNum(lengthCm),
+    W = toNum(widthCm);
   return L > 0 && W > 0 ? (L * W) / 10000 : 0;
 };
 const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
@@ -77,9 +96,11 @@ const deriveBalances = (row, mode) => {
 
   const nonOfr = row?.ofrTotalsUnits?.balance;
   const onesBal = row?.ones?.balance;
-  const nonOfrBal = Number.isFinite(Number(nonOfr)) ? Number(nonOfr)
-                   : Number.isFinite(Number(onesBal)) ? Number(onesBal)
-                   : undefined;
+  const nonOfrBal = Number.isFinite(Number(nonOfr))
+    ? Number(nonOfr)
+    : Number.isFinite(Number(onesBal))
+    ? Number(onesBal)
+    : undefined;
 
   const ofrSqm = row?.ofrTotalsSqm?.balanceOFR;
   const ofrSqmBal = Number.isFinite(Number(ofrSqm)) ? Number(ofrSqm) : undefined;
@@ -102,28 +123,30 @@ const deriveBalances = (row, mode) => {
       }
     } else if (Number.isFinite(ofrSqmBal)) {
       sqm = ofrSqmBal;
-      qty = typeLower === "sqm"
-        ? ofrSqmBal
-        : sqmToQty({
-            itemType: row.type,
-            lengthCm: row.length,
-            widthCm: row.width,
-            sheetsPerBox: row.sheetsPerBox,
-            valueSqm: ofrSqmBal,
-          });
+      qty =
+        typeLower === "sqm"
+          ? ofrSqmBal
+          : sqmToQty({
+              itemType: row.type,
+              lengthCm: row.length,
+              widthCm: row.width,
+              sheetsPerBox: row.sheetsPerBox,
+              valueSqm: ofrSqmBal,
+            });
     }
   } else {
     if (Number.isFinite(ofrSqmBal)) {
       sqm = ofrSqmBal;
-      qty = typeLower === "sqm"
-        ? ofrSqmBal
-        : sqmToQty({
-            itemType: row.type,
-            lengthCm: row.length,
-            widthCm: row.width,
-            sheetsPerBox: row.sheetsPerBox,
-            valueSqm: ofrSqmBal,
-          });
+      qty =
+        typeLower === "sqm"
+          ? ofrSqmBal
+          : sqmToQty({
+              itemType: row.type,
+              lengthCm: row.length,
+              widthCm: row.width,
+              sheetsPerBox: row.sheetsPerBox,
+              valueSqm: ofrSqmBal,
+            });
     } else if (Number.isFinite(nonOfrBal)) {
       qty = nonOfrBal;
       sqm = qtyToSqm({
@@ -151,7 +174,10 @@ const parseChipsToParams = (chips) => {
 
   const thkRe = /(\d+(?:\.\d+)?)\s*م?\s*ل?\s*م/;
   const thkM = q.match(thkRe);
-  if (thkM) { thickness = Number(thkM[1]); q = q.replace(thkM[0], " "); }
+  if (thkM) {
+    thickness = Number(thkM[1]);
+    q = q.replace(thkM[0], " ");
+  }
 
   const dimRe = /(\d{2,4})\s*\*\s*(\d{2,4})(?:\s*-\s*(\d{1,3}))?/;
   const dimM = q.match(dimRe);
@@ -205,7 +231,7 @@ export default function InventoryBrowser() {
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
 
-  // ✅ NEW: As-of date filter (empty = backend uses "today")
+  // ✅ As-of date filter (empty = backend uses "today")
   const [asOf, setAsOf] = useState("");
 
   // description source (maps to your endpoints)
@@ -225,7 +251,9 @@ export default function InventoryBrowser() {
   const [reportSpbRows, setReportSpbRows] = useState([]); // unfiltered source (for SPB)
   const reportAbortRef = useRef();
   const newReportSignal = () => {
-    try { reportAbortRef.current?.abort(); } catch {}
+    try {
+      reportAbortRef.current?.abort();
+    } catch {}
     reportAbortRef.current = new AbortController();
     return reportAbortRef.current.signal;
   };
@@ -263,9 +291,15 @@ export default function InventoryBrowser() {
     });
     setPage(1);
   };
-  const clearChips = () => { setChips([]); setPage(1); };
+  const clearChips = () => {
+    setChips([]);
+    setPage(1);
+  };
 
-  // ------- Fetch current page -------
+  const isCanceled = (e) =>
+    e?.name === "CanceledError" || e?.code === "ERR_CANCELED";
+
+  // ------- Fetch current page (NOW via axiosClient) -------
   const fetchFromLedger = async () => {
     setLoading(true);
     setBalancesLoading(true);
@@ -278,35 +312,38 @@ export default function InventoryBrowser() {
     try {
       const signal = cancel();
 
-      const url = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
-      url.searchParams.set("_", String(Date.now()));
-      url.searchParams.set("page", String(page));
-      url.searchParams.set("limit", String(limit));
-
-      // ✅ NEW: send asOf only if user picked a date (else backend uses "today")
-      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
-        url.searchParams.set("asOf", asOf);
-      } else {
-        url.searchParams.delete("asOf");
-      }
-
       const parsed = parseChipsToParams(chips);
-      if (parsed.itemName) url.searchParams.set("itemName", parsed.itemName);
-      if (parsed.thickness != null) url.searchParams.set("thickness", String(parsed.thickness));
-      if (parsed.length != null) url.searchParams.set("length", String(parsed.length));
-      if (parsed.width != null) url.searchParams.set("width", String(parsed.width));
-      if (parsed.sheetsPerBox != null) url.searchParams.set("sheetsPerBox", String(parsed.sheetsPerBox));
-
       const qFinal = buildQ();
-      if (qFinal) url.searchParams.set("q", qFinal);
-      if (type) url.searchParams.set("type", type);
-      url.searchParams.set("includeZeros", String(includeZeros));
 
-      const res = await fetch(url, { signal, cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const params = {
+        _: Date.now(),
+        page,
+        limit,
+        includeZeros: String(includeZeros),
+      };
 
-      const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      // ✅ AsOf
+      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) params.asOf = asOf;
+
+      // chips parsed fields
+      if (parsed.itemName) params.itemName = parsed.itemName;
+      if (parsed.thickness != null) params.thickness = String(parsed.thickness);
+      if (parsed.length != null) params.length = String(parsed.length);
+      if (parsed.width != null) params.width = String(parsed.width);
+      if (parsed.sheetsPerBox != null)
+        params.sheetsPerBox = String(parsed.sheetsPerBox);
+
+      if (qFinal) params.q = qFinal;
+      if (type) params.type = type;
+
+      const res = await axiosClient.get(currentLedgerPath, { params, signal });
+      const json = res?.data;
+
+      const data = Array.isArray(json?.data)
+        ? json.data
+        : Array.isArray(json)
+        ? json
+        : [];
 
       const filtered = includeZeros
         ? data
@@ -334,41 +371,38 @@ export default function InventoryBrowser() {
           ? reportedTotal
           : (page - 1) * limit + data.length
       );
-      setHasMore(Boolean(json?.hasMore ?? (data.length === limit)));
+      setHasMore(Boolean(json?.hasMore ?? data.length === limit));
     } catch (e) {
-      if (e?.name !== "AbortError") console.error("Fetch ledger failed:", e);
+      if (!isCanceled(e)) console.error("Fetch ledger failed:", e);
     } finally {
       setBalancesLoading(false);
       setLoading(false);
     }
   };
 
-  // ------- Fetch ALL for report (UNFILTERED source + filtered view) -------
+  // ------- Fetch ALL for report (NOW via axiosClient) -------
   const fetchAllForReport = async () => {
     setReportLoading(true);
     try {
       const signal = newReportSignal();
 
-      const base = new URL(`${baseUrl}${currentLedgerPath}`, window.location.origin);
-      base.searchParams.set("_", String(Date.now()));
-
-      // ✅ NEW: include asOf in report fetch too
-      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) {
-        base.searchParams.set("asOf", asOf);
-      } else {
-        base.searchParams.delete("asOf");
-      }
-
       const parsed = parseChipsToParams(chips);
-      if (parsed.itemName) base.searchParams.set("itemName", parsed.itemName);
-      if (parsed.thickness != null) base.searchParams.set("thickness", String(parsed.thickness));
-      if (parsed.length != null) base.searchParams.set("length", String(parsed.length));
-      if (parsed.width != null) base.searchParams.set("width", String(parsed.width));
-      if (parsed.sheetsPerBox != null) base.searchParams.set("sheetsPerBox", String(parsed.sheetsPerBox));
       const qFinal = buildQ();
-      if (qFinal) base.searchParams.set("q", qFinal);
-      if (type) base.searchParams.set("type", type);
-      // NOTE: do NOT pass includeZeros here — we want the raw universe for SPB.
+
+      const baseParams = {
+        _: Date.now(),
+      };
+
+      if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) baseParams.asOf = asOf;
+      if (parsed.itemName) baseParams.itemName = parsed.itemName;
+      if (parsed.thickness != null) baseParams.thickness = String(parsed.thickness);
+      if (parsed.length != null) baseParams.length = String(parsed.length);
+      if (parsed.width != null) baseParams.width = String(parsed.width);
+      if (parsed.sheetsPerBox != null)
+        baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
+      if (qFinal) baseParams.q = qFinal;
+      if (type) baseParams.type = type;
+      // NOTE: do NOT pass includeZeros — we want raw universe for SPB.
 
       const BIG_LIMIT = 500;
       let aggAll = [];
@@ -376,24 +410,28 @@ export default function InventoryBrowser() {
       let hasMoreAll = true;
 
       while (hasMoreAll) {
-        const url = new URL(base.toString());
-        url.searchParams.set("page", String(pg));
-        url.searchParams.set("limit", String(BIG_LIMIT));
-        url.searchParams.set("_", String(Date.now()));
+        const params = {
+          ...baseParams,
+          page: pg,
+          limit: BIG_LIMIT,
+          _: Date.now(),
+        };
 
-        const res = await fetch(url, { signal, cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const res = await axiosClient.get(currentLedgerPath, { params, signal });
+        const json = res?.data;
 
-        const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        const data = Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json)
+          ? json
+          : [];
         aggAll = aggAll.concat(data);
 
-        const inferredHasMore = json?.hasMore ?? (data.length === BIG_LIMIT);
+        const inferredHasMore = json?.hasMore ?? data.length === BIG_LIMIT;
         hasMoreAll = Boolean(inferredHasMore);
         pg += 1;
       }
 
-      // Visible set (respect current includeZeros toggle)
       const aggShown = includeZeros
         ? aggAll
         : aggAll.filter((r) => {
@@ -401,11 +439,11 @@ export default function InventoryBrowser() {
             return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
           });
 
-      setReportSpbRows(aggAll);   // source for SPB index (includes 0-qty box)
-      setReportRows(aggShown);    // what we actually display
+      setReportSpbRows(aggAll); // source for SPB index
+      setReportRows(aggShown); // visible
       setReportOpen(true);
     } catch (e) {
-      if (e?.name !== "AbortError") {
+      if (!isCanceled(e)) {
         console.error("Report fetch failed:", e);
         setReportRows([]);
         setReportSpbRows([]);
@@ -439,9 +477,7 @@ export default function InventoryBrowser() {
         });
       }
     }
-    const sqm =
-      Number(batch?.startOFR ?? 0) +
-      Number(batch?.inOFR ?? 0) - Number(batch?.outOFR ?? 0);
+    const sqm = Number(batch?.startOFR ?? 0) + Number(batch?.inOFR ?? 0) - Number(batch?.outOFR ?? 0);
     return sqmToQty({
       itemType: header?.type,
       lengthCm: header?.length,
@@ -472,7 +508,8 @@ export default function InventoryBrowser() {
     const filtered = (includeZeros ? enriched : enriched.filter((b) => b.__qty > 0))
       .slice()
       .sort((a, b) => {
-        const ad = a.dateReceived || ""; const bd = b.dateReceived || "";
+        const ad = a.dateReceived || "";
+        const bd = b.dateReceived || "";
         if (ad && bd) return String(bd).localeCompare(String(ad));
         if (ad && !bd) return -1;
         if (!ad && bd) return 1;
@@ -494,15 +531,13 @@ export default function InventoryBrowser() {
   };
 
   const exportCsv = () => {
-    const headers = [
-      "Item (Thk)","Dimensions","Type","Sheets/Box","Origin","Balance (Qty)","Balance (sqm)"
-    ];
+    const headers = ["Item (Thk)", "Dimensions", "Type", "Sheets/Box", "Origin", "Balance (Qty)", "Balance (sqm)"];
     const lines = [headers.join(",")];
 
     rows.forEach((r) => {
       const itemWithThk = `${fmt2(r.thickness)}ملم ${r.itemName ?? ""}`.trim();
       const typeLower = String(r.type).toLowerCase();
-      const spbForDims = (typeLower === "sheet" || typeLower === "sqm") ? 0 : r.sheetsPerBox;
+      const spbForDims = typeLower === "sheet" || typeLower === "sqm" ? 0 : r.sheetsPerBox;
       const dims = prettyDims(r.length, r.width, spbForDims);
       const { qty, sqm } = deriveBalances(r, descMode);
 
@@ -510,17 +545,20 @@ export default function InventoryBrowser() {
         itemWithThk.replace(/"/g, '""'),
         dims,
         String(r.type || "").toUpperCase(),
-        (typeLower === "sheet" || typeLower === "sqm") ? "" : (Number(r.sheetsPerBox) || ""),
+        typeLower === "sheet" || typeLower === "sqm" ? "" : Number(r.sheetsPerBox) || "",
         r.origin || "",
         Number.isFinite(Number(qty)) ? Number(qty.toFixed(2)) : "",
         Number.isFinite(Number(sqm)) ? Number(sqm.toFixed(2)) : "",
       ];
+
       lines.push(
-        row.map((cell) =>
-          typeof cell === "string" && (cell.includes(",") || cell.includes('"') || cell.includes("\n"))
-            ? `"${cell}"`
-            : String(cell)
-        ).join(",")
+        row
+          .map((cell) =>
+            typeof cell === "string" && (cell.includes(",") || cell.includes('"') || cell.includes("\n"))
+              ? `"${cell}"`
+              : String(cell)
+          )
+          .join(",")
       );
     });
 
@@ -528,7 +566,7 @@ export default function InventoryBrowser() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+    const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
     a.download = `inventory_page_${page}_${ts}.csv`;
     document.body.appendChild(a);
     a.click();
@@ -545,7 +583,10 @@ export default function InventoryBrowser() {
   };
 
   const onSearchInputKeyDown = (e) => {
-    if (e.key === "Enter") { e.preventDefault(); addChipFromInput(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addChipFromInput();
+    }
   };
 
   // ---------- Header UI ----------
@@ -557,12 +598,7 @@ export default function InventoryBrowser() {
             {chips.map((c, idx) => (
               <span key={`${c}-${idx}`} className="chip">
                 {c}
-                <button
-                  type="button"
-                  className="chip-x"
-                  aria-label="Remove"
-                  onClick={() => removeChip(idx)}
-                >
+                <button type="button" className="chip-x" aria-label="Remove" onClick={() => removeChip(idx)}>
                   ×
                 </button>
               </span>
@@ -577,7 +613,9 @@ export default function InventoryBrowser() {
             onKeyDown={onSearchInputKeyDown}
           />
           <div className="invb-search-actions">
-            <button className="invb-btn" onClick={addChipFromInput}>Add</button>
+            <button className="invb-btn" onClick={addChipFromInput}>
+              Add
+            </button>
             {chips.length > 0 && (
               <button className="invb-btn invb-btn--ghost" onClick={clearChips}>
                 Clear
@@ -586,11 +624,7 @@ export default function InventoryBrowser() {
           </div>
         </div>
 
-        <select
-          className="invb-select"
-          value={type}
-          onChange={(e) => { setType(e.target.value); setPage(1); }}
-        >
+        <select className="invb-select" value={type} onChange={(e) => { setType(e.target.value); setPage(1); }}>
           {TYPE_OPTIONS.map((t) => (
             <option key={t || "any"} value={t}>
               {t ? t.toUpperCase() : "Any Type"}
@@ -598,17 +632,23 @@ export default function InventoryBrowser() {
           ))}
         </select>
 
-        {/* ✅ NEW: As-of date control (empty = today) */}
+        {/* As-of date */}
         <div className="invb-date">
           <span className="u-muted">As of</span>
           <input
             type="date"
             value={asOf}
-            onChange={(e) => { setAsOf(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setAsOf(e.target.value);
+              setPage(1);
+            }}
           />
           <button
             className="invb-btn invb-btn--ghost"
-            onClick={() => { setAsOf(""); setPage(1); }}
+            onClick={() => {
+              setAsOf("");
+              setPage(1);
+            }}
             disabled={!asOf}
             title="Back to today"
           >
@@ -620,21 +660,18 @@ export default function InventoryBrowser() {
           <input
             type="checkbox"
             checked={includeZeros}
-            onChange={(e) => { setIncludeZeros(e.target.checked); setPage(1); }}
+            onChange={(e) => {
+              setIncludeZeros(e.target.checked);
+              setPage(1);
+            }}
           />
           Show zero/negative
         </label>
 
         <label className="invb-chk">
-          <input
-            type="checkbox"
-            checked={showBoth}
-            onChange={(e) => setShowBoth(e.target.checked)}
-          />
+          <input type="checkbox" checked={showBoth} onChange={(e) => setShowBoth(e.target.checked)} />
           Show SQM column
         </label>
-
-        {/* (toggle moved to title bar) */}
 
         <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
           ⬇ Export CSV (page)
@@ -648,30 +685,31 @@ export default function InventoryBrowser() {
         <span className="invb-hint">
           {loading
             ? "Loading…"
-            : `Page ${page} • ${hasMore ? `${page * limit}+ variants` : `${totalRows} variants`}${balancesLoading ? " • computing totals…" : ""}`}
+            : `Page ${page} • ${hasMore ? `${page * limit}+ variants` : `${totalRows} variants`}${
+                balancesLoading ? " • computing totals…" : ""
+              }`}
         </span>
 
         <div className="invb-pager">
-          <button
-            className="invb-btn"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={loading || page <= 1}
-          >
+          <button className="invb-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={loading || page <= 1}>
             ◀ Prev
           </button>
-          <button
-            className="invb-btn"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={loading || !hasMore}
-          >
+          <button className="invb-btn" onClick={() => setPage((p) => p + 1)} disabled={loading || !hasMore}>
             Next ▶
           </button>
           <select
             className="invb-select"
             value={limit}
-            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
           >
-            {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n}/page</option>)}
+            {[25, 50, 100, 200].map((n) => (
+              <option key={n} value={n}>
+                {n}/page
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -679,7 +717,6 @@ export default function InventoryBrowser() {
   );
 
   const colCount = 7 + (showBoth ? 1 : 0);
-
   const isNameMode = descMode === "name";
 
   return (
@@ -690,9 +727,7 @@ export default function InventoryBrowser() {
 
         <div className="invb-mode-toggle">
           <span
-            className={
-              "invb-mode-label" + (descMode === "real" ? " active" : "")
-            }
+            className={"invb-mode-label" + (descMode === "real" ? " active" : "")}
             onClick={() => {
               setDescMode("real");
               setPage(1);
@@ -712,9 +747,7 @@ export default function InventoryBrowser() {
             <span className="invb-mode-toggle-slider" />
           </label>
           <span
-            className={
-              "invb-mode-label" + (descMode === "name" ? " active" : "")
-            }
+            className={"invb-mode-label" + (descMode === "name" ? " active" : "")}
             onClick={() => {
               setDescMode("name");
               setPage(1);
@@ -744,11 +777,15 @@ export default function InventoryBrowser() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>Loading…</td>
+                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>
+                  Loading…
+                </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>No variants found.</td>
+                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>
+                  No variants found.
+                </td>
               </tr>
             ) : (
               rows.map((r) => {
@@ -758,11 +795,8 @@ export default function InventoryBrowser() {
                 const lowStock = hasQty && Number(qty) < LOW_STOCK_THRESHOLD;
 
                 const typeLower = String(r.type || "").toLowerCase();
-                const spbForDims = (typeLower === "sheet" || typeLower === "sqm") ? 0 : r.sheetsPerBox;
-                const spbCell =
-                  (typeLower === "sheet" || typeLower === "sqm")
-                    ? ""
-                    : (Number(r.sheetsPerBox) || "");
+                const spbForDims = typeLower === "sheet" || typeLower === "sqm" ? 0 : r.sheetsPerBox;
+                const spbCell = typeLower === "sheet" || typeLower === "sqm" ? "" : Number(r.sheetsPerBox) || "";
 
                 const canViewBatches = descMode === "real" && Array.isArray(r?.batches);
 
@@ -776,16 +810,19 @@ export default function InventoryBrowser() {
                     <td className="ta-center">{spbCell}</td>
                     <td className="truncate">{r.origin || ""}</td>
                     <td className="ta-right">
-                      {balancesLoading && qty === undefined ? "…" :
-                        qty === undefined ? "—" : (
-                          <span className={`qty-pill ${Number(qty) < LOW_STOCK_THRESHOLD ? "low" : ""}`}>
-                            {fmt2(qty)} <span className="u-muted">{unitLabelFor(r.type)}</span>
-                          </span>
-                        )}
+                      {balancesLoading && qty === undefined ? (
+                        "…"
+                      ) : qty === undefined ? (
+                        "—"
+                      ) : (
+                        <span className={`qty-pill ${Number(qty) < LOW_STOCK_THRESHOLD ? "low" : ""}`}>
+                          {fmt2(qty)} <span className="u-muted">{unitLabelFor(r.type)}</span>
+                        </span>
+                      )}
                     </td>
                     {showBoth && (
                       <td className="ta-right u-muted">
-                        {balancesLoading && sqm === undefined ? "…" : (sqm === undefined ? "—" : fmt2(sqm))}
+                        {balancesLoading && sqm === undefined ? "…" : sqm === undefined ? "—" : fmt2(sqm)}
                       </td>
                     )}
                     <td>
@@ -814,10 +851,21 @@ export default function InventoryBrowser() {
               <div>
                 <div className="invb-drawer-title">Batches</div>
                 <div className="invb-drawer-sub">
-                  {drawerVariant?.itemName} — {fmt2(drawerVariant?.thickness)} ملم — {prettyDims(drawerVariant?.length, drawerVariant?.width, (String(drawerVariant?.type).toLowerCase() === "sheet" || String(drawerVariant?.type).toLowerCase() === "sqm") ? 0 : drawerVariant?.sheetsPerBox)} — {String(drawerVariant?.type || "").toUpperCase()}
+                  {drawerVariant?.itemName} — {fmt2(drawerVariant?.thickness)} ملم —{" "}
+                  {prettyDims(
+                    drawerVariant?.length,
+                    drawerVariant?.width,
+                    String(drawerVariant?.type).toLowerCase() === "sheet" ||
+                      String(drawerVariant?.type).toLowerCase() === "sqm"
+                      ? 0
+                      : drawerVariant?.sheetsPerBox
+                  )}{" "}
+                  — {String(drawerVariant?.type || "").toUpperCase()}
                 </div>
               </div>
-              <button className="invb-btn" onClick={closeDrawer}>✕</button>
+              <button className="invb-btn" onClick={closeDrawer}>
+                ✕
+              </button>
             </div>
 
             <div className="invb-drawer-body">
@@ -873,7 +921,7 @@ export default function InventoryBrowser() {
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         rows={reportRows}
-        spbSourceRows={reportSpbRows}   // ✅ unfiltered rows feed the SPB index
+        spbSourceRows={reportSpbRows} // ✅ unfiltered rows feed the SPB index
         loading={reportLoading}
         mode={descMode}
       />

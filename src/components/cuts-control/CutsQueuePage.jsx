@@ -1,53 +1,15 @@
+// src/components/cuts-control/CutsQueuePage.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./CutsQueuePage.css";
-
-const RAW_API_BASE = String(process.env.REACT_APP_API_BASE_URL || "")
-  .trim()
-  .replace(/\/+$/, "");
-
-// Robust URL builder for:
-// - RAW_API_BASE = "" (same-origin dev proxy)
-// - RAW_API_BASE = "/api" (nginx prefix)
-// - RAW_API_BASE = "https://domain.com/api" (absolute)
-function apiUrl(path) {
-  const p = path.startsWith("/") ? path : `/${path}`;
-
-  if (!RAW_API_BASE) return new URL(p, window.location.origin);
-
-  if (/^https?:\/\//i.test(RAW_API_BASE)) {
-    const base = new URL(RAW_API_BASE.endsWith("/") ? RAW_API_BASE : `${RAW_API_BASE}/`);
-    const basePath = base.pathname.replace(/\/+$/, "");
-    base.pathname = `${basePath}${p}`.replace(/\/{2,}/g, "/");
-    return base;
-  }
-
-  const u = new URL(p, window.location.origin);
-  u.pathname = `${RAW_API_BASE}${u.pathname}`.replace(/\/{2,}/g, "/");
-  return u;
-}
-
-async function safeJson(res) {
-  const text = await res.text();
-  if (!text) return null;
-
-  const trimmed = text.trim();
-  if (trimmed.startsWith("<!DOCTYPE") || trimmed.startsWith("<html") || trimmed.startsWith("<")) {
-    throw new Error(
-      `Server returned HTML instead of JSON. Check nginx /api proxy.\nSnippet: ${trimmed.slice(0, 160)}...`
-    );
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    throw new Error(`Invalid JSON response: ${String(e?.message || e)}\nSnippet: ${trimmed.slice(0, 160)}...`);
-  }
-}
+import { axiosClient } from "../api/axiosClient";
 
 const fmtNum = (n, digits = 2) => {
   const x = Number(n);
   if (!Number.isFinite(x)) return "—";
-  return x.toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  return x.toLocaleString("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
 };
 
 const fmtDate = (d) => {
@@ -66,7 +28,7 @@ const tagFor = (changed) => {
 
 export default function CutsQueuePage() {
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all"); // in case your API still supports it; safe default
+  const [status, setStatus] = useState("all"); // keep as your UI expects
   const [limit, setLimit] = useState(50);
   const [page, setPage] = useState(1);
 
@@ -85,22 +47,20 @@ export default function CutsQueuePage() {
 
       setLoading(true);
       setErr("");
+
       try {
-        // ✅ YOUR ENDPOINT
-        const url = apiUrl("/transfers/v1/dim-changes");
-        url.searchParams.set("page", String(effectivePage));
-        url.searchParams.set("limit", String(effectiveLimit));
+        const params = {
+          page: effectivePage,
+          limit: effectiveLimit,
+        };
 
-        if (status) url.searchParams.set("status", status);
-        if (q.trim()) url.searchParams.set("q", q.trim());
+        if (status) params.status = status; // matches your existing API usage
+        if (q.trim()) params.q = q.trim();
 
-        const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `HTTP ${res.status}`);
-        }
+        // ✅ token automatically added by axiosClient interceptor
+        const res = await axiosClient.get("/transfers/v1/dim-changes", { params });
 
-        const json = await safeJson(res);
+        const json = res?.data || {};
         const data = Array.isArray(json?.data) ? json.data : [];
 
         setRows(data);
@@ -109,12 +69,21 @@ export default function CutsQueuePage() {
           totalPages: Number(json?.totalPages ?? 1),
           hasMore: Boolean(json?.hasMore),
         });
+
         setPage(Number(json?.page ?? effectivePage));
         setLimit(Number(json?.limit ?? effectiveLimit));
       } catch (e) {
         setRows([]);
         setMeta({ total: 0, totalPages: 1, hasMore: false });
-        setErr(String(e?.message || e));
+
+        const msg = e?.response?.data?.message;
+        const nice =
+          (Array.isArray(msg) ? msg.join(", ") : msg) ||
+          e?.response?.data?.error ||
+          e?.message ||
+          String(e);
+
+        setErr(String(nice));
       } finally {
         setLoading(false);
       }
@@ -122,7 +91,7 @@ export default function CutsQueuePage() {
     [page, limit, status, q]
   );
 
-  // 🔥 Important fix: when page changes (Prev/Next), fetch new page
+  // when page changes (Prev/Next), fetch new page
   useEffect(() => {
     fetchList({ page });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,7 +117,8 @@ export default function CutsQueuePage() {
   };
 
   const totalChanged = useMemo(() => {
-    return rows.filter((r) => Object.values(r?.sold?.changed || {}).some(Boolean)).length;
+    return rows.filter((r) => Object.values(r?.sold?.changed || {}).some(Boolean))
+      .length;
   }, [rows]);
 
   const exportCsv = () => {
@@ -198,7 +168,9 @@ export default function CutsQueuePage() {
         ch?.sheetsPerBox ? 1 : 0,
       ];
 
-      lines.push(row.map((x) => `"${String(x ?? "").replaceAll('"', '""')}"`).join(","));
+      lines.push(
+        row.map((x) => `"${String(x ?? "").replaceAll('"', '""')}"`).join(",")
+      );
     }
 
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -220,10 +192,18 @@ export default function CutsQueuePage() {
         </div>
 
         <div className="cuts-header-actions">
-          <button className="btn btn-ghost" onClick={() => fetchList({ page })} disabled={loading}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => fetchList({ page })}
+            disabled={loading}
+          >
             {loading ? "Refreshing…" : "Refresh"}
           </button>
-          <button className="btn btn-dark" onClick={exportCsv} disabled={!rows.length}>
+          <button
+            className="btn btn-dark"
+            onClick={exportCsv}
+            disabled={!rows.length}
+          >
             Export CSV
           </button>
         </div>
@@ -311,9 +291,6 @@ export default function CutsQueuePage() {
                   const id = Number(r?.invoiceItemId ?? r?.transferItemId ?? r?.id);
                   const isOpen = expanded.has(id);
 
-                  // Support either shape:
-                  // - your old cut queue shape: r.sold.snapshotDims/originalDims
-                  // - dim-changes shape: r.snapshotDims/originalDims
                   const sold = r?.sold || {};
                   const snap = sold?.snapshotDims || r?.snapshotDims || {};
                   const orig = sold?.originalDims || r?.originalDims || {};
@@ -321,16 +298,24 @@ export default function CutsQueuePage() {
 
                   const snapText =
                     snap?.length != null && snap?.width != null
-                      ? `${fmtNum(snap.length, 0)}×${fmtNum(snap.width, 0)}${snap?.sheetsPerBox ? `-${String(
-                          Math.round(Number(snap.sheetsPerBox) || 0)
-                        ).padStart(3, "0")}` : ""}`
+                      ? `${fmtNum(snap.length, 0)}×${fmtNum(snap.width, 0)}${
+                          snap?.sheetsPerBox
+                            ? `-${String(
+                                Math.round(Number(snap.sheetsPerBox) || 0)
+                              ).padStart(3, "0")}`
+                            : ""
+                        }`
                       : "—";
 
                   const origText =
                     orig?.length != null && orig?.width != null
-                      ? `${fmtNum(orig.length, 0)}×${fmtNum(orig.width, 0)}${orig?.sheetsPerBox ? `-${String(
-                          Math.round(Number(orig.sheetsPerBox) || 0)
-                        ).padStart(3, "0")}` : ""}`
+                      ? `${fmtNum(orig.length, 0)}×${fmtNum(orig.width, 0)}${
+                          orig?.sheetsPerBox
+                            ? `-${String(
+                                Math.round(Number(orig.sheetsPerBox) || 0)
+                              ).padStart(3, "0")}`
+                            : ""
+                        }`
                       : "—";
 
                   const tg = tagFor(changed);
@@ -339,13 +324,15 @@ export default function CutsQueuePage() {
                     <React.Fragment key={`row-${id}`}>
                       <tr className={isOpen ? "row-open" : ""}>
                         <td>
-                          <button className="iconbtn" onClick={() => toggleExpand(id)} title="Details">
+                          <button
+                            className="iconbtn"
+                            onClick={() => toggleExpand(id)}
+                            title="Details"
+                          >
                             {isOpen ? "–" : "+"}
                           </button>
                         </td>
-                        <td className="mono">
-                          {fmtDate(r?.invoiceDate || r?.transferDate)}
-                        </td>
+                        <td className="mono">{fmtDate(r?.invoiceDate || r?.transferDate)}</td>
                         <td>
                           <div className="mono">{r?.invoiceNumber || "—"}</div>
                           <div className="muted mono">ID {r?.invoiceId ?? "—"}</div>
@@ -390,26 +377,32 @@ export default function CutsQueuePage() {
                               <div className="detailBox">
                                 <div className="detailTitle">Snapshot dims</div>
                                 <div className="detailLine">
-                                  <span className="muted">length:</span> <b>{fmtNum(snap?.length, 0)}</b>
+                                  <span className="muted">length:</span>{" "}
+                                  <b>{fmtNum(snap?.length, 0)}</b>
                                 </div>
                                 <div className="detailLine">
-                                  <span className="muted">width:</span> <b>{fmtNum(snap?.width, 0)}</b>
+                                  <span className="muted">width:</span>{" "}
+                                  <b>{fmtNum(snap?.width, 0)}</b>
                                 </div>
                                 <div className="detailLine">
-                                  <span className="muted">SPB:</span> <b>{snap?.sheetsPerBox ?? "—"}</b>
+                                  <span className="muted">SPB:</span>{" "}
+                                  <b>{snap?.sheetsPerBox ?? "—"}</b>
                                 </div>
                               </div>
 
                               <div className="detailBox">
                                 <div className="detailTitle">Original variant dims</div>
                                 <div className="detailLine">
-                                  <span className="muted">length:</span> <b>{fmtNum(orig?.length, 0)}</b>
+                                  <span className="muted">length:</span>{" "}
+                                  <b>{fmtNum(orig?.length, 0)}</b>
                                 </div>
                                 <div className="detailLine">
-                                  <span className="muted">width:</span> <b>{fmtNum(orig?.width, 0)}</b>
+                                  <span className="muted">width:</span>{" "}
+                                  <b>{fmtNum(orig?.width, 0)}</b>
                                 </div>
                                 <div className="detailLine">
-                                  <span className="muted">SPB:</span> <b>{orig?.sheetsPerBox ?? "—"}</b>
+                                  <span className="muted">SPB:</span>{" "}
+                                  <b>{orig?.sheetsPerBox ?? "—"}</b>
                                 </div>
                               </div>
                             </div>
@@ -444,7 +437,11 @@ export default function CutsQueuePage() {
             >
               Next
             </button>
-            <button className="btn btn-dark" disabled={loading} onClick={() => fetchList({ page })}>
+            <button
+              className="btn btn-dark"
+              disabled={loading}
+              onClick={() => fetchList({ page })}
+            >
               {loading ? "Loading…" : "Load"}
             </button>
           </div>

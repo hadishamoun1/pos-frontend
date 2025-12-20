@@ -18,53 +18,54 @@ import PaymentVoucherTable from "./components/payments/payments";
 import JournalVoucherPage from "./components/vouchers/vouchers";
 import InventoryActivityPage from "./components/inventory-activity/inventory-activity";
 import ReportsPage from "./components/pos-system/Reports";
-import SqmPiecesPage from "./components/sqmPiece/sqmPiece"
-// Import the BlinkingRequestsProvider to manage the blinking state
+import SqmPiecesPage from "./components/sqmPiece/sqmPiece";
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
 import SettingsPage from "./components/settings/settings";
 import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
 import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
+import UsersPage from "./components/users/users";
+import AdminRoute from "./components/auth/AdminRoute";
 
+import ProtectedRoute from "./components/auth/ProtectedRoute"; // ✅ add this
 
-// Initialize QueryClient
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BlinkingItemsProvider>
-        {" "}
-        {/* Wrap your whole app with BlinkingRequestsProvider */}
         <Router>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/pos-system" element={<POSSystemPage />} />
-            <Route path="/recivables" element={<AccountingPage />} />
-            <Route
-              path="/purchases-invoice"
-              element={<PurchasesInvoicePage />}
-            />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/suppliers" element={<SuppliersPage />} />
-            <Route path="/items" element={<ItemCreationPage />} />
-            <Route path="/cost-estimator" element={<PricingPage />} />
-            <Route path="/customers" element={<CreatePreviewCustomers />} />
-            <Route path="/accounts" element={<AccountsPage />} />
-            <Route path="/payments" element={<PaymentVoucherTable />} />
-            <Route path="/transactions" element={<JournalVoucherPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/sqm" element={<SqmPiecesPage />} />
-            <Route
-              path="/inventory-activity"
-              element={<InventoryActivityPage />}
-            />
-            <Route path="/cuts-control" element={<CutsQueuePage />} />
-            <Route path="/viewing" element={<InvoiceDetailsPage />} />
-          </Routes>
 
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/pos-system" element={<POSSystemPage />} />
+              <Route path="/recivables" element={<AccountingPage />} />
+              <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/suppliers" element={<SuppliersPage />} />
+              <Route path="/items" element={<ItemCreationPage />} />
+              <Route path="/cost-estimator" element={<PricingPage />} />
+              <Route path="/customers" element={<CreatePreviewCustomers />} />
+              <Route path="/accounts" element={<AccountsPage />} />
+              <Route path="/payments" element={<PaymentVoucherTable />} />
+              <Route path="/transactions" element={<JournalVoucherPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/sqm" element={<SqmPiecesPage />} />
+              <Route path="/inventory-activity" element={<InventoryActivityPage />} />
+              <Route path="/cuts-control" element={<CutsQueuePage />} />
+              <Route path="/viewing" element={<InvoiceDetailsPage />} />
+              <Route element={<AdminRoute />}>
+  <Route path="/users" element={<UsersPage />} />
+</Route>
+
+            </Route>
+          </Routes>
         </Router>
       </BlinkingItemsProvider>
     </QueryClientProvider>
