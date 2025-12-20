@@ -8,15 +8,14 @@ import React, {
   useRef,
   useState,
 } from "react";
-import axios from "axios";
+import axios from "axios"; // keep only for axios.isCancel
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client
 import "./AllTab.css";
 
 const AllTab = forwardRef(function AllTab(
   { modalOpen, isActive, selectedMap, setSelectedMap },
   ref
 ) {
-  const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
   const [flatRows, setFlatRows] = useState([]);
   const [nestedItems, setNestedItems] = useState([]);
 
@@ -241,9 +240,10 @@ const AllTab = forwardRef(function AllTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const url = `${baseUrl}/items/v2/filtered-items-all-batches`;
+        // ✅ relative path (NO baseUrl, NO /api here)
+        const url = `/items/v2/filtered-items-all-batches`;
         const params = { page: targetPage, limit };
-        const res = await axios.get(url, { params, signal });
+        const res = await axiosClient.get(url, { params, signal });
         const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
         if (targetPage === 1) setFlatRows(flat || []);
@@ -253,14 +253,14 @@ const AllTab = forwardRef(function AllTab(
         setPage(targetPage);
         setHasMore(Boolean(hm));
       } catch (err) {
-        if (axios.isCancel?.(err)) return;
+        if (axios.isCancel?.(err) || err?.code === "ERR_CANCELED") return;
         console.error("Error fetching all-batches default page:", err);
         setHasMore(false);
       } finally {
         setLoading(false);
       }
     },
-    [baseUrl, isActive, limit, modalOpen, normalizeEnvelope]
+    [isActive, limit, modalOpen, normalizeEnvelope]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -271,7 +271,8 @@ const AllTab = forwardRef(function AllTab(
     setLoading(true);
     try {
       const signal = cancelInFlight();
-      const url = `${baseUrl}/items/pos/search-modal`;
+      // ✅ relative path (NO baseUrl, NO /api here)
+      const url = `/items/pos/search-modal`;
       const params = { page: 1, limit: 200, includeEmpty: 1 };
 
       if (nameChip) params.q = normalizeArabic(nameChip);
@@ -282,7 +283,7 @@ const AllTab = forwardRef(function AllTab(
         else if (isPlainNumber(raw)) params.length = Number(raw);
       }
 
-      const res = await axios.get(url, { params, signal });
+      const res = await axiosClient.get(url, { params, signal });
       const nested = Array.isArray(res.data) ? res.data : [];
 
       setNestedItems(nested);
@@ -290,7 +291,7 @@ const AllTab = forwardRef(function AllTab(
       setHasMore(false);
       setPage(1);
     } catch (err) {
-      if (axios.isCancel?.(err)) return;
+      if (axios.isCancel?.(err) || err?.code === "ERR_CANCELED") return;
       console.error("Error fetching all-batches search:", err);
       setNestedItems([]);
       setHasMore(false);
@@ -298,7 +299,6 @@ const AllTab = forwardRef(function AllTab(
       setLoading(false);
     }
   }, [
-    baseUrl,
     dimsChip,
     isActive,
     isPlainNumber,
@@ -866,7 +866,11 @@ const AllTab = forwardRef(function AllTab(
 
       {!inSearchMode && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
-          <button className="all-save-button" disabled={loading || !hasMore} onClick={() => fetchDefaultPage(page + 1)}>
+          <button
+            className="all-save-button"
+            disabled={loading || !hasMore}
+            onClick={() => fetchDefaultPage(page + 1)}
+          >
             {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
           </button>
           <span style={{ fontSize: 12, opacity: 0.7 }}>

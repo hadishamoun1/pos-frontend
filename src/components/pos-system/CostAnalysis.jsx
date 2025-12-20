@@ -2,9 +2,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./Reports.css";
 import "./CostAnalysis.css";
-
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
+import { axiosClient } from "../api/axiosClient"; // ✅ API client
 
 // number formatter
 const fmt2 = (n) => {
@@ -15,14 +13,12 @@ const fmt2 = (n) => {
 
 // normalize date fields coming from API
 const getRowDate = (row) => {
-  const raw =
-    row?.dateForEachInvoice || row?.transactionDate || null;
+  const raw = row?.dateForEachInvoice || row?.transactionDate || null;
   if (!raw) return "";
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(); 
+  return d.toLocaleDateString();
 };
-
 
 // 🔹 Event columns (always visible)
 const EVENT_COLUMNS = [
@@ -66,8 +62,8 @@ export default function CostAnalysis() {
   const isVariantMode = mode === "variant";
 
   // toggleable variant columns
-  const [visibleVariantCols, setVisibleVariantCols] = useState(
-    () => VARIANT_COLUMNS.map((c) => c.key) // default: all ON
+  const [visibleVariantCols, setVisibleVariantCols] = useState(() =>
+    VARIANT_COLUMNS.map((c) => c.key) // default: all ON
   );
 
   const printAreaRef = useRef(null);
@@ -75,10 +71,11 @@ export default function CostAnalysis() {
 
   // -------- Helper to build URL with q ---------- //
   const buildUrl = () => {
+    // ✅ relative endpoints ONLY (no baseUrl)
     const endpoint =
       mode === "variant"
-        ? `${baseUrl}/purchase-invoices/cost-analysis/history`
-        : `${baseUrl}/purchase-invoices/cost-analysis/real-description-history`;
+        ? `/purchase-invoices/cost-analysis/history`
+        : `/purchase-invoices/cost-analysis/real-description-history`;
 
     const params = new URLSearchParams();
     if (searchTokens.length > 0) {
@@ -98,11 +95,11 @@ export default function CostAnalysis() {
       setError("");
       try {
         const url = buildUrl();
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error(`Request failed with status ${res.status}`);
-        }
-        const data = await res.json();
+
+        // ✅ use axiosClient instead of fetch
+        const res = await axiosClient.get(url);
+        const data = res.data;
+
         if (!cancelled) {
           setRows(Array.isArray(data) ? data : []);
         }
@@ -268,9 +265,7 @@ export default function CostAnalysis() {
 
         return 0;
       } else {
-        const catA = (a.categoryName || "").localeCompare(
-          b.categoryName || ""
-        );
+        const catA = (a.categoryName || "").localeCompare(b.categoryName || "");
         if (catA !== 0) return catA;
 
         const colA = (a.colorName || "").localeCompare(b.colorName || "");
@@ -358,9 +353,7 @@ export default function CostAnalysis() {
 
       const baseDims =
         isVariantMode && v.length && v.width
-          ? `${Math.floor(Number(v.length))} × ${Math.floor(
-              Number(v.width)
-            )}`
+          ? `${Math.floor(Number(v.length))} × ${Math.floor(Number(v.width))}`
           : "";
 
       const dims =
@@ -382,9 +375,7 @@ export default function CostAnalysis() {
           metaParts.push(`Size: ${dims}`);
         }
         if (metaParts.length > 0) {
-          html += `<div class="meta">${escapeHtml(
-            metaParts.join(" | ")
-          )}</div>`;
+          html += `<div class="meta">${escapeHtml(metaParts.join(" | "))}</div>`;
         }
       }
 
@@ -394,9 +385,7 @@ export default function CostAnalysis() {
   <thead>
     <tr>
       <th>Date / التاريخ</th>
-      ${EVENT_COLUMNS.map(
-        (col) => `<th>${escapeHtml(col.label)}</th>`
-      ).join("")}
+      ${EVENT_COLUMNS.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("")}
       ${activeVariantColumns
         .map((col) => `<th>${escapeHtml(col.label)}</th>`)
         .join("")}
@@ -408,8 +397,10 @@ export default function CostAnalysis() {
           html += `
     <tr>
       <td>${escapeHtml(getRowDate(h))}</td>
-      ${EVENT_COLUMNS.map(
-        (col) => `<td>${fmt2(h[col.key] ?? h[col.key] ?? "")}</td>`
+      ${EVENT_COLUMNS.map((col) =>
+        col.key === "transactionType"
+          ? `<td>${escapeHtml(h[col.key] ?? "")}</td>`
+          : `<td>${fmt2(h[col.key])}</td>`
       ).join("")}
       ${activeVariantColumns
         .map((col) => `<td>${fmt2(h[col.key])}</td>`)
@@ -587,10 +578,7 @@ export default function CostAnalysis() {
               </div>
               <div className="cost-analysis-columns-grid">
                 {VARIANT_COLUMNS.map((col) => (
-                  <label
-                    key={col.key}
-                    className="cost-analysis-column-checkbox"
-                  >
+                  <label key={col.key} className="cost-analysis-column-checkbox">
                     <input
                       type="checkbox"
                       checked={visibleVariantCols.includes(col.key)}
@@ -716,9 +704,7 @@ export default function CostAnalysis() {
                         </span>
                       )}
                       {isVariantMode && dims !== "-" && (
-                        <span className="cost-analysis-pill">
-                          Size: {dims}
-                        </span>
+                        <span className="cost-analysis-pill">Size: {dims}</span>
                       )}
                     </div>
                   </div>

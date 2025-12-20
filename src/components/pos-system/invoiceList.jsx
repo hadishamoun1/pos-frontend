@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import "./invoiceList.css";
 import PropTypes from "prop-types";
 import { io } from "socket.io-client";
 import { useBlinkingItems } from "../blink/blink-cards";
+import { axiosClient } from "../api/axiosClient"; // ✅ API client
 
 const PAGE_SIZE = 100;
 
@@ -13,8 +13,6 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   const [hasMore, setHasMore] = useState(false); // only true after we know from API
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const invoicesListRef = useRef(null);
   const socketRef = useRef(null);
@@ -31,7 +29,9 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   useEffect(() => {
     isSearching ? fetchSearch(1, searchTerm) : fetchInvoices(1);
 
-    socketRef.current = io(`${baseUrl}`);
+    // ✅ socket uses current host; if your nginx proxies socket under /api, keep path like this:
+    socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
+
     socketRef.current.on("newInvoice", (invoice) => {
       if (isSearching) return; // ignore while user is searching
       addItemToBlink(invoice.id);
@@ -43,7 +43,7 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
 
     return () => socketRef.current?.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+  }, []);
 
   // react to external searchTerm changes (debounced)
   useEffect(() => {
@@ -62,6 +62,7 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
     }, 300);
 
     return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   // infinite scroll
@@ -87,7 +88,8 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
     setLoading(true);
     setError("");
     try {
-      const { data } = await axios.get(`${baseUrl}/invoices/filtered`, {
+      // ✅ relative path only
+      const { data } = await axiosClient.get(`/invoices/filtered`, {
         params: { page: pageNum, limit: PAGE_SIZE },
       });
 
@@ -113,10 +115,10 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
     setLoading(true);
     setError("");
     try {
-      const { data } = await axios.get(
-        `${baseUrl}/invoices/v1/filtered/search`,
-        { params: { q: q || "", page: pageNum, limit: PAGE_SIZE } }
-      );
+      // ✅ relative path only
+      const { data } = await axiosClient.get(`/invoices/v1/filtered/search`, {
+        params: { q: q || "", page: pageNum, limit: PAGE_SIZE },
+      });
 
       const list = Array.isArray(data?.data) ? data.data : [];
       setInvoices((prev) =>
@@ -136,7 +138,8 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
 
   const handleInvoiceClick = async (invoice) => {
     try {
-      const { data } = await axios.get(`${baseUrl}/invoices/v1/${invoice.id}`);
+      // ✅ relative path only
+      const { data } = await axiosClient.get(`/invoices/v1/${invoice.id}`);
       onSelectInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice details:", error);

@@ -1,7 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+import { axiosClient } from "../api/axiosClient"; // ✅ use your api client
 
 const InvoiceCreation = ({
   invoiceType,
@@ -23,12 +21,15 @@ const InvoiceCreation = ({
     setLoading(true);
     setError("");
 
-    const formattedItems = tableData.map((item) => ({
-      itemVariantId: item.itemVariantId,
-      sqm: parseFloat(item.sqm) || 0,
-      unitPrice: parseFloat(item.price) || 0,
-      vat: (parseFloat(item.price) * 0.11).toFixed(2), // Assuming VAT is 11%
-    }));
+    const formattedItems = tableData.map((item) => {
+      const price = parseFloat(item.price) || 0;
+      return {
+        itemVariantId: item.itemVariantId,
+        sqm: parseFloat(item.sqm) || 0,
+        unitPrice: price,
+        vat: (price * 0.11).toFixed(2), // Assuming VAT is 11%
+      };
+    });
 
     const invoiceData = {
       customerId,
@@ -39,12 +40,11 @@ const InvoiceCreation = ({
     };
 
     try {
-      const response = await axios.post(
-        `${baseUrl}/invoices`,
-        invoiceData
-      );
+      // ✅ relative endpoint only (axiosClient baseURL already has /api)
+      const response = await axiosClient.post(`/invoices`, invoiceData);
+
       console.log("Invoice Created:", response.data);
-      onSuccess(response.data); // Call parent function to handle success
+      onSuccess(response.data);
     } catch (err) {
       setError("Failed to create invoice. Please try again.");
       console.error("Error creating invoice:", err);

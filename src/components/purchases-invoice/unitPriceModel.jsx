@@ -6,8 +6,8 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import axios from "axios";
 import "./styles/unitPriceModel.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ api client (adjust path if needed)
 
 export default function UnitPriceModal({
   isVisible,
@@ -18,8 +18,6 @@ export default function UnitPriceModal({
   rows,
   onRowsChange,
 }) {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
   const [suppliers, setSuppliers] = useState([]);
   const [accounts, setAccounts] = useState([]);
 
@@ -100,17 +98,17 @@ export default function UnitPriceModal({
     if (!isVisible) return;
 
     // suppliers
-    axios
-      .get(`${baseUrl}/suppliers`)
+    axiosClient
+      .get(`/suppliers`)
       .then((res) => setSuppliers(res.data))
       .catch(console.error);
 
     // accounts (flat, nested)
-    axios
-      .get(`${baseUrl}/accounts/v1/acc-flat-arranged`)
+    axiosClient
+      .get(`/accounts/v1/acc-flat-arranged`)
       .then((res) => setAccounts(res.data))
       .catch(console.error);
-  }, [isVisible, baseUrl]);
+  }, [isVisible]);
 
   // Prefer already-typed rows from parent; only fetch rows if none exist
   useEffect(() => {
@@ -119,8 +117,8 @@ export default function UnitPriceModal({
 
     const loadExisting = async () => {
       try {
-        const { data } = await axios.get(
-          `${baseUrl}/purchase-invoices/${invoiceId}`
+        const { data } = await axiosClient.get(
+          `/purchase-invoices/${invoiceId}`
         );
         const mapped = (data.unitPriceRows || []).map((r) => ({
           id: r.id,
@@ -149,7 +147,7 @@ export default function UnitPriceModal({
 
     const loadDefaults = async () => {
       try {
-        const { data } = await axios.get(`${baseUrl}/purchase-invoice-setting`);
+        const { data } = await axiosClient.get(`/purchase-invoice-setting`);
         const mapped = (data || []).map((row) => ({
           id: undefined,
           purchaseInvoiceSettingId: row.id,
@@ -178,7 +176,7 @@ export default function UnitPriceModal({
     if (invoiceId) loadExisting();
     else loadDefaults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVisible, invoiceId, baseUrl, safeRows.length]);
+  }, [isVisible, invoiceId, safeRows.length]);
 
   // once suppliers load, fill in derived fields (accNbOfSupplier) for selected supplier rows
   useEffect(() => {
@@ -195,6 +193,7 @@ export default function UnitPriceModal({
         return r;
       })
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suppliers]);
 
   // ───────────────────────── inputs & toggles ─────────────────────────
@@ -258,35 +257,26 @@ export default function UnitPriceModal({
   const supplierOptions = useMemo(() => suppliers || [], [suppliers]);
 
   // 🔹 ENTER navigation across inputs & selects
-  const handleEnterNav = useCallback(
-    (e) => {
-      if (e.key !== "Enter") return;
+  const handleEnterNav = useCallback((e) => {
+    if (e.key !== "Enter") return;
 
-      e.preventDefault();
+    e.preventDefault();
 
-      const root = tableRef.current;
-      if (!root) return;
+    const root = tableRef.current;
+    if (!root) return;
 
-      const focusable = Array.from(
-        root.querySelectorAll(
-          "input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
-        )
-      ).filter((el) => el.tabIndex !== -1);
+    const focusable = Array.from(
+      root.querySelectorAll(
+        "input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+      )
+    ).filter((el) => el.tabIndex !== -1);
 
-      const idx = focusable.indexOf(e.target);
-      if (idx === -1) return;
+    const idx = focusable.indexOf(e.target);
+    if (idx === -1) return;
 
-      const next = focusable[idx + 1];
-      if (next) {
-        next.focus();
-      }
-      // If you want to loop back to the first:
-      // else if (focusable.length > 0) {
-      //   focusable[0].focus();
-      // }
-    },
-    []
-  );
+    const next = focusable[idx + 1];
+    if (next) next.focus();
+  }, []);
 
   if (!isVisible) return null;
 
@@ -304,10 +294,7 @@ export default function UnitPriceModal({
         </div>
 
         <div className="unit-price-table-container">
-          <table
-            className="unit-price-table"
-            ref={tableRef} // 🔹 ref for Enter navigation
-          >
+          <table className="unit-price-table" ref={tableRef}>
             <thead>
               <tr>
                 <th>Charge Name</th>

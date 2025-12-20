@@ -1,18 +1,12 @@
 // src/components/pos-system/AccountStatement.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Reports.css"; // reuse your styles
-import { axiosClient } from "../api/axiosClient"; // ✅ added
+import { axiosClient } from "../api/axiosClient"; 
 
-const BASE_URL =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.VITE_API_BASE_URL) ||
-  process.env.REACT_APP_API_BASE_URL ||
-  "http://localhost:3000";
-
+// ✅ FIX: use RELATIVE endpoints (NO base url here, NO /api here)
 const ENDPOINTS = {
-  arrangedAccounts: `${BASE_URL}/accounts/v1/acc-flat-arranged`,
-  accountStatementOFR: `${BASE_URL}/journal-vouchers/account-statement/ofr`,
+  arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
+  accountStatementOFR: `/journal-vouchers/account-statement/ofr`,
 };
 
 function sanitizeParams(p) {
@@ -78,7 +72,7 @@ export default function AccountStatement() {
       setAccLoading(true);
       setAccError("");
       try {
-        // ✅ axios -> axiosClient
+        // ✅ axios -> axiosClient (and relative endpoint)
         const res = await axiosClient.get(ENDPOINTS.arrangedAccounts);
 
         if (cancelled) return;
@@ -167,7 +161,7 @@ export default function AccountStatement() {
         to,
       });
 
-      // ✅ axios -> axiosClient
+      // ✅ axios -> axiosClient (and relative endpoint)
       const res = await axiosClient.get(ENDPOINTS.accountStatementOFR, {
         params,
       });
@@ -608,7 +602,11 @@ export default function AccountStatement() {
 
           <label className="tb-field">
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </label>
 
           <label className="tb-field">
@@ -631,13 +629,21 @@ export default function AccountStatement() {
           </button>
         </div>
 
-        {accError && <div className="tb-error" style={{ marginTop: 12 }}>{accError}</div>}
+        {accError && (
+          <div className="tb-error" style={{ marginTop: 12 }}>
+            {accError}
+          </div>
+        )}
 
         <div className="tb-actions">
           <button className="tb-btn" onClick={exportCSV} disabled={!items.length}>
             Export CSV
           </button>
-          <button className="tb-btn tb-btn-primary" onClick={handlePrint} disabled={!items.length}>
+          <button
+            className="tb-btn tb-btn-primary"
+            onClick={handlePrint}
+            disabled={!items.length}
+          >
             Print
           </button>
         </div>
@@ -717,30 +723,50 @@ export default function AccountStatement() {
             style={{ display: "flex", justifyContent: "space-between", gap: 16 }}
           >
             <div className="statement-report-modal-header-right">
-              <h2 className="statement-report-modal-company-arabic-title">شركة شمعون</h2>
-              <h2 className="statement-report-modal-company-arabic-subtitle">للزجاج و المرايا</h2>
-              <p className="statement-report-modal-small-subtitle">الحدث / شويفات</p>
+              <h2 className="statement-report-modal-company-arabic-title">
+                شركة شمعون
+              </h2>
+              <h2 className="statement-report-modal-company-arabic-subtitle">
+                للزجاج و المرايا
+              </h2>
+              <p className="statement-report-modal-small-subtitle">
+                الحدث / شويفات
+              </p>
               <div className="statement-report-modal-arabic-contact">
                 <div className="statement-report-modal-arabic-line">
-                  <span className="statement-report-modal-arabic-label">تلفون</span>
+                  <span className="statement-report-modal-arabic-label">
+                    تلفون
+                  </span>
                   <span className="statement-report-modal-arabic-colon">:</span>
-                  <span className="statement-report-modal-arabic-value">05/814964 05/810888</span>
+                  <span className="statement-report-modal-arabic-value">
+                    05/814964 05/810888
+                  </span>
                 </div>
                 <div className="statement-report-modal-arabic-line">
-                  <span className="statement-report-modal-arabic-label">خلوي / واتساب</span>
+                  <span className="statement-report-modal-arabic-label">
+                    خلوي / واتساب
+                  </span>
                   <span className="statement-report-modal-arabic-colon">:</span>
-                  <span className="statement-report-modal-arabic-value">79/100068</span>
+                  <span className="statement-report-modal-arabic-value">
+                    79/100068
+                  </span>
                 </div>
                 <div className="statement-report-modal-arabic-line">
                   <span className="statement-report-modal-arabic-label">فاكس</span>
                   <span className="statement-report-modal-arabic-colon">:</span>
-                  <span className="statement-report-modal-arabic-value">05/814961</span>
+                  <span className="statement-report-modal-arabic-value">
+                    05/814961
+                  </span>
                 </div>
               </div>
             </div>
             <div className="statement-report-modal-header-left">
-              <h1 className="statement-report-modal-company-title">Shamoun Company</h1>
-              <h2 className="statement-report-modal-company-subtitle">For Glass & Mirrors</h2>
+              <h1 className="statement-report-modal-company-title">
+                Shamoun Company
+              </h1>
+              <h2 className="statement-report-modal-company-subtitle">
+                For Glass & Mirrors
+              </h2>
               <p>Chweifat - Near Spot Mall</p>
               <p>Tel: 05-810 888 ; 79-1000 68 ; Fax: 05-814 961</p>
               <p>Email: info@shamoun.com</p>
@@ -750,7 +776,12 @@ export default function AccountStatement() {
 
           <div
             className="statement-report-modal-titlebar"
-            style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "8px 0" }}
+            style={{
+              textAlign: "center",
+              fontWeight: 700,
+              fontSize: 18,
+              margin: "8px 0",
+            }}
           >
             كشف حساب
           </div>
@@ -758,7 +789,10 @@ export default function AccountStatement() {
           <div className="statement-report-modal-clientline" style={{ marginBottom: 6 }}>
             <span className="statement-report-modal-clientline-label">السادة</span>
             <span className="statement-report-modal-clientline-colon">:</span>
-            <span className="statement-report-modal-clientline-value" style={{ marginInlineStart: 6 }}>
+            <span
+              className="statement-report-modal-clientline-value"
+              style={{ marginInlineStart: 6 }}
+            >
               {clientName}
             </span>
           </div>
@@ -848,7 +882,11 @@ export default function AccountStatement() {
                   <td className="footer-spacer">&nbsp;</td>
                   <td
                     className="footer-label"
-                    style={{ textAlign: "center", fontWeight: 700, fontSize: "14px" }}
+                    style={{
+                      textAlign: "center",
+                      fontWeight: 700,
+                      fontSize: "14px",
+                    }}
                   >
                     رصيد
                   </td>
