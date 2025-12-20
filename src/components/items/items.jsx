@@ -104,32 +104,29 @@ const UniqueItemsPage = () => {
   // Debug: show last sent payload
   const [lastSentPayload, setLastSentPayload] = useState(null);
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
   // which description mode drives list/edit/create/search APIs
   const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
 
-  // Endpoints for both modes
+  // ✅ FIX: Endpoints are RELATIVE (do NOT include /api here)
   const endpoints = useMemo(() => {
-    const base = process.env.REACT_APP_API_BASE_URL;
     return {
       list: {
         real: (page, limit) =>
-          `${base}/items/v1/filtered-items?page=${page}&limit=${limit}`,
+          `/items/v1/filtered-items?page=${page}&limit=${limit}`,
         name: (page, limit) =>
-          `${base}/items/selected-details/by-description?page=${page}&limit=${limit}`,
+          `/items/selected-details/by-description?page=${page}&limit=${limit}`,
       },
       search: {
-        real: `${base}/items/v1/search-real`,
-        name: `${base}/items/v1/search`,
+        real: `/items/v1/search-real`,
+        name: `/items/v1/search`,
       },
       edit: {
-        real: `${base}/items/v1/full`,
-        name: `${base}/items/v1/full`,
+        real: `/items/v1/full`,
+        name: `/items/v1/full`,
       },
       create: {
-        real: `${base}/items/v1/full/real`,
-        name: `${base}/items/v1/full`,
+        real: `/items/v1/full/real`,
+        name: `/items/v1/full`,
       },
     };
   }, []);
@@ -403,7 +400,7 @@ const UniqueItemsPage = () => {
   useEffect(() => {
     refreshItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl, descMode]);
+  }, [descMode]);
 
   // ============ Tokenized search ============
   const queryString = useMemo(() => tokens.join(" ").trim(), [tokens]);
@@ -434,7 +431,7 @@ const UniqueItemsPage = () => {
   useEffect(() => {
     runTokenSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryString, baseUrl, descMode]);
+  }, [queryString, descMode]);
 
   const addToken = (t) => {
     const v = (t || "").trim();
@@ -768,9 +765,9 @@ const UniqueItemsPage = () => {
   const deleteVariantById = async (variantId) => {
     const key = (variantId ?? "").toString();
     if (!key) throw new Error("Invalid variant id");
-    await axiosClient.delete(
-      `${baseUrl}/items/variants/${encodeURIComponent(key)}`
-    );
+
+    // ✅ FIX: relative URL (no baseUrl, no /api here)
+    await axiosClient.delete(`/items/variants/${encodeURIComponent(key)}`);
   };
 
   const selectedVariantIds = useMemo(() => {
@@ -819,9 +816,7 @@ const UniqueItemsPage = () => {
         thicknessId: Number(found.thicknessId ?? tid),
         itemName: safe(found.itemName),
         type: t,
-        stockMode:
-          safe(found.stockMode) ||
-          defaultStockModeForType(t), // ✅ NEW
+        stockMode: safe(found.stockMode) || defaultStockModeForType(t), // ✅ NEW
         thickness: numOrEmpty(found.thickness),
         length: numOrEmpty(found.length),
         width: numOrEmpty(found.width),
@@ -862,8 +857,7 @@ const UniqueItemsPage = () => {
                 thicknessId: Number(thick.id ?? tid),
                 itemName: safe(item.itemName),
                 type: t,
-                stockMode:
-                  safe(item.stockMode) || defaultStockModeForType(t), // ✅ NEW
+                stockMode: safe(item.stockMode) || defaultStockModeForType(t), // ✅ NEW
                 thickness: numOrEmpty(thick.thickness),
                 length: numOrEmpty(v.length),
                 width: numOrEmpty(v.width),
