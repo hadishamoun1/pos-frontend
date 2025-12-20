@@ -1,6 +1,6 @@
 // src/components/.../PurchaseInvoiceSettings.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { axiosClient } from "../../api/axiosClient"; // ✅ adjust path if your folder level differs
 import NotificationModal from "../recievables/NotificationModal";
 import "./styles/PurchaseinvoiceSettings.css";
 
@@ -10,9 +10,9 @@ const PurchaseInvoiceSettings = () => {
 
   const [notification, setNotification] = useState({
     show: false,
-    type: "",      // "success" | "error" | "warning"
+    type: "", // "success" | "error" | "warning"
     message: "",
-    mode: "info",  // "info" | "confirm"
+    mode: "info", // "info" | "confirm"
   });
 
   const [deleteMenu, setDeleteMenu] = useState({
@@ -25,15 +25,13 @@ const PurchaseInvoiceSettings = () => {
   // which row we want to delete (for confirm)
   const [pendingDelete, setPendingDelete] = useState(null); // { index, id } | null
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
   // ───────────────────────── fetch data on mount ─────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [accountsRes, settingsRes] = await Promise.all([
-          axios.get(`${baseUrl}/accounts/v1/acc-flat-arranged`),
-          axios.get(`${baseUrl}/purchase-invoice-setting`),
+          axiosClient.get(`/accounts/v1/acc-flat-arranged`),
+          axiosClient.get(`/purchase-invoice-setting`),
         ]);
 
         setAccounts(accountsRes.data || []);
@@ -48,10 +46,8 @@ const PurchaseInvoiceSettings = () => {
       }
     };
 
-    if (baseUrl) {
-      fetchData();
-    }
-  }, [baseUrl]);
+    fetchData();
+  }, []);
 
   // ───────────────────────── helpers ─────────────────────────
   const renderAccountOptions = (accountsList, level = 0) =>
@@ -131,7 +127,7 @@ const PurchaseInvoiceSettings = () => {
     }));
 
     try {
-      await axios.post(`${baseUrl}/purchase-invoice-setting`, sanitized);
+      await axiosClient.post(`/purchase-invoice-setting`, sanitized);
       setNotification({
         show: true,
         type: "success",
@@ -208,7 +204,7 @@ const PurchaseInvoiceSettings = () => {
     try {
       if (id) {
         // call DELETE API for existing setting
-        await axios.delete(`${baseUrl}/purchase-invoice-setting/${id}`);
+        await axiosClient.delete(`/purchase-invoice-setting/${id}`);
       }
       // remove row from UI
       setRows((prev) => prev.filter((_, i) => i !== index));
