@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import axios from "axios";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 /* ----------------- Light Repeat Modal (no prompt) ----------------- */
 function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
@@ -88,8 +89,6 @@ const StockTab = forwardRef(function StockTab(
   { modalOpen, isActive, selectedMap, setSelectedMap },
   ref
 ) {
-  const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
   const [flatRows, setFlatRows] = useState([]);
   const [nestedItems, setNestedItems] = useState([]);
 
@@ -283,9 +282,12 @@ const StockTab = forwardRef(function StockTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const url = `${baseUrl}/items/v2/filtered-items`;
+
+        // ✅ FIX: relative path (no /api/api) + axiosClient
+        const url = `/items/v2/filtered-items`;
         const params = { page: targetPage, limit };
-        const res = await axios.get(url, { params, signal });
+
+        const res = await axiosClient.get(url, { params, signal });
         const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
         if (targetPage === 1) setFlatRows(flat || []);
@@ -302,7 +304,7 @@ const StockTab = forwardRef(function StockTab(
         setLoading(false);
       }
     },
-    [baseUrl, isActive, limit, modalOpen, normalizeEnvelope]
+    [isActive, limit, modalOpen, normalizeEnvelope]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -312,7 +314,9 @@ const StockTab = forwardRef(function StockTab(
     setLoading(true);
     try {
       const signal = cancelInFlight();
-      const url = `${baseUrl}/items/pos/search-modal-instock`;
+
+      // ✅ FIX: relative path (no /api/api) + axiosClient
+      const url = `/items/pos/search-modal-instock`;
       const params = { page: 1, limit: 200 };
 
       if (nameChip) params.q = normalizeArabic(nameChip);
@@ -323,7 +327,7 @@ const StockTab = forwardRef(function StockTab(
         else if (isPlainNumber(raw)) params.length = Number(raw);
       }
 
-      const res = await axios.get(url, { params, signal });
+      const res = await axiosClient.get(url, { params, signal });
       const nested = Array.isArray(res.data) ? res.data : [];
 
       setNestedItems(nested);
@@ -339,7 +343,6 @@ const StockTab = forwardRef(function StockTab(
       setLoading(false);
     }
   }, [
-    baseUrl,
     dimsChip,
     isActive,
     isPlainNumber,

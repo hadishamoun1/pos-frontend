@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import "./pricingTable.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ API client
 
 const pageSize = 5;
 
@@ -16,9 +16,9 @@ const arabicIndicToAscii = (str = "") =>
 
 const normalizeSymbols = (str = "") =>
   str
-    .replace(/[×xX✕✖︎]/g, "*")  // mult
-    .replace(/[–—-−ـ]/g, "-")   // dashes
-    .replace(/[﹡＊]/g, "*");   // odd asterisks
+    .replace(/[×xX✕✖︎]/g, "*") // mult
+    .replace(/[–—-−ـ]/g, "-") // dashes
+    .replace(/[﹡＊]/g, "*"); // odd asterisks
 
 const normalizeSpaces = (str = "") => str.replace(/\s+/g, " ").trim();
 
@@ -28,7 +28,18 @@ const normalizeQuery = (str = "") =>
 const getDirForText = (str = "") => (ARABIC_RE.test(str) ? "rtl" : "ltr");
 
 // --- Tag bubbles to inject into the search ---
-const TAGS = ["ابيض", "برونز", "اسود", "تريبلكس", "مشرط", "عاكس","محجر","مرايا","جامبو","ديكور"];
+const TAGS = [
+  "ابيض",
+  "برونز",
+  "اسود",
+  "تريبلكس",
+  "مشرط",
+  "عاكس",
+  "محجر",
+  "مرايا",
+  "جامبو",
+  "ديكور",
+];
 
 const PricingTable = ({
   presetGroups = null,
@@ -39,7 +50,7 @@ const PricingTable = ({
 }) => {
   const [groups, setGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchDir, setSearchDir] = useState("ltr"); 
+  const [searchDir, setSearchDir] = useState("ltr");
 
   // chips (tags) selection state
   const [selectedTags, setSelectedTags] = useState([]);
@@ -51,7 +62,9 @@ const PricingTable = ({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   // 'preset' (use presetGroups) or 'customer' (browse by selected customer)
-  const [viewMode, setViewMode] = useState(presetGroups != null ? "preset" : "customer");
+  const [viewMode, setViewMode] = useState(
+    presetGroups != null ? "preset" : "customer"
+  );
 
   // track if we’re showing server-search results
   const [isServerSearch, setIsServerSearch] = useState(false);
@@ -59,7 +72,6 @@ const PricingTable = ({
   // 🔹 NEW: prevent auto reloads right after Clear
   const [cleared, setCleared] = useState(false);
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
   const effectiveCustomerId = useMemo(
     () => customerId ?? selectedCustomerId,
     [customerId, selectedCustomerId]
@@ -85,14 +97,17 @@ const PricingTable = ({
 
       // Reflect in searchTerm
       setSearchTerm((prevQ) => {
-        const updated = has ? removeTagFromQuery(prevQ, tag) : addTagToQuery(prevQ, tag);
+        const updated = has
+          ? removeTagFromQuery(prevQ, tag)
+          : addTagToQuery(prevQ, tag);
         setSearchDir(getDirForText(updated));
         return updated;
       });
 
       // exit cleared if user interacts
       if (cleared) setCleared(false);
-      if (viewMode === "empty") setViewMode(presetGroups != null ? "preset" : "customer");
+      if (viewMode === "empty")
+        setViewMode(presetGroups != null ? "preset" : "customer");
 
       return nextTags;
     });
@@ -120,7 +135,12 @@ const PricingTable = ({
 
   // If in customer mode and a customer is selected, load their browsing data
   useEffect(() => {
-    if (viewMode === "customer" && selectedCustomerId && !isServerSearch && !cleared) {
+    if (
+      viewMode === "customer" &&
+      selectedCustomerId &&
+      !isServerSearch &&
+      !cleared
+    ) {
       loadInitialData(selectedCustomerId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,7 +149,7 @@ const PricingTable = ({
   // --- Customer search / suggestions ---
   const fetchCustomers = async (query) => {
     try {
-      const res = await axios.get(`${baseUrl}/customers/v1/search`, {
+      const res = await axiosClient.get(`/customers/v1/search`, {
         params: { query },
       });
       setCustomerSuggestions(res.data || []);
@@ -176,7 +196,7 @@ const PricingTable = ({
   // --- Data loaders ---
   const loadInitialData = async (custId) => {
     try {
-      const res = await axios.get(`${baseUrl}/invoices/v1/browsing/${custId}`);
+      const res = await axiosClient.get(`/invoices/v1/browsing/${custId}`);
       setGroups(res.data || []);
     } catch (err) {
       console.error("Error loading pricing data:", err);
@@ -206,8 +226,8 @@ const PricingTable = ({
       const q = normalizeQuery(qRaw); // normalize digits/symbols
 
       try {
-        const res = await axios.get(
-          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
+        const res = await axiosClient.get(
+          `/invoices/v1/browsing/${effectiveCustomerId}/search`,
           { params: { q, limitPerGroup: pageSize } }
         );
         setGroups(res.data || []);
@@ -237,9 +257,16 @@ const PricingTable = ({
       // server-search mode
       if (isServerSearch && effectiveCustomerId && !cleared) {
         const q = normalizeQuery(searchTerm || "");
-        const res = await axios.get(
-          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
-          { params: { q, groupKey, pagePerGroup: nextPage, limitPerGroup: pageSize } }
+        const res = await axiosClient.get(
+          `/invoices/v1/browsing/${effectiveCustomerId}/search`,
+          {
+            params: {
+              q,
+              groupKey,
+              pagePerGroup: nextPage,
+              limitPerGroup: pageSize,
+            },
+          }
         );
 
         setGroups((prev) =>
@@ -260,8 +287,8 @@ const PricingTable = ({
 
       // customer-browsing (non-search)
       if (viewMode === "customer" && selectedCustomerId && !cleared) {
-        const res = await axios.get(
-          `${baseUrl}/invoices/v1/browsing/${selectedCustomerId}`,
+        const res = await axiosClient.get(
+          `/invoices/v1/browsing/${selectedCustomerId}`,
           { params: { groupKey, page: nextPage, limit: pageSize } }
         );
 
@@ -306,8 +333,8 @@ const PricingTable = ({
     try {
       if (isServerSearch && effectiveCustomerId) {
         const q = normalizeQuery(searchTerm || "");
-        const res = await axios.get(
-          `${baseUrl}/invoices/v1/browsing/${effectiveCustomerId}/search`,
+        const res = await axiosClient.get(
+          `/invoices/v1/browsing/${effectiveCustomerId}/search`,
           { params: { q, limitPerGroup: pageSize } }
         );
         setGroups(res.data || []);
@@ -319,7 +346,9 @@ const PricingTable = ({
           await onRefreshPreset();
         } else {
           setGroups(Array.isArray(presetGroups) ? presetGroups : []);
-          console.warn("[PricingTable] onRefreshPreset not provided; reapplied current presetGroups.");
+          console.warn(
+            "[PricingTable] onRefreshPreset not provided; reapplied current presetGroups."
+          );
         }
       } else if (viewMode === "customer" && selectedCustomerId) {
         await loadInitialData(selectedCustomerId);
@@ -416,7 +445,10 @@ const PricingTable = ({
     }
 
     body.push(
-      <tr key={`${grp.groupKey}-spacer`} className="price-browsing-group-spacer-row">
+      <tr
+        key={`${grp.groupKey}-spacer`}
+        className="price-browsing-group-spacer-row"
+      >
         <td colSpan={9}></td>
       </tr>
     );
@@ -498,7 +530,8 @@ const PricingTable = ({
               setSearchDir(getDirForText(v));
               // typing means: exit cleared & leave "empty" mode
               if (cleared) setCleared(false);
-              if (viewMode === "empty") setViewMode(presetGroups != null ? "preset" : "customer");
+              if (viewMode === "empty")
+                setViewMode(presetGroups != null ? "preset" : "customer");
             }}
             disabled={!effectiveCustomerId && viewMode !== "preset"}
           />

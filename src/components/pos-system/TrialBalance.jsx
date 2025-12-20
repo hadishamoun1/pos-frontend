@@ -1,21 +1,14 @@
 // src/pages/Reports/TrialBalance.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import "./TrialBalance.css";
-
-const BASE_URL =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.VITE_API_BASE_URL) ||
-  process.env.REACT_APP_API_BASE_URL ||
-  "http://localhost:3000";
+import { axiosClient } from "../api/axiosClient"; 
 
 const ENDPOINTS = {
-  arrangedAccounts: `${BASE_URL}/accounts/v1/acc-flat-arranged`,
-  currencies: `${BASE_URL}/currency`,
-  trialBalance: `${BASE_URL}/reports/trial-balance`,
-  standardTrialBalance: `${BASE_URL}/reports/trial-balance/standard`,
-  trialBalanceCurrencies: `${BASE_URL}/reports/trial-balance/currencies`, // NEW
+  arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
+  currencies: `/currency`,
+  trialBalance: `/reports/trial-balance`,
+  standardTrialBalance: `/reports/trial-balance/standard`,
+  trialBalanceCurrencies: `/reports/trial-balance/currencies`, // NEW
 };
 
 function LoadingScreen({ show, text = "Generating report…" }) {
@@ -29,7 +22,6 @@ function LoadingScreen({ show, text = "Generating report…" }) {
     </div>
   );
 }
-
 
 function sanitizeParams(p) {
   const out = {};
@@ -105,8 +97,8 @@ export default function TrialBalance() {
       setAccError("");
       try {
         const [accRes, curRes] = await Promise.all([
-          axios.get(ENDPOINTS.arrangedAccounts),
-          axios.get(ENDPOINTS.currencies),
+          axiosClient.get(ENDPOINTS.arrangedAccounts), // ✅
+          axiosClient.get(ENDPOINTS.currencies),       // ✅
         ]);
 
         if (!cancelled) {
@@ -282,10 +274,8 @@ export default function TrialBalance() {
       flatAccounts.forEach((fa) => {
         if (prefixes.some((p) => fa.code.startsWith(p))) {
           if (fa.depth === 0) {
-            // main matched → include ALL descendants
             walkDesc(fa.node);
           } else {
-            // sub matched → include this node + descendants
             pushNode(fa.node);
             walkDesc(fa.node);
           }
@@ -294,7 +284,6 @@ export default function TrialBalance() {
       return out;
     }
 
-    // else: use main From→To (by index in root mains)
     if (!rootMains.length) return out;
 
     const findIdx = (codeVal) => rootMains.findIndex((m) => m.code === codeVal);
@@ -336,7 +325,6 @@ export default function TrialBalance() {
     setLoading(true);
     setErr("");
     try {
-      // choose endpoint
       const endpoint =
         reportType === "STANDARD"
           ? ENDPOINTS.standardTrialBalance
@@ -344,11 +332,10 @@ export default function TrialBalance() {
           ? ENDPOINTS.trialBalanceCurrencies
           : ENDPOINTS.trialBalance;
 
-      // build params (do NOT override any UI selections)
       const params = sanitizeParams({
         from,
         to,
-        level, // harmless for standard/currencies
+        level,
         currency,
         invoiceType,
         mainFrom: prefixes.length ? undefined : mainFrom,
@@ -357,25 +344,21 @@ export default function TrialBalance() {
         mainPrefixes: prefixes.length ? prefixes.join(",") : undefined,
       });
 
-      const res = await axios.get(endpoint, { params });
+      const res = await axiosClient.get(endpoint, { params }); // ✅
 
-      // Always keep backend order EXACTLY as delivered
       const rawRows = Array.isArray(res.data)
         ? res.data
         : (res.data?.rows ?? []);
 
-      // Detect "extended" shape from backend (opening/period/closing)
       const extended =
         rawRows?.length > 0 &&
         (Object.prototype.hasOwnProperty.call(rawRows[0], "openingBalance") ||
           Object.prototype.hasOwnProperty.call(rawRows[0], "periodDebit") ||
           Object.prototype.hasOwnProperty.call(rawRows[0], "closingBalance"));
 
-      // Normalize minimally, preserve order with _ord, no re-sorting
       const normalized = rawRows.map((r, _ord) => {
         const coerce = (x) => (x === null || x === undefined ? 0 : Number(x) || 0);
 
-        // Common fields
         const base = {
           _ord,
           accountCode: r.accountCode ?? r.code ?? "",
@@ -385,29 +368,24 @@ export default function TrialBalance() {
         };
 
         if (reportType === "CURRENCIES") {
-          // Expecting both USD (default names) and LL (…LL) as sent by the server.
           return {
             ...base,
-            // USD side (server-calculated)
             openingBalance: coerce(r.openingBalance),
             periodDebit: coerce(r.periodDebit),
             periodCredit: coerce(r.periodCredit),
             balance: coerce(r.balance),
             closingBalance: coerce(r.closingBalance),
 
-            // LL side (server-calculated)
             prevBalanceLL: coerce(r.prevBalanceLL ?? r.openingBalanceLL),
             debitLL: coerce(r.debitLL ?? r.periodDebitLL),
             creditLL: coerce(r.creditLL ?? r.periodCreditLL),
             balanceLL: coerce(r.balanceLL),
             endingBalanceLL: coerce(r.endingBalanceLL ?? r.closingBalanceLL),
 
-            // legacy mirrors (not used in CURRENCIES view for CSV on USD headers)
             debit: coerce(r.periodDebit),
             credit: coerce(r.periodCredit),
           };
         } else if (extended) {
-          // Standard / Grouped extended
           const openingBalance =
             "openingBalance" in r
               ? coerce(r.openingBalance)
@@ -428,12 +406,10 @@ export default function TrialBalance() {
             periodCredit,
             balance,
             closingBalance,
-            // legacy fields
             debit: periodDebit,
             credit: periodCredit,
           };
         } else {
-          // Legacy short shape
           const debit = coerce(r.debit);
           const credit = coerce(r.credit);
           const openingBalance = 0;
@@ -449,7 +425,6 @@ export default function TrialBalance() {
             periodCredit,
             balance,
             closingBalance,
-            // legacy
             debit,
             credit,
           };
@@ -476,7 +451,6 @@ export default function TrialBalance() {
         periodCredit: 0,
         balance: 0,
         closingBalance: 0,
-        // LL totals (only used in CURRENCIES view)
         prevBalanceLL: 0,
         debitLL: 0,
         creditLL: 0,
@@ -493,7 +467,6 @@ export default function TrialBalance() {
         t.balance += Number(r.balance || 0);
         t.closingBalance += Number(r.closingBalance || 0);
 
-        // LL if present
         t.prevBalanceLL += Number(r.prevBalanceLL || 0);
         t.debitLL += Number(r.debitLL || 0);
         t.creditLL += Number(r.creditLL || 0);
@@ -537,13 +510,11 @@ export default function TrialBalance() {
       const header = [
         "Account Code",
         "Account Name",
-        // USD
         "Prev Balance (USD)",
         "Debit (USD)",
         "Credit (USD)",
         "Balance (USD)",
         "Ending Balance (USD)",
-        // LL
         "Prev Balance (LL)",
         "Debit (LL)",
         "Credit (LL)",
@@ -555,13 +526,11 @@ export default function TrialBalance() {
         [
           `"${(displayCode(r) ?? "").replace(/"/g, '""')}"`,
           `"${(r.accountName ?? "").replace(/"/g, '""')}"`,
-          // USD
           fmt(r.openingBalance),
           fmt(r.periodDebit),
           fmt(r.periodCredit),
           fmt(r.balance),
           fmt(r.closingBalance),
-          // LL
           fmt(r.prevBalanceLL),
           fmt(r.debitLL),
           fmt(r.creditLL),
@@ -573,13 +542,11 @@ export default function TrialBalance() {
       const footer = [
         "",
         "TOTAL",
-        // USD totals
         fmt(totals.openingBalance),
         fmt(totals.periodDebit),
         fmt(totals.periodCredit),
         fmt(totals.balance),
         fmt(totals.closingBalance),
-        // LL totals
         fmt(totals.prevBalanceLL),
         fmt(totals.debitLL),
         fmt(totals.creditLL),
@@ -591,7 +558,6 @@ export default function TrialBalance() {
       return;
     }
 
-    // Standard / Grouped
     const header = [
       "Account Code",
       "Account Name",
@@ -634,7 +600,6 @@ export default function TrialBalance() {
 
     const isCurrencies = reportType === "CURRENCIES";
 
-    // meta (same as screen)
     const metaHTML = `
       <div class="tb-title">Trial Balance / ميزان المراجعة</div>
       <div class="tb-meta">
@@ -650,7 +615,6 @@ export default function TrialBalance() {
       </div>
     `;
 
-    // currencies table builder (2 rows per account)
     const buildCurrenciesPrintTable = () => {
       const rowHTML = rows.map((r) => {
         const codeCell = `<td class="code" rowspan="2">${r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode}</td>`;
@@ -696,7 +660,6 @@ export default function TrialBalance() {
           <td class="num">${fmt(totals.endingBalanceLL)}</td>
         </tr>`;
 
-      // colgroup for currencies (Account Name narrower)
       return `
         <table class="tb-table tb-cur">
           <colgroup>
@@ -738,7 +701,6 @@ export default function TrialBalance() {
       document.querySelectorAll('style, link[rel="stylesheet"]')
     ).map((n) => n.outerHTML).join("");
 
-    // IMPORTANT: style is now scoped per mode (no leaking)
     const styleStandard = `
       <style>
         @page { size: A4 landscape; margin: 10mm; }
@@ -755,7 +717,6 @@ export default function TrialBalance() {
         .tb-table thead th { position: static !important; }
         .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        /* No currencies-specific rules here */
       </style>
     `;
 
@@ -776,9 +737,8 @@ export default function TrialBalance() {
         .tb-table tr { break-inside: avoid; page-break-inside: avoid; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-        /* currencies-only rules */
         .tb-table.tb-cur th, .tb-table.tb-cur td { width: auto !important; }
-        .tb-table.tb-cur col { width: auto; } /* widths come from colgroup */
+        .tb-table.tb-cur col { width: auto; }
         .tb-table.tb-cur .ll-row td { background: #fcfcfc; }
         .tb-table.tb-cur .usd-head { text-align: center; }
       </style>
@@ -820,16 +780,9 @@ export default function TrialBalance() {
 
   const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;
 
-  // For meta header: show the actual current selections
   const reportTypeLabel =
     reportTypeOptions.find((o) => o.value === reportType)?.label || reportType;
 
-  const mainDisplay = (mainPrefixes || "").trim()
-    ? mainPrefixes
-    : `${mainFrom || "—"} → ${mainTo || "—"}`;
-  const subDisplay = subTouched ? `${subFrom || "—"} → ${subTo || "—"}` : "ALL";
-
-  // Inline styles to FORCE native table semantics (overrides any flex/grid rules)
   const tStyles = {
     thead: { display: "table-header-group" },
     tbody: { display: "table-row-group" },
@@ -838,41 +791,27 @@ export default function TrialBalance() {
     td: { display: "table-cell" },
   };
 
-  // Helper to render account code as "parentCode-accountCode" when available
   const renderAccountCode = (r) =>
     r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
 
-  const isCurrencies = reportType === "CURRENCIES";
-
   return (
     <div className="tb-wrap">
-      {/* Controls */}
       <div className="tb-toolbar">
         <div className="tb-controls tb-controls-grid">
           <label className="tb-field">
             From
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
 
           <label className="tb-field">
             To
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </label>
 
           <label className="tb-field">
             <span className="tb-label-row">
               <span className="tb-label">Main Acc (codes)</span>
-              <span className="tb-hint-inline">
-                Comma-separated prefixes. Overrides range.
-              </span>
+              <span className="tb-hint-inline">Comma-separated prefixes. Overrides range.</span>
             </span>
             <input
               type="text"
@@ -950,10 +889,7 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Level
-            <select
-              value={level}
-              onChange={(e) => setLevel(Number(e.target.value))}
-            >
+            <select value={level} onChange={(e) => setLevel(Number(e.target.value))}>
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <option key={n} value={n}>
                   {n}
@@ -964,10 +900,7 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Currency
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {currencyOptions.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -978,10 +911,7 @@ export default function TrialBalance() {
 
           <label className="tb-field">
             Invoice Type
-            <select
-              value={invoiceType}
-              onChange={(e) => setInvoiceType(e.target.value)}
-            >
+            <select value={invoiceType} onChange={(e) => setInvoiceType(e.target.value)}>
               {invoiceTypeOptions.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -990,13 +920,9 @@ export default function TrialBalance() {
             </select>
           </label>
 
-          {/* Report Type */}
           <label className="tb-field">
             Report Type
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-            >
+            <select value={reportType} onChange={(e) => setReportType(e.target.value)}>
               {reportTypeOptions.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
@@ -1036,7 +962,6 @@ export default function TrialBalance() {
 
       {err && <div className="tb-error">{err}</div>}
 
-      {/* Printable region */}
       <div className="tb-paper" ref={printRef}>
         <div className="tb-a4">
           <div className="tb-title">Trial Balance / ميزان المراجعة</div>
@@ -1052,9 +977,7 @@ export default function TrialBalance() {
             <div><strong>Date:</strong> {new Date().toISOString().split("T")[0]}</div>
           </div>
 
-          {/* Table */}
           {reportType !== "CURRENCIES" ? (
-            // Standard/Grouped: USD only
             <table className="tb-table">
               <thead style={tStyles.thead}>
                 <tr style={tStyles.tr}>
@@ -1091,19 +1014,16 @@ export default function TrialBalance() {
               </tbody>
             </table>
           ) : (
-            // CURRENCIES: USD + LL (screen view only; print uses special layout)
             <table className="tb-table">
               <thead style={tStyles.thead}>
                 <tr style={tStyles.tr}>
                   <th style={{...tStyles.th, width: "10%"}}>Account Code</th>
                   <th style={{...tStyles.th, width: "10%"}}>Account Name</th>
-                  {/* USD */}
                   <th style={tStyles.th}>Prev (USD)</th>
                   <th style={tStyles.th}>Debit (USD)</th>
                   <th style={tStyles.th}>Credit (USD)</th>
                   <th style={tStyles.th}>Balance (USD)</th>
                   <th style={tStyles.th}>Ending (USD)</th>
-                  {/* LL */}
                   <th style={tStyles.th}>Prev (LL)</th>
                   <th style={tStyles.th}>Debit (LL)</th>
                   <th style={tStyles.th}>Credit (LL)</th>
@@ -1116,13 +1036,11 @@ export default function TrialBalance() {
                   <tr key={r._ord ?? i} style={tStyles.tr}>
                     <td style={tStyles.td}>{renderAccountCode(r)}</td>
                     <td style={tStyles.td}>{r.accountName}</td>
-                    {/* USD */}
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.openingBalance)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodDebit)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.periodCredit)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.balance)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.closingBalance)}</td>
-                    {/* LL */}
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.prevBalanceLL)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.debitLL)}</td>
                     <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(r.creditLL)}</td>
@@ -1133,13 +1051,11 @@ export default function TrialBalance() {
                 <tr className="totals-row" style={tStyles.tr}>
                   <td style={tStyles.td}></td>
                   <td style={tStyles.td}>Total</td>
-                  {/* USD totals */}
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.openingBalance)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodDebit)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.periodCredit)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.balance)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.closingBalance)}</td>
-                  {/* LL totals */}
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.prevBalanceLL)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.debitLL)}</td>
                   <td style={{ ...tStyles.td, textAlign: "right" }} className="num">{fmt(totals.creditLL)}</td>
@@ -1151,8 +1067,10 @@ export default function TrialBalance() {
           )}
         </div>
 
-        <LoadingScreen show={loading || accLoading} text={accLoading ? "Loading accounts & currencies…" : "Generating report…"} />
-
+        <LoadingScreen
+          show={loading || accLoading}
+          text={accLoading ? "Loading accounts & currencies…" : "Generating report…"}
+        />
       </div>
 
       {!rows.length && !loading && !err && (

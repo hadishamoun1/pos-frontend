@@ -3,14 +3,14 @@ import "./invoiceList.css";
 import PropTypes from "prop-types";
 import { io } from "socket.io-client";
 import { useBlinkingItems } from "../blink/blink-cards";
-import { axiosClient } from "../api/axiosClient"; // ✅ API client
+import { axiosClient } from "../api/axiosClient"; 
 
 const PAGE_SIZE = 100;
 
 const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   const [invoices, setInvoices] = useState([]);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false); // only true after we know from API
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,70 +25,12 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   // utils
   const isArabicText = (s) => /[\u0600-\u06FF]/.test(s || "");
 
-  // initial load + socket
-  useEffect(() => {
-    isSearching ? fetchSearch(1, searchTerm) : fetchInvoices(1);
-
-    // ✅ socket uses current host; if your nginx proxies socket under /api, keep path like this:
-    socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
-
-    socketRef.current.on("newInvoice", (invoice) => {
-      if (isSearching) return; // ignore while user is searching
-      addItemToBlink(invoice.id);
-      setInvoices((prev) => {
-        if (prev.some((p) => p.id === invoice.id)) return prev;
-        return [invoice, ...prev];
-      });
-    });
-
-    return () => socketRef.current?.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // react to external searchTerm changes (debounced)
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setInvoices([]);
-      setHasMore(false); // don’t flash Load More between keystrokes
-
-      if ((searchTerm || "").trim() === "") {
-        fetchInvoices(1);
-      } else {
-        fetchSearch(1, searchTerm);
-      }
-    }, 300);
-
-    return () => clearTimeout(debounceRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
-
-  // infinite scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!invoicesListRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = invoicesListRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
-      if (isAtBottom && hasMore && !loading) {
-        const next = page + 1;
-        isSearching ? fetchSearch(next, searchTerm) : fetchInvoices(next);
-      }
-    };
-
-    const el = invoicesListRef.current;
-    el?.addEventListener("scroll", handleScroll);
-    return () => el?.removeEventListener("scroll", handleScroll);
-  }, [hasMore, loading, page, isSearching, searchTerm]);
-
   // normal list fetch
   const fetchInvoices = async (pageNum) => {
     if (loading) return;
     setLoading(true);
     setError("");
     try {
-      // ✅ relative path only
       const { data } = await axiosClient.get(`/invoices/filtered`, {
         params: { page: pageNum, limit: PAGE_SIZE },
       });
@@ -115,7 +57,6 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
     setLoading(true);
     setError("");
     try {
-      // ✅ relative path only
       const { data } = await axiosClient.get(`/invoices/v1/filtered/search`, {
         params: { q: q || "", page: pageNum, limit: PAGE_SIZE },
       });
@@ -138,13 +79,70 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
 
   const handleInvoiceClick = async (invoice) => {
     try {
-      // ✅ relative path only
       const { data } = await axiosClient.get(`/invoices/v1/${invoice.id}`);
       onSelectInvoice(data);
     } catch (error) {
       console.error("Error fetching invoice details:", error);
     }
   };
+
+  // initial load + socket
+  useEffect(() => {
+    isSearching ? fetchSearch(1, searchTerm) : fetchInvoices(1);
+
+    // ✅ nginx proxy uses /api, so socket.io path should be under /api/socket.io
+    socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
+
+    socketRef.current.on("newInvoice", (invoice) => {
+      if (isSearching) return;
+      addItemToBlink(invoice.id);
+      setInvoices((prev) => {
+        if (prev.some((p) => p.id === invoice.id)) return prev;
+        return [invoice, ...prev];
+      });
+    });
+
+    return () => socketRef.current?.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // react to external searchTerm changes (debounced)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setInvoices([]);
+      setHasMore(false);
+
+      if ((searchTerm || "").trim() === "") {
+        fetchInvoices(1);
+      } else {
+        fetchSearch(1, searchTerm);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // infinite scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!invoicesListRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = invoicesListRef.current;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+
+      if (isAtBottom && hasMore && !loading) {
+        const next = page + 1;
+        isSearching ? fetchSearch(next, searchTerm) : fetchInvoices(next);
+      }
+    };
+
+    const el = invoicesListRef.current;
+    el?.addEventListener("scroll", handleScroll);
+    return () => el?.removeEventListener("scroll", handleScroll);
+  }, [hasMore, loading, page, isSearching, searchTerm]);
 
   return (
     <div className="invoices-container" ref={invoicesListRef}>
@@ -177,11 +175,7 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
                       {name.length > 15 ? name.slice(0, 15) + "..." : name}
                     </span>
                     {name.length > 15 && (
-                      <span
-                        className={`invoice-tooltip ${
-                          arabic ? "rtl-ar" : ""
-                        }`}
-                      >
+                      <span className={`invoice-tooltip ${arabic ? "rtl-ar" : ""}`}>
                         {name}
                       </span>
                     )}
@@ -192,7 +186,6 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
                   </span>
                 </div>
 
-                {/* total + date in one row */}
                 <div className="invoice-list-details">
                   <span className="invoice-total">
                     ${Number(invoice.grandTotal).toFixed(2)}

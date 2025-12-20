@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import "./requests.css";
 import PropTypes from "prop-types";
 import { io } from "socket.io-client";
 import { useBlinkingItems } from "../blink/blink-cards";
+import { axiosClient } from "../api/axiosClient"; // ✅ API client
 
 const PAGE_SIZE = 100;
 
@@ -22,14 +22,16 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
   const requestListRef = useRef(null);
   const socketRef = useRef(null);
   const debounceRef = useRef(null);
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const isSearching = (searchTerm || "").trim().length > 0;
 
+  // initial load + socket
   useEffect(() => {
     isSearching ? fetchSearch(1, searchTerm) : fetchRequests(1);
 
-    socketRef.current = io(`${baseUrl}`);
+    // ✅ nginx proxies backend under /api, so socket should go through /api/socket.io
+    socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
+
     socketRef.current.on("newRequest", (newRequest) => {
       if (isSearching) return;
       addItemToBlink(newRequest.id);
@@ -41,8 +43,9 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
 
     return () => socketRef.current?.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+  }, []);
 
+  // react to external searchTerm changes (debounced)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -60,13 +63,16 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     }, 300);
 
     return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
+  // infinite scroll
   useEffect(() => {
     const handleScroll = () => {
       if (!requestListRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = requestListRef.current;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+
       if (isAtBottom && hasMore && !loading) {
         const next = page + 1;
         isSearching ? fetchSearch(next, searchTerm) : fetchRequests(next);
@@ -84,7 +90,8 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     setError("");
 
     try {
-      const { data } = await axios.get(`${baseUrl}/requests/v1/filtered`, {
+      // ✅ relative path only
+      const { data } = await axiosClient.get(`/requests/v1/filtered`, {
         params: { page: pageNum, limit: PAGE_SIZE },
       });
 
@@ -94,6 +101,7 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
           ? list
           : [...prev, ...list.filter((n) => !prev.some((p) => p.id === n.id))]
       );
+
       setPage(pageNum);
       setHasMore(pageNum < Number(data?.totalPages || 1));
     } catch (err) {
@@ -109,10 +117,10 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     setError("");
 
     try {
-      const { data } = await axios.get(
-        `${baseUrl}/requests/v1/filtered/search`,
-        { params: { q: q || "", page: pageNum, limit: PAGE_SIZE } }
-      );
+      // ✅ relative path only
+      const { data } = await axiosClient.get(`/requests/v1/filtered/search`, {
+        params: { q: q || "", page: pageNum, limit: PAGE_SIZE },
+      });
 
       const list = Array.isArray(data?.data) ? data.data : [];
       setRequests((prev) =>
@@ -120,6 +128,7 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
           ? list
           : [...prev, ...list.filter((n) => !prev.some((p) => p.id === n.id))]
       );
+
       setPage(pageNum);
       setHasMore(pageNum < Number(data?.totalPages || 1));
     } catch (err) {
@@ -146,11 +155,12 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
             return (
               <li
                 key={`request-${request.id}`}
-                className={`request-item ${isItemBlinking(request.id) ? "blink" : ""}`}
+                className={`request-item ${
+                  isItemBlinking(request.id) ? "blink" : ""
+                }`}
                 onClick={() => onSelectRequest(request)}
               >
                 <div className="request-header">
-                  {/* Container controls hover + positions tooltip */}
                   <span
                     className="request-customer-container"
                     dir={isRTL ? "rtl" : "ltr"}

@@ -1,9 +1,12 @@
 // src/components/pos-system/SqmPiecesTab.jsx
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import axios from "axios";
-
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client (baseURL includes /api)
 
 const num = (v) => {
   const n = Number(v);
@@ -13,11 +16,22 @@ const num = (v) => {
 const fmt2 = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return "0.00";
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 const SqmPiecesTab = forwardRef(function SqmPiecesTab(
-  { modalOpen, isActive, onSelectionCountChange },
+  {
+    modalOpen,
+    isActive,
+    onSelectionCountChange,
+
+    // ✅ NEW (from SearchModal): selection kept in parent
+    selectedMap: selectedMapProp,
+    setSelectedMap: setSelectedMapProp,
+  },
   ref
 ) {
   const [rows, setRows] = useState([]);
@@ -25,15 +39,21 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
   const [searchText, setSearchText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ✅ persistent selection map: pieceId -> payload
-  const [selectedMap, setSelectedMap] = useState(() => new Map());
+  // ✅ Backward compatible:
+  // If parent provides selectedMap/setSelectedMap, use them.
+  // Otherwise keep internal selection.
+  const [internalSelectedMap, setInternalSelectedMap] = useState(() => new Map());
+  const selectedMap = selectedMapProp ?? internalSelectedMap;
+  const setSelectedMap = setSelectedMapProp ?? setInternalSelectedMap;
 
   // abort in-flight
   const abortRef = useRef(null);
   const cancelInFlight = () => {
     const ctl = abortRef.current;
     if (ctl && typeof ctl.abort === "function") {
-      try { ctl.abort(); } catch {}
+      try {
+        ctl.abort();
+      } catch {}
     }
     const next = new AbortController();
     abortRef.current = next;
@@ -47,11 +67,11 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
       const pieceId = r.sqmPieceId ?? r.id;
       return {
         ...r,
-        id: pieceId,                  // stable key
+        id: pieceId, // stable key
         type: "sqm",
         sqmPieceId: pieceId,
         itemVariantId: r.itemVariantId,
-        batchId: r.itemBatchId,       // ✅ used by POS table
+        batchId: r.itemBatchId, // ✅ used by POS table
         thickness: r.thickness,
         itemName: r.itemName,
         length: r.length,
@@ -63,13 +83,22 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     });
   };
 
+  const isCanceled = (err) =>
+    err?.name === "CanceledError" ||
+    err?.code === "ERR_CANCELED" ||
+    err?.message?.toLowerCase?.().includes("canceled") ||
+    err?.message?.toLowerCase?.().includes("cancelled");
+
   const fetchPieces = async (query = "") => {
     if (!modalOpen || !isActive) return;
     setLoading(true);
     setErrorMsg("");
+
     try {
       const signal = cancelInFlight();
-      const res = await axios.get(`${baseUrl}/sqm-pieces/pos-pieces`, {
+
+      // ✅ FIX: use axiosClient + relative path only (NO baseUrl)
+      const res = await axiosClient.get(`/sqm-pieces/pos-pieces`, {
         params: { q: query.trim() || undefined },
         signal,
       });
@@ -78,23 +107,27 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
       setRows(normalized);
       // ✅ DO NOT clear selection here
     } catch (err) {
-      if (axios.isCancel?.(err)) return;
+      if (isCanceled(err)) return;
+
       console.error("Failed to load SQM pieces for POS search", err);
-      setErrorMsg(err?.response?.data?.message || "Failed to load SQM pieces. Please try again.");
+      setErrorMsg(
+        err?.response?.data?.message ||
+          "Failed to load SQM pieces. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Reset selection ONLY when modal opens
+  // Reset selection ONLY when modal opens (same behavior you had)
   useEffect(() => {
     if (!modalOpen) return;
     setSelectedMap(new Map());
     onSelectionCountChange?.(0);
-    // also reset UI rows/search if you want:
+    // optional:
     // setSearchText("");
     // setRows([]);
-  }, [modalOpen, onSelectionCountChange]);
+  }, [modalOpen]); // keep same behavior
 
   // When SQM tab becomes active, load rows
   useEffect(() => {
@@ -103,7 +136,7 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalOpen, isActive]);
 
-  // expose collectSelected() to parent
+  // expose collectSelected() to parent (doesn't hurt, even if parent doesn't use it)
   useImperativeHandle(ref, () => ({
     collectSelected: () => Array.from(selectedMap.values()),
   }));
@@ -113,13 +146,13 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     setSelectedMap((prev) => {
       const next = new Map(prev);
       if (next.has(rowId)) next.delete(rowId);
-      else next.set(rowId, row); // store full payload
+      else next.set(rowId, row);
       onSelectionCountChange?.(next.size);
       return next;
     });
   };
 
-  // Select/Deselect ALL **visible** rows only (don’t wipe selections from other searches)
+  // Select/Deselect ALL visible rows only
   const toggleAllVisible = () => {
     setSelectedMap((prev) => {
       const next = new Map(prev);
@@ -129,10 +162,8 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
         rows.length > 0 && visibleIds.every((id) => next.has(id));
 
       if (allVisibleSelected) {
-        // remove only visible
         visibleIds.forEach((id) => next.delete(id));
       } else {
-        // add only visible
         rows.forEach((r) => next.set(r.id, r));
       }
 
@@ -157,7 +188,6 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
           onChange={(e) => {
             const value = e.target.value;
             setSearchText(value);
-            // live search while active
             if (modalOpen && isActive) fetchPieces(value);
           }}
         />
@@ -209,7 +239,8 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
               const checked = selectedMap.has(row.id);
               const label =
                 row.label ||
-                ((row.thickness != null ? `${row.thickness}ملم ` : "") + (row.itemName || ""));
+                ((row.thickness != null ? `${row.thickness}ملم ` : "") +
+                  (row.itemName || ""));
 
               return (
                 <tr key={row.id}>

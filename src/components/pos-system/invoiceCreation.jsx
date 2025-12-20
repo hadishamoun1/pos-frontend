@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { axiosClient } from "../api/axiosClient"; // ✅ use your api client
+import { axiosClient } from "../api/axiosClient"; 
+
 
 const InvoiceCreation = ({
   invoiceType,
@@ -13,7 +14,7 @@ const InvoiceCreation = ({
   const [error, setError] = useState("");
 
   const handleCreateInvoice = async () => {
-    if (!customerId || tableData.length === 0) {
+    if (!customerId || !Array.isArray(tableData) || tableData.length === 0) {
       setError("Customer and items are required.");
       return;
     }
