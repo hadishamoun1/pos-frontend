@@ -1,7 +1,7 @@
 // TransferSearchModal.jsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./transferSearchModal.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added (named export)
+import { axiosClient } from "../api/axiosClient"; 
 
 /** format numbers: remove trailing .00 */
 function fmtNum(v) {
@@ -20,8 +20,6 @@ const TransferSearchModal = ({
   existingKeys = new Set(),
   singleSelect = false,
 }) => {
-  const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
   const [inputValue, setInputValue] = useState("");
   const [qChip, setQChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
@@ -52,7 +50,7 @@ const TransferSearchModal = ({
     async (pageToLoad, { replace } = { replace: false }) => {
       setLoading(true);
       try {
-        const res = await axiosClient.get(`${baseUrl}/items/v2/filtered-items`, {
+        const res = await axiosClient.get(`/items/v2/filtered-items`, {
           params: {
             page: pageToLoad,
             limit,
@@ -86,7 +84,7 @@ const TransferSearchModal = ({
         setLoading(false);
       }
     },
-    [baseUrl, limit]
+    [limit]
   );
 
   const fetchSearchPage = useCallback(
@@ -96,7 +94,7 @@ const TransferSearchModal = ({
 
       setLoading(true);
       try {
-        const res = await axiosClient.get(`${baseUrl}/items/pos/search-modal-instock`, {
+        const res = await axiosClient.get(`/items/pos/search-modal-instock`, {
           params: {
             q: qChip || undefined,
             dims: dimsChip || undefined,
@@ -136,7 +134,7 @@ const TransferSearchModal = ({
         setLoading(false);
       }
     },
-    [baseUrl, qChip, dimsChip, limit]
+    [qChip, dimsChip, limit]
   );
 
   // reset everything when modal opens

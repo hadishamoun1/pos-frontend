@@ -1,9 +1,7 @@
 // src/components/transfers/previewTransferTable.jsx
 import React, { useEffect, useState } from "react";
 import "./previewTransferTable.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added
-
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+import { axiosClient } from "../api/axiosClient"; 
 
 export default function PreviewTransferTable({
   transfers,
@@ -29,7 +27,7 @@ export default function PreviewTransferTable({
 
     setInternalLoading(true);
     axiosClient
-      .get(`${baseUrl}/transfers/v1/details`) // ✅ axiosClient instead of axios
+      .get(`/transfers/v1/details`) // ✅ relative ONLY (NO baseUrl)
       .then((res) => {
         setInternalTransfers(res.data || []);
         setInternalError("");
