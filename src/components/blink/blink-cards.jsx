@@ -11,7 +11,7 @@ export const useBlinkingItems = () => {
 // Provider component to manage state
 export const BlinkingItemsProvider = ({ children }) => {
   const [newItemBatch, setNewItemBatch] = useState([]); // Track items that are blinking (requests, invoices, etc.)
-  const [batchEndTime, setBatchEndTime] = useState(null); // Track the batch end time for blinking items
+  const [batchEndTime, setBatchEndTime] = useState(null); 
 
   // Add a new item (request or invoice) to the blinking batch and trigger blinking
   const addItemToBlink = (itemId) => {
