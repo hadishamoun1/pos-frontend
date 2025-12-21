@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./CustomerSelectionModal.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use your api client
 
 const fmtMoney = (n) => {
   const v = Number(n);
@@ -23,20 +24,21 @@ const CustomerSelectionModal = ({ onClose, onSelectCustomer }) => {
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const res = await fetch(`${baseUrl}/customers/v1/basic-details`);
-        const data = await res.json();
+        // ✅ FIX: relative URL ONLY (axiosClient already has baseURL with /api)
+        const res = await axiosClient.get(`/customers/v1/basic-details`);
+        const data = res.data;
         setCustomers(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error("Error fetching customers:", e);
+        setCustomers([]);
       }
     };
+
     fetchCustomers();
-  }, [baseUrl]);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = String(searchTerm || "").toLowerCase().trim();

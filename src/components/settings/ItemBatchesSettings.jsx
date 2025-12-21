@@ -1,24 +1,35 @@
 // src/components/settings/ItemBatchesSettings.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import NotificationModal from "../recievables/NotificationModal"; 
+import NotificationModal from "../recievables/NotificationModal";
 import "./styles/ItemBatchesSettings.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client (relative requests)
 
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
-
-async function getJSON(path) {
-  const res = await fetch(`${baseUrl}${path}`, { method: "GET" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  return res.json();
+async function getJSON(path, config) {
+  try {
+    const res = await axiosClient.get(path, config);
+    return res.data;
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message ||
+      err?.response?.data ||
+      err?.message ||
+      "Request failed";
+    throw new Error(msg);
+  }
 }
+
 async function postJSON(path, body) {
-  const res = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body || {}),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-  return res.json();
+  try {
+    const res = await axiosClient.post(path, body || {});
+    return res.data;
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message ||
+      err?.response?.data ||
+      err?.message ||
+      "Request failed";
+    throw new Error(msg);
+  }
 }
 
 /**
@@ -26,16 +37,9 @@ async function postJSON(path, body) {
  *
  * 1) OLD:
  *    items[] → thicknesses[] → variants[]
- *    (what we handled originally)
  *
- * 2) NEW (your current response):
- *    data[] = {
- *      realDescription: {...},
- *      variants: [
- *        { variantId, length, width, sheetsPerBox, origin, thicknessId,
- *          thickness, itemId, itemName, type }
- *      ]
- *    }
+ * 2) NEW:
+ *    data[] = { realDescription: {...}, variants: [...] }
  */
 function flattenItemTree(items) {
   const rows = [];
@@ -73,7 +77,7 @@ function flattenItemTree(items) {
             : null,
         });
       }
-      continue; // go to next "it"
+      continue;
     }
 
     // ───────── Case 2: OLD shape (items → thicknesses → variants) ─────────
@@ -132,9 +136,14 @@ export default function ItemBatchesSettings() {
   const fetchPage = async (p) => {
     setLoading(true);
     try {
-      const data = await getJSON(
-        `/items/v1/filtered-items?page=${p}&limit=${limit}&includeEmpty=false`
-      );
+      // ✅ relative path only — axiosClient already has baseURL (/api)
+      const data = await getJSON(`/items/v1/filtered-items`, {
+        params: {
+          page: p,
+          limit,
+          includeEmpty: false,
+        },
+      });
 
       // NEW API: list is inside data.data
       const rows = flattenItemTree(data?.data || []);
@@ -199,7 +208,9 @@ export default function ItemBatchesSettings() {
     if (!result || typeof result !== "object") return "Done.";
     const created = Number(result.created ?? 0);
     const skipped = Number(result.skipped ?? 0);
-    const total = Number.isFinite(created + skipped) ? created + skipped : undefined;
+    const total = Number.isFinite(created + skipped)
+      ? created + skipped
+      : undefined;
 
     const parts = [];
     if (Number.isFinite(created)) parts.push(`Created: ${created}`);
@@ -217,7 +228,10 @@ export default function ItemBatchesSettings() {
     try {
       const payload = { variantIds: Array.from(selected.values()) };
       if (force) payload.force = true;
+
+      // ✅ relative path only
       const data = await postJSON(`/items/batches/seed-clean`, payload);
+
       setModal({
         open: true,
         type: "success",
@@ -240,7 +254,10 @@ export default function ItemBatchesSettings() {
     setLoading(true);
     try {
       const payload = force ? { all: true, force: true } : { all: true };
+
+      // ✅ relative path only
       const data = await postJSON(`/items/batches/seed-clean`, payload);
+
       setModal({
         open: true,
         type: "success",

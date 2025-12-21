@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import "./styles/invoiceDisplayName.css";
-
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+import { axiosClient } from "../api/axiosClient"; 
 
 function useDebouncedValue(value, delay = 350) {
   const [debounced, setDebounced] = useState(value);
@@ -15,10 +13,10 @@ function useDebouncedValue(value, delay = 350) {
 
 const norm = (s) => String(s ?? "").trim();
 
-// ✅ endpoints (edit if your controller path is different)
+// ✅ endpoints (relative only)
 const ENDPOINTS = {
   real: "/invoices/v1/invoice-display-names-real",
-  description: "/invoices/invoice-display-names-description", // <- if yours is /invoices/v1/... change it
+  description: "/invoices/invoice-display-names-description", // if yours is /invoices/v1/... change it
 };
 
 export default function InvoiceDisplayNamesPanel() {
@@ -44,9 +42,9 @@ export default function InvoiceDisplayNamesPanel() {
     setTimeout(() => setMessage({ type: "", text: "" }), 2500);
   };
 
-  const currentListUrl = useMemo(() => {
-    const p = ENDPOINTS[mode] || ENDPOINTS.real;
-    return `${baseUrl}${p}`;
+  // ✅ just the path (no baseUrl)
+  const currentListPath = useMemo(() => {
+    return ENDPOINTS[mode] || ENDPOINTS.real;
   }, [mode]);
 
   const fetchRows = async (q) => {
@@ -60,7 +58,7 @@ export default function InvoiceDisplayNamesPanel() {
       } catch {}
       abortRef.current = new AbortController();
 
-      const res = await axios.get(currentListUrl, {
+      const res = await axiosClient.get(currentListPath, {
         params: { q: q || undefined },
         signal: abortRef.current.signal,
       });
@@ -98,13 +96,13 @@ export default function InvoiceDisplayNamesPanel() {
   useEffect(() => {
     fetchRows("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentListUrl]);
+  }, [currentListPath]);
 
   // Debounced search auto-fetch
   useEffect(() => {
     fetchRows(debouncedSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, currentListUrl]);
+  }, [debouncedSearch, currentListPath]);
 
   const computeFallbackName = (row) =>
     (row.thickness != null ? `${parseFloat(row.thickness)} ملم ` : "") +
@@ -160,10 +158,10 @@ export default function InvoiceDisplayNamesPanel() {
       setSaving(true);
       setMessage({ type: "", text: "" });
 
-      const res = await axios.put(
-        `${baseUrl}/invoices/v1/invoice-display-names`,
-        { items: dirtyItems }
-      );
+      // ✅ relative path only
+      const res = await axiosClient.put(`/invoices/v1/invoice-display-names`, {
+        items: dirtyItems,
+      });
 
       setMessage({
         type: "success",
@@ -222,8 +220,9 @@ export default function InvoiceDisplayNamesPanel() {
       setFilling(true);
       setMessage({ type: "", text: "" });
 
-      const res = await axios.put(
-        `${baseUrl}/invoices/v1/invoice-display-names/fill-defaults`
+      // ✅ relative path only
+      const res = await axiosClient.put(
+        `/invoices/v1/invoice-display-names/fill-defaults`
       );
 
       const updated = res.data?.updated ?? 0;
@@ -264,8 +263,6 @@ export default function InvoiceDisplayNamesPanel() {
     }
 
     setMode(nextMode);
-    // optional UX: keep search text, but reset changed toggle because list changes
-    // setOnlyChanged(false);
   };
 
   return (
@@ -313,7 +310,6 @@ export default function InvoiceDisplayNamesPanel() {
             Customize the item name shown on invoices.
           </div>
 
-          {/* ✅ NEW: Mode toggle */}
           <div className="invnames__modeToggle" style={{ marginTop: 10 }}>
             <button
               className={`btn btn--tiny ${mode === "real" ? "btn--primary" : "btn--ghost"}`}

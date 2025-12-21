@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import "./suppliers.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client (NO /api/api)
 
 const CreatePreviewSuppliers = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -20,13 +20,13 @@ const CreatePreviewSuppliers = () => {
   const [hasMore, setHasMore] = useState(true);
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
+
   // Fetch currency codes from the API
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
-        const response = await axios.get(
-          `${baseUrl}/currency/v1/dropdown/currencycodes`
+        const response = await axiosClient.get(
+          `/currency/v1/dropdown/currencycodes`
         );
         setCurrencyCodes(response.data);
       } catch (error) {
@@ -43,9 +43,10 @@ const CreatePreviewSuppliers = () => {
     setLoading(true);
     try {
       console.log(`Fetching suppliers for page ${currentPage}`);
-      const response = await axios.get(
-        `${baseUrl}/suppliers/v1/paginated?page=${currentPage}&limit=50`
-      );
+
+      const response = await axiosClient.get(`/suppliers/v1/paginated`, {
+        params: { page: currentPage, limit: 50 },
+      });
 
       setSuppliers((prevSuppliers) => {
         const newSuppliers = response.data.suppliers.filter(
@@ -77,6 +78,7 @@ const CreatePreviewSuppliers = () => {
   // Initial fetch for the first page of suppliers
   useEffect(() => {
     fetchSuppliers(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleInputChange = (e) => {
@@ -97,10 +99,7 @@ const CreatePreviewSuppliers = () => {
         location: formData.location,
       };
 
-      const response = await axios.post(
-        `${baseUrl}/suppliers`,
-        newSupplier
-      );
+      const response = await axiosClient.post(`/suppliers`, newSupplier);
 
       setSuppliers((prevSuppliers) => [...prevSuppliers, response.data]);
       setFormData({

@@ -1,72 +1,35 @@
 // src/pages/settings/VariantRelinker.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./styles/VarientRelinker.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (baseURL is /api)
 
 const PAGE_SIZE = 30;
 
 const VariantRelinker = () => {
-  const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
-  // ✅ robust URL builder:
-  // - RAW_API_BASE = "/api"   -> same-origin "/api/..."
-  // - RAW_API_BASE = "http://x:3001/api" -> absolute base
-  const apiUrl = useCallback(
-    (path) => {
-      const p = String(path || "");
-      const cleanPath = p.startsWith("/") ? p : `/${p}`;
-
-      if (!RAW_API_BASE) return new URL(cleanPath, window.location.origin);
-
-      // absolute base
-      if (/^https?:\/\//i.test(RAW_API_BASE)) {
-        return new URL(`${RAW_API_BASE}${cleanPath}`);
-      }
-
-      // relative base like "/api"
-      return new URL(`${RAW_API_BASE}${cleanPath}`, window.location.origin);
-    },
-    [RAW_API_BASE]
-  );
-
-  // ✅ Safe JSON fetch: catches the "<!DOCTYPE html>" case and shows a real message.
-  const fetchJson = useCallback(async (urlObj, init) => {
-    const res = await fetch(urlObj.toString(), init);
-
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const text = await res.text();
-
-    // If backend returns HTML (often React index.html), JSON.parse will fail with "<"
-    if (!ct.includes("application/json")) {
-      const head = text.slice(0, 120).replace(/\s+/g, " ").trim();
-      throw new Error(
-        `Expected JSON but got "${ct || "unknown"}". ` +
-          `This usually means your request hit the frontend (index.html) instead of the API. ` +
-          `URL: ${urlObj.toString()} | Starts with: ${head}`
-      );
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      throw new Error(`Bad JSON from ${urlObj.toString()} — ${String(e)} — starts: ${text.slice(0, 120)}`);
-    }
-
-    if (!res.ok) {
-      throw new Error(json?.message || json?.error || `${res.status} ${res.statusText}`);
-    }
-
-    return json;
-  }, []);
-
   // ---------- Normalization helpers ----------
   const normalizeDigits = (s) => {
     if (!s) return "";
     const map = {
-      "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
-      "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
-      "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-      "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+      "٠": "0",
+      "١": "1",
+      "٢": "2",
+      "٣": "3",
+      "٤": "4",
+      "٥": "5",
+      "٦": "6",
+      "٧": "7",
+      "٨": "8",
+      "٩": "9",
+      "۰": "0",
+      "۱": "1",
+      "۲": "2",
+      "۳": "3",
+      "۴": "4",
+      "۵": "5",
+      "۶": "6",
+      "۷": "7",
+      "۸": "8",
+      "۹": "9",
     };
     return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
   };
@@ -156,7 +119,8 @@ const VariantRelinker = () => {
 
   // ✅ Helper to read paginated responses with different shapes
   const toArray = (x) => (Array.isArray(x) ? x : []);
-  const pickData = (json) => toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
+  const pickData = (json) =>
+    toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
   const pickTotal = (json, fallbackLen) => {
     const n =
       json?.total ??
@@ -169,21 +133,19 @@ const VariantRelinker = () => {
     return Number.isFinite(num) ? num : fallbackLen ?? 0;
   };
 
-  // ✅ Variant search
+  // ✅ Variant search (axiosClient)
   const fetchVariants = useCallback(
     async (reset = true, pageArg) => {
-      const page = reset ? 1 : (pageArg ?? variantPage);
+      const page = reset ? 1 : pageArg ?? variantPage;
       const q = makeQueryFromTokens(variantTokens);
 
       setVariantLoading(true);
       try {
-        const url = apiUrl("/items/variants/search");
-        url.searchParams.set("q", q);
-        url.searchParams.set("page", String(page));
-        url.searchParams.set("limit", String(PAGE_SIZE));
+        const res = await axiosClient.get(`/items/variants/search`, {
+          params: { q, page, limit: PAGE_SIZE },
+        });
 
-        const json = await fetchJson(url);
-
+        const json = res.data;
         const data = pickData(json);
         const total = pickTotal(json, data.length);
 
@@ -198,12 +160,17 @@ const VariantRelinker = () => {
       } catch (e) {
         setVariantResults([]);
         setVariantTotal(0);
-        setStatus({ ok: false, message: String(e?.message || e) });
+        const msg =
+          e?.response?.data?.message ||
+          e?.response?.data?.error ||
+          e?.message ||
+          "Failed to fetch variants";
+        setStatus({ ok: false, message: String(msg) });
       } finally {
         setVariantLoading(false);
       }
     },
-    [apiUrl, fetchJson, variantTokens, variantPage]
+    [variantTokens, variantPage]
   );
 
   // Debounce token changes -> search
@@ -214,25 +181,33 @@ const VariantRelinker = () => {
     return () => debounceRef.current && clearTimeout(debounceRef.current);
   }, [variantTokens, fetchVariants]);
 
-  // ✅ Description search
+  // ✅ Description search (axiosClient)
   const fetchDescriptions = useCallback(async () => {
     setDescLoading(true);
     try {
-      const url = apiUrl("/items/descriptions/search");
-      url.searchParams.set("mode", mode === "real" ? "real" : "name");
-      url.searchParams.set("q", descQuery || "");
-      url.searchParams.set("page", "1");
-      url.searchParams.set("limit", "30");
+      const res = await axiosClient.get(`/items/descriptions/search`, {
+        params: {
+          mode: mode === "real" ? "real" : "name",
+          q: descQuery || "",
+          page: 1,
+          limit: 30,
+        },
+      });
 
-      const json = await fetchJson(url);
+      const json = res.data;
       setDescResults(pickData(json));
     } catch (e) {
       setDescResults([]);
-      setStatus({ ok: false, message: String(e?.message || e) });
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Failed to fetch descriptions";
+      setStatus({ ok: false, message: String(msg) });
     } finally {
       setDescLoading(false);
     }
-  }, [apiUrl, fetchJson, mode, descQuery]);
+  }, [mode, descQuery]);
 
   useEffect(() => {
     if (tab !== "select") return;
@@ -276,7 +251,11 @@ const VariantRelinker = () => {
       if (tab === "unlink") {
         body = { mode, description: null, alsoSetOtherSide };
       } else if (tab === "select") {
-        body = { mode, description: { id: Number(selectedDescId) }, alsoSetOtherSide };
+        body = {
+          mode,
+          description: { id: Number(selectedDescId) },
+          alsoSetOtherSide,
+        };
       } else {
         let effMode = mode;
         let effAlso = alsoSetOtherSide;
@@ -295,12 +274,10 @@ const VariantRelinker = () => {
         body = { mode: effMode, fields: { ...fields }, alsoSetOtherSide: effAlso };
       }
 
-      const url = apiUrl(`/items/variants/${encodeURIComponent(selectedVariant.variantId)}/description`);
-      const json = await fetchJson(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const id = encodeURIComponent(selectedVariant.variantId);
+      const res = await axiosClient.put(`/items/variants/${id}/description`, body);
+
+      const json = res.data;
 
       setStatus({ ok: true, message: "Variant description updated." });
 
@@ -314,7 +291,12 @@ const VariantRelinker = () => {
           : prev
       );
     } catch (e) {
-      setStatus({ ok: false, message: String(e?.message || e) });
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Failed to update variant description";
+      setStatus({ ok: false, message: String(msg) });
     } finally {
       setSubmitting(false);
     }
@@ -327,7 +309,8 @@ const VariantRelinker = () => {
       <div className="vr-header">
         <h1>Variant Relinker</h1>
         <p className="vr-sub">
-          Pin tokens like <b>5.5ملم ابيض</b>, then add size <b>225*321</b> and search together.
+          Pin tokens like <b>5.5ملم ابيض</b>, then add size <b>225*321</b> and
+          search together.
         </p>
       </div>
 
@@ -364,11 +347,20 @@ const VariantRelinker = () => {
             </div>
 
             <div className="vr-tokenbar-actions">
-              <button className="vr-btn" onClick={() => addToken(variantInput)}>Add</button>
-              <button className="vr-btn vr-btn-ghost" onClick={clearTokens} disabled={variantTokens.length === 0}>
+              <button className="vr-btn" onClick={() => addToken(variantInput)}>
+                Add
+              </button>
+              <button
+                className="vr-btn vr-btn-ghost"
+                onClick={clearTokens}
+                disabled={variantTokens.length === 0}
+              >
                 Clear
               </button>
-              <button className="vr-btn vr-btn-dark" onClick={() => fetchVariants(true)}>
+              <button
+                className="vr-btn vr-btn-dark"
+                onClick={() => fetchVariants(true)}
+              >
                 Search
               </button>
             </div>
@@ -389,7 +381,9 @@ const VariantRelinker = () => {
               variantResults.map((v) => (
                 <div className="vr-variant-card" key={`v-${v.variantId}`}>
                   <div className="vr-variant-line">
-                    <div className="vr-variant-name ar-rtl"><b>{v.itemName}</b></div>
+                    <div className="vr-variant-name ar-rtl">
+                      <b>{v.itemName}</b>
+                    </div>
                     <div className="vr-variant-meta">
                       <span className="vr-badge">{v.type}</span>
                       <span className="vr-dot" />
@@ -397,7 +391,9 @@ const VariantRelinker = () => {
                       {v.type !== "sqm" && (
                         <>
                           <span className="vr-dot" />
-                          <span>{v.length} × {v.width} cm</span>
+                          <span>
+                            {v.length} × {v.width} cm
+                          </span>
                         </>
                       )}
                       {v.type === "box" && (
@@ -414,16 +410,23 @@ const VariantRelinker = () => {
                   <div className="vr-desc-split">
                     <div>
                       <div className="vr-desc-label">Item-Name Description</div>
-                      <div className="vr-desc-text ar-rtl">{currentDescToText(v.itemNameDescription)}</div>
+                      <div className="vr-desc-text ar-rtl">
+                        {currentDescToText(v.itemNameDescription)}
+                      </div>
                     </div>
                     <div>
                       <div className="vr-desc-label">Real Description</div>
-                      <div className="vr-desc-text ar-rtl">{currentDescToText(v.realDescription)}</div>
+                      <div className="vr-desc-text ar-rtl">
+                        {currentDescToText(v.realDescription)}
+                      </div>
                     </div>
                   </div>
 
                   <div className="vr-card-actions">
-                    <button className="vr-btn vr-btn-dark" onClick={() => setSelectedVariant(v)}>
+                    <button
+                      className="vr-btn vr-btn-dark"
+                      onClick={() => setSelectedVariant(v)}
+                    >
                       Select
                     </button>
                   </div>
@@ -459,7 +462,9 @@ const VariantRelinker = () => {
             <>
               <div className="vr-selected">
                 <div className="vr-variant-line">
-                  <div className="vr-variant-name ar-rtl"><b>{selectedVariant.itemName}</b></div>
+                  <div className="vr-variant-name ar-rtl">
+                    <b>{selectedVariant.itemName}</b>
+                  </div>
                   <div className="vr-variant-meta">
                     <span className="vr-badge">{selectedVariant.type}</span>
                     <span className="vr-dot" />
@@ -467,7 +472,9 @@ const VariantRelinker = () => {
                     {selectedVariant.type !== "sqm" && (
                       <>
                         <span className="vr-dot" />
-                        <span>{selectedVariant.length} × {selectedVariant.width} cm</span>
+                        <span>
+                          {selectedVariant.length} × {selectedVariant.width} cm
+                        </span>
                       </>
                     )}
                     {selectedVariant.type === "box" && (
@@ -477,7 +484,9 @@ const VariantRelinker = () => {
                       </>
                     )}
                     <span className="vr-dot" />
-                    <span className="ar-rtl">المنشأ: {selectedVariant.origin || "—"}</span>
+                    <span className="ar-rtl">
+                      المنشأ: {selectedVariant.origin || "—"}
+                    </span>
                   </div>
                 </div>
 
@@ -503,10 +512,14 @@ const VariantRelinker = () => {
                     <input
                       type="checkbox"
                       checked={mode === "real"}
-                      onChange={(e) => setMode(e.target.checked ? "real" : "name")}
+                      onChange={(e) =>
+                        setMode(e.target.checked ? "real" : "name")
+                      }
                     />
                     <span className="pill">
-                      {mode === "real" ? "Editing: Real Description" : "Editing: Item-Name Description"}
+                      {mode === "real"
+                        ? "Editing: Real Description"
+                        : "Editing: Item-Name Description"}
                     </span>
                   </label>
                 </div>
@@ -522,13 +535,22 @@ const VariantRelinker = () => {
               </div>
 
               <div className="vr-tabs">
-                <button className={`vr-tab ${tab === "select" ? "active" : ""}`} onClick={() => setTab("select")}>
+                <button
+                  className={`vr-tab ${tab === "select" ? "active" : ""}`}
+                  onClick={() => setTab("select")}
+                >
                   Select existing
                 </button>
-                <button className={`vr-tab ${tab === "create" ? "active" : ""}`} onClick={() => setTab("create")}>
+                <button
+                  className={`vr-tab ${tab === "create" ? "active" : ""}`}
+                  onClick={() => setTab("create")}
+                >
                   Create new
                 </button>
-                <button className={`vr-tab ${tab === "unlink" ? "active" : ""}`} onClick={() => setTab("unlink")}>
+                <button
+                  className={`vr-tab ${tab === "unlink" ? "active" : ""}`}
+                  onClick={() => setTab("unlink")}
+                >
                   Unlink (set to NULL)
                 </button>
               </div>
@@ -538,12 +560,16 @@ const VariantRelinker = () => {
                   <div className="vr-search">
                     <input
                       type="text"
-                      placeholder={`Search ${mode === "real" ? "Real" : "Item-Name"} descriptions…`}
+                      placeholder={`Search ${
+                        mode === "real" ? "Real" : "Item-Name"
+                      } descriptions…`}
                       value={descQuery}
                       onChange={(e) => setDescQuery(e.target.value)}
                       className="ar-rtl"
                     />
-                    <button className="vr-btn" onClick={fetchDescriptions}>Search</button>
+                    <button className="vr-btn" onClick={fetchDescriptions}>
+                      Search
+                    </button>
                   </div>
                   <div className="vr-autolist">
                     {descLoading ? (
@@ -552,7 +578,10 @@ const VariantRelinker = () => {
                       <div className="vr-empty">No descriptions found.</div>
                     ) : (
                       descResults.map((d) => (
-                        <label key={`d-${mode}-${d.id}`} className="vr-radio-row">
+                        <label
+                          key={`d-${mode}-${d.id}`}
+                          className="vr-radio-row"
+                        >
                           <input
                             type="radio"
                             name="descPick"
@@ -574,7 +603,12 @@ const VariantRelinker = () => {
                       <input
                         type="checkbox"
                         checked={createSides.name}
-                        onChange={(e) => setCreateSides((p) => ({ ...p, name: e.target.checked }))}
+                        onChange={(e) =>
+                          setCreateSides((p) => ({
+                            ...p,
+                            name: e.target.checked,
+                          }))
+                        }
                       />
                       <span>Create Item-Name</span>
                     </label>
@@ -582,7 +616,12 @@ const VariantRelinker = () => {
                       <input
                         type="checkbox"
                         checked={createSides.real}
-                        onChange={(e) => setCreateSides((p) => ({ ...p, real: e.target.checked }))}
+                        onChange={(e) =>
+                          setCreateSides((p) => ({
+                            ...p,
+                            real: e.target.checked,
+                          }))
+                        }
                       />
                       <span>Create Real</span>
                     </label>
@@ -595,7 +634,12 @@ const VariantRelinker = () => {
                         type="text"
                         className="ltr"
                         value={fields.itemNumber}
-                        onChange={(e) => setFields((p) => ({ ...p, itemNumber: e.target.value }))}
+                        onChange={(e) =>
+                          setFields((p) => ({
+                            ...p,
+                            itemNumber: e.target.value,
+                          }))
+                        }
                       />
                     </label>
                     <label>
@@ -604,7 +648,12 @@ const VariantRelinker = () => {
                         type="text"
                         className="ar-rtl"
                         value={fields.categoryName}
-                        onChange={(e) => setFields((p) => ({ ...p, categoryName: e.target.value }))}
+                        onChange={(e) =>
+                          setFields((p) => ({
+                            ...p,
+                            categoryName: e.target.value,
+                          }))
+                        }
                       />
                     </label>
                     <label>
@@ -613,7 +662,12 @@ const VariantRelinker = () => {
                         type="text"
                         className="ar-rtl"
                         value={fields.subCategory}
-                        onChange={(e) => setFields((p) => ({ ...p, subCategory: e.target.value }))}
+                        onChange={(e) =>
+                          setFields((p) => ({
+                            ...p,
+                            subCategory: e.target.value,
+                          }))
+                        }
                       />
                     </label>
                     <label>
@@ -622,7 +676,12 @@ const VariantRelinker = () => {
                         type="text"
                         className="ar-rtl"
                         value={fields.colorName}
-                        onChange={(e) => setFields((p) => ({ ...p, colorName: e.target.value }))}
+                        onChange={(e) =>
+                          setFields((p) => ({
+                            ...p,
+                            colorName: e.target.value,
+                          }))
+                        }
                       />
                     </label>
                     <label>
@@ -631,7 +690,12 @@ const VariantRelinker = () => {
                         type="text"
                         className="ar-rtl"
                         value={fields.designName}
-                        onChange={(e) => setFields((p) => ({ ...p, designName: e.target.value }))}
+                        onChange={(e) =>
+                          setFields((p) => ({
+                            ...p,
+                            designName: e.target.value,
+                          }))
+                        }
                       />
                     </label>
                   </div>
@@ -648,11 +712,19 @@ const VariantRelinker = () => {
               )}
 
               <div className="vr-actions">
-                <button className="vr-btn vr-btn-dark" disabled={!canSubmit || submitting} onClick={handleSubmit}>
+                <button
+                  className="vr-btn vr-btn-dark"
+                  disabled={!canSubmit || submitting}
+                  onClick={handleSubmit}
+                >
                   {submitting ? "Applying…" : "Apply Changes"}
                 </button>
                 {status && (
-                  <span className={`vr-status ${status.ok ? "vr-status-ok" : "vr-status-err"}`}>
+                  <span
+                    className={`vr-status ${
+                      status.ok ? "vr-status-ok" : "vr-status-err"
+                    }`}
+                  >
                     {status.message}
                   </span>
                 )}

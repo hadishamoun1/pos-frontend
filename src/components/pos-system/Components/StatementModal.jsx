@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "./StatementModal.css";
 import StatementReportModal from "./StatementReportModal";
+import { axiosClient } from "../../api/axiosClient"; // ✅ use your api client
 
-const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName }) => {
+const StatementModal = ({
+  isOpen,
+  onClose,
+  customerId,
+  defaultDate,
+  customerName,
+}) => {
   const today = defaultDate || new Date().toISOString().split("T")[0];
   const [type, setType] = useState("ALL");
 
@@ -12,65 +18,61 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
   const [err, setErr] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // ✅ Support both CRA and Vite envs
-  const baseUrl =
-    (typeof import.meta !== "undefined" &&
-      import.meta.env &&
-      (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_APP_API_BASE_URL)) ||
-    process.env.REACT_APP_API_BASE_URL ||
-    "http://localhost:3000";
+  const toYMDLocal = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
-    const toYMDLocal = (d) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
+  const addMonthsSafe = (date, deltaMonths) => {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + deltaMonths);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, lastDay));
+    return d;
+  };
 
-const addMonthsSafe = (date, deltaMonths) => {
-  const d = new Date(date);
-  const day = d.getDate();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + deltaMonths);
-  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  d.setDate(Math.min(day, lastDay));
-  return d;
-};
+  const base = defaultDate ? new Date(`${defaultDate}T00:00:00`) : new Date();
+  const baseYMD = toYMDLocal(base);
+  const fromDefault = toYMDLocal(addMonthsSafe(base, -1));
+  const toDefault = baseYMD;
 
-const base = defaultDate
-  ? new Date(`${defaultDate}T00:00:00`)
-  : new Date();
-
-const baseYMD = toYMDLocal(base);
-const fromDefault = toYMDLocal(addMonthsSafe(base, -1));
-const toDefault = baseYMD;
-
-const [from, setFrom] = useState(fromDefault);
-const [to, setTo] = useState(toDefault);
-
+  const [from, setFrom] = useState(fromDefault);
+  const [to, setTo] = useState(toDefault);
 
   useEffect(() => {
     if (isOpen) {
-     setFrom(fromDefault);
-  setTo(toDefault);
+      setFrom(fromDefault);
+      setTo(toDefault);
       setType("ALL");
       setData(null);
       setErr("");
     }
-  }, [isOpen, today]);
+  }, [isOpen, today]); // keep your deps as-is
 
   const fmt = (v) => {
     if (v === null || v === undefined || v === "") return "0.00";
     const n = typeof v === "string" ? Number(v.replace(/,/g, "")) : Number(v);
     if (!isFinite(n)) return "0.00";
-    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
   // Loading overlay (uses CSS classes)
   function LoadingScreen({ show, text = "Generating…" }) {
     if (!show) return null;
     return (
-      <div className="stmt-loading-overlay" role="status" aria-live="polite" aria-busy="true">
+      <div
+        className="stmt-loading-overlay"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="stmt-loading-card">
           <div className="stmt-spinner" aria-hidden="true" />
           <div className="stmt-loading-text">{text}</div>
@@ -80,17 +82,21 @@ const [to, setTo] = useState(toDefault);
   }
 
   const fetchStatement = async () => {
-    if (!customerId) return;             // button is disabled when !customerId
+    if (!customerId) return;
     setLoading(true);
     setErr("");
     setData(null);
+
     try {
       const params = { from, to };
       if (type !== "ALL") params.type = type;
-      const res = await axios.get(
-        `${baseUrl}/journal-vouchers/statements/customers/${customerId}`,
+
+      // ✅ FIX: relative URL ONLY (axiosClient already points to /api)
+      const res = await axiosClient.get(
+        `/journal-vouchers/statements/customers/${customerId}`,
         { params }
       );
+
       setData(res.data);
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
@@ -115,14 +121,24 @@ const [to, setTo] = useState(toDefault);
       <div className="pos-modal" onClick={(e) => e.stopPropagation()}>
         <div className="pos-modal-header">
           <h2>كشف حساب</h2>
-          <button className="pos-modal-close" onClick={onClose} disabled={loading}>✕</button>
+          <button
+            className="pos-modal-close"
+            onClick={onClose}
+            disabled={loading}
+          >
+            ✕
+          </button>
         </div>
 
         <div className="pos-modal-controls">
           <div className="controls-left">
             <label>
               Type
-              <select value={type} onChange={(e) => setType(e.target.value)} disabled={loading}>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                disabled={loading}
+              >
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="ALL">All</option>
@@ -131,12 +147,22 @@ const [to, setTo] = useState(toDefault);
 
             <label>
               From
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} disabled={loading} />
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                disabled={loading}
+              />
             </label>
 
             <label>
               To
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} disabled={loading} />
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                disabled={loading}
+              />
             </label>
 
             <button
@@ -164,11 +190,24 @@ const [to, setTo] = useState(toDefault);
         {data && (
           <div className="pos-modal-body">
             <div className="stmt-summary">
-              <div><strong>رصيد سابق:</strong> {fmt(data.openingBalance?.toFixed?.(2) ?? 0)}</div>
-              <div><strong>مجموع الفواتير:</strong> {fmt(data.totals?.totalDebit?.toFixed?.(2) ?? 0)}</div>
-              <div><strong>مجموع الدفعات:</strong> {fmt(data.totals?.totalCredit?.toFixed?.(2) ?? 0)}</div>
-              <div><strong>رصيد:</strong> {fmt(data.closingBalance?.toFixed?.(2) ?? 0)}</div>
+              <div>
+                <strong>رصيد سابق:</strong>{" "}
+                {fmt(data.openingBalance?.toFixed?.(2) ?? 0)}
+              </div>
+              <div>
+                <strong>مجموع الفواتير:</strong>{" "}
+                {fmt(data.totals?.totalDebit?.toFixed?.(2) ?? 0)}
+              </div>
+              <div>
+                <strong>مجموع الدفعات:</strong>{" "}
+                {fmt(data.totals?.totalCredit?.toFixed?.(2) ?? 0)}
+              </div>
+              <div>
+                <strong>رصيد:</strong>{" "}
+                {fmt(data.closingBalance?.toFixed?.(2) ?? 0)}
+              </div>
             </div>
+
             <div className="stmt-table-wrap">
               <table className="stmt-table">
                 <thead>
@@ -208,7 +247,6 @@ const [to, setTo] = useState(toDefault);
           customerName={reportCustomerName}
         />
 
-        {/* ✅ Loading overlay (modal-scoped) */}
         <LoadingScreen
           show={loading}
           text={type === "ALL" ? "Generating statement…" : `Generating (${type})…`}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./acc-modal-selection.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (baseURL = /api)
 
 const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   const [data, setData] = useState([]);
@@ -11,8 +12,6 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const filterDebounceRef = useRef(null);
 
@@ -29,9 +28,9 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${baseUrl}/accounts/v1/acc-arranged`);
-      if (!res.ok) throw new Error("Failed to fetch accounts data");
-      const combinedData = await res.json();
+      // ✅ IMPORTANT: relative URL only (axiosClient already has /api)
+      const res = await axiosClient.get(`/accounts/v1/acc-arranged`);
+      const combinedData = res.data;
 
       setData(combinedData);
       setFilteredTree(combinedData);
@@ -40,7 +39,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
       setSearchQuery("");
       setSearchResults(null);
     } catch (e) {
-      setError(e.message);
+      setError(e?.response?.data?.message || e.message || "Failed to fetch accounts data");
     } finally {
       setLoading(false);
     }
@@ -155,7 +154,6 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
       const matches = indexed.filter((r) => {
         const hitNum = qNum ? r._num.includes(qNum) : false;
         const hitName = tokens.every((t) => r._name.includes(t));
-        // if you ONLY want English name + number, delete the arabic line:
         const hitAr = tokens.every((t) => r._ar.includes(t));
 
         return hitNum || hitName || hitAr;

@@ -1,68 +1,24 @@
 // src/pages/settings/DescriptionEditor.jsx
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import "./styles/editDescription.css";
+import { axiosClient } from "../api/axiosClient"; 
 
 const PAGE_SIZE = 30;
 
 const DescriptionEditor = () => {
-  const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
-  // ✅ robust URL builder:
-  // - RAW_API_BASE="/api" -> same-origin "/api/..."
-  // - RAW_API_BASE="http://server:3001/api" -> absolute base
-  const apiUrl = useCallback(
-    (path) => {
-      const p = String(path || "");
-      const cleanPath = p.startsWith("/") ? p : `/${p}`;
-
-      if (!RAW_API_BASE) return new URL(cleanPath, window.location.origin);
-
-      if (/^https?:\/\//i.test(RAW_API_BASE)) {
-        return new URL(`${RAW_API_BASE}${cleanPath}`);
-      }
-
-      // relative base like "/api"
-      return new URL(`${RAW_API_BASE}${cleanPath}`, window.location.origin);
-    },
-    [RAW_API_BASE]
-  );
-
-  // ✅ Safe JSON fetch: catches HTML index.html and shows the real URL
-  const fetchJson = useCallback(async (urlObj, init) => {
-    const res = await fetch(urlObj.toString(), init);
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    const text = await res.text();
-
-    if (!ct.includes("application/json")) {
-      const head = text.slice(0, 140).replace(/\s+/g, " ").trim();
-      throw new Error(
-        `Expected JSON but got "${ct || "unknown"}". ` +
-          `This usually means the request hit React (index.html) instead of the API. ` +
-          `URL: ${urlObj.toString()} | Starts with: ${head}`
-      );
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      throw new Error(`Bad JSON from ${urlObj.toString()} — ${String(e)} — starts: ${text.slice(0, 140)}`);
-    }
-
-    if (!res.ok) {
-      throw new Error(json?.message || json?.error || `${res.status} ${res.statusText}`);
-    }
-
-    return json;
-  }, []);
-
   // Helpers for different response shapes
   const toArray = (x) => (Array.isArray(x) ? x : []);
-  const pickData = (json) => toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
+  const pickData = (json) =>
+    toArray(json?.data) || toArray(json?.items) || toArray(json?.results) || [];
   const pickTotal = (json, fallbackLen) => {
-    const n = json?.total ?? json?.totalRows ?? json?.count ?? json?.totalCount ?? null;
+    const n =
+      json?.total ??
+      json?.totalRows ??
+      json?.count ??
+      json?.totalCount ??
+      null;
     const num = Number(n);
-    return Number.isFinite(num) ? num : (fallbackLen ?? 0);
+    return Number.isFinite(num) ? num : fallbackLen ?? 0;
   };
 
   // Mode
@@ -95,19 +51,22 @@ const DescriptionEditor = () => {
 
   const fetchList = useCallback(
     async (reset = true, pageArg) => {
-      const p = reset ? 1 : (pageArg ?? page);
+      const p = reset ? 1 : pageArg ?? page;
       setLoading(true);
       setStatus(null);
 
       try {
-        const url = apiUrl("/items/descriptions/search");
-        url.searchParams.set("mode", mode);
-        url.searchParams.set("q", query || "");
-        url.searchParams.set("page", String(p));
-        url.searchParams.set("limit", String(PAGE_SIZE));
+        // ✅ FIX: axiosClient + relative endpoint (NO baseUrl, NO /api in string)
+        const res = await axiosClient.get(`/items/descriptions/search`, {
+          params: {
+            mode,
+            q: query || "",
+            page: p,
+            limit: PAGE_SIZE,
+          },
+        });
 
-        const json = await fetchJson(url);
-
+        const json = res.data;
         const data = pickData(json);
         const tot = pickTotal(json, data.length);
 
@@ -122,12 +81,19 @@ const DescriptionEditor = () => {
       } catch (e) {
         setResults([]);
         setTotal(0);
-        setStatus({ ok: false, message: String(e?.message || e) });
+
+        const msg =
+          e?.response?.data?.message ||
+          e?.response?.data ||
+          e?.message ||
+          String(e);
+
+        setStatus({ ok: false, message: String(msg) });
       } finally {
         setLoading(false);
       }
     },
-    [apiUrl, fetchJson, mode, query, page]
+    [mode, query, page]
   );
 
   useEffect(() => {
@@ -153,11 +119,11 @@ const DescriptionEditor = () => {
   const isDirty = useMemo(() => {
     if (!selected) return false;
     return (
-      (form.itemNumber ?? "")   !== (selected.itemNumber ?? "") ||
+      (form.itemNumber ?? "") !== (selected.itemNumber ?? "") ||
       (form.categoryName ?? "") !== (selected.categoryName ?? "") ||
-      (form.subCategory ?? "")  !== (selected.subCategory ?? "") ||
-      (form.colorName ?? "")    !== (selected.colorName ?? "") ||
-      (form.designName ?? "")   !== (selected.designName ?? "")
+      (form.subCategory ?? "") !== (selected.subCategory ?? "") ||
+      (form.colorName ?? "") !== (selected.colorName ?? "") ||
+      (form.designName ?? "") !== (selected.designName ?? "")
     );
   }, [form, selected]);
 
@@ -172,20 +138,19 @@ const DescriptionEditor = () => {
     try {
       const endpoint =
         mode === "name"
-          ? apiUrl(`/items/descriptions/name/${encodeURIComponent(selected.id)}`)
-          : apiUrl(`/items/descriptions/real/${encodeURIComponent(selected.id)}`);
+          ? `/items/descriptions/name/${encodeURIComponent(selected.id)}`
+          : `/items/descriptions/real/${encodeURIComponent(selected.id)}`;
 
       const body = {
-        ...Object.fromEntries(Object.entries(form).filter(([_, v]) => v !== undefined)),
+        ...Object.fromEntries(
+          Object.entries(form).filter(([_, v]) => v !== undefined)
+        ),
         onDuplicate,
       };
 
-      // ✅ use fetchJson so we catch HTML responses too
-      const json = await fetchJson(endpoint, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      // ✅ FIX: axiosClient PATCH
+      const res = await axiosClient.patch(endpoint, body);
+      const json = res.data;
 
       // Update local selection + list row
       setSelected(json);
@@ -197,18 +162,28 @@ const DescriptionEditor = () => {
         designName: json?.designName || "",
       });
 
-      setResults((prev) => prev.map((r) => (Number(r.id) === Number(selected.id) ? json : r)));
+      setResults((prev) =>
+        prev.map((r) => (Number(r.id) === Number(selected.id) ? json : r))
+      );
 
       setStatus({
         ok: true,
-        message: onDuplicate === "merge" ? "Updated (merged if duplicate existed)." : "Updated.",
+        message:
+          onDuplicate === "merge"
+            ? "Updated (merged if duplicate existed)."
+            : "Updated.",
       });
     } catch (e) {
-      setStatus({ ok: false, message: String(e?.message || e) });
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        String(e);
+      setStatus({ ok: false, message: String(msg) });
     } finally {
       setSaving(false);
     }
-  }, [selected, mode, form, onDuplicate, apiUrl, fetchJson]);
+  }, [selected, mode, form, onDuplicate]);
 
   // Helpers
   const rowToText = (d) =>
@@ -223,7 +198,8 @@ const DescriptionEditor = () => {
       <div className="de-header">
         <h1>Description Editor</h1>
         <p className="de-sub">
-          Search a description, switch side (<b>Item-Name</b> / <b>Real</b>), edit fields, and choose how to handle duplicates.
+          Search a description, switch side (<b>Item-Name</b> / <b>Real</b>),
+          edit fields, and choose how to handle duplicates.
         </p>
       </div>
 
@@ -252,7 +228,9 @@ const DescriptionEditor = () => {
                   }}
                 />
                 <span className="pill">
-                  {mode === "real" ? "Editing: Real descriptions" : "Editing: Item-Name descriptions"}
+                  {mode === "real"
+                    ? "Editing: Real descriptions"
+                    : "Editing: Item-Name descriptions"}
                 </span>
               </label>
             </div>
@@ -260,12 +238,16 @@ const DescriptionEditor = () => {
             <div className="de-search">
               <input
                 type="text"
-                placeholder={`Search ${mode === "real" ? "Real" : "Item-Name"} descriptions…`}
+                placeholder={`Search ${
+                  mode === "real" ? "Real" : "Item-Name"
+                } descriptions…`}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="ar-rtl"
               />
-              <button className="de-btn" onClick={() => fetchList(true)}>Search</button>
+              <button className="de-btn" onClick={() => fetchList(true)}>
+                Search
+              </button>
             </div>
           </div>
 
@@ -333,7 +315,9 @@ const DescriptionEditor = () => {
                     type="text"
                     className="ltr"
                     value={form.itemNumber}
-                    onChange={(e) => setForm((p) => ({ ...p, itemNumber: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, itemNumber: e.target.value }))
+                    }
                   />
                 </label>
                 <label>
@@ -342,7 +326,9 @@ const DescriptionEditor = () => {
                     type="text"
                     className="ar-rtl"
                     value={form.categoryName}
-                    onChange={(e) => setForm((p) => ({ ...p, categoryName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, categoryName: e.target.value }))
+                    }
                   />
                 </label>
                 <label>
@@ -351,7 +337,9 @@ const DescriptionEditor = () => {
                     type="text"
                     className="ar-rtl"
                     value={form.subCategory}
-                    onChange={(e) => setForm((p) => ({ ...p, subCategory: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, subCategory: e.target.value }))
+                    }
                   />
                 </label>
                 <label>
@@ -360,7 +348,9 @@ const DescriptionEditor = () => {
                     type="text"
                     className="ar-rtl"
                     value={form.colorName}
-                    onChange={(e) => setForm((p) => ({ ...p, colorName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, colorName: e.target.value }))
+                    }
                   />
                 </label>
                 <label>
@@ -369,7 +359,9 @@ const DescriptionEditor = () => {
                     type="text"
                     className="ar-rtl"
                     value={form.designName}
-                    onChange={(e) => setForm((p) => ({ ...p, designName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, designName: e.target.value }))
+                    }
                   />
                 </label>
               </div>

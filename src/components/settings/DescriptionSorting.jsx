@@ -1,25 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./styles/DescriptionSorting.css";
-
-const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
-const apiUrl = (path) => {
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-
-  // If env is an absolute URL (http://... or https://...), use it as the base
-  if (/^https?:\/\//i.test(RAW_API_BASE)) {
-    return new URL(cleanPath, `${RAW_API_BASE}/`);
-  }
-
-  // Else treat env as a prefix (e.g. "/api")
-  if (RAW_API_BASE) {
-    const prefix = RAW_API_BASE.startsWith("/") ? RAW_API_BASE : `/${RAW_API_BASE}`;
-    return new URL((prefix + cleanPath).replace(/\/{2,}/g, "/"), window.location.origin);
-  }
-
-  // Default: same origin
-  return new URL(cleanPath, window.location.origin);
-};
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client
 
 /* ----------------- helpers ----------------- */
 function highlight(text, q) {
@@ -69,19 +50,24 @@ export default function DescriptionSettings() {
     setLoading(true);
     setErr("");
     try {
-const url = apiUrl("/items/real-descriptions");
-if (q) url.searchParams.set("q", q);
-if (withCounts) url.searchParams.set("withCounts", "1");
-const res = await fetch(url.toString());
+      // ✅ FIX: axiosClient + relative path only
+      const res = await axiosClient.get(`/items/real-descriptions`, {
+        params: {
+          ...(q ? { q } : {}),
+          ...(withCounts ? { withCounts: 1 } : {}),
+        },
+      });
 
-
-     
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = res.data;
       setRows(Array.isArray(data) ? data : []);
       setIsDirty(false);
     } catch (e) {
-      setErr(String(e?.message || e));
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        String(e);
+      setErr(String(msg));
     } finally {
       setLoading(false);
     }
@@ -126,15 +112,18 @@ const res = await fetch(url.toString());
     try {
       setLoading(true);
       setErr("");
-const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // ✅ FIX: axiosClient + relative path only
+      await axiosClient.put(`/items/real-descriptions/reorder`, { order });
+
       await fetchData();
     } catch (e) {
-      setErr(String(e?.message || e));
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        String(e);
+      setErr(String(msg));
     } finally {
       setLoading(false);
     }
@@ -152,20 +141,27 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
     setViewerErr("");
     setViewerData([]);
     setViewerOpen(true);
+
     try {
       setViewerLoading(true);
-      // NEW API: /items/item-descriptions/:descId/variants
- const url = apiUrl(`/items/real-descriptions/${descRow.id}/variants`);
 
-      url.searchParams.set("limit", "1000");
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const js = await res.json();
+      // ✅ FIX: axiosClient + relative path only
+      const res = await axiosClient.get(
+        `/items/real-descriptions/${descRow.id}/variants`,
+        { params: { limit: 1000 } }
+      );
+
+      const js = res.data;
       // Accept either {data: [...] } or bare array
       const arr = Array.isArray(js?.data) ? js.data : Array.isArray(js) ? js : [];
       setViewerData(arr);
     } catch (e) {
-      setViewerErr(String(e?.message || e));
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        String(e);
+      setViewerErr(String(msg));
     } finally {
       setViewerLoading(false);
     }
@@ -175,6 +171,7 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
   const viewerGrouped = useMemo(() => {
     const out = [];
     const byItem = new Map();
+
     for (const row of viewerData) {
       const keyItem = row.itemName || "(Unnamed)";
       if (!byItem.has(keyItem)) {
@@ -189,6 +186,7 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
       }
       itemObj.thicknesses.get(th).push(row);
     }
+
     // turn thickness map to array & sort
     return out.map((item) => {
       const thArr = Array.from(item.thicknesses.entries())
@@ -251,7 +249,8 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
         </label>
 
         <div className="description-setting__meta">
-          <span className="description-setting__count">{rows.length}</span> total &middot; {metaText}
+          <span className="description-setting__count">{rows.length}</span> total
+          &middot; {metaText}
         </div>
       </div>
 
@@ -291,7 +290,10 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
                         {highlight(r.itemNumber, q)}
                       </span>
                     ) : (
-                      <span className="description-setting__badge" title="No item number">
+                      <span
+                        className="description-setting__badge"
+                        title="No item number"
+                      >
                         —
                       </span>
                     )}
@@ -325,7 +327,11 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
 
       {/* === Slide-over viewer === */}
       {viewerOpen && (
-        <div className="description-setting__viewer" aria-modal="true" role="dialog">
+        <div
+          className="description-setting__viewer"
+          aria-modal="true"
+          role="dialog"
+        >
           {/* Backdrop first so it sits visually behind the panel but above page */}
           <div
             className="description-setting__viewer-backdrop"
@@ -342,24 +348,37 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
                     : "Description"}
                 </div>
                 <div className="description-setting__viewer-sub">
-                  {viewerRow?.itemNumber ? `#${viewerRow.itemNumber}` : "—"} &middot; ID {viewerRow?.id}
+                  {viewerRow?.itemNumber ? `#${viewerRow.itemNumber}` : "—"}{" "}
+                  &middot; ID {viewerRow?.id}
                 </div>
               </div>
-              <button className="description-setting__btn" onClick={() => setViewerOpen(false)}>
+              <button
+                className="description-setting__btn"
+                onClick={() => setViewerOpen(false)}
+              >
                 Close
               </button>
             </div>
 
             <div className="description-setting__viewer-body">
-              {viewerErr && <div className="description-setting__error">Error: {viewerErr}</div>}
+              {viewerErr && (
+                <div className="description-setting__error">
+                  Error: {viewerErr}
+                </div>
+              )}
               {viewerLoading ? (
                 <div className="description-setting__empty">Loading…</div>
               ) : viewerData.length === 0 ? (
-                <div className="description-setting__empty">No variants found for this description.</div>
+                <div className="description-setting__empty">
+                  No variants found for this description.
+                </div>
               ) : (
                 <div className="description-setting__viewer-groups">
                   {viewerGrouped.map((grp) => (
-                    <div key={grp.itemName} className="description-setting__viewer-group">
+                    <div
+                      key={grp.itemName}
+                      className="description-setting__viewer-group"
+                    >
                       <div className="description-setting__viewer-group-title">
                         {grp.itemName}
                       </div>
@@ -375,9 +394,13 @@ const res = await fetch(apiUrl("/items/real-descriptions/reorder").toString(), {
 
                           <div className="description-setting__viewer-variants">
                             {th.variants.map((v) => (
-                              <div className="description-setting__viewer-variant" key={v.variantId ?? v.id}>
+                              <div
+                                className="description-setting__viewer-variant"
+                                key={v.variantId ?? v.id}
+                              >
                                 <div className="description-setting__viewer-variant-title">
-                                  {fmtDims(v.length, v.width, v.sheetsPerBox) || "(No size)"}
+                                  {fmtDims(v.length, v.width, v.sheetsPerBox) ||
+                                    "(No size)"}
                                 </div>
                                 <div className="description-setting__viewer-variant-sub">
                                   <span className="description-setting__chip">

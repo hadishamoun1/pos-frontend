@@ -1,10 +1,7 @@
 // src/sqm-pieces/SqmPiecesPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import "./sqmPiece.css";
-
-const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-const baseUrl = rawBase.replace(/\/+$/, "");
+import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (baseURL already has /api)
 
 const num = (v) => {
   const n = Number(v);
@@ -92,7 +89,7 @@ export default function SqmPiecesPage() {
     setErrorMsg("");
 
     try {
-      const res = await axios.get(`${baseUrl}/sqm-pieces/lines`, {
+      const res = await axiosClient.get(`/sqm-pieces/lines`, {
         params: {
           page: pageToLoad,
           limit: PAGE_SIZE,
@@ -145,9 +142,7 @@ export default function SqmPiecesPage() {
     }
 
     try {
-      const res = await axios.get(
-        `${baseUrl}/sqm-pieces/lines/${transferItemId}`
-      );
+      const res = await axiosClient.get(`/sqm-pieces/lines/${transferItemId}`);
       const data = res.data;
       setModalHeader(data.header || null);
 
@@ -272,8 +267,8 @@ export default function SqmPiecesPage() {
       .filter((r) => r.length > 0 && r.width > 0 && r.count > 0);
 
     try {
-      const res = await axios.post(
-        `${baseUrl}/sqm-pieces/lines/${modalHeader.transferItemId}`,
+      const res = await axiosClient.post(
+        `/sqm-pieces/lines/${modalHeader.transferItemId}`,
         { pieces: payloadPieces }
       );
 
@@ -339,8 +334,8 @@ export default function SqmPiecesPage() {
     setModalSuccess("");
 
     try {
-      await axios.post(
-        `${baseUrl}/sqm-pieces/lines/${modalHeader.transferItemId}/trash-unallocated`,
+      await axiosClient.post(
+        `/sqm-pieces/lines/${modalHeader.transferItemId}/trash-unallocated`,
         { sqmToTrash }
       );
 
@@ -365,9 +360,7 @@ export default function SqmPiecesPage() {
   const handleRestoreUnallocated = async () => {
     if (!modalHeader) return;
 
-    const trashedUnalloc = num(
-      modalHeader.trashUnallocatedSqm 
-    );
+    const trashedUnalloc = num(modalHeader.trashUnallocatedSqm);
     const sqmToRestore = Number(trashedUnalloc.toFixed(4));
 
     if (sqmToRestore <= 0) {
@@ -387,8 +380,8 @@ export default function SqmPiecesPage() {
     setModalSuccess("");
 
     try {
-      await axios.post(
-        `${baseUrl}/sqm-pieces/lines/${modalHeader.transferItemId}/restore-unallocated`,
+      await axiosClient.post(
+        `/sqm-pieces/lines/${modalHeader.transferItemId}/restore-unallocated`,
         { sqmToRestore }
       );
 
@@ -422,14 +415,12 @@ export default function SqmPiecesPage() {
 
     const remaining = num(group.totalAvailableSqm);
     if (remaining <= 0.0001) {
-      // keep using banner if nothing to trash
       setErrorMsg(
         "There is no remaining available sqm in this group to move to trash."
       );
       return;
     }
 
-    // Open professional confirmation modal instead of window.confirm
     setTrashModal({
       open: true,
       groupKey: group.key,
@@ -460,14 +451,12 @@ export default function SqmPiecesPage() {
     setGroupTrashingKey(trashModal.groupKey);
 
     try {
-      await axios.post(`${baseUrl}/sqm-pieces/groups/trash-all`, {
+      await axiosClient.post(`/sqm-pieces/groups/trash-all`, {
         groupKey: trashModal.groupKey,
       });
 
-      // Reload from first page with current search
       await fetchLines({ page: 1, reset: true, q: searchText });
 
-      // Show success state in modal
       setTrashModal((prev) => ({
         ...prev,
         loading: false,
@@ -495,7 +484,6 @@ export default function SqmPiecesPage() {
 
     setErrorMsg("");
 
-    // Open confirmation modal for restore
     setRestoreModal({
       open: true,
       groupKey: group.key,
@@ -524,17 +512,12 @@ export default function SqmPiecesPage() {
     setGroupRestoreKey(restoreModal.groupKey);
 
     try {
-      await axios.post(
-        `${baseUrl}/sqm-pieces/groups/restore-all-unallocated`,
-        {
-          groupKey: restoreModal.groupKey,
-        }
-      );
+      await axiosClient.post(`/sqm-pieces/groups/restore-all-unallocated`, {
+        groupKey: restoreModal.groupKey,
+      });
 
-      // Reload from first page with current search
       await fetchLines({ page: 1, reset: true, q: searchText });
 
-      // Show success state in modal
       setRestoreModal((prev) => ({
         ...prev,
         loading: false,
@@ -635,9 +618,8 @@ export default function SqmPiecesPage() {
           <>
             {groups.map((group) => {
               const itemLabel =
-                (group.thickness != null
-                  ? `${group.thickness}ملم `
-                  : "") + (group.itemName || "");
+                (group.thickness != null ? `${group.thickness}ملم ` : "") +
+                (group.itemName || "");
               const isOpen = expandedGroupKey === group.key;
               const groupAvailable = num(group.totalAvailableSqm);
               const groupSold = num(group.totalSoldSqm);
@@ -655,9 +637,7 @@ export default function SqmPiecesPage() {
                   >
                     <div className="sqm-group-card-main">
                       <div className="sqm-group-card-title-row">
-                        <span className="sqm-group-card-title">
-                          {itemLabel}
-                        </span>
+                        <span className="sqm-group-card-title">{itemLabel}</span>
                       </div>
                       <div className="sqm-group-card-sub">
                         <span className="sqm-group-lines-count">
@@ -685,9 +665,7 @@ export default function SqmPiecesPage() {
                         </span>
                       </div>
                       <div className="sqm-group-metric">
-                        <span className="sqm-group-metric-label">
-                          Total sold
-                        </span>
+                        <span className="sqm-group-metric-label">Total sold</span>
                         <span className="sqm-group-metric-value">
                           {fmt2(groupSold)}
                         </span>
@@ -725,9 +703,7 @@ export default function SqmPiecesPage() {
                       <button
                         type="button"
                         className="sqm-group-view-btn sqm-group-trash-all-btn"
-                        onClick={() =>
-                          handleTrashAllForGroup(group, itemLabel)
-                        }
+                        onClick={() => handleTrashAllForGroup(group, itemLabel)}
                         disabled={
                           groupTrashingKey === group.key ||
                           groupRestoreKey === group.key ||
@@ -747,9 +723,7 @@ export default function SqmPiecesPage() {
                       <button
                         type="button"
                         className="sqm-group-view-btn sqm-group-restore-all-btn"
-                        onClick={() =>
-                          handleRestoreAllForGroup(group, itemLabel)
-                        }
+                        onClick={() => handleRestoreAllForGroup(group, itemLabel)}
                         disabled={
                           groupTrashingKey === group.key ||
                           groupRestoreKey === group.key
@@ -771,9 +745,7 @@ export default function SqmPiecesPage() {
                             <th>Transfer #</th>
                             <th>Date</th>
                             <th className="sqm-num-col">Line sqm</th>
-                            <th className="sqm-num-col">
-                              Allocated (pieces)
-                            </th>
+                            <th className="sqm-num-col">Allocated (pieces)</th>
                             <th className="sqm-num-col">Sold sqm</th>
                             <th className="sqm-num-col">Trash (total)</th>
                             <th className="sqm-num-col">Available</th>
@@ -807,15 +779,11 @@ export default function SqmPiecesPage() {
                               <tr key={row.transferItemId}>
                                 <td>{row.transferNumber}</td>
                                 <td>{row.date}</td>
-                                <td className="sqm-num-col">
-                                  {fmt2(row.lineSqm)}
-                                </td>
+                                <td className="sqm-num-col">{fmt2(row.lineSqm)}</td>
                                 <td className="sqm-num-col">
                                   {fmt2(row.allocatedSqm || 0)}
                                 </td>
-                                <td className="sqm-num-col">
-                                  {fmt2(row.soldSqm || 0)}
-                                </td>
+                                <td className="sqm-num-col">{fmt2(row.soldSqm || 0)}</td>
                                 <td className="sqm-num-col">
                                   {fmt2(row.totalTrashSqm || 0)}
                                 </td>
@@ -839,9 +807,7 @@ export default function SqmPiecesPage() {
                                   <button
                                     type="button"
                                     className="sqm-table-action-btn"
-                                    onClick={() =>
-                                      openModalForLine(row.transferItemId)
-                                    }
+                                    onClick={() => openModalForLine(row.transferItemId)}
                                   >
                                     Allocate pieces
                                   </button>
@@ -862,9 +828,7 @@ export default function SqmPiecesPage() {
                 <button
                   type="button"
                   className="sqm-load-more-btn"
-                  onClick={() =>
-                    fetchLines({ page: page + 1, reset: false })
-                  }
+                  onClick={() => fetchLines({ page: page + 1, reset: false })}
                   disabled={loadingMore}
                 >
                   {loadingMore ? "Loading more…" : "Load more"}
@@ -1140,15 +1104,11 @@ function SqmPiecesModal({
               </div>
               <div className="sqm-summary-block">
                 <span className="sqm-summary-label">Saved pieces sqm</span>
-                <span className="sqm-summary-value">
-                  {fmt2(savedPiecesSqm)}
-                </span>
+                <span className="sqm-summary-value">{fmt2(savedPiecesSqm)}</span>
               </div>
               <div className="sqm-summary-block">
                 <span className="sqm-summary-label">Trashed (unallocated)</span>
-                <span className="sqm-summary-value">
-                  {fmt2(trashedUnalloc)}
-                </span>
+                <span className="sqm-summary-value">{fmt2(trashedUnalloc)}</span>
               </div>
               <div className="sqm-summary-block sqm-summary-block-highlight">
                 <span className="sqm-summary-label">
@@ -1166,9 +1126,7 @@ function SqmPiecesModal({
                   {error}
                 </div>
               )}
-              {success && (
-                <div className="sqm-success-banner">{success}</div>
-              )}
+              {success && <div className="sqm-success-banner">{success}</div>}
 
               {/* Section 1: Define pieces */}
               <div className="sqm-modal-section">
@@ -1257,12 +1215,8 @@ function SqmPiecesModal({
                                 className="sqm-modal-input"
                               />
                             </td>
-                            <td className="sqm-num-col">
-                              {fmt2(row.sqmPerPiece)}
-                            </td>
-                            <td className="sqm-num-col">
-                              {fmt2(row.sqmTotal)}
-                            </td>
+                            <td className="sqm-num-col">{fmt2(row.sqmPerPiece)}</td>
+                            <td className="sqm-num-col">{fmt2(row.sqmTotal)}</td>
                             <td>
                               <button
                                 type="button"
@@ -1314,11 +1268,7 @@ function SqmPiecesModal({
                       type="button"
                       className="sqm-toolbar-btn sqm-toolbar-btn-danger"
                       onClick={onTrashRemaining}
-                      disabled={
-                        saving ||
-                        unallocatedBeforeEdit <= 0 ||
-                        hasUnsavedChanges
-                      }
+                      disabled={saving || unallocatedBeforeEdit <= 0 || hasUnsavedChanges}
                       title={
                         hasUnsavedChanges
                           ? "Save your piece changes first, then trash remaining sqm."
@@ -1333,9 +1283,7 @@ function SqmPiecesModal({
                       type="button"
                       className="sqm-toolbar-btn sqm-toolbar-btn-restore"
                       onClick={onRestoreUnallocated}
-                      disabled={
-                        saving || trashedUnalloc <= 0 || hasUnsavedChanges
-                      }
+                      disabled={saving || trashedUnalloc <= 0 || hasUnsavedChanges}
                       title={
                         hasUnsavedChanges
                           ? "Save your piece changes first, then restore trashed sqm."

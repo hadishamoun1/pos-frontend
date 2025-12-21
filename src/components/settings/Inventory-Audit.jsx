@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import axios from "axios";
 import "./styles/Inventory-Audit.css";
+import { axiosClient } from "../api/axiosClient"; 
 
-const RAW_API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-
-// existing audit endpoint
-const AUDIT_API = `${RAW_API_BASE}/inventory/audit/ofr/all`;
-
-// ✅ fix-one endpoint (the one you asked for)
-const FIX_ONE_API = `${RAW_API_BASE}/inventory/audit/ofr/fix`;
+// ✅ relative endpoints only (axiosClient.baseURL already handles /api)
+const AUDIT_API = `/inventory/audit/ofr/all`;
+const FIX_ONE_API = `/inventory/audit/ofr/fix`;
 
 function n(v, fallback = 0) {
   const x = Number(v);
@@ -16,7 +12,10 @@ function n(v, fallback = 0) {
 }
 function fmt2(v) {
   const x = n(v, 0);
-  return x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return x.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 function abs(v) {
   const x = n(v, 0);
@@ -67,7 +66,11 @@ export default function InventoryAuditPage() {
   const [fixErr, setFixErr] = useState("");
   const [fixRow, setFixRow] = useState(null); // original row (from audit list)
   const [fixPreview, setFixPreview] = useState(null); // response.row from fix-one
-  const [toast, setToast] = useState({ show: false, type: "success", msg: "" });
+  const [toast, setToast] = useState({
+    show: false,
+    type: "success",
+    msg: "",
+  });
 
   const params = useMemo(() => {
     const p = {};
@@ -84,7 +87,9 @@ export default function InventoryAuditPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.get(AUDIT_API, { params });
+      // ✅ axiosClient + relative endpoint
+      const res = await axiosClient.get(AUDIT_API, { params });
+
       const rawRows = Array.isArray(res.data?.rows) ? res.data.rows : [];
       const withNames = rawRows.map((r) => ({
         ...r,
@@ -94,7 +99,9 @@ export default function InventoryAuditPage() {
       setRows(withNames);
       setExpanded(new Set());
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || "Failed to load audit data");
+      setError(
+        e?.response?.data?.message || e?.message || "Failed to load audit data"
+      );
     } finally {
       setLoading(false);
     }
@@ -207,18 +214,21 @@ export default function InventoryAuditPage() {
     setFixLoading(true);
 
     try {
-      const res = await axios.post(FIX_ONE_API, {
+      // ✅ axiosClient + relative endpoint
+      const res = await axiosClient.post(FIX_ONE_API, {
         itemVariantId: row.itemVariantId,
         tolerance: effectiveTol,
         dryRun: true,
       });
 
       const rr = res.data?.row || null;
-      // ensure displayName
       const withName = rr
         ? {
             ...rr,
-            displayName: buildDisplayName(rr) || row.displayName || `#${row.itemVariantId}`,
+            displayName:
+              buildDisplayName(rr) ||
+              row.displayName ||
+              `#${row.itemVariantId}`,
           }
         : null;
 
@@ -236,7 +246,8 @@ export default function InventoryAuditPage() {
     setFixLoading(true);
 
     try {
-      const res = await axios.post(FIX_ONE_API, {
+      // ✅ axiosClient + relative endpoint
+      const res = await axiosClient.post(FIX_ONE_API, {
         itemVariantId: fixRow.itemVariantId,
         tolerance: effectiveTol,
         dryRun: false,
@@ -250,7 +261,6 @@ export default function InventoryAuditPage() {
       setFixPreview(null);
       setFixRow(null);
 
-      // refresh list
       await fetchData();
     } catch (e) {
       setFixErr(e?.response?.data?.message || e?.message || "Fix failed");
@@ -272,20 +282,31 @@ export default function InventoryAuditPage() {
     <div className="inventory-audit-page">
       {/* toast */}
       {toast.show ? (
-        <div className={`inventory-audit-toast inventory-audit-toast-${toast.type}`}>
+        <div
+          className={`inventory-audit-toast inventory-audit-toast-${toast.type}`}
+        >
           {toast.msg}
         </div>
       ) : null}
 
       {/* fix modal */}
       {fixOpen ? (
-        <div className="inventory-audit-modal-overlay" onClick={closeFixModal}>
-          <div className="inventory-audit-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="inventory-audit-modal-overlay"
+          onClick={closeFixModal}
+        >
+          <div
+            className="inventory-audit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="inventory-audit-modal-head">
               <div>
-                <div className="inventory-audit-modal-title">Fix Ghost Stock</div>
+                <div className="inventory-audit-modal-title">
+                  Fix Ghost Stock
+                </div>
                 <div className="inventory-audit-modal-sub">
-                  This will update <b>ItemVariant total*OFR</b> to match <b>InventoryTransaction.sqmofr</b>.
+                  This will update <b>ItemVariant total*OFR</b> to match{" "}
+                  <b>InventoryTransaction.sqmofr</b>.
                 </div>
               </div>
 
@@ -299,7 +320,10 @@ export default function InventoryAuditPage() {
             </div>
 
             {fixErr ? (
-              <div className="inventory-audit-alert inventory-audit-alert-error" style={{ marginTop: 10 }}>
+              <div
+                className="inventory-audit-alert inventory-audit-alert-error"
+                style={{ marginTop: 10 }}
+              >
                 <div className="inventory-audit-alert-title">Error</div>
                 <div className="inventory-audit-alert-body">{fixErr}</div>
               </div>
@@ -309,38 +333,70 @@ export default function InventoryAuditPage() {
               <div className="inventory-audit-modal-kpi">
                 <div className="inventory-audit-modal-kpi-label">Item</div>
                 <div className="inventory-audit-modal-kpi-value">
-                  {fixPreview?.displayName || fixRow?.displayName || (fixRow ? `#${fixRow.itemVariantId}` : "-")}
+                  {fixPreview?.displayName ||
+                    fixRow?.displayName ||
+                    (fixRow ? `#${fixRow.itemVariantId}` : "-")}
                 </div>
               </div>
 
               <div className="inventory-audit-modal-grid">
                 <div className="inventory-audit-modal-card">
-                  <div className="inventory-audit-modal-card-title">Ledger (sqmofr)</div>
+                  <div className="inventory-audit-modal-card-title">
+                    Ledger (sqmofr)
+                  </div>
                   <div className="inventory-audit-modal-kv">
-                    <div>Start</div><div>{fixPreview ? fmt2(fixPreview.ledgerStartOFR) : "…"}</div>
-                    <div>In</div><div>{fixPreview ? fmt2(fixPreview.ledgerInOFR) : "…"}</div>
-                    <div>Out (mag)</div><div>{fixPreview ? fmt2(fixPreview.ledgerOutOFR) : "…"}</div>
-                    <div>Balance</div><div>{fixPreview ? fmt2(fixPreview.ledgerBalanceOFR) : "…"}</div>
+                    <div>Start</div>
+                    <div>{fixPreview ? fmt2(fixPreview.ledgerStartOFR) : "…"}</div>
+                    <div>In</div>
+                    <div>{fixPreview ? fmt2(fixPreview.ledgerInOFR) : "…"}</div>
+                    <div>Out (mag)</div>
+                    <div>{fixPreview ? fmt2(fixPreview.ledgerOutOFR) : "…"}</div>
+                    <div>Balance</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.ledgerBalanceOFR) : "…"}
+                    </div>
                   </div>
                 </div>
 
                 <div className="inventory-audit-modal-card">
-                  <div className="inventory-audit-modal-card-title">Cached (ItemVariant)</div>
+                  <div className="inventory-audit-modal-card-title">
+                    Cached (ItemVariant)
+                  </div>
                   <div className="inventory-audit-modal-kv">
-                    <div>Start</div><div>{fixPreview ? fmt2(fixPreview.cachedStartOFR) : "…"}</div>
-                    <div>In</div><div>{fixPreview ? fmt2(fixPreview.cachedInOFR) : "…"}</div>
-                    <div>Out</div><div>{fixPreview ? fmt2(fixPreview.cachedOutOFR) : "…"}</div>
-                    <div>Balance</div><div>{fixPreview ? fmt2(fixPreview.cachedBalanceOFR) : "…"}</div>
+                    <div>Start</div>
+                    <div>{fixPreview ? fmt2(fixPreview.cachedStartOFR) : "…"}</div>
+                    <div>In</div>
+                    <div>{fixPreview ? fmt2(fixPreview.cachedInOFR) : "…"}</div>
+                    <div>Out</div>
+                    <div>{fixPreview ? fmt2(fixPreview.cachedOutOFR) : "…"}</div>
+                    <div>Balance</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.cachedBalanceOFR) : "…"}
+                    </div>
                   </div>
                 </div>
 
                 <div className="inventory-audit-modal-card">
-                  <div className="inventory-audit-modal-card-title">Will be set to</div>
+                  <div className="inventory-audit-modal-card-title">
+                    Will be set to
+                  </div>
                   <div className="inventory-audit-modal-kv">
-                    <div>totalStartOFR</div><div>{fixPreview ? fmt2(fixPreview.fixTo?.totalStartOFR) : "…"}</div>
-                    <div>totalInOFR</div><div>{fixPreview ? fmt2(fixPreview.fixTo?.totalInOFR) : "…"}</div>
-                    <div>totalOutOFR</div><div>{fixPreview ? fmt2(fixPreview.fixTo?.totalOutOFR) : "…"}</div>
-                    <div>totalBalanceOFR</div><div>{fixPreview ? fmt2(fixPreview.fixTo?.totalBalanceOFR) : "…"}</div>
+                    <div>totalStartOFR</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.fixTo?.totalStartOFR) : "…"}
+                    </div>
+                    <div>totalInOFR</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.fixTo?.totalInOFR) : "…"}
+                    </div>
+                    <div>totalOutOFR</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.fixTo?.totalOutOFR) : "…"}
+                    </div>
+                    <div>totalBalanceOFR</div>
+                    <div>
+                      {fixPreview ? fmt2(fixPreview.fixTo?.totalBalanceOFR) : "…"}
+                    </div>
                   </div>
 
                   <div className="inventory-audit-modal-actions">
@@ -377,7 +433,8 @@ export default function InventoryAuditPage() {
         <div>
           <h1 className="inventory-audit-title">Inventory OFR Audit</h1>
           <p className="inventory-audit-subtitle">
-            Shows <b>ghost stock only</b> (ledger ≠ cached) using <b>sqmofr</b>. Display uses <b>Thickness + Item Name</b>.
+            Shows <b>ghost stock only</b> (ledger ≠ cached) using <b>sqmofr</b>.
+            Display uses <b>Thickness + Item Name</b>.
           </p>
         </div>
 
@@ -401,7 +458,9 @@ export default function InventoryAuditPage() {
               <div className="inventory-audit-kpi-label">Ghost variants</div>
               <div
                 className={`inventory-audit-kpi-value ${
-                  ghostCount ? "inventory-audit-kpi-bad" : "inventory-audit-kpi-ok"
+                  ghostCount
+                    ? "inventory-audit-kpi-bad"
+                    : "inventory-audit-kpi-ok"
                 }`}
               >
                 {ghostCount}
@@ -415,7 +474,9 @@ export default function InventoryAuditPage() {
 
             <div className="inventory-audit-kpi">
               <div className="inventory-audit-kpi-label">Returned (API)</div>
-              <div className="inventory-audit-kpi-value">{meta?.returned ?? rows.length}</div>
+              <div className="inventory-audit-kpi-value">
+                {meta?.returned ?? rows.length}
+              </div>
             </div>
           </div>
 
@@ -430,17 +491,23 @@ export default function InventoryAuditPage() {
 
           <div className="inventory-audit-form-row">
             <div className="inventory-audit-field">
-              <div className="inventory-audit-field-label">Variant ID (server)</div>
+              <div className="inventory-audit-field-label">
+                Variant ID (server)
+              </div>
               <input
                 className="inventory-audit-input"
                 placeholder="e.g. 111"
                 value={variantId}
-                onChange={(e) => setVariantId(e.target.value.replace(/[^\d]/g, ""))}
+                onChange={(e) =>
+                  setVariantId(e.target.value.replace(/[^\d]/g, ""))
+                }
               />
             </div>
 
             <div className="inventory-audit-field">
-              <div className="inventory-audit-field-label">Tolerance (server)</div>
+              <div className="inventory-audit-field-label">
+                Tolerance (server)
+              </div>
               <input
                 className="inventory-audit-input"
                 value={tolerance}
@@ -458,7 +525,9 @@ export default function InventoryAuditPage() {
             </button>
 
             <div className="inventory-audit-field" style={{ minWidth: 260 }}>
-              <div className="inventory-audit-field-label">Quick filter (local: name/id)</div>
+              <div className="inventory-audit-field-label">
+                Quick filter (local: name/id)
+              </div>
               <input
                 className="inventory-audit-input"
                 placeholder="مثال: 5.5ملم ابيض أو 111"
@@ -481,7 +550,8 @@ export default function InventoryAuditPage() {
         <div className="inventory-audit-table-toolbar">
           <div className="inventory-audit-table-title">Ghost stock results</div>
           <div className="inventory-audit-table-hint">
-            Click a row to expand details. Click headers to sort. Δ = (ledger - cached).
+            Click a row to expand details. Click headers to sort. Δ = (ledger -
+            cached).
           </div>
         </div>
 
@@ -499,7 +569,9 @@ export default function InventoryAuditPage() {
                     title="Sort"
                   >
                     {c.label}
-                    <span className="inventory-audit-sort-ind">{sortIndicator(c.key)}</span>
+                    <span className="inventory-audit-sort-ind">
+                      {sortIndicator(c.key)}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -508,14 +580,21 @@ export default function InventoryAuditPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={COLS.length + 1} className="inventory-audit-empty">
+                  <td
+                    colSpan={COLS.length + 1}
+                    className="inventory-audit-empty"
+                  >
                     Loading…
                   </td>
                 </tr>
               ) : sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={COLS.length + 1} className="inventory-audit-empty">
-                    No ghost stock found (ledger matches cached within tolerance).
+                  <td
+                    colSpan={COLS.length + 1}
+                    className="inventory-audit-empty"
+                  >
+                    No ghost stock found (ledger matches cached within
+                    tolerance).
                   </td>
                 </tr>
               ) : (
@@ -547,21 +626,48 @@ export default function InventoryAuditPage() {
 
                         <td>
                           <div style={{ fontWeight: 900 }}>{r.displayName}</div>
-                          <div style={{ fontSize: 12, color: "rgba(15,23,42,.55)" }}>#{id}</div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "rgba(15,23,42,.55)",
+                            }}
+                          >
+                            #{id}
+                          </div>
                         </td>
 
-                        <td className="inventory-audit-td-num">{fmt2(r.ledgerStartOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.ledgerInOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.ledgerOutOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.ledgerBalanceOFR)}</td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.ledgerStartOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.ledgerInOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.ledgerOutOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.ledgerBalanceOFR)}
+                        </td>
 
-                        <td className="inventory-audit-td-num">{fmt2(r.cachedStartOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.cachedInOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.cachedOutOFR)}</td>
-                        <td className="inventory-audit-td-num">{fmt2(r.cachedBalanceOFR)}</td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.cachedStartOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.cachedInOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.cachedOutOFR)}
+                        </td>
+                        <td className="inventory-audit-td-num">
+                          {fmt2(r.cachedBalanceOFR)}
+                        </td>
 
-                        <td className={`inventory-audit-td-num ${balanceCls}`}>{fmt2(r.diffBalanceOFR)}</td>
-                        <td className={`inventory-audit-td-num ${outCls}`}>{fmt2(r.diffOutOFR)}</td>
+                        <td className={`inventory-audit-td-num ${balanceCls}`}>
+                          {fmt2(r.diffBalanceOFR)}
+                        </td>
+                        <td className={`inventory-audit-td-num ${outCls}`}>
+                          {fmt2(r.diffOutOFR)}
+                        </td>
                       </tr>
 
                       {open ? (
@@ -569,44 +675,76 @@ export default function InventoryAuditPage() {
                           <td colSpan={COLS.length + 1}>
                             <div className="inventory-audit-detail-grid">
                               <div className="inventory-audit-detail-card">
-                                <div className="inventory-audit-detail-title">Ledger (sqmofr)</div>
+                                <div className="inventory-audit-detail-title">
+                                  Ledger (sqmofr)
+                                </div>
                                 <div className="inventory-audit-detail-kv">
-                                  <div>Start</div><div>{fmt2(r.ledgerStartOFR)}</div>
-                                  <div>In</div><div>{fmt2(r.ledgerInOFR)}</div>
-                                  <div>Out (mag)</div><div>{fmt2(r.ledgerOutOFR)}</div>
-                                  <div>Balance</div><div>{fmt2(r.ledgerBalanceOFR)}</div>
+                                  <div>Start</div>
+                                  <div>{fmt2(r.ledgerStartOFR)}</div>
+                                  <div>In</div>
+                                  <div>{fmt2(r.ledgerInOFR)}</div>
+                                  <div>Out (mag)</div>
+                                  <div>{fmt2(r.ledgerOutOFR)}</div>
+                                  <div>Balance</div>
+                                  <div>{fmt2(r.ledgerBalanceOFR)}</div>
                                 </div>
                               </div>
 
                               <div className="inventory-audit-detail-card">
-                                <div className="inventory-audit-detail-title">Cached (ItemVariant)</div>
+                                <div className="inventory-audit-detail-title">
+                                  Cached (ItemVariant)
+                                </div>
                                 <div className="inventory-audit-detail-kv">
-                                  <div>Start</div><div>{fmt2(r.cachedStartOFR)}</div>
-                                  <div>In</div><div>{fmt2(r.cachedInOFR)}</div>
-                                  <div>Out</div><div>{fmt2(r.cachedOutOFR)}</div>
-                                  <div>Balance</div><div>{fmt2(r.cachedBalanceOFR)}</div>
+                                  <div>Start</div>
+                                  <div>{fmt2(r.cachedStartOFR)}</div>
+                                  <div>In</div>
+                                  <div>{fmt2(r.cachedInOFR)}</div>
+                                  <div>Out</div>
+                                  <div>{fmt2(r.cachedOutOFR)}</div>
+                                  <div>Balance</div>
+                                  <div>{fmt2(r.cachedBalanceOFR)}</div>
                                 </div>
                               </div>
 
                               <div className="inventory-audit-detail-card">
-                                <div className="inventory-audit-detail-title">Diffs</div>
+                                <div className="inventory-audit-detail-title">
+                                  Diffs
+                                </div>
                                 <div className="inventory-audit-detail-kv">
-                                  <div>Δ Start</div><div className={diffClass(r.diffStartOFR)}>{fmt2(r.diffStartOFR)}</div>
-                                  <div>Δ In</div><div className={diffClass(r.diffInOFR)}>{fmt2(r.diffInOFR)}</div>
-                                  <div>Δ Out</div><div className={diffClass(r.diffOutOFR)}>{fmt2(r.diffOutOFR)}</div>
-                                  <div>Δ Balance</div><div className={diffClass(r.diffBalanceOFR)}>{fmt2(r.diffBalanceOFR)}</div>
+                                  <div>Δ Start</div>
+                                  <div className={diffClass(r.diffStartOFR)}>
+                                    {fmt2(r.diffStartOFR)}
+                                  </div>
+                                  <div>Δ In</div>
+                                  <div className={diffClass(r.diffInOFR)}>
+                                    {fmt2(r.diffInOFR)}
+                                  </div>
+                                  <div>Δ Out</div>
+                                  <div className={diffClass(r.diffOutOFR)}>
+                                    {fmt2(r.diffOutOFR)}
+                                  </div>
+                                  <div>Δ Balance</div>
+                                  <div className={diffClass(r.diffBalanceOFR)}>
+                                    {fmt2(r.diffBalanceOFR)}
+                                  </div>
                                 </div>
 
                                 <div className="inventory-audit-detail-note">
-                                  Cached formula check: <b>cachedStart + cachedIn - cachedOut</b> ={" "}
-                                  <b>{fmt2(r.cachedBalanceFormulaOFR)}</b> (diff:{" "}
-                                  <b className={diffClass(r.diffCachedBalanceFormulaOFR)}>
+                                  Cached formula check:{" "}
+                                  <b>cachedStart + cachedIn - cachedOut</b> ={" "}
+                                  <b>{fmt2(r.cachedBalanceFormulaOFR)}</b>{" "}
+                                  (diff:{" "}
+                                  <b
+                                    className={diffClass(
+                                      r.diffCachedBalanceFormulaOFR
+                                    )}
+                                  >
                                     {fmt2(r.diffCachedBalanceFormulaOFR)}
-                                  </b>)
+                                  </b>
+                                  )
                                 </div>
 
                                 <div className="inventory-audit-detail-actions">
-                                  {/* ✅ NEW: preview fix */}
                                   <button
                                     className="inventory-audit-btn inventory-audit-btn-primary"
                                     onClick={(e) => {
@@ -643,7 +781,8 @@ export default function InventoryAuditPage() {
       </div>
 
       <div className="inventory-audit-footer-note">
-        Display name is built as: <b>Thickness + "ملم" + Item Name</b>. Δ values are <b>(ledger - cached)</b>.
+        Display name is built as: <b>Thickness + "ملم" + Item Name</b>. Δ values
+        are <b>(ledger - cached)</b>.
       </div>
     </div>
   );

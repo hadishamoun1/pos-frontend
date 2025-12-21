@@ -1,9 +1,8 @@
 // src/components/StockTotalsAudit.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
+import axios from "axios"; // keep ONLY for axios.isCancel checks
+import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (adjust path if needed)
 import "./styles/stockTotalsAudit.css";
-
-const baseUrl = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
 /* =========================
    Robust parsing/formatting
@@ -169,11 +168,16 @@ export default function StockTotalsAudit() {
       includeBatches: 1,
       ...(fix ? { fix: 1 } : {}),
     };
-    const res = await axios.get(`${baseUrl}/items/v1/stock-totals/all-variants-batches`, {
-      params,
-      signal,
-      headers: { "Cache-Control": "no-cache" },
-    });
+
+    // ✅ axiosClient + RELATIVE path ONLY (no baseUrl prefix)
+    const res = await axiosClient.get(
+      `/items/v1/stock-totals/all-variants-batches`,
+      {
+        params,
+        signal,
+        headers: { "Cache-Control": "no-cache" },
+      }
+    );
     return res.data;
   };
 
@@ -476,7 +480,8 @@ export default function StockTotalsAudit() {
   }, [clientPaging, clientTotalPages]);
 
   const serverTotalPages = Number(data?.totalPages || 0);
-  const serverHasMore = data?.hasMore !== undefined ? Boolean(data.hasMore) : (serverTotalPages ? page < serverTotalPages : false);
+  const serverHasMore =
+    data?.hasMore !== undefined ? Boolean(data.hasMore) : (serverTotalPages ? page < serverTotalPages : false);
 
   const hasMore = clientPaging ? (page < clientTotalPages) : serverHasMore;
 
@@ -561,7 +566,12 @@ export default function StockTotalsAudit() {
 
   const saveVariant = async (variantId, editObj) => {
     const id = Number(variantId);
-    await axios.put(`${baseUrl}/items/v1/stock-totals/variants/${id}/totals`, buildVariantPayload(editObj));
+    // ✅ axiosClient + relative path
+    await axiosClient.put(
+      `/items/v1/stock-totals/variants/${id}/totals`,
+      buildVariantPayload(editObj)
+    );
+
     setVariantEdits((prev) => {
       const next = new Map(prev);
       next.delete(id);
@@ -621,7 +631,12 @@ export default function StockTotalsAudit() {
 
   const saveBatch = async (batchId, editObj) => {
     const id = Number(batchId);
-    await axios.put(`${baseUrl}/items/v1/stock-totals/batches/${id}/totals`, buildBatchPayload(editObj));
+    // ✅ axiosClient + relative path
+    await axiosClient.put(
+      `/items/v1/stock-totals/batches/${id}/totals`,
+      buildBatchPayload(editObj)
+    );
+
     setBatchEdits((prev) => {
       const next = new Map(prev);
       next.delete(id);
@@ -691,6 +706,9 @@ export default function StockTotalsAudit() {
 
   return (
     <div className="sta-root">
+      {/* UI unchanged below */}
+      {/* ... KEEP THE REST OF YOUR JSX EXACTLY AS YOU HAVE IT ... */}
+      {/* NOTE: Everything below this point is exactly your original UI */}
       <div className="sta-header">
         <div className="sta-header-left">
           <div className="sta-title">Stock Totals Audit</div>
@@ -785,7 +803,6 @@ export default function StockTotalsAudit() {
         </div>
       </div>
 
-      {/* ✅ Pagination visible when NOT loadAll */}
       {!loadAll && (
         <div className="sta-card sta-pager">
           <div className="sta-pager-inline">
@@ -843,6 +860,9 @@ export default function StockTotalsAudit() {
       {note && <div className="sta-alert info">{note}</div>}
       {err && <div className="sta-alert error"><b>Error:</b> {err}</div>}
 
+      {/* ✅ keep the rest of your original rendering exactly as-is */}
+      {/* (Your big list UI continues...) */}
+      {/* --- START original block --- */}
       <div className="sta-card sta-list">
         {visibleRows.length === 0 ? (
           <div className="sta-empty">{loading ? "Loading…" : "No variants matched your filters."}</div>
@@ -906,7 +926,6 @@ export default function StockTotalsAudit() {
                   </div>
                 </div>
 
-                {/* ✅ HEAVY BODY renders ONLY when expanded */}
                 {expanded && (() => {
                   const ve = getEditForVariant(row);
                   const vbal  = toNum(ve.totalStart) + toNum(ve.totalIn) - toNum(ve.totalOut);
@@ -921,7 +940,6 @@ export default function StockTotalsAudit() {
 
                       <div className="sta-vcard">
                         <div className="sta-vcard-cols">
-                          {/* Stored */}
                           <div className="sta-vbox">
                             <div className="sta-vbox-title"><span className="sta-legend-dot stored" /> Stored (DB)</div>
                             <div className="sta-vrow"><span>BASE Bal</span><b>{fmt2(s.totalBalance)}</b></div>
@@ -930,7 +948,6 @@ export default function StockTotalsAudit() {
                             <div className="sta-vrow small"><span>OFR S/I/O</span><b>{fmt2(s.totalStartOFR)} / {fmt2(s.totalInOFR)} / {fmt2(s.totalOutOFR)}</b></div>
                           </div>
 
-                          {/* Expected */}
                           <div className="sta-vbox">
                             <div className="sta-vbox-title"><span className="sta-legend-dot expected" /> Expected (sum of batches)</div>
                             <div className="sta-vrow"><span>BASE Bal</span><b>{fmt2(c.totalBalance)}</b></div>
@@ -939,7 +956,6 @@ export default function StockTotalsAudit() {
                             <div className="sta-vrow small"><span>OFR S/I/O</span><b>{fmt2(c.totalStartOFR)} / {fmt2(c.totalInOFR)} / {fmt2(c.totalOutOFR)}</b></div>
                           </div>
 
-                          {/* Edit */}
                           <div className="sta-vbox edit">
                             <div className="sta-vbox-title"><span className="sta-legend-dot edit" /> Edit Variant Totals</div>
 
@@ -1207,6 +1223,7 @@ export default function StockTotalsAudit() {
           })
         )}
       </div>
+   
     </div>
   );
 }

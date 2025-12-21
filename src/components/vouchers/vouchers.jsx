@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
-import axios from "axios";
+import { axiosClient } from "../api/axiosClient";
 import NotificationModal from "../recievables/NotificationModal";
 import JournalListsModal from "./journal-list-modal";
 
@@ -13,7 +13,6 @@ const JournalVoucherPage = () => {
   // Header / meta
   const [date, setDate] = useState("");
   const [type, setType] = useState(""); // S | G | SR | RVR
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   // Summary list search
   const [summarySeq, setSummarySeq] = useState("");
@@ -912,7 +911,7 @@ const JournalVoucherPage = () => {
       }
 
       const payload = buildCreatePayload();
-      const response = await axios.post(`${baseUrl}/journal-vouchers`, payload);
+      const response = await axiosClient.post(`/journal-vouchers`, payload);
 
       if (response.status === 201) {
         const created = response.data;
@@ -959,8 +958,8 @@ const JournalVoucherPage = () => {
 
     try {
       const payload = buildEditPayload();
-      const response = await axios.put(
-        `${baseUrl}/journal-vouchers/${editingId}`,
+      const response = await axiosClient.put(
+        `/journal-vouchers/${editingId}`,
         payload
       );
 
@@ -990,7 +989,7 @@ const JournalVoucherPage = () => {
 
   // ====== PAGINATED fetch for the modal list ======
   const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
-    const base = `${baseUrl}/journal-vouchers/v1`;
+    const base = `/journal-vouchers/v1`;
 
     const seq = (seqArg || "").replace(/\D+/g, "");
     const kind = (kindArg || "").trim();
@@ -1005,7 +1004,7 @@ const JournalVoucherPage = () => {
       ? `${base}/search-by-seq?${qs.toString()}`
       : `${base}/list?${qs.toString()}`;
 
-    const response = await axios.get(url);
+    const response = await axiosClient.get(url);
     return response.data;
   };
 
@@ -1074,9 +1073,7 @@ const JournalVoucherPage = () => {
 
   const fetchJournalVoucherById = async (id) => {
     try {
-      const { data: jv } = await axios.get(
-        `${baseUrl}/journal-vouchers/${id}`
-      );
+      const { data: jv } = await axiosClient.get(`/journal-vouchers/${id}`);
 
       setDate(jv.date);
       setType(jv.jvType);
@@ -1138,8 +1135,7 @@ const JournalVoucherPage = () => {
       setNotification({
         visible: true,
         type: "error",
-        message:
-          "Failed to fetch journal voucher details. Please try again.",
+        message: "Failed to fetch journal voucher details. Please try again.",
         onConfirm: null,
       });
     }
@@ -1353,9 +1349,7 @@ const JournalVoucherPage = () => {
             <td>
               <input
                 type="text"
-                value={
-                  readOnlyMode ? formatNumber(entry.debit) : entry.debit
-                }
+                value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
                 onChange={(e) =>
                   handleInputChange(index, "debit", e.target.value)
@@ -1372,9 +1366,7 @@ const JournalVoucherPage = () => {
             <td>
               <input
                 type="text"
-                value={
-                  readOnlyMode ? formatNumber(entry.credit) : entry.credit
-                }
+                value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
                 onChange={(e) =>
                   handleInputChange(index, "credit", e.target.value)
@@ -1787,9 +1779,7 @@ const JournalVoucherPage = () => {
             <td>
               <input
                 type="text"
-                value={
-                  readOnlyMode ? formatNumber(entry.debit) : entry.debit
-                }
+                value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
                 onChange={(e) =>
                   handleInputChange(index, "debit", e.target.value)
@@ -1817,9 +1807,7 @@ const JournalVoucherPage = () => {
             <td>
               <input
                 type="text"
-                value={
-                  readOnlyMode ? formatNumber(entry.credit) : entry.credit
-                }
+                value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
                 onChange={(e) =>
                   handleInputChange(index, "credit", e.target.value)
@@ -2131,11 +2119,7 @@ const JournalVoucherPage = () => {
             </span>
             <span className="summary-total-txt">
               Diff (Base):{" "}
-              <span
-                className={`number ${
-                  diffBase === 0 ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${diffBase === 0 ? "equal" : "not-equal"}`}>
                 {formatNumber(diffBase)}
               </span>
             </span>
@@ -2146,11 +2130,7 @@ const JournalVoucherPage = () => {
               Total Debit OFR:{" "}
               <span
                 className={`number ${
-                  type === "G"
-                    ? isEqualOFR
-                      ? "equal"
-                      : "not-equal"
-                    : ""
+                  type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""
                 }`}
               >
                 {formatNumber(totalDebitOFR)}
@@ -2160,11 +2140,7 @@ const JournalVoucherPage = () => {
               Total Credit OFR:{" "}
               <span
                 className={`number ${
-                  type === "G"
-                    ? isEqualOFR
-                      ? "equal"
-                      : "not-equal"
-                    : ""
+                  type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""
                 }`}
               >
                 {formatNumber(totalCreditOFR)}
@@ -2172,11 +2148,7 @@ const JournalVoucherPage = () => {
             </span>
             <span className="summary-total-txt">
               Diff (OFR):{" "}
-              <span
-                className={`number ${
-                  diffOFR === 0 ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${diffOFR === 0 ? "equal" : "not-equal"}`}>
                 {formatNumber(diffOFR)}
               </span>
             </span>
@@ -2185,21 +2157,13 @@ const JournalVoucherPage = () => {
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit USD:{" "}
-              <span
-                className={`number ${
-                  isUSDEqual ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
                 {formatNumber(totalDebitUSD)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit USD:{" "}
-              <span
-                className={`number ${
-                  isUSDEqual ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isUSDEqual ? "equal" : "not-equal"}`}>
                 {formatNumber(totalCreditUSD)}
               </span>
             </span>
@@ -2208,21 +2172,13 @@ const JournalVoucherPage = () => {
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit LL:{" "}
-              <span
-                className={`number ${
-                  isLLEqual ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
                 {formatNumber(totalDebitLL)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit LL:{" "}
-              <span
-                className={`number ${
-                  isLLEqual ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isLLEqual ? "equal" : "not-equal"}`}>
                 {formatNumber(totalCreditLL)}
               </span>
             </span>
@@ -2231,20 +2187,11 @@ const JournalVoucherPage = () => {
 
         {/* Context menu */}
         {contextMenu.visible && !readOnlyMode && (
-          <div
-            className="context-menu"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-          >
-            <button
-              className="context-menu-item"
-              onClick={handleDuplicateRow}
-            >
+          <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+            <button className="context-menu-item" onClick={handleDuplicateRow}>
               Duplicate row
             </button>
-            <button
-              className="context-menu-item"
-              onClick={handleDeleteRow}
-            >
+            <button className="context-menu-item" onClick={handleDeleteRow}>
               Delete row
             </button>
           </div>
@@ -2255,14 +2202,10 @@ const JournalVoucherPage = () => {
           <NotificationModal
             type={notification.type}
             message={notification.message}
-            onClose={() =>
-              setNotification({ ...notification, visible: false })
-            }
+            onClose={() => setNotification({ ...notification, visible: false })}
             onConfirm={notification.onConfirm}
             confirmLabel="OK"
-            cancelLabel={
-              notification.type === "warning" ? "Cancel" : null
-            }
+            cancelLabel={notification.type === "warning" ? "Cancel" : null}
           />
         )}
       </div>

@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
-import axios from "axios";
 import CustomerSelectionModal from "./CustomerSelectionModal";
 import "./newRecord.css";
 import NotificationModal from "./NotificationModal";
-
+import { axiosClient } from "../api/axiosClient"; // ✅ added (api client)
 
 function InvoicePicker({
   disabled,
   loading,
-  value, 
-  options, 
-  onChange, 
+  value,
+  options,
+  onChange,
   placeholder = "— None —",
 }) {
   const [open, setOpen] = useState(false);
@@ -67,27 +66,27 @@ function InvoicePicker({
   const displayText =
     selected?.invoiceNumber || (loading ? "Loading..." : placeholder);
 
-const computeMenuPos = () => {
-  const el = rootRef.current;
-  if (!el) return;
-  const btn = el.querySelector(".inv-picker__btn");
-  if (!btn) return;
+  const computeMenuPos = () => {
+    const el = rootRef.current;
+    if (!el) return;
+    const btn = el.querySelector(".inv-picker__btn");
+    if (!btn) return;
 
-  const rect = btn.getBoundingClientRect();
+    const rect = btn.getBoundingClientRect();
 
-  const MENU_W = 750; // must match the width you use in portal style
-  const GAP = 6;
+    const MENU_W = 750; // must match the width you use in portal style
+    const GAP = 6;
 
-  // ✅ align menu to the LEFT side (right-aligned to the button)
-  let left = rect.right - MENU_W;
+    // ✅ align menu to the LEFT side (right-aligned to the button)
+    let left = rect.right - MENU_W;
 
-  // ✅ keep inside viewport
-  left = Math.max(8, Math.min(left, window.innerWidth - MENU_W - 8));
+    // ✅ keep inside viewport
+    left = Math.max(8, Math.min(left, window.innerWidth - MENU_W - 8));
 
-  const top = rect.bottom + GAP;
+    const top = rect.bottom + GAP;
 
-  setPos({ left, top, width: rect.width });
-};
+    setPos({ left, top, width: rect.width });
+  };
 
   // close on outside click / ESC
   useEffect(() => {
@@ -186,7 +185,9 @@ const computeMenuPos = () => {
             <div className="inv-picker__list">
               {normalized.length === 0 ? (
                 <div className="inv-picker__empty">
-                  {loading ? "Loading invoices..." : "No invoices for this customer."}
+                  {loading
+                    ? "Loading invoices..."
+                    : "No invoices for this customer."}
                 </div>
               ) : (
                 normalized.map((inv) => (
@@ -299,8 +300,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
   // ✅ prevents double save
   const [saving, setSaving] = useState(false);
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL || "http://localhost:3000";
-
   // ✅ Cache invoices per customer to avoid refetching
   const invoiceCacheRef = useRef(new Map()); // customerId -> invoices[]
 
@@ -333,8 +332,10 @@ const NewRecordModal = ({ onClose, onSave }) => {
       return invoiceCacheRef.current.get(key) || [];
     }
 
-    const url = `${baseUrl}/recievables/v1/customers/${key}/invoices`;
-    const resp = await axios.get(url);
+    // ✅ FIX: relative URL only
+    const url = `/recievables/v1/customers/${key}/invoices`;
+    const resp = await axiosClient.get(url);
+
     const list = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
     invoiceCacheRef.current.set(key, list);
     return list;
@@ -473,11 +474,13 @@ const NewRecordModal = ({ onClose, onSave }) => {
         if (r.currency === "LL" && !r.exchangeRate)
           throw new Error("Exchange rate is required for LL.");
 
-        if (!r.amountExchanged) throw new Error("Amount exchanged is required.");
+        if (!r.amountExchanged)
+          throw new Error("Amount exchanged is required.");
         if (!r.date) throw new Error("Date is required.");
 
         const cashNumber = parseFloat((r.cashNumber || "").replace(/,/g, ""));
-        if (!Number.isFinite(cashNumber)) throw new Error("Invalid cash number.");
+        if (!Number.isFinite(cashNumber))
+          throw new Error("Invalid cash number.");
 
         const exchangeRateRaw = (r.exchangeRate || "").replace(/,/g, "");
         const exchangeRate =
@@ -513,7 +516,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
           pmtType: r.pmtType,
         };
 
-        const resp = await axios.post(`${baseUrl}/recievables`, payload);
+        // ✅ FIX: relative URL only
+        const resp = await axiosClient.post(`/recievables`, payload);
         created.push(resp.data);
       }
 

@@ -1,6 +1,7 @@
 // src/pages/settings/YearSettings.jsx
 import React, { useEffect, useState } from "react";
 import "./styles/SettingYear.css";
+import { axiosClient } from "../api/axiosClient"; 
 
 const YearSettings = () => {
   const [activeYear, setActiveYear] = useState("");
@@ -10,18 +11,12 @@ const YearSettings = () => {
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-  const baseUrl = rawBase.replace(/\/+$/, "");
-
   // Fetch current active year on mount
   useEffect(() => {
     const fetchActiveYear = async () => {
       try {
-        const res = await fetch(`${baseUrl}/settings/active-year`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch active year (status ${res.status})`);
-        }
-        const year = await res.json(); // returns a string
+        const res = await axiosClient.get(`/settings/active-year`); // ✅ relative path
+        const year = res.data; // returns a string
         setActiveYear(String(year));
         setErrorMsg("");
       } catch (err) {
@@ -31,7 +26,7 @@ const YearSettings = () => {
     };
 
     fetchActiveYear();
-  }, [baseUrl]);
+  }, []);
 
   // Add new year
   const handleAddYear = async (e) => {
@@ -47,25 +42,20 @@ const YearSettings = () => {
 
     try {
       setLoading(true);
-      const res = await fetch(`${baseUrl}/settings/add-year`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ year: y }),
-      });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to add year.");
-      }
+      const res = await axiosClient.post(`/settings/add-year`, { year: y }); // ✅ relative path
+      const saved = res.data; // Settings entity
 
-      const saved = await res.json(); // Settings entity
       setStatusMsg(`Year ${saved.year} was added successfully.`);
       setNewYear("");
     } catch (err) {
       console.error("Error adding year:", err);
-      setErrorMsg(err.message || "Error occurred while adding the year.");
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Error occurred while adding the year.";
+      setErrorMsg(String(msg));
     } finally {
       setLoading(false);
     }
@@ -85,26 +75,23 @@ const YearSettings = () => {
 
     try {
       setLoading(true);
-      const res = await fetch(`${baseUrl}/settings/set-active-year`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ year: y }),
-      });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to set active year.");
-      }
+      const res = await axiosClient.patch(`/settings/set-active-year`, {
+        year: y,
+      }); // ✅ relative path
 
-      const updated = await res.json(); // Settings entity
+      const updated = res.data; // Settings entity
       setActiveYear(String(updated.year));
       setStatusMsg(`Active fiscal year set to ${updated.year}.`);
       setYearToActivate("");
     } catch (err) {
       console.error("Error setting active year:", err);
-      setErrorMsg(err.message || "Error occurred while setting active year.");
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Error occurred while setting active year.";
+      setErrorMsg(String(msg));
     } finally {
       setLoading(false);
     }

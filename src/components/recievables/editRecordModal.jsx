@@ -1,8 +1,8 @@
 // src/recievables/EditRecordModal.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import "./editRecordModal.css";
 import CustomerSelectionModal from "./CustomerSelectionModal";
+import { axiosClient } from "../api/axiosClient"; // ✅ added
 
 const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -21,8 +21,6 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
   });
   console.log(formData);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const stripCommas = (s) => (s ? s.replace(/,/g, "") : "");
   const formatCommas = (n) =>
@@ -65,6 +63,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
 
     setFormData(newForm);
   }, [selectedRow]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
@@ -117,8 +116,9 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
         pmtType,
       };
 
-      const res = await axios.put(
-        `${baseUrl}/recievables/${receiptVoucherId}`,
+      // ✅ FIX: relative URL only (axiosClient already has baseURL /api)
+      const res = await axiosClient.put(
+        `/recievables/${receiptVoucherId}`,
         payload
       );
 

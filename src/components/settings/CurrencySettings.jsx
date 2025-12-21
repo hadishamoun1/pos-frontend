@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles/CurrencySettings.css";
+import { axiosClient } from "../api/axiosClient"; // ✅ use api client
 
 const CurrencySettings = () => {
   const [currencies, setCurrencies] = useState([]);
@@ -12,9 +13,6 @@ const CurrencySettings = () => {
   const [statusMsg, setStatusMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const rawBase = process.env.REACT_APP_API_BASE_URL || "";
-  const baseUrl = rawBase.replace(/\/+$/, "");
-
   const clearMessages = () => {
     setStatusMsg("");
     setErrorMsg("");
@@ -24,12 +22,9 @@ const CurrencySettings = () => {
   const fetchCurrencies = async () => {
     try {
       clearMessages();
-      const res = await fetch(`${baseUrl}/currency`);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch currencies (status ${res.status})`);
-      }
-      const data = await res.json();
-      setCurrencies(data || []);
+      // ✅ FIX: relative URL only
+      const res = await axiosClient.get(`/currency`);
+      setCurrencies(res.data || []);
     } catch (err) {
       console.error("Error fetching currencies:", err);
       setErrorMsg("Failed to load currencies.");
@@ -39,7 +34,7 @@ const CurrencySettings = () => {
   useEffect(() => {
     fetchCurrencies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseUrl]);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -71,46 +66,24 @@ const CurrencySettings = () => {
 
       if (editingCode) {
         // UPDATE
-        const res = await fetch(
-          `${baseUrl}/currency/${encodeURIComponent(editingCode)}`,
+        const res = await axiosClient.put(
+          `/currency/${encodeURIComponent(editingCode)}`,
           {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              currencyName: currencyName || "",
-              currencyCode: currencyCode, // you can allow changing code or not
-            }),
+            currencyName: currencyName || "",
+            currencyCode: currencyCode, // you can allow changing code or not
           }
         );
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Failed to update currency.");
-        }
-
-        const updated = await res.json();
+        const updated = res.data;
         setStatusMsg(`Currency ${updated.currencyCode} updated successfully.`);
       } else {
         // CREATE
-        const res = await fetch(`${baseUrl}/currency`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            currencyCode: currencyCode,
-            currencyName: currencyName || "",
-          }),
+        const res = await axiosClient.post(`/currency`, {
+          currencyCode: currencyCode,
+          currencyName: currencyName || "",
         });
 
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Failed to create currency.");
-        }
-
-        const created = await res.json();
+        const created = res.data;
         setStatusMsg(`Currency ${created.currencyCode} created successfully.`);
       }
 
@@ -118,7 +91,12 @@ const CurrencySettings = () => {
       fetchCurrencies();
     } catch (err) {
       console.error("Error saving currency:", err);
-      setErrorMsg(err.message || "Error occurred while saving currency.");
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Error occurred while saving currency.";
+      setErrorMsg(String(msg));
     } finally {
       setLoading(false);
     }
@@ -147,17 +125,11 @@ const CurrencySettings = () => {
 
     try {
       setLoading(true);
-      const res = await fetch(
-        `${baseUrl}/currency/${encodeURIComponent(currency.currencyCode)}`,
-        {
-          method: "DELETE",
-        }
-      );
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to delete currency.");
-      }
+      // ✅ FIX: relative URL only
+      await axiosClient.delete(
+        `/currency/${encodeURIComponent(currency.currencyCode)}`
+      );
 
       setStatusMsg(`Currency ${currency.currencyCode} deleted successfully.`);
       fetchCurrencies();
@@ -166,7 +138,12 @@ const CurrencySettings = () => {
       }
     } catch (err) {
       console.error("Error deleting currency:", err);
-      setErrorMsg(err.message || "Error occurred while deleting currency.");
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data ||
+        err?.message ||
+        "Error occurred while deleting currency.";
+      setErrorMsg(String(msg));
     } finally {
       setLoading(false);
     }

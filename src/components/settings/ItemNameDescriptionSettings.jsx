@@ -1,57 +1,7 @@
 // src/pages/settings/DescriptionSettingsBase.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import "./styles/DescriptionSorting.css";
-
-/**
- * Production (Nginx):
- *   REACT_APP_API_BASE_URL=/api
- * Dev:
- *   You can also use /api if you proxy, or set full URL.
- *
- * This helper supports BOTH:
- *   - "/api" (path prefix)
- *   - "http://192.168.x.x:3001/api" (full url)
- *   - "http://192.168.x.x:3001" (full url no prefix)
- */
-const API_BASE = (process.env.REACT_APP_API_BASE_URL || "/api").replace(/\/+$/, "");
-
-const apiUrl = (path) => {
-  const cleanPath = String(path || "").startsWith("/") ? String(path || "") : `/${String(path || "")}`;
-
-  // If API_BASE is a full URL
-  if (/^https?:\/\//i.test(API_BASE)) {
-    const base = new URL(API_BASE);
-    const prefix = base.pathname.replace(/\/+$/, "");
-    base.pathname = `${prefix}${cleanPath}`.replace(/\/{2,}/g, "/");
-    return base;
-  }
-
-  // If API_BASE is a path prefix like "/api"
-  return new URL(`${API_BASE}${cleanPath}`.replace(/\/{2,}/g, "/"), window.location.origin);
-};
-
-async function fetchJson(url, options) {
-  const res = await fetch(url.toString(), options);
-  const ct = res.headers.get("content-type") || "";
-  const text = await res.text();
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} — ${text.slice(0, 200)}`);
-  }
-
-  // Help you catch the famous "<!DOCTYPE html>" issue early
-  if (!ct.includes("application/json")) {
-    throw new Error(
-      `Expected JSON but got "${ct || "unknown"}". First bytes: ${text.slice(0, 80)}`
-    );
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Invalid JSON. First bytes: ${text.slice(0, 120)}`);
-  }
-}
+import { axiosClient } from "../api/axiosClient"; 
 
 /* ----------------- helpers ----------------- */
 function highlight(text, q) {
@@ -108,15 +58,27 @@ export default function DescriptionSettingsBase({ resource, title }) {
     setLoading(true);
     setErr("");
     try {
-      const url = apiUrl(`/items/${resource || "item-descriptions"}`);
-      if (q) url.searchParams.set("q", q);
-      if (withCounts) url.searchParams.set("withCounts", "1");
+      const path = `/items/${resource || "item-descriptions"}`;
 
-      const data = await fetchJson(url);
+      const res = await axiosClient.get(path, {
+        params: {
+          q: q || undefined,
+          withCounts: withCounts ? "1" : undefined,
+        },
+      });
+
+      const data = res.data;
       setRows(Array.isArray(data) ? data : []);
       setIsDirty(false);
     } catch (e) {
-      setErr(String(e?.message || e));
+      setErr(
+        String(
+          e?.response?.data?.message ||
+            e?.response?.data ||
+            e?.message ||
+            e
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -163,16 +125,20 @@ export default function DescriptionSettingsBase({ resource, title }) {
       setLoading(true);
       setErr("");
 
-      const url = apiUrl(`/items/${resource || "item-descriptions"}/reorder`);
-      await fetchJson(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order }),
-      });
+      const path = `/items/${resource || "item-descriptions"}/reorder`;
+
+      await axiosClient.put(path, { order });
 
       await fetchData();
     } catch (e) {
-      setErr(String(e?.message || e));
+      setErr(
+        String(
+          e?.response?.data?.message ||
+            e?.response?.data ||
+            e?.message ||
+            e
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -193,16 +159,32 @@ export default function DescriptionSettingsBase({ resource, title }) {
     try {
       setViewerLoading(true);
 
-      const url = apiUrl(`/items/${resource || "item-descriptions"}/${descRow.id}/variants`);
-      url.searchParams.set("limit", "500");
-      url.searchParams.set("page", "1");
-      if (q) url.searchParams.set("q", q);
+      const path = `/items/${resource || "item-descriptions"}/${descRow.id}/variants`;
 
-      const js = await fetchJson(url);
-      const arr = Array.isArray(js?.data) ? js.data : Array.isArray(js) ? js : [];
+      const res = await axiosClient.get(path, {
+        params: {
+          limit: "500",
+          page: "1",
+          q: q || undefined,
+        },
+      });
+
+      const js = res.data;
+      const arr = Array.isArray(js?.data)
+        ? js.data
+        : Array.isArray(js)
+        ? js
+        : [];
       setViewerData(arr);
     } catch (e) {
-      setViewerErr(String(e?.message || e));
+      setViewerErr(
+        String(
+          e?.response?.data?.message ||
+            e?.response?.data ||
+            e?.message ||
+            e
+        )
+      );
     } finally {
       setViewerLoading(false);
     }
@@ -248,7 +230,9 @@ export default function DescriptionSettingsBase({ resource, title }) {
         <h3 className="description-setting__title">{title}</h3>
         <div className="description-setting__actions">
           <button
-            className={`description-setting__btn description-setting__btn--primary ${isDirty ? "is-dirty" : ""}`}
+            className={`description-setting__btn description-setting__btn--primary ${
+              isDirty ? "is-dirty" : ""
+            }`}
             disabled={!isDirty || loading}
             onClick={saveOrder}
             title="Save sort order"
@@ -286,7 +270,8 @@ export default function DescriptionSettingsBase({ resource, title }) {
         </label>
 
         <div className="description-setting__meta">
-          <span className="description-setting__count">{rows.length}</span> total &middot; {metaText}
+          <span className="description-setting__count">{rows.length}</span> total
+          &middot; {metaText}
         </div>
       </div>
 
@@ -325,7 +310,10 @@ export default function DescriptionSettingsBase({ resource, title }) {
                         {highlight(r.itemNumber, q)}
                       </span>
                     ) : (
-                      <span className="description-setting__badge" title="No item number">
+                      <span
+                        className="description-setting__badge"
+                        title="No item number"
+                      >
                         —
                       </span>
                     )}
@@ -357,7 +345,11 @@ export default function DescriptionSettingsBase({ resource, title }) {
 
       {/* === Slide-over viewer === */}
       {viewerOpen && (
-        <div className="description-setting__viewer" aria-modal="true" role="dialog">
+        <div
+          className="description-setting__viewer"
+          aria-modal="true"
+          role="dialog"
+        >
           <div
             className="description-setting__viewer-backdrop"
             onClick={() => setViewerOpen(false)}
@@ -373,24 +365,37 @@ export default function DescriptionSettingsBase({ resource, title }) {
                     : "Description"}
                 </div>
                 <div className="description-setting__viewer-sub">
-                  {viewerRow?.itemNumber ? `#${viewerRow.itemNumber}` : "—"} &middot; ID {viewerRow?.id}
+                  {viewerRow?.itemNumber ? `#${viewerRow.itemNumber}` : "—"}
+                  &middot; ID {viewerRow?.id}
                 </div>
               </div>
-              <button className="description-setting__btn" onClick={() => setViewerOpen(false)}>
+              <button
+                className="description-setting__btn"
+                onClick={() => setViewerOpen(false)}
+              >
                 Close
               </button>
             </div>
 
             <div className="description-setting__viewer-body">
-              {viewerErr && <div className="description-setting__error">Error: {viewerErr}</div>}
+              {viewerErr && (
+                <div className="description-setting__error">
+                  Error: {viewerErr}
+                </div>
+              )}
               {viewerLoading ? (
                 <div className="description-setting__empty">Loading…</div>
               ) : viewerData.length === 0 ? (
-                <div className="description-setting__empty">No variants found for this description.</div>
+                <div className="description-setting__empty">
+                  No variants found for this description.
+                </div>
               ) : (
                 <div className="description-setting__viewer-groups">
                   {viewerGrouped.map((grp) => (
-                    <div key={grp.itemName} className="description-setting__viewer-group">
+                    <div
+                      key={grp.itemName}
+                      className="description-setting__viewer-group"
+                    >
                       <div className="description-setting__viewer-group-title">
                         {grp.itemName}
                       </div>
@@ -411,7 +416,8 @@ export default function DescriptionSettingsBase({ resource, title }) {
                                 key={v.variantId ?? v.id}
                               >
                                 <div className="description-setting__viewer-variant-title">
-                                  {fmtDims(v.length, v.width, v.sheetsPerBox) || "(No size)"}
+                                  {fmtDims(v.length, v.width, v.sheetsPerBox) ||
+                                    "(No size)"}
                                 </div>
                                 <div className="description-setting__viewer-variant-sub">
                                   <span className="description-setting__chip">

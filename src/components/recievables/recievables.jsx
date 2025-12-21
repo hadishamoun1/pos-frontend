@@ -4,8 +4,8 @@ import "./recievables.css";
 import NewRecordModal from "./newRecord";
 import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";
-import axios from "axios";
-import io from "socket.io-client";
+import { axiosClient } from "../api/axiosClient"; // ✅ use your api client
+import { io } from "socket.io-client"; // ✅ named import
 import RctPaper from "./rctPreview";
 
 // ✅ NEW: Statement modal (adjust path to your actual file location)
@@ -31,8 +31,6 @@ const AccountingPage = () => {
   const [stmtCustomerId, setStmtCustomerId] = useState(null);
   const [stmtCustomerName, setStmtCustomerName] = useState("");
   const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
-
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   const openNewModal = () => setIsNewModalOpen(true);
   const closeNewModal = () => setIsNewModalOpen(false);
@@ -91,7 +89,9 @@ const AccountingPage = () => {
   const handleDelete = async () => {
     const id = filteredData[selectedRowIndex].id;
     try {
-      await axios.delete(`${baseUrl}/recievables/${id}`);
+      // ✅ relative URL only
+      await axiosClient.delete(`/recievables/${id}`);
+
       setNotification({ type: "success", message: "Deleted successfully." });
       const next = data.filter((r) => r.id !== id);
       setData(next);
@@ -126,7 +126,6 @@ const AccountingPage = () => {
 
     setStmtCustomerId(cid);
     setStmtCustomerName(sel?.customerName || "");
-    // optional: pass the record date as the default date in statement modal
     setStmtDefaultDate(sel?.date || null);
 
     setIsStatementOpen(true);
@@ -137,8 +136,10 @@ const AccountingPage = () => {
 
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${baseUrl}/recievables/v1/summary`);
-        const formatted = res.data.map((v) => ({
+        // ✅ relative URL only
+        const res = await axiosClient.get(`/recievables/v1/summary`);
+
+        const formatted = (res.data || []).map((v) => ({
           id: v.id,
           date: v.date.slice(0, 10),
           customerName: v.customerName,
@@ -154,12 +155,16 @@ const AccountingPage = () => {
           rct: v.jvNumber,
           type: v.type,
         }));
+
         setData(formatted);
         setFilteredData(formatted);
       } catch (err) {
         console.error("🚨 fetchData error:", err);
-        setError(err.message || "Failed to load data");
-        setNotification({ type: "error", message: err.message });
+        setError(err?.message || "Failed to load data");
+        setNotification({
+          type: "error",
+          message: err?.response?.data?.message || err?.message,
+        });
       } finally {
         setLoading(false);
       }
@@ -168,9 +173,12 @@ const AccountingPage = () => {
     fetchData();
 
     try {
-      socket = io(baseUrl);
+      // ✅ IMPORTANT for nginx /api proxy:
+      // connect to same origin and set socket.io path under /api
+      socket = io(window.location.origin, { path: "/api/socket.io" });
+
       socket.on("recievables", (updated) => {
-        const fmt = updated.map((v) => ({
+        const fmt = (updated || []).map((v) => ({
           id: v.id,
           date: v.date.slice(0, 10),
           customerName: v.customerName,
@@ -190,11 +198,11 @@ const AccountingPage = () => {
         setFilteredData(fmt);
       });
     } catch {
-      console.warn("Socket.io not available at", baseUrl);
+      console.warn("Socket.io not available");
     }
 
     return () => socket && socket.disconnect();
-  }, [baseUrl]);
+  }, []);
 
   const formatNumberWithCommas = (n) =>
     n != null ? Number(n).toLocaleString("en-US") : "";
@@ -212,19 +220,19 @@ const AccountingPage = () => {
       return;
     }
 
-const norm = (v) => String(v ?? "").toLowerCase();
+    const norm = (v) => String(v ?? "").toLowerCase();
+    const t = norm(term);
 
-const t = norm(term);
-const quick = data.filter(
-  (r) =>
-    norm(r.customerName).includes(t) ||
-    norm(r.refInvoice).includes(t) ||      
-    norm(r.invoiceNumber).includes(t) ||
-    norm(r.comments).includes(t) ||
-    norm(r.pmtType).includes(t)
-);
+    const quick = data.filter(
+      (r) =>
+        norm(r.customerName).includes(t) ||
+        norm(r.refInvoice).includes(t) ||
+        norm(r.invoiceNumber).includes(t) ||
+        norm(r.comments).includes(t) ||
+        norm(r.pmtType).includes(t)
+    );
 
-setFilteredData(quick);
+    setFilteredData(quick);
     if (term.length < 2) return;
 
     const timeout = setTimeout(async () => {
@@ -236,7 +244,8 @@ setFilteredData(quick);
 
       setSearching(true);
       try {
-        const resp = await axios.get(`${baseUrl}/journal-vouchers/v1/jv/search`, {
+        // ✅ relative URL only
+        const resp = await axiosClient.get(`/journal-vouchers/v1/jv/search`, {
           params: { q: term, limit: 50, page: 1 },
           signal: controller.signal,
         });
@@ -254,8 +263,10 @@ setFilteredData(quick);
 
         setFilteredData(byServer.length ? byServer : quick);
       } catch (err) {
-        if (axios.isCancel?.(err)) return;
+        // ✅ cancellation guard (no axios import needed)
+        if (err?.code === "ERR_CANCELED") return;
         if (err?.name === "CanceledError") return;
+
         console.warn("Server search failed, using local filter:", err);
       } finally {
         setSearching(false);
@@ -263,7 +274,7 @@ setFilteredData(quick);
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchTerm, data, baseUrl]);
+  }, [searchTerm, data]);
 
   const handlePreviewReceipt = (record) => {
     setReceiptPreviewRecord(record);
