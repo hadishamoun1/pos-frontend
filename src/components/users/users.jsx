@@ -30,6 +30,7 @@ const PERMISSION_GROUPS = [
       "sqm.view",
       "cuts.view",
       "viewing.view",
+      
     ],
   },
   {
@@ -99,6 +100,7 @@ const PERMISSION_GROUPS = [
       "transfers.update",
       "transfers.delete",
       "cuts.view",
+      "inventory.view"
 
 
 
