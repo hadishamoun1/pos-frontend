@@ -152,7 +152,7 @@ const Toolbar = ({
             className="pos-page-toolbar-button pos-page-blue-button"
             onClick={() => setShowRequestPreview(true)}
           >
-            View Request
+            View Req
           </button>
         )}
         {/* ✅ Delivery Note (always visible; enabled only if request OR invoice selected) */}
@@ -168,7 +168,7 @@ const Toolbar = ({
       : "Select a request or invoice first"
   }
 >
-  Delivery Note
+  Del Note
 </button>
 
 
