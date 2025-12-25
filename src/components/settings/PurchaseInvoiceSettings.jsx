@@ -8,6 +8,14 @@ const PurchaseInvoiceSettings = () => {
   const [accounts, setAccounts] = useState([]);
   const [rows, setRows] = useState([]);
 
+  // ✅ recompute UI state
+  const [recomputeFromDate, setRecomputeFromDate] = useState(() => {
+    // default: today (you can change to "" if you want empty by default)
+    return new Date().toISOString().slice(0, 10);
+  });
+  const [isRecomputing, setIsRecomputing] = useState(false);
+  const [pendingRecompute, setPendingRecompute] = useState(false);
+
   const [notification, setNotification] = useState({
     show: false,
     type: "", // "success" | "error" | "warning"
@@ -146,6 +154,29 @@ const PurchaseInvoiceSettings = () => {
     }
   };
 
+  // ✅ recompute button click → confirm
+  const handleRecomputeClick = () => {
+    const fromDate = (recomputeFromDate || "").trim();
+
+    if (!fromDate) {
+      setNotification({
+        show: true,
+        type: "warning",
+        message: "Please select a From Date first.",
+        mode: "info",
+      });
+      return;
+    }
+
+    setPendingRecompute(true);
+    setNotification({
+      show: true,
+      type: "warning",
+      message: `Recompute costs from ${fromDate}? This may take some time.`,
+      mode: "confirm",
+    });
+  };
+
   // ───────────────────────── delete menu (right-click) ─────────────────────────
   const openDeleteMenu = (e, rowIndex) => {
     e.preventDefault();
@@ -190,42 +221,83 @@ const PurchaseInvoiceSettings = () => {
   const handleNotificationClose = () => {
     setNotification((prev) => ({ ...prev, show: false }));
     setPendingDelete(null);
+    setPendingRecompute(false);
   };
 
   const handleNotificationConfirm = async () => {
-    // Only do delete logic when we are in confirm mode
-    if (notification.mode !== "confirm" || !pendingDelete) {
+    // confirm can be delete OR recompute
+    if (notification.mode !== "confirm") {
       handleNotificationClose();
       return;
     }
 
-    const { index, id } = pendingDelete;
+    // ✅ 1) Delete logic
+    if (pendingDelete) {
+      const { index, id } = pendingDelete;
 
-    try {
-      if (id) {
-        // call DELETE API for existing setting
-        await axiosClient.delete(`/purchase-invoice-setting/${id}`);
+      try {
+        if (id) {
+          // call DELETE API for existing setting
+          await axiosClient.delete(`/purchase-invoice-setting/${id}`);
+        }
+        // remove row from UI
+        setRows((prev) => prev.filter((_, i) => i !== index));
+
+        setNotification({
+          show: true,
+          type: "success",
+          message: "Charge deleted successfully.",
+          mode: "info",
+        });
+      } catch (error) {
+        console.error("Delete failed", error);
+        setNotification({
+          show: true,
+          type: "error",
+          message: "Failed to delete charge.",
+          mode: "info",
+        });
+      } finally {
+        setPendingDelete(null);
       }
-      // remove row from UI
-      setRows((prev) => prev.filter((_, i) => i !== index));
 
-      setNotification({
-        show: true,
-        type: "success",
-        message: "Charge deleted successfully.",
-        mode: "info",
-      });
-    } catch (error) {
-      console.error("Delete failed", error);
-      setNotification({
-        show: true,
-        type: "error",
-        message: "Failed to delete charge.",
-        mode: "info",
-      });
-    } finally {
-      setPendingDelete(null);
+      return;
     }
+
+    // ✅ 2) Recompute logic
+    if (pendingRecompute) {
+      const fromDate = (recomputeFromDate || "").trim();
+
+      setPendingRecompute(false);
+      setIsRecomputing(true);
+
+      try {
+        await axiosClient.post(`/recompute/recompute-costs`, { fromDate });
+
+        setNotification({
+          show: true,
+          type: "success",
+          message: `Recompute started successfully from ${fromDate}.`,
+          mode: "info",
+        });
+      } catch (error) {
+        console.error("Recompute failed", error);
+        setNotification({
+          show: true,
+          type: "error",
+          message:
+            "Failed to run recompute. Check permission (recompute.run) and server logs.",
+          mode: "info",
+        });
+      } finally {
+        setIsRecomputing(false);
+      }
+
+      return;
+    }
+
+    // nothing pending
+    handleNotificationClose();
   };
 
   return (
@@ -236,7 +308,24 @@ const PurchaseInvoiceSettings = () => {
       <div className="purchase-invoice-settings-header-wrapper">
         <div className="purchase-invoice-settings-header">
           <h2>Purchase Invoice Charges</h2>
-          <div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* ✅ Recompute controls */}
+            <input
+              type="date"
+              value={recomputeFromDate}
+              onChange={(e) => setRecomputeFromDate(e.target.value)}
+              className="purchase-invoice-settings-recompute-date"
+            />
+            <button
+              className="purchase-invoice-settings-save-button purchase-invoice-settings-recompute-button"
+              onClick={handleRecomputeClick}
+              disabled={isRecomputing}
+              title="Runs /recompute/recompute-costs"
+            >
+              {isRecomputing ? "Recomputing..." : "Recompute Costs"}
+            </button>
+
+            {/* Existing buttons */}
             <button
               className="purchase-invoice-settings-add-row-button"
               onClick={addRow}

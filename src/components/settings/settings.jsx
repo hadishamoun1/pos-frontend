@@ -12,6 +12,7 @@ import YearSettings from "./YearSettings";
 import CurrencySettings from "./CurrencySettings";
 import InvoiceDisplayNamesPanel from "./invoiceDisplayName";   
 import StockTotalsAudit from "./StockTotalsAudit";
+import LogoutAllUsersPage from "./LogoutAllUsersPage";
 
 
 import "./settings.css";
@@ -50,6 +51,8 @@ const SettingsPage = () => {
         return <StockTotalsAudit />;
            case "inventory-audit":
         return <InventoryAuditPage />;
+             case "logout-users":
+        return <LogoutAllUsersPage />;
 
       default:
         return <GeneralSettings />;
@@ -148,6 +151,12 @@ const SettingsPage = () => {
             onClick={() => setActiveTab("inventory-audit")}
           >
              Inventory Audit
+          </li>
+                <li
+            className={activeTab === "logout-users" ? "active" : ""}
+            onClick={() => setActiveTab("logout-users")}
+          >
+             Users Logout
           </li>
 
         </ul>

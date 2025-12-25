@@ -215,6 +215,19 @@
   color: #b91c1c;
 }
 
+.purchase-invoice-settings-recompute-date {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.purchase-invoice-settings-recompute-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
 /* ───────────────────────── Responsive ───────────────────────── */
 
 @media (max-width: 768px) {

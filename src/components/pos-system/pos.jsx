@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa";
 import "./pos.css";
 import SearchModal from "./searchModal";
@@ -13,6 +13,8 @@ import PricingTable from "./pricingTable";
 import ToggleSwitch from "./Components/ToggleSwitch";
 import InvoiceModal from "./invoicePreviewModal";
 import StatementModal from "./Components/StatementModal";
+import RequestPreviewModal from "./RequestPreviewModal";
+import DeliveryNoteModal from "./DeliveryNoteModal";
 
 // ✅ API client (baseURL should be "/api")
 import { axiosClient } from "../api/axiosClient";
@@ -44,8 +46,12 @@ const POSSystemPage = () => {
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [requestSearch, setRequestSearch] = useState("");
   const [editingInvoiceType, setEditingInvoiceType] = useState(null);
-
+const [showRequestPreview, setShowRequestPreview] = useState(false);
   const [cutMode, setCutMode] = useState(false);
+  const [showDeliveryNotePreview, setShowDeliveryNotePreview] = useState(false);
+
+  const [selectedRequestNumber, setSelectedRequestNumber] = useState("");
+
   const [customerPreview, setCustomerPreview] = useState({
     customerName: "",
     customerAddress: "",
@@ -55,6 +61,8 @@ const POSSystemPage = () => {
     currencyCode: "USD",
   });
   const [statementBaseDate, setStatementBaseDate] = useState(null);
+  const today = new Date().toISOString().split("T")[0];
+  const [date, setDate] = useState(today);
 
   const toYMDLocal = (d) => {
     const y = d.getFullYear();
@@ -99,6 +107,8 @@ const POSSystemPage = () => {
       handleEditRequest();
     });
   };
+
+
 
   const handleCreateInvoiceConfirmed = (type) => {
     const label =
@@ -241,6 +251,7 @@ const POSSystemPage = () => {
       );
     });
 
+
     const expanded = [];
     (selectedItems || []).forEach((item) => {
       const t = String(item?.type || "").toLowerCase();
@@ -334,95 +345,168 @@ const POSSystemPage = () => {
     setTableData((prev) => [...prev, ...newRows]);
   };
 
-  const handleSelectRequest = async (reqOrId) => {
-    const id =
-      typeof reqOrId === "object"
-        ? reqOrId?.id ?? reqOrId?.requestId ?? null
-        : reqOrId;
+  
+    const requestForPreview = {
+      requestNumber: selectedRequestNumber || "", 
+  customerName: selectedCustomerName || customerInput || "",
+  requestDate: date,
+  address: customerPreview?.customerAddress || "",
+  telephone: customerPreview?.customerPhone || "",
+  items: (tableData || []).map((r, i) => ({
+    itemNumber: i + 1,
+    itemName: r.item || "",
+    box: r.box ?? "",
+    sheet: r.sheet ?? "",
+    length: r.length ?? "",
+    width: r.width ?? "",
+    sqm: r.sqm ?? "",
+    unit: (String(r.type || r.itemType || "").toUpperCase() || ""),
+    unitPrice: r.price ?? "",
+    invoicePrice: r.total ?? "",
+  })),
+};
 
-    console.log("Fetching request details for:", reqOrId, "→ id:", id);
-    if (!id) return;
+ const handleSelectRequest = async (reqOrId) => {
+  const id =
+    typeof reqOrId === "object"
+      ? reqOrId?.id ?? reqOrId?.requestId ?? null
+      : reqOrId;
 
-    setSelectedRequestId(id);
-    setSelectedInvoiceId(null);
-    setLoading(true);
-    setIsEditable(false);
+  console.log("Fetching request details for:", reqOrId, "→ id:", id);
+  if (!id) return;
 
-    if (typeof reqOrId === "object") {
-      setSelectedCustomerName(reqOrId?.customerName || "");
-      setCustomerInput(reqOrId?.customerName || "");
-      setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
-    }
+  setSelectedRequestId(id);
+  setSelectedInvoiceId(null);
+  setLoading(true);
+  setIsEditable(false);
 
-    try {
-      // ✅ FIX
-      const { data: request } = await axiosClient.get(`/requests/${id}`);
-      console.log("Fetched Request:", request);
+  // ✅ if we clicked from RequestCard, set some fields immediately (including requestNumber)
+  if (typeof reqOrId === "object") {
+    setSelectedRequestNumber(reqOrId?.requestNumber || "");
+    setSelectedCustomerName(reqOrId?.customerName || "");
+    setCustomerInput(reqOrId?.customerName || "");
+    setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
+  } else {
+    // if id-only (no object), clear until fetch fills it
+    setSelectedRequestNumber("");
+  }
 
-      setCustomerInput(request.customerName || "");
-      setSelectedCustomerName(request.customerName || "");
-      setSelectedCustomerId(request.customerId || null);
-      setSelectedInvoiceType(request.invoiceType || "Both");
-      setDate(toYMD(request.requestDate || request.date));
+  try {
+    // ✅ fetch full request
+    const { data: request } = await axiosClient.get(`/requests/${id}`);
+    console.log("Fetched Request:", request);
 
-      const details = Array.isArray(request.details) ? request.details : [];
+    // ✅ IMPORTANT: set requestNumber from backend payload
+    setSelectedRequestNumber(
+      request?.requestNumber || (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") || ""
+    );
 
-      const updatedData = details.map((detail) => {
-        const itemType = String(detail?.itemType || "").toLowerCase();
-        const stockMode = detail?.stockMode ?? null;
+    setCustomerInput(request.customerName || "");
+    setSelectedCustomerName(request.customerName || "");
+    setSelectedCustomerId(request.customerId || null);
+    setSelectedInvoiceType(request.invoiceType || "Both");
+    setDate(toYMD(request.requestDate || request.date));
 
-        const qty = Number(detail?.quantity ?? 0);
+    const details = Array.isArray(request.details) ? request.details : [];
 
-        const isBox = itemType === "box";
-        const isSheet = itemType === "sheet";
-        const isSqm = itemType === "sqm";
-        const isUnit = itemType === "unit";
+    const updatedData = details.map((detail) => {
+      const itemType = String(detail?.itemType || "").toLowerCase();
+      const stockMode = detail?.stockMode ?? null;
 
-        const boxVal = isBox ? qty : "";
-        const sheetVal = isBox ? detail?.sheetsPerBox ?? "" : qty;
+      const qty = Number(detail?.quantity ?? 0);
 
-        const sqmVal = isUnit ? 0 : detail?.sqm ?? "";
+      const isBox = itemType === "box";
+      const isSheet = itemType === "sheet";
+      const isSqm = itemType === "sqm";
+      const isUnit = itemType === "unit";
 
-        return {
-          __rowKey: makeKey(),
+      const boxVal = isBox ? qty : "";
+      const sheetVal = isBox ? detail?.sheetsPerBox ?? "" : qty;
 
-          itemVariantId: detail?.itemVariantId || null,
-          batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
+      const sqmVal = isUnit ? 0 : detail?.sqm ?? "";
 
-          origin: detail?.origin || "",
-          item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
+      return {
+        __rowKey: makeKey(),
 
-          type: itemType,
+        itemVariantId: detail?.itemVariantId || null,
+        batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
 
-          itemType,
-          stockMode,
+        origin: detail?.origin || "",
+        item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
 
-          thickness: detail?.thickness || "",
-          length: detail?.length ?? "",
-          width: detail?.width ?? "",
+        type: itemType,
 
-          box: boxVal,
-          sheet: sheetVal,
+        itemType,
+        stockMode,
 
-          sqm: sqmVal,
-          price: detail?.price ?? "",
-          total: detail?.total ?? "0.00",
-        };
-      });
+        thickness: detail?.thickness || "",
+        length: detail?.length ?? "",
+        width: detail?.width ?? "",
 
-      setTableData(updatedData);
-    } catch (error) {
-      console.error("Error fetching request details:", error);
-      showNotification(
-        "error",
-        `Failed to fetch request details: ${
-          error.response?.data?.message || error.message
-        }`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        box: boxVal,
+        sheet: sheetVal,
+
+        sqm: sqmVal,
+        price: detail?.price ?? "",
+        total: detail?.total ?? "0.00",
+      };
+    });
+
+    setTableData(updatedData);
+  } catch (error) {
+    console.error("Error fetching request details:", error);
+    showNotification(
+      "error",
+      `Failed to fetch request details: ${
+        error.response?.data?.message || error.message
+      }`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+const deliveryDocForPreview = useMemo(() => {
+  // If request selected -> reuse requestForPreview (already has requestNumber, items, customer)
+  if (selectedRequestId !== null) return requestForPreview;
+
+  // If invoice selected -> build from invoice state
+  if (selectedInvoiceId !== null) {
+    return {
+    
+      customerName: selectedCustomerName || customerInput || "",
+      invoiceDate: date,
+      address: customerPreview?.customerAddress || "",
+      telephone: customerPreview?.customerPhone || "",
+      // IMPORTANT: items must match your invoice table data shape
+      items: (tableData || []).map((r, i) => ({
+        itemNumber: i + 1,
+        itemName: r.item || "",
+        box: r.box ?? "",
+        sheet: r.sheet ?? "",
+        length: r.length ?? "",
+        width: r.width ?? "",
+        sqm: r.sqm ?? "",
+        unit: String(r.type || r.itemType || "").toUpperCase(),
+      })),
+    };
+  }
+
+  return null;
+}, [
+  selectedRequestId,
+  selectedInvoiceId,
+  requestForPreview,
+  
+  selectedCustomerName,
+  customerInput,
+  date,
+  customerPreview,
+  tableData,
+]);
+
+
 
   // ====================== PRICING (Get Price) ======================
 
@@ -519,8 +603,7 @@ const POSSystemPage = () => {
     }
   };
 
-  const today = new Date().toISOString().split("T")[0];
-  const [date, setDate] = useState(today);
+
 
   const calculateSQM = (length, width, type, box, sheet) => {
     if (!length || !width || box === "" || sheet === "" || sheet === undefined) {
@@ -557,6 +640,7 @@ const POSSystemPage = () => {
     setEditingInvoiceType(null);
     setCutMode(false);
     setDate(today);
+    setSelectedRequestNumber("");
   };
 
   const handleInputChange = (index, field, value) => {
@@ -1281,6 +1365,9 @@ const POSSystemPage = () => {
             handleOpenStatement={openStatement}
             canOpenStatement={!!selectedCustomerId}
             handleCreateReturnInvoice={handleCreateReturnInvoiceConfirmed}
+            setShowRequestPreview={setShowRequestPreview}
+            setShowDeliveryNotePreview={setShowDeliveryNotePreview}  
+
             canCreateReturnInvoice={
               !!selectedInvoiceId && String(editingInvoiceType || "").toUpperCase() !== "RTN"
             }
@@ -1303,6 +1390,20 @@ const POSSystemPage = () => {
               cssHref="/invoicePreview.css"
             />
           )}
+          <RequestPreviewModal
+  open={showRequestPreview}
+  onClose={() => setShowRequestPreview(false)}
+  request={requestForPreview}
+  currencyCode={customerPreview.currencyCode}
+  vatPercent={Number(vat || 0)} 
+  currencyRate={Number(currencyRate || 0)}
+/>
+
+<DeliveryNoteModal
+  open={showDeliveryNotePreview}
+  onClose={() => setShowDeliveryNotePreview(false)}
+  doc={deliveryDocForPreview || {}}
+/>
 
           <StatementModal
             isOpen={showStatement}

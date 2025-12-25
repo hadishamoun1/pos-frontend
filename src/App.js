@@ -24,9 +24,12 @@ import SettingsPage from "./components/settings/settings";
 import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
 import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
 import UsersPage from "./components/users/users";
-import AdminRoute from "./components/auth/AdminRoute";
 
-import ProtectedRoute from "./components/auth/ProtectedRoute"; // ✅ add this
+import AdminRoute from "./components/auth/AdminRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+import MaintenanceModePage from "./components/settings/MaintenanceModePage";
+import MaintenanceGate from "./components/settings/MaintenanceGate"; // ✅ FIX
 
 const queryClient = new QueryClient();
 
@@ -35,12 +38,17 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BlinkingItemsProvider>
         <Router>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+          {/* ✅ Global gate */}
+          <MaintenanceGate />
 
-            {/* Protected routes */}
+          <Routes>
+            {/* ✅ Public */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} /> {/* ✅ alias */}
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/maintenance" element={<MaintenanceModePage />} />
+
+            {/* ✅ Protected */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/pos-system" element={<POSSystemPage />} />
@@ -60,10 +68,11 @@ function App() {
               <Route path="/inventory-activity" element={<InventoryActivityPage />} />
               <Route path="/cuts-control" element={<CutsQueuePage />} />
               <Route path="/viewing" element={<InvoiceDetailsPage />} />
-              <Route element={<AdminRoute />}>
-  <Route path="/users" element={<UsersPage />} />
-</Route>
 
+              {/* ✅ Admin-only */}
+              <Route element={<AdminRoute />}>
+                <Route path="/users" element={<UsersPage />} />
+              </Route>
             </Route>
           </Routes>
         </Router>

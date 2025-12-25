@@ -15,13 +15,18 @@ const Toolbar = ({
   handleSaveRequest,
   handleSaveInvoice,
   isEditable,
-  setShowPreview,
+  setShowPreview, // invoice preview
   handleOpenStatement = () => {},
   canOpenStatement = true,
+  setShowDeliveryNotePreview = () => {},
+
 
   // ✅ NEW
   handleCreateReturnInvoice = () => {},
   canCreateReturnInvoice = true,
+
+  // ✅ NEW: request preview
+  setShowRequestPreview = () => {},
 }) => {
   console.log("isEditable in toolbar:", isEditable);
 
@@ -44,7 +49,7 @@ const Toolbar = ({
             {loading ? "Processing..." : "Edit Invoice"}
           </button>
 
-          {/* ✅ NEW: Return button */}
+          {/* ✅ Return button */}
           <button
             className="pos-page-toolbar-button pos-page-purple-button"
             onClick={handleCreateReturnInvoice}
@@ -70,7 +75,11 @@ const Toolbar = ({
               onClick={selectedRequestId ? handleEditRequest : handleCreateRequest}
               disabled={loading}
             >
-              {loading ? "Processing..." : selectedRequestId ? "Edit Request" : "Request"}
+              {loading
+                ? "Processing..."
+                : selectedRequestId
+                ? "Edit Request"
+                : "Request"}
             </button>
           )}
 
@@ -127,6 +136,7 @@ const Toolbar = ({
       )}
 
       <div className="pos-page-date-wrapper">
+        {/* ✅ View Invoice (only when invoice selected) */}
         {selectedInvoiceId !== null && (
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
@@ -135,6 +145,32 @@ const Toolbar = ({
             View Invoice
           </button>
         )}
+
+        {/* ✅ NEW: View Request (only when request selected) */}
+        {selectedRequestId !== null && (
+          <button
+            className="pos-page-toolbar-button pos-page-blue-button"
+            onClick={() => setShowRequestPreview(true)}
+          >
+            View Request
+          </button>
+        )}
+        {/* ✅ Delivery Note (always visible; enabled only if request OR invoice selected) */}
+<button
+  className="pos-page-toolbar-button pos-page-blue-button"
+  onClick={() => setShowDeliveryNotePreview(true)}
+  disabled={loading || (selectedRequestId === null && selectedInvoiceId === null)}
+  title={
+    selectedRequestId !== null
+      ? "Delivery Note for Request"
+      : selectedInvoiceId !== null
+      ? "Delivery Note for Invoice"
+      : "Select a request or invoice first"
+  }
+>
+  Delivery Note
+</button>
+
 
         <button
           className="pos-page-toolbar-button pos-page-orange-button"
