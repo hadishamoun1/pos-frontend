@@ -157,7 +157,7 @@ const Toolbar = ({
         )}
         {/* ✅ Delivery Note (always visible; enabled only if request OR invoice selected) */}
 <button
-  className="pos-page-toolbar-button pos-page-blue-button"
+  className="pos-page-toolbar-delvry-note "
   onClick={() => setShowDeliveryNotePreview(true)}
   disabled={loading || (selectedRequestId === null && selectedInvoiceId === null)}
   title={

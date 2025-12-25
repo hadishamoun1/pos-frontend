@@ -387,6 +387,27 @@ min-width:0;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
+
+.pos-page-toolbar-delvry-note{
+    padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-left: 10px;
+  background-color:rgb(174, 99, 1);
+  
+}
+
+.pos-page-toolbar-delvry-note:hover{
+  transform: scale(1.05);
+    background-color:rgb(123, 70, 0);
+
+}
+
 .pos-page-toolbar-button:hover {
   transform: scale(1.05);
 }
