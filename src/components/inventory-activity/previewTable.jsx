@@ -119,8 +119,6 @@ const mapFilteredRowToView = (r) => ({
    Component
    ========================= */
 const PreviewTable = () => {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
-
   // UI state
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +128,7 @@ const PreviewTable = () => {
   const [selected, setSelected] = useState(new Set());
   const [editOpen, setEditOpen] = useState(false);
 
-  // ✅ NEW: delete flow state
+  // ✅ delete flow state
   const [deleting, setDeleting] = useState(false);
 
   // search chips
@@ -142,7 +140,8 @@ const PreviewTable = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axiosClient.get(`${baseUrl}/inventory-count/v1/filtered`);
+      // ✅ FIX: relative path only (axiosClient already has baseURL "/api")
+      const { data } = await axiosClient.get(`/inventory-count/v1/filtered`);
       const mapped = Array.isArray(data) ? data.map(mapFilteredRowToView) : [];
       setRows(mapped);
     } catch (e) {
@@ -152,14 +151,15 @@ const PreviewTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [baseUrl]);
+  }, []);
 
   const fetchSearch = useCallback(async () => {
     const params = mergeChipParams(chips);
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axiosClient.get(`${baseUrl}/inventory-count/v1/search`, {
+      // ✅ FIX: relative path only
+      const { data } = await axiosClient.get(`/inventory-count/v1/search`, {
         params: {
           ...(params.q ? { q: params.q } : {}),
           ...(params.itemName ? { itemName: params.itemName } : {}),
@@ -182,7 +182,7 @@ const PreviewTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, chips]);
+  }, [chips]);
 
   // Initial load (no chips → filtered)
   useEffect(() => {
@@ -232,7 +232,7 @@ const PreviewTable = () => {
     });
   };
 
-  // ✅ NEW: Delete selected counts
+  // ✅ Delete selected counts
   const handleDeleteSelected = async () => {
     const ids = Array.from(selected).filter((n) => Number.isInteger(n) && n > 0);
     if (!ids.length) return;
@@ -244,15 +244,14 @@ const PreviewTable = () => {
 
     setDeleting(true);
     try {
-      // NOTE: Adjust URL to match your NestJS route
-      // Expected payload: { ids: number[] }
-      await axiosClient.post(`${baseUrl}/inventory-count/v1/delete-counts-strict`, { ids });
+      // ✅ FIX: relative path only
+      await axiosClient.post(`/inventory-count/v1/delete-counts-strict`, { ids });
 
       // remove from UI immediately
       setRows((prev) => prev.filter((r) => !selected.has(r.id)));
       setSelected(new Set());
 
-      // optional refresh to be 100% sure server recompute is reflected
+      // optional refresh
       if (chips.length > 0) await fetchSearch();
       else await fetchFiltered();
     } catch (e) {
@@ -395,7 +394,6 @@ const PreviewTable = () => {
               Edit
             </button>
 
-            {/* ✅ NEW DELETE BUTTON */}
             <button
               className="count-preview-edit-btn"
               onClick={handleDeleteSelected}
