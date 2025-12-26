@@ -28,8 +28,6 @@ const Toolbar = ({
   // ✅ request preview
   setShowRequestPreview = () => {},
 }) => {
-  console.log("isEditable in toolbar:", isEditable);
-
   // ✅ permissions
   const canRvr = hasPerm("pos.rvr");
   const canReturn = hasPerm("pos.return");
@@ -109,17 +107,17 @@ const Toolbar = ({
             </button>
           )}
 
-          {/* ✅ RVR button (permission controlled) */}
-          {(selectedInvoiceType === "RVR" || selectedInvoiceType === "Both") &&
-            canRvr && (
-              <button
-                className="pos-page-toolbar-button pos-page-purple-button"
-                onClick={() => handleCreateInvoice("RVR")}
-                disabled={loading || (selectedRequestId !== null && isEditable)}
-              >
-                {loading ? "Processing..." : "RVR"}
-              </button>
-            )}
+          {/* ✅ FIX: RVR ALWAYS visible for allowed users (not tied to selectedInvoiceType) */}
+          {canRvr && (
+            <button
+              className="pos-page-toolbar-button pos-page-purple-button"
+              onClick={() => handleCreateInvoice("RVR")}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
+              title="RVR"
+            >
+              {loading ? "Processing..." : "RVR"}
+            </button>
+          )}
         </>
       )}
 

@@ -132,6 +132,9 @@ const PERMISSION_GROUPS = [
 
  "settings.invoiceAudit",
 
+ "customers.update",
+
+
     ],
   },
   {

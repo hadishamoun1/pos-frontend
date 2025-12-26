@@ -1,157 +1,222 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./customers.css";
 import { axiosClient } from "../api/axiosClient";
 
-const CreatePreviewCustomers = () => {
+const PAGE_SIZE = 50;
+
+const emptyForm = {
+  customerName: "",
+  phoneNumber: "",
+  financialAccount: "",
+  invoiceType: "",
+  vat: "",
+  currency: "",
+  address: "",
+  location: "",
+
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  paymentTerms: "",
+  area: "",
+  companyType: "",
+};
+
+function toStr(v) {
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
+function buildPayload(formData) {
+  const payload = {
+    customerName: formData.customerName?.trim(),
+
+    firstName: formData.firstName?.trim() || undefined,
+    middleName: formData.middleName?.trim() || undefined,
+    lastName: formData.lastName?.trim() || undefined,
+    paymentTerms: formData.paymentTerms?.trim() || undefined,
+    area: formData.area?.trim() || undefined,
+    companyType: formData.companyType?.trim() || undefined,
+
+    phoneNumber: formData.phoneNumber?.trim() || undefined,
+    financialNumber: formData.financialAccount?.trim() || undefined,
+    invoiceType: formData.invoiceType || undefined,
+    vat: formData.vat !== "" ? formData.vat : undefined,
+
+    currencyId: formData.currency !== "" ? Number(formData.currency) : undefined,
+
+    address: formData.address?.trim() || undefined,
+    location: formData.location?.trim() || undefined,
+  };
+
+  Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
+  return payload;
+}
+
+export default function CreatePreviewCustomers() {
   const [customers, setCustomers] = useState([]);
   const [currencyCodes, setCurrencyCodes] = useState([]);
-  const [formData, setFormData] = useState({
-    customerName: "",
-    phoneNumber: "",
-    financialAccount: "",
-    invoiceType: "",
-    vat: "",
-    currency: "",
-    address: "",
-    location: "",
-
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    paymentTerms: "",
-    area: "",
-    companyType: "",
-  });
+  const [formData, setFormData] = useState({ ...emptyForm });
 
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [modalContent, setModalContent] = useState(false);
-  const [modalType, setModalType] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState(""); // success | error
+  const [modalMessage, setModalMessage] = useState("");
+
+  // ✅ edit state
+  const [editingId, setEditingId] = useState(null);
+  const isEditing = editingId !== null;
 
   useEffect(() => {
-    const fetchCurrencyCodes = async () => {
+    (async () => {
       try {
         const res = await axiosClient.get("/currency/v1/dropdown/currencycodes");
-        setCurrencyCodes(res.data);
-      } catch (error) {
-        console.error("Error fetching currency codes:", error);
+        setCurrencyCodes(res.data || []);
+      } catch (e) {
+        console.error("Error fetching currency codes:", e);
       }
-    };
-    fetchCurrencyCodes();
+    })();
   }, []);
+
+  const openModal = (type, msg) => {
+    setModalType(type);
+    setModalMessage(msg);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => setModalOpen(false);
 
   const fetchCustomers = async (currentPage) => {
     if (loading || !hasMore) return;
-
     setLoading(true);
+
     try {
       const res = await axiosClient.get(
-        `/customers/v1/paginated?page=${currentPage}&limit=50`
+        `/customers/v1/paginated?page=${currentPage}&limit=${PAGE_SIZE}`
       );
 
-      setCustomers((prevCustomers) => {
-        const newCustomers = res.data.customers.filter(
-          (newCustomer) =>
-            !prevCustomers.some(
-              (existingCustomer) => existingCustomer.id === newCustomer.id
-            )
-        );
-        return [...prevCustomers, ...newCustomers];
+      const list = Array.isArray(res?.data?.customers) ? res.data.customers : [];
+
+      setCustomers((prev) => {
+        const newOnes = list.filter((n) => !prev.some((p) => p.id === n.id));
+        return [...prev, ...newOnes];
       });
 
-      setHasMore(res.data.customers.length > 0);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
+      setHasMore(list.length > 0);
+    } catch (e) {
+      console.error("Error fetching customers:", e);
+      openModal("error", "Failed to load customers");
     } finally {
       setLoading(false);
     }
   };
 
-  const nextPage = () => {
-    setPage((prevPage) => {
-      const newPage = prevPage + 1;
-      fetchCustomers(newPage);
-      return newPage;
-    });
-  };
-
   useEffect(() => {
-    fetchCustomers(page);
+    fetchCustomers(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const nextPage = () => {
+    setPage((p) => {
+      const np = p + 1;
+      fetchCustomers(np);
+      return np;
+    });
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
-  const handleAddCustomer = async () => {
+  const startEditCustomer = (customer) => {
+    if (!customer?.id) return;
+
+    setEditingId(customer.id);
+    setFormData({
+      customerName: toStr(customer.customerName),
+      phoneNumber: toStr(customer.phoneNumber),
+      financialAccount: toStr(customer.financialNumber),
+      invoiceType: toStr(customer.invoiceType),
+      vat: customer.vat === null || customer.vat === undefined ? "" : toStr(customer.vat),
+
+      // currency may come as currencyId or nested currency.id
+      currency: toStr(customer.currencyId ?? customer.currency?.id ?? ""),
+
+      address: toStr(customer.address),
+      location: toStr(customer.location),
+
+      firstName: toStr(customer.firstName),
+      middleName: toStr(customer.middleName),
+      lastName: toStr(customer.lastName),
+      paymentTerms: toStr(customer.paymentTerms),
+      area: toStr(customer.area),
+      companyType: toStr(customer.companyType),
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({ ...emptyForm });
+  };
+
+  const saveCustomer = async () => {
     try {
-      const newCustomer = {
-        customerName: formData.customerName,
+      const payload = buildPayload(formData);
 
-        firstName: formData.firstName || undefined,
-        middleName: formData.middleName || undefined,
-        lastName: formData.lastName || undefined,
-        paymentTerms: formData.paymentTerms || undefined,
-        area: formData.area || undefined,
-        companyType: formData.companyType || undefined,
+      if (!payload.customerName) {
+        openModal("error", "Customer Name is required.");
+        return;
+      }
 
-        phoneNumber: formData.phoneNumber || undefined,
-        financialNumber: formData.financialAccount || undefined,
-        invoiceType: formData.invoiceType || undefined,
-        vat: formData.vat || undefined,
-        currencyId: formData.currency,
-        address: formData.address || undefined,
+      if (!isEditing) {
+        if (!payload.currencyId) {
+          openModal("error", "Currency is required.");
+          return;
+        }
 
-        // keep only if your backend accepts it
-        location: formData.location || undefined,
-      };
+        const res = await axiosClient.post("/customers", payload);
+        setCustomers((prev) => [res.data, ...prev]);
+        setFormData({ ...emptyForm });
+        openModal("success", "Customer Added Successfully");
+      } else {
+        const res = await axiosClient.patch(`/customers/${editingId}`, payload);
 
-      const res = await axiosClient.post("/customers", newCustomer);
+        setCustomers((prev) =>
+          prev.map((c) => (c.id === editingId ? { ...c, ...res.data } : c))
+        );
 
-      setCustomers((prevCustomers) => [...prevCustomers, res.data]);
-
-      setFormData({
-        customerName: "",
-        phoneNumber: "",
-        financialAccount: "",
-        invoiceType: "",
-        vat: "",
-        currency: "",
-        address: "",
-        location: "",
-
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        paymentTerms: "",
-        area: "",
-        companyType: "",
-      });
-
-      setModalType("success");
-      setModalContent(true);
-    } catch (error) {
-      console.error("Error adding customer:", error);
-      setModalType("error");
-      setModalContent(true);
+        setEditingId(null);
+        setFormData({ ...emptyForm });
+        openModal("success", "Customer Updated Successfully");
+      }
+    } catch (e) {
+      console.error("Error saving customer:", e);
+      openModal("error", isEditing ? "Failed to Update Customer" : "Failed to Add Customer");
     }
   };
 
-  const closeModal = () => setModalContent(false);
+  const rowClass = useMemo(() => {
+    return (id) => (isEditing && id === editingId ? "customer-preview-is-editing" : "");
+  }, [isEditing, editingId]);
 
   return (
-    <div className="customers-container">
-      <div className="customers-header">
-        <h2 className="customers-heading">Create and Preview Customers</h2>
+    <div className="customer-preview-container">
+      <div className="customer-preview-header">
+        <h2 className="customer-preview-heading">Create and Preview Customers</h2>
       </div>
 
-      <div className="customers-card customers-form">
-        <div className="card-title">Create Customer</div>
+      <div className="customer-preview-card customer-preview-form">
+        <div className="customer-preview-card-title">
+          {isEditing ? `Edit Customer #${editingId}` : "Create Customer"}
+        </div>
 
-        <table className="form-table">
+        <table className="customer-preview-form-table">
           <tbody>
             <tr>
               <td>
@@ -239,11 +304,7 @@ const CreatePreviewCustomers = () => {
             <tr>
               <td>
                 <label>VAT</label>
-                <select
-                  name="vat"
-                  value={formData.vat}
-                  onChange={handleInputChange}
-                >
+                <select name="vat" value={formData.vat} onChange={handleInputChange}>
                   <option value="">Select VAT</option>
                   <option value="0">0%</option>
                   <option value="6">6%</option>
@@ -258,9 +319,9 @@ const CreatePreviewCustomers = () => {
                   onChange={handleInputChange}
                 >
                   <option value="">Select Currency</option>
-                  {currencyCodes.map((currency) => (
-                    <option key={currency.id} value={currency.id}>
-                      {currency.currencyCode}
+                  {currencyCodes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.currencyCode}
                     </option>
                   ))}
                 </select>
@@ -311,25 +372,31 @@ const CreatePreviewCustomers = () => {
 
             <tr>
               <td colSpan="4">
-                <button
-                  className="btn-primary add-customer-btn"
-                  onClick={handleAddCustomer}
-                >
-                  Add Customer
-                </button>
+                <div className="customer-preview-form-actions">
+                  <button className="customer-preview-add-btn" onClick={saveCustomer}>
+                    {isEditing ? "Update Customer" : "Add Customer"}
+                  </button>
+
+                  {isEditing && (
+                    <button className="customer-preview-cancel-edit-btn" onClick={cancelEdit}>
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div className="customers-card customers-preview">
-        <div className="card-title">Customer Preview</div>
+      <div className="customer-preview-card">
+        <div className="customer-preview-card-title">Customer Preview</div>
 
-        <div className="table-scroll">
-          <table className="customers-table">
+        <div className="customer-preview-table-scroll">
+          <table className="customer-preview-table">
             <thead>
               <tr>
+                <th>Actions</th>
                 <th>Customer Account #</th>
                 <th>Customer Name</th>
                 <th>First</th>
@@ -347,29 +414,49 @@ const CreatePreviewCustomers = () => {
                 <th>Location</th>
               </tr>
             </thead>
+
             <tbody>
-              {customers.map((customer, index) => (
-                <tr key={customer.id || index}>
-                  <td className="mono">{customer.customerAccountNumber}</td>
-                  <td>{customer.customerName}</td>
-                  <td>{customer.firstName}</td>
-                  <td>{customer.middleName}</td>
-                  <td>{customer.lastName}</td>
-                  <td>{customer.paymentTerms}</td>
-                  <td>{customer.area}</td>
-                  <td>{customer.companyType}</td>
-                  <td className="mono">{customer.phoneNumber}</td>
-                  <td className="mono">{customer.financialNumber}</td>
-                  <td className="mono">{customer.invoiceType}</td>
-                  <td className="mono">{customer.vat ? `${customer.vat}%` : ""}</td>
-                  <td className="mono">{customer.currencyCode}</td>
-                  <td className="truncate">{customer.address}</td>
-                  <td className="truncate">{customer.location}</td>
+              {customers.map((c) => (
+                <tr
+                  key={c.id}
+                  className={rowClass(c.id)}
+                  onDoubleClick={() => startEditCustomer(c)}
+                  title="Double click to edit"
+                >
+                  <td>
+                    <button
+                      className="customer-preview-btn-mini"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditCustomer(c);
+                      }}
+                    >
+                      Edit
+                    </button>
+                  </td>
+
+                  <td className="customer-preview-mono">{c.customerAccountNumber}</td>
+                  <td>{c.customerName}</td>
+                  <td>{c.firstName}</td>
+                  <td>{c.middleName}</td>
+                  <td>{c.lastName}</td>
+                  <td>{c.paymentTerms}</td>
+                  <td>{c.area}</td>
+                  <td>{c.companyType}</td>
+                  <td className="customer-preview-mono">{c.phoneNumber}</td>
+                  <td className="customer-preview-mono">{c.financialNumber}</td>
+                  <td className="customer-preview-mono">{c.invoiceType}</td>
+                  <td className="customer-preview-mono">{c.vat ? `${c.vat}%` : ""}</td>
+                  <td className="customer-preview-mono">{c.currencyCode}</td>
+                  <td className="customer-preview-truncate">{c.address}</td>
+                  <td className="customer-preview-truncate">{c.location}</td>
                 </tr>
               ))}
+
               {customers.length === 0 && (
                 <tr>
-                  <td colSpan="15" className="empty-row">
+                  <td colSpan="16" className="customer-preview-empty-row">
                     No customers loaded yet
                   </td>
                 </tr>
@@ -379,33 +466,36 @@ const CreatePreviewCustomers = () => {
         </div>
 
         {hasMore && !loading && (
-          <button className="btn-secondary load-more-customers-btn" onClick={nextPage}>
+          <button className="customer-preview-load-more-btn" onClick={nextPage}>
             Load More
           </button>
         )}
-        {loading && <p className="hint">Loading...</p>}
-        {!hasMore && <p className="hint">No more customers to load</p>}
+        {loading && <p className="customer-preview-hint">Loading...</p>}
+        {!hasMore && <p className="customer-preview-hint">No more customers to load</p>}
       </div>
 
-      {modalContent && (
-        <div className="modal">
+      {modalOpen && (
+        <div className="customer-preview-modal-overlay">
           <div
-            className={`cus-modal-content ${
-              modalType === "success" ? "success-modal" : "error-modal"
+            className={`customer-preview-modal-content ${
+              modalType === "success" ? "customer-preview-success-modal" : "customer-preview-error-modal"
             }`}
           >
-            {modalType === "success" ? (
-              <>
-                <h2 className="modal-success-text">Customer Added Successfully</h2>
-                <div className="modal-icon">✔</div>
-              </>
-            ) : (
-              <>
-                <h2 className="modal-error-text">Failed to Add Customer</h2>
-                <div className="modal-icon">✖</div>
-              </>
-            )}
-            <button className="modal-button" onClick={closeModal}>
+            <h2
+              className={
+                modalType === "success"
+                  ? "customer-preview-modal-success-text"
+                  : "customer-preview-modal-error-text"
+              }
+            >
+              {modalMessage}
+            </h2>
+
+            <div className="customer-preview-modal-icon">
+              {modalType === "success" ? "✔" : "✖"}
+            </div>
+
+            <button className="customer-preview-modal-button" onClick={closeModal}>
               OK
             </button>
           </div>
@@ -413,6 +503,4 @@ const CreatePreviewCustomers = () => {
       )}
     </div>
   );
-};
-
-export default CreatePreviewCustomers;
+}
