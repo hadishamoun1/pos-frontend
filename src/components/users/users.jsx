@@ -100,15 +100,37 @@ const PERMISSION_GROUPS = [
       "transfers.update",
       "transfers.delete",
       "cuts.view",
-      "inventory.view"
+      "inventory.view",
 
 
 
+"settings.general",
+"settings.invoice",
+"settings.permissions",
+"settings.purchaseInvoice",
+"settings.itemBatches",
+"settings.descriptionsReal",
+"settings.descriptionsItemName",
+"settings.variantRelinker",
+"settings.editDescriptions",
+"settings.fiscalYear",
+"settings.currency",
+"settings.invoiceDisplay",
+"settings.stockTotalsAudit",
+"settings.inventoryAudit",
+"settings.logoutUsers",
 
+"pos.search.stockTab",
+"pos.search.allTab",
+"pos.search.sqmTab",
+"pos.rvr",
+"pos.return",
 
+"recievables.create",
+"recievables.update",
+"recievables.delete",
 
-
-
+ "settings.invoiceAudit",
 
     ],
   },

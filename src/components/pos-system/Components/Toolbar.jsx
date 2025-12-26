@@ -1,4 +1,5 @@
 import React from "react";
+import { hasPerm } from "../../auth/authz"; // ✅ adjust path if needed
 
 const Toolbar = ({
   handleNewTransaction,
@@ -20,15 +21,18 @@ const Toolbar = ({
   canOpenStatement = true,
   setShowDeliveryNotePreview = () => {},
 
-
-  // ✅ NEW
+  // ✅ Return
   handleCreateReturnInvoice = () => {},
   canCreateReturnInvoice = true,
 
-  // ✅ NEW: request preview
+  // ✅ request preview
   setShowRequestPreview = () => {},
 }) => {
   console.log("isEditable in toolbar:", isEditable);
+
+  // ✅ permissions
+  const canRvr = hasPerm("pos.rvr");
+  const canReturn = hasPerm("pos.return");
 
   return (
     <div className="pos-page-button-row">
@@ -49,21 +53,23 @@ const Toolbar = ({
             {loading ? "Processing..." : "Edit Invoice"}
           </button>
 
-          {/* ✅ Return button */}
-          <button
-            className="pos-page-toolbar-button pos-page-purple-button"
-            onClick={handleCreateReturnInvoice}
-            disabled={loading || isEditable || !canCreateReturnInvoice}
-            title={
-              !canCreateReturnInvoice
-                ? "Return is not available for this invoice"
-                : isEditable
-                ? "Finish editing before returning"
-                : "Create Return Invoice (RTN)"
-            }
-          >
-            {loading ? "Processing..." : "Return"}
-          </button>
+          {/* ✅ Return button (permission controlled) */}
+          {canReturn && (
+            <button
+              className="pos-page-toolbar-button pos-page-purple-button"
+              onClick={handleCreateReturnInvoice}
+              disabled={loading || isEditable || !canCreateReturnInvoice}
+              title={
+                !canCreateReturnInvoice
+                  ? "Return is not available for this invoice"
+                  : isEditable
+                  ? "Finish editing before returning"
+                  : "Create Return Invoice (RTN)"
+              }
+            >
+              {loading ? "Processing..." : "Return"}
+            </button>
+          )}
         </>
       ) : (
         <>
@@ -103,15 +109,17 @@ const Toolbar = ({
             </button>
           )}
 
-          {(selectedInvoiceType === "RVR" || selectedInvoiceType === "Both") && (
-            <button
-              className="pos-page-toolbar-button pos-page-purple-button"
-              onClick={() => handleCreateInvoice("RVR")}
-              disabled={loading || (selectedRequestId !== null && isEditable)}
-            >
-              {loading ? "Processing..." : "RVR"}
-            </button>
-          )}
+          {/* ✅ RVR button (permission controlled) */}
+          {(selectedInvoiceType === "RVR" || selectedInvoiceType === "Both") &&
+            canRvr && (
+              <button
+                className="pos-page-toolbar-button pos-page-purple-button"
+                onClick={() => handleCreateInvoice("RVR")}
+                disabled={loading || (selectedRequestId !== null && isEditable)}
+              >
+                {loading ? "Processing..." : "RVR"}
+              </button>
+            )}
         </>
       )}
 
@@ -136,7 +144,6 @@ const Toolbar = ({
       )}
 
       <div className="pos-page-date-wrapper">
-        {/* ✅ View Invoice (only when invoice selected) */}
         {selectedInvoiceId !== null && (
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
@@ -146,7 +153,6 @@ const Toolbar = ({
           </button>
         )}
 
-        {/* ✅ NEW: View Request (only when request selected) */}
         {selectedRequestId !== null && (
           <button
             className="pos-page-toolbar-button pos-page-blue-button"
@@ -155,22 +161,21 @@ const Toolbar = ({
             View Req
           </button>
         )}
-        {/* ✅ Delivery Note (always visible; enabled only if request OR invoice selected) */}
-<button
-  className="pos-page-toolbar-delvry-note "
-  onClick={() => setShowDeliveryNotePreview(true)}
-  disabled={loading || (selectedRequestId === null && selectedInvoiceId === null)}
-  title={
-    selectedRequestId !== null
-      ? "Delivery Note for Request"
-      : selectedInvoiceId !== null
-      ? "Delivery Note for Invoice"
-      : "Select a request or invoice first"
-  }
->
-  Del Note
-</button>
 
+        <button
+          className="pos-page-toolbar-delvry-note "
+          onClick={() => setShowDeliveryNotePreview(true)}
+          disabled={loading || (selectedRequestId === null && selectedInvoiceId === null)}
+          title={
+            selectedRequestId !== null
+              ? "Delivery Note for Request"
+              : selectedInvoiceId !== null
+              ? "Delivery Note for Invoice"
+              : "Select a request or invoice first"
+          }
+        >
+          Del Note
+        </button>
 
         <button
           className="pos-page-toolbar-button pos-page-orange-button"

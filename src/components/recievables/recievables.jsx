@@ -4,12 +4,15 @@ import "./recievables.css";
 import NewRecordModal from "./newRecord";
 import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";
-import { axiosClient } from "../api/axiosClient"; // ✅ use your api client
-import { io } from "socket.io-client"; // ✅ named import
+import { axiosClient } from "../api/axiosClient"; 
+import { io } from "socket.io-client"; 
 import RctPaper from "./rctPreview";
 
 // ✅ NEW: Statement modal (adjust path to your actual file location)
 import StatementModal from "../pos-system/Components/StatementModal";
+
+// ✅ NEW: permissions helper
+import { hasPerm } from "../auth/authz";
 
 const AccountingPage = () => {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -31,6 +34,11 @@ const AccountingPage = () => {
   const [stmtCustomerId, setStmtCustomerId] = useState(null);
   const [stmtCustomerName, setStmtCustomerName] = useState("");
   const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
+
+  // ✅ PERMISSIONS (hide buttons if not allowed)
+  const canCreate = hasPerm("recievables.create");
+  const canUpdate = hasPerm("recievables.update");
+  const canDelete = hasPerm("recievables.delete");
 
   const openNewModal = () => setIsNewModalOpen(true);
   const closeNewModal = () => setIsNewModalOpen(false);
@@ -263,10 +271,8 @@ const AccountingPage = () => {
 
         setFilteredData(byServer.length ? byServer : quick);
       } catch (err) {
-        // ✅ cancellation guard (no axios import needed)
         if (err?.code === "ERR_CANCELED") return;
         if (err?.name === "CanceledError") return;
-
         console.warn("Server search failed, using local filter:", err);
       } finally {
         setSearching(false);
@@ -294,17 +300,25 @@ const AccountingPage = () => {
             />
 
             <div className="button-group">
-              <button className="action-button" onClick={openNewModal}>
-                New
-              </button>
-              <button className="action-button" onClick={openEditModal}>
-                Edit
-              </button>
-              <button className="delete-button" onClick={openDeleteModal}>
-                Delete
-              </button>
+              {canCreate && (
+                <button className="action-button" onClick={openNewModal}>
+                  New
+                </button>
+              )}
 
-              {/* ✅ NEW: Statement button */}
+              {canUpdate && (
+                <button className="action-button" onClick={openEditModal}>
+                  Edit
+                </button>
+              )}
+
+              {canDelete && (
+                <button className="delete-button" onClick={openDeleteModal}>
+                  Delete
+                </button>
+              )}
+
+              {/* Statement stays as-is (you can also permission it if you want) */}
               <button
                 className="action-button-stmt"
                 onClick={openStatement}
@@ -450,7 +464,6 @@ const AccountingPage = () => {
         />
       )}
 
-      {/* ✅ NEW: Statement modal mount */}
       <StatementModal
         isOpen={isStatementOpen}
         onClose={() => setIsStatementOpen(false)}

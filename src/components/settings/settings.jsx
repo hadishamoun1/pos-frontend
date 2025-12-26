@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import GeneralSettings from "./GeneralSettings";
 import InvoiceSettings from "./InvoiceSettings";
 import PermissionsSettings from "./PermissionsSettings";
@@ -8,160 +8,86 @@ import DescriptionsSettings from "./DescriptionSorting";
 import ItemNameDescriptionSettings from "./ItemNameDescriptionSettings";
 import VariantRelinker from "./VariantRelinker";
 import DescriptionEditor from "./editDescription";
-import YearSettings from "./YearSettings";           
+import YearSettings from "./YearSettings";
 import CurrencySettings from "./CurrencySettings";
-import InvoiceDisplayNamesPanel from "./invoiceDisplayName";   
+import InvoiceDisplayNamesPanel from "./invoiceDisplayName";
 import StockTotalsAudit from "./StockTotalsAudit";
 import LogoutAllUsersPage from "./LogoutAllUsersPage";
-
-
-import "./settings.css";
 import InventoryAuditPage from "./Inventory-Audit";
+import InvoiceAuditPage from "./InvoiceAuditPage";
+import { hasPerm } from "../auth/authz"; // ✅ adjust path if different
+import "./settings.css";
 
 const SettingsPage = () => {
+  const TABS = useMemo(
+    () => [
+      { key: "general", label: "General", perm: "settings.general", component: <GeneralSettings /> },
+      { key: "invoice", label: "Invoice Settings", perm: "settings.invoice", component: <InvoiceSettings /> },
+      { key: "permissions", label: "Permissions", perm: "settings.permissions", component: <PermissionsSettings /> },
+      { key: "purchase-invoice", label: "Purchase Invoice", perm: "settings.purchaseInvoice", component: <PurchaseInvoiceSettings /> },
+      { key: "item-batches", label: "Item Batches", perm: "settings.itemBatches", component: <ItemBatchesSettings /> },
+      { key: "descriptions", label: "Descriptions (Real)", perm: "settings.descriptionsReal", component: <DescriptionsSettings /> },
+      { key: "item-name-descriptions", label: "Descriptions (Item Name)", perm: "settings.descriptionsItemName", component: <ItemNameDescriptionSettings /> },
+      { key: "variant-relinker", label: "Variant Relinker", perm: "settings.variantRelinker", component: <VariantRelinker /> },
+      { key: "descriptions-editor", label: "Edit Descriptions", perm: "settings.editDescriptions", component: <DescriptionEditor /> },
+      { key: "year-settings", label: "Fiscal Year", perm: "settings.fiscalYear", component: <YearSettings /> },
+      { key: "currency-settings", label: "Currency", perm: "settings.currency", component: <CurrencySettings /> },
+      { key: "invoice-display-name-settings", label: "Invoice display", perm: "settings.invoiceDisplay", component: <InvoiceDisplayNamesPanel /> },
+      { key: "stock-totals-audit", label: "Stock Totals / Audit", perm: "settings.stockTotalsAudit", component: <StockTotalsAudit /> },
+      { key: "inventory-audit", label: "Inventory Audit", perm: "settings.inventoryAudit", component: <InventoryAuditPage /> },
+      { key: "invoice-audit", label: "Invoice Audit", perm: "settings.invoiceAudit", component: <InvoiceAuditPage /> },
+
+      { key: "logout-users", label: "Users Logout", perm: "settings.logoutUsers", component: <LogoutAllUsersPage /> },
+    ],
+    []
+  );
+
+  // ✅ only show tabs user has permission for
+  const allowedTabs = useMemo(() => {
+    return TABS.filter((t) => hasPerm(t.perm));
+  }, [TABS]);
+
   const [activeTab, setActiveTab] = useState("general");
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case "general":
-        return <GeneralSettings />;
-      case "invoice":
-        return <InvoiceSettings />;
-      case "permissions":
-        return <PermissionsSettings />;
-      case "purchase-invoice":
-        return <PurchaseInvoiceSettings />;
-      case "item-batches":
-        return <ItemBatchesSettings />;
-      case "descriptions":
-        return <DescriptionsSettings />;
-      case "item-name-descriptions":
-        return <ItemNameDescriptionSettings />;
-      case "variant-relinker":
-        return <VariantRelinker />;
-      case "descriptions-editor":
-        return <DescriptionEditor />;
-      case "year-settings":
-        return <YearSettings />;           
-      case "currency-settings":
-        return <CurrencySettings />;  
-         case "invoice-display-name-settings":
-        return <InvoiceDisplayNamesPanel />;      
-      case "stock-totals-audit":
-        return <StockTotalsAudit />;
-           case "inventory-audit":
-        return <InventoryAuditPage />;
-             case "logout-users":
-        return <LogoutAllUsersPage />;
+  // ✅ if user does not have access to current tab, jump to first allowed tab
+  useEffect(() => {
+    if (!allowedTabs.length) return;
+    const ok = allowedTabs.some((t) => t.key === activeTab);
+    if (!ok) setActiveTab(allowedTabs[0].key);
+  }, [allowedTabs, activeTab]);
 
-      default:
-        return <GeneralSettings />;
-    }
-  };
+  const active = allowedTabs.find((t) => t.key === activeTab) || allowedTabs[0] || null;
+
+  // ✅ If user has no settings permissions at all
+  if (!allowedTabs.length) {
+    return (
+      <div className="settings-container">
+        <div style={{ padding: 16 }}>
+          You do not have permission to view any settings sections.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="settings-container">
       <aside className="settings-sidebar">
         <h3 className="sidebar-title">Settings</h3>
+
         <ul className="sidebar-menu">
-          <li
-            className={activeTab === "general" ? "active" : ""}
-            onClick={() => setActiveTab("general")}
-          >
-            General
-          </li>
-          <li
-            className={activeTab === "invoice" ? "active" : ""}
-            onClick={() => setActiveTab("invoice")}
-          >
-            Invoice Settings
-          </li>
-          <li
-            className={activeTab === "permissions" ? "active" : ""}
-            onClick={() => setActiveTab("permissions")}
-          >
-            Permissions
-          </li>
-          <li
-            className={activeTab === "purchase-invoice" ? "active" : ""}
-            onClick={() => setActiveTab("purchase-invoice")}
-          >
-            Purchase Invoice
-          </li>
-          <li
-            className={activeTab === "item-batches" ? "active" : ""}
-            onClick={() => setActiveTab("item-batches")}
-          >
-            Item Batches
-          </li>
-          <li
-            className={activeTab === "descriptions" ? "active" : ""}
-            onClick={() => setActiveTab("descriptions")}
-          >
-            Descriptions (Real)
-          </li>
-          <li
-            className={activeTab === "item-name-descriptions" ? "active" : ""}
-            onClick={() => setActiveTab("item-name-descriptions")}
-          >
-            Descriptions (Item Name)
-          </li>
-          <li
-            className={activeTab === "variant-relinker" ? "active" : ""}
-            onClick={() => setActiveTab("variant-relinker")}
-          >
-            Variant Relinker
-          </li>
-          <li
-            className={activeTab === "descriptions-editor" ? "active" : ""}
-            onClick={() => setActiveTab("descriptions-editor")}
-          >
-            Edit Descriptions
-          </li>
-          <li
-            className={activeTab === "year-settings" ? "active" : ""}
-            onClick={() => setActiveTab("year-settings")}
-          >
-            Fiscal Year
-          </li>
-          <li
-            className={activeTab === "currency-settings" ? "active" : ""}
-            onClick={() => setActiveTab("currency-settings")}
-          >
-            Currency
-          </li>
-
-
-              <li
-            className={activeTab === "invoice-display-name-settings" ? "active" : ""}
-            onClick={() => setActiveTab("invoice-display-name-settings")}
-          >
-            Invoice display
-          </li>
-
-          <li
-            className={activeTab === "stock-totals-audit" ? "active" : ""}
-            onClick={() => setActiveTab("stock-totals-audit")}
-          >
-             Stock Totals / Audit
-          </li>
-
-              <li
-            className={activeTab === "inventory-audit" ? "active" : ""}
-            onClick={() => setActiveTab("inventory-audit")}
-          >
-             Inventory Audit
-          </li>
-                <li
-            className={activeTab === "logout-users" ? "active" : ""}
-            onClick={() => setActiveTab("logout-users")}
-          >
-             Users Logout
-          </li>
-
+          {allowedTabs.map((t) => (
+            <li
+              key={t.key}
+              className={activeTab === t.key ? "active" : ""}
+              onClick={() => setActiveTab(t.key)}
+            >
+              {t.label}
+            </li>
+          ))}
         </ul>
       </aside>
-      <section className="settings-content">{renderTab()}</section>
+
+      <section className="settings-content">{active?.component}</section>
     </div>
   );
 };

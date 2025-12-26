@@ -4,8 +4,22 @@ import "./searchModal.css";
 import StockTab from "./StockTab";
 import AllTab from "./AllTab";
 import SqmPiecesTab from "./SqmPiecesTab";
+import { hasPerm } from "../auth/authz"; 
 
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
+  // ✅ permissions: control all 3 tabs
+  const canStock = hasPerm("pos.search.stockTab");
+  const canAll = hasPerm("pos.search.allTab");
+  const canSqm = hasPerm("pos.search.sqmTab");
+
+  const allowedTabs = useMemo(() => {
+    const tabs = [];
+    if (canStock) tabs.push("stock");
+    if (canAll) tabs.push("all");
+    if (canSqm) tabs.push("sqm");
+    return tabs;
+  }, [canStock, canAll, canSqm]);
+
   const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all" | "sqm"
 
   // ✅ selections stored in parent so they don't disappear on tab switch
@@ -19,14 +33,28 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
 
   useEffect(() => {
     if (!isOpen) return;
-    setActiveTab("stock");
+
+    // reset selections on open
     setSelectedStock(new Map());
     setSelectedAll(new Map());
     setSelectedSqm(new Map());
-  }, [isOpen]);
+
+    // pick first allowed tab
+    const first = allowedTabs[0] || null;
+    setActiveTab(first || "all");
+  }, [isOpen, allowedTabs]);
+
+  // if permissions change or active tab is no longer allowed, move to first allowed
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!allowedTabs.length) return;
+
+    if (!allowedTabs.includes(activeTab)) {
+      setActiveTab(allowedTabs[0]);
+    }
+  }, [allowedTabs, activeTab, isOpen]);
 
   const selectedCount = useMemo(() => {
-    // ✅ count unique things: batchId for stock/all, sqmPieceId for sqm
     const keys = new Set();
 
     const addValues = (map) => {
@@ -45,6 +73,28 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   }, [selectedStock, selectedAll, selectedSqm]);
 
   if (!isOpen) return null;
+
+  // ✅ if user has no tab permissions at all
+  if (allowedTabs.length === 0) {
+    return (
+      <div className="search-modal-overlay" onClick={onClose}>
+        <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="search-modal-header">
+            <h2 className="search-modal-title">Search</h2>
+            <div className="search-modal-buttons">
+              <button className="search-modal-close-button" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </div>
+
+          <div style={{ padding: 16 }}>
+            ERROR!. Please Contact the Administrator.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleOk = () => {
     const items = [
@@ -90,13 +140,13 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
         </div>
 
         <div className="search-tabs" role="tablist" aria-label="Search Results Tabs">
-          <TabButton id="stock" label="Stock Items" />
-          <TabButton id="all" label="All" />
-          <TabButton id="sqm" label="SQM Pieces" />
+          {canStock && <TabButton id="stock" label="Stock Items" />}
+          {canAll && <TabButton id="all" label="All" />}
+          {canSqm && <TabButton id="sqm" label="SQM Pieces" />}
         </div>
 
-        {/* Panels (they can unmount now, selections still won’t be lost) */}
-        {activeTab === "stock" && (
+        {/* Panels */}
+        {canStock && activeTab === "stock" && (
           <div id="stock-panel" role="tabpanel" aria-labelledby="stock-tab">
             <StockTab
               ref={stockRef}
@@ -108,7 +158,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         )}
 
-        {activeTab === "all" && (
+        {canAll && activeTab === "all" && (
           <div id="all-panel" role="tabpanel" aria-labelledby="all-tab">
             <AllTab
               ref={allRef}
@@ -120,7 +170,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           </div>
         )}
 
-        {activeTab === "sqm" && (
+        {canSqm && activeTab === "sqm" && (
           <div id="sqm-panel" role="tabpanel" aria-labelledby="sqm-tab">
             <SqmPiecesTab
               ref={sqmRef}
