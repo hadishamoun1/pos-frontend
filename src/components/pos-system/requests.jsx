@@ -25,6 +25,12 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
 
   const isSearching = (searchTerm || "").trim().length > 0;
 
+  // ✅ avoid stale closure inside socket events
+  const isSearchingRef = useRef(isSearching);
+  useEffect(() => {
+    isSearchingRef.current = (searchTerm || "").trim().length > 0;
+  }, [searchTerm]);
+
   // initial load + socket
   useEffect(() => {
     isSearching ? fetchSearch(1, searchTerm) : fetchRequests(1);
@@ -33,7 +39,8 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
 
     socketRef.current.on("newRequest", (newRequest) => {
-      if (isSearching) return;
+      if (isSearchingRef.current) return;
+
       addItemToBlink(newRequest.id);
       setRequests((prev) => {
         if (prev.some((r) => r.id === newRequest.id)) return prev;
@@ -41,7 +48,16 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
       });
     });
 
-    return () => socketRef.current?.disconnect();
+    // ✅ NEW: remove request from list when it gets converted to invoice
+    socketRef.current.on("requestRemoved", ({ id }) => {
+      setRequests((prev) => prev.filter((r) => r.id !== Number(id)));
+    });
+
+    return () => {
+      socketRef.current?.off("newRequest");
+      socketRef.current?.off("requestRemoved");
+      socketRef.current?.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -90,7 +106,6 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     setError("");
 
     try {
-      // ✅ relative path only
       const { data } = await axiosClient.get(`/requests/v1/filtered`, {
         params: { page: pageNum, limit: PAGE_SIZE },
       });
@@ -117,7 +132,6 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
     setError("");
 
     try {
-      // ✅ relative path only
       const { data } = await axiosClient.get(`/requests/v1/filtered/search`, {
         params: { q: q || "", page: pageNum, limit: PAGE_SIZE },
       });
@@ -155,9 +169,7 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
             return (
               <li
                 key={`request-${request.id}`}
-                className={`request-item ${
-                  isItemBlinking(request.id) ? "blink" : ""
-                }`}
+                className={`request-item ${isItemBlinking(request.id) ? "blink" : ""}`}
                 onClick={() => onSelectRequest(request)}
               >
                 <div className="request-header">
@@ -194,9 +206,7 @@ const RequestCard = ({ onSelectRequest, searchTerm = "" }) => {
           <button
             className="request-load-more-button"
             onClick={() =>
-              isSearching
-                ? fetchSearch(page + 1, searchTerm)
-                : fetchRequests(page + 1)
+              isSearching ? fetchSearch(page + 1, searchTerm) : fetchRequests(page + 1)
             }
           >
             Load More
