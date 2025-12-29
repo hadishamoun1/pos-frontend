@@ -974,7 +974,7 @@ const deliveryDocForPreview = useMemo(() => {
     let invoice = invoiceSummary;
     try {
       // ✅ FIX
-      const res = await axiosClient.get(`/invoices/${invId}`);
+const res = await axiosClient.get(`/invoices/v1/${invId}`);
       invoice = res.data;
       console.log("📥 Full invoice from API:", invoice);
     } catch (err) {
@@ -1257,11 +1257,19 @@ const deliveryDocForPreview = useMemo(() => {
 
     try {
       // ✅ FIX
-      const response = await axiosClient.put(
-        `/invoices/${selectedInvoiceId}`,
-        invoiceDataToSave
-      );
-      console.log("✅ Invoice Updated:", response.data);
+  const response = await axiosClient.put(
+    `/invoices/${selectedInvoiceId}`,
+    invoiceDataToSave
+  );
+
+  console.log("✅ Invoice Updated:", response.data);
+  showNotification("success", "Invoice updated successfully!");
+
+  // ✅ refresh state so preview shows the latest
+  await handleSelectInvoice({ id: selectedInvoiceId, invoiceType: typeToSave });
+
+  // optional: exit edit mode
+  setIsEditable?.(false);
       showNotification("success", "Invoice updated successfully!");
     } catch (err) {
       console.error("❌ Error saving invoice:", err);

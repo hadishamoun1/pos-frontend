@@ -134,6 +134,7 @@ const PERMISSION_GROUPS = [
 
  "customers.update",
 
+"sqm.update"
 
     ],
   },

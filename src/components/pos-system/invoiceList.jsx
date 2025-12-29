@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./invoiceList.css";
 import PropTypes from "prop-types";
-import { io } from "socket.io-client";
 import { useBlinkingItems } from "../blink/blink-cards";
-import { axiosClient } from "../api/axiosClient"; 
+import { axiosClient } from "../api/axiosClient";
+import { createSocket } from "../api/socketClient";
 
 const PAGE_SIZE = 100;
 
@@ -21,6 +21,12 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   const { addItemToBlink, isItemBlinking } = useBlinkingItems();
 
   const isSearching = (searchTerm || "").trim().length > 0;
+
+  // ✅ keep latest searching state for socket callbacks (avoid stale closure)
+  const isSearchingRef = useRef(isSearching);
+  useEffect(() => {
+    isSearchingRef.current = (searchTerm || "").trim().length > 0;
+  }, [searchTerm]);
 
   // utils
   const isArabicText = (s) => /[\u0600-\u06FF]/.test(s || "");
@@ -90,11 +96,24 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
   useEffect(() => {
     isSearching ? fetchSearch(1, searchTerm) : fetchInvoices(1);
 
-    // ✅ nginx proxy uses /api, so socket.io path should be under /api/socket.io
-    socketRef.current = io(window.location.origin, { path: "/api/socket.io" });
+    // ✅ create socket (works locally + on server)
+    socketRef.current = createSocket();
 
+    // ✅ DEBUG: confirm connection status
+    socketRef.current.on("connect", () => {
+      console.log("✅ SOCKET CONNECTED", socketRef.current.id);
+    });
+    socketRef.current.on("connect_error", (err) => {
+      console.log("❌ SOCKET CONNECT ERROR", err?.message || err);
+    });
+    socketRef.current.on("disconnect", (reason) => {
+      console.log("⚠️ SOCKET DISCONNECTED", reason);
+    });
+
+    // ✅ CREATE -> add new invoice to list (when not searching)
     socketRef.current.on("newInvoice", (invoice) => {
-      if (isSearching) return;
+      if (isSearchingRef.current) return;
+
       addItemToBlink(invoice.id);
       setInvoices((prev) => {
         if (prev.some((p) => p.id === invoice.id)) return prev;
@@ -102,7 +121,39 @@ const InvoicesList = ({ onSelectInvoice, searchTerm = "" }) => {
       });
     });
 
-    return () => socketRef.current?.disconnect();
+    // ✅ UPDATE -> patch invoice in list (and optionally bring to top when not searching)
+    socketRef.current.on("invoiceUpdated", (invoice) => {
+      addItemToBlink(invoice.id);
+
+      setInvoices((prev) => {
+        const idx = prev.findIndex((p) => p.id === invoice.id);
+
+        if (idx === -1) {
+          if (!isSearchingRef.current) return [invoice, ...prev];
+          return prev;
+        }
+
+        const next = [...prev];
+        next[idx] = { ...next[idx], ...invoice };
+
+        if (!isSearchingRef.current) {
+          const updated = next[idx];
+          const rest = next.filter((p) => p.id !== invoice.id);
+          return [updated, ...rest];
+        }
+
+        return next;
+      });
+    });
+
+    return () => {
+      socketRef.current?.off("connect");
+      socketRef.current?.off("connect_error");
+      socketRef.current?.off("disconnect");
+      socketRef.current?.off("newInvoice");
+      socketRef.current?.off("invoiceUpdated");
+      socketRef.current?.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
