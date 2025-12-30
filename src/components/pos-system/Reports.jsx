@@ -3,12 +3,14 @@ import React, { useState } from "react";
 import "./Reports.css";
 import TrialBalance from "./TrialBalance";
 import AccountStatement from "./AccountStatement";
-import CostAnalysis from "./CostAnalysis"; // <-- NEW
+import CostAnalysis from "./CostAnalysis";
+import CustomerBalances from "./CustomerBalances"; // ✅ NEW
 
 const TABS = [
   { key: "trial-balance", label: "Trial Balance / ميزان المراجعة" },
   { key: "account-statement", label: "Account Statement / كشف حساب" },
-  { key: "cost-analysis", label: "Cost Analysis / تحليل الكلفة" }, // <-- CHANGED
+  { key: "cost-analysis", label: "Cost Analysis / تحليل الكلفة" },
+  { key: "customer-balances", label: "Customer Balances / أرصدة الزبائن" }, // ✅ NEW
   { key: "aging", label: "A/R Aging (soon)", disabled: true },
 ];
 
@@ -33,11 +35,13 @@ export default function ReportsPage() {
       <div className="reports-panel">
         {active === "trial-balance" && <TrialBalance />}
         {active === "account-statement" && <AccountStatement />}
-        {active === "cost-analysis" && <CostAnalysis />}{/* NEW */}
+        {active === "cost-analysis" && <CostAnalysis />}
+        {active === "customer-balances" && <CustomerBalances />} {/* ✅ NEW */}
 
         {active !== "trial-balance" &&
           active !== "account-statement" &&
-          active !== "cost-analysis" && (
+          active !== "cost-analysis" &&
+          active !== "customer-balances" && (
             <div className="reports-coming-soon">
               <p>Coming soon…</p>
             </div>
