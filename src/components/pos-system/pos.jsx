@@ -29,7 +29,7 @@ const POSSystemPage = () => {
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [currencyRate, setCurrencyRate] = useState("89000");
+  const [currencyRate, setCurrencyRate] = useState("89500");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [vat, setVat] = useState("11");
@@ -629,7 +629,7 @@ const deliveryDocForPreview = useMemo(() => {
     setSelectedCustomerId(null);
     setCustomerInput("");
     setSelectedCustomerName("");
-    setCurrencyRate("89000");
+    setCurrencyRate("89500");
     setVat("11");
     setSelectedInvoiceId(null);
     setSelectedRequestId(null);
@@ -991,7 +991,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
 
     const currencyRateValue = invoice?.currencyRate
       ? parseFloat(invoice.currencyRate).toString()
-      : "89000";
+      : "89500";
 
     setCustomerInput(invoice?.customerName || invoice?.customer?.customerName || "");
     setSelectedCustomerId(invoice?.customerId ?? invoice?.customer?.id ?? null);

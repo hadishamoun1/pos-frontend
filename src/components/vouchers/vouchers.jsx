@@ -669,8 +669,8 @@ const JournalVoucherPage = () => {
     round2(totalDebitOFR) === round2(totalCreditOFR) &&
     round2(totalDebitOFR) !== 0;
 
-  const isUSDEqual = totalDebitUSD === totalCreditUSD;
-  const isLLEqual = totalDebitLL === totalCreditLL;
+const isUSDEqual = round2(totalDebitUSD) === round2(totalCreditUSD);
+const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
   const diffBase = round2(totalDebitBase - totalCreditBase);
   const diffOFR = round2(totalDebitOFR - totalCreditOFR);

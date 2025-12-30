@@ -134,7 +134,7 @@ const AccountingPage = () => {
 
     setStmtCustomerId(cid);
     setStmtCustomerName(sel?.customerName || "");
-    setStmtDefaultDate(sel?.date || null);
+    setStmtDefaultDate(null);
 
     setIsStatementOpen(true);
   };

@@ -32,8 +32,7 @@ const CustomerDetails = ({
             value={currencyRate}
             onChange={(e) => setCurrencyRate(e.target.value)}
           >
-            <option value="89000">89,000</option>
-            <option value="1500">1500</option>
+            <option value="89500">89,500</option>
           </select>
 
           <select
