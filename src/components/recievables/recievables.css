@@ -72,11 +72,9 @@
 }
 
 .action-button-stmt:hover {
- background: linear-gradient(135deg, #d5a000, #8f8300);
-   transform: scale(1.05);
+  background: linear-gradient(135deg, #d5a000, #8f8300);
+  transform: scale(1.05);
 }
-
-
 
 .action-button:hover {
   background: linear-gradient(135deg, #0056b3, #003f8a);
@@ -92,7 +90,7 @@
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   background: #ffffff;
-  table-layout: fixed; /* Ensures consistent column widths */
+  table-layout: fixed;
 }
 
 .accounting-table th {
@@ -105,6 +103,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .accounting-table td {
   padding: 0.7rem;
   border-bottom: 1px solid #f1f1f1;
@@ -128,7 +127,6 @@
 
 .accounting-table td {
   background-color: #f9f9f9;
-  transition: all 0.3s ease;
 }
 
 .accounting-table tr:nth-child(even) td {
@@ -137,10 +135,6 @@
 
 .accounting-table tbody tr:hover td {
   background-color: #d6ebfa;
-}
-
-.accounting-table tbody tr {
-  transition: background-color 0.3s ease, transform 0.3s ease;
 }
 
 /* Square Checkbox Styling */
@@ -193,7 +187,7 @@
 }
 
 .delete-button {
-  background-color: #dc3545; /* Red */
+  background-color: #dc3545;
   color: white;
   border: none;
   border-radius: 10px;
@@ -205,78 +199,78 @@
 }
 
 .delete-button:hover {
-  background-color: #bd0417; /* Darker red on hover */
+  background-color: #bd0417;
   transform: scale(1.05);
   color: white;
 }
 
-/* 1st col: “Select” */
+/* 1st col: "Select" */
 .accounting-table th:nth-child(1),
 .accounting-table td:nth-child(1) {
   width: 5%;
 }
 
-/* 2nd col: “Customer Name” */
+/* 2nd col: "Customer Name" */
 .accounting-table th:nth-child(2),
 .accounting-table td:nth-child(2) {
   width: 20%;
 }
 
-/* 3rd col: “Currency” */
+/* 3rd col: "Currency" */
 .accounting-table th:nth-child(3),
 .accounting-table td:nth-child(3) {
   width: 4%;
 }
 
-/* 4th col: “Ex Rate” */
+/* 4th col: "Ex Rate" */
 .accounting-table th:nth-child(4),
 .accounting-table td:nth-child(4) {
   width: 10%;
 }
 
-/* 5th col: “Amount Ex” */
+/* 5th col: "Amount Ex" */
 .accounting-table th:nth-child(5),
 .accounting-table td:nth-child(5) {
   width: 10%;
 }
 
-/* 6th col: “Cash Number” */
+/* 6th col: "Cash Number" */
 .accounting-table th:nth-child(6),
 .accounting-table td:nth-child(6) {
   width: 10%;
 }
 
-/* 7th col: “Date” */
+/* 7th col: "Date" */
 .accounting-table th:nth-child(7),
 .accounting-table td:nth-child(7) {
   width: 9%;
 }
 
-/* 8th col: “Ref Invoice” */
+/* 8th col: "Ref Invoice" */
 .accounting-table th:nth-child(8),
 .accounting-table td:nth-child(8) {
   width: 10%;
 }
 
-/* 9th col: “JV Number” */
+/* 9th col: "JV Number" */
 .accounting-table th:nth-child(9),
 .accounting-table td:nth-child(9) {
   width: 10%;
 }
 
-/* 10th col: “PMT Type” */
+/* 10th col: "PMT Type" */
 .accounting-table th:nth-child(10),
 .accounting-table td:nth-child(10) {
   width: 7%;
 }
 
-/* 11th col: “Comments” */
+/* 11th col: "Comments" */
 .accounting-table th:nth-child(11),
 .accounting-table td:nth-child(11) {
   width: 10%;
 }
 
-/* 12th col: “RCT” */
+/* 12th col: "RCT" */
 .accounting-table th:nth-child(12),
 .accounting-table td:nth-child(12) {
   width: 10%;
@@ -295,6 +289,57 @@
 
 .receipt-preview-button:hover {
   background: #0056b3;
+}
+
+.action-button-jv {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #07db7f, #05854d);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-button-jv:hover {
+  background: linear-gradient(135deg, #05a45f, #046e40);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.action-button-jv:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+/* ✅ UNIQUE CLASS: Blinking yellow animation for new receivables */
+@keyframes receivable-blink-animation {
+  0% { background-color: #fbbf24 !important; }
+  10% { background-color: transparent !important; }
+  20% { background-color: #fbbf24 !important; }
+  30% { background-color: transparent !important; }
+  40% { background-color: #fbbf24 !important; }
+  50% { background-color: transparent !important; }
+  60% { background-color: #fbbf24 !important; }
+  70% { background-color: transparent !important; }
+  80% { background-color: #fbbf24 !important; }
+  90% { background-color: transparent !important; }
+  100% { background-color: transparent !important; }
+}
+
+/* Apply to cells of highlighted row */
+tr.receivable-row-highlight-blink td {
+  animation: receivable-blink-animation 5s linear !important;
+}
+
+/* Override hover during animation */
+tr.receivable-row-highlight-blink:hover td {
+  animation: receivable-blink-animation 5s linear !important;
 }
 
 /* Responsive Design */

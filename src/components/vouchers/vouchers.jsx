@@ -4,6 +4,8 @@ import AccountSelectionModal from "./acc-modal-selection";
 import { axiosClient } from "../api/axiosClient";
 import NotificationModal from "../recievables/NotificationModal";
 import JournalListsModal from "./journal-list-modal";
+import { useParams, useNavigate } from "react-router-dom";
+
 
 const JournalVoucherPage = () => {
   const [isJournalListOpen, setIsJournalListOpen] = useState(false);
@@ -30,6 +32,8 @@ const JournalVoucherPage = () => {
   const [hasMoreSummary, setHasMoreSummary] = useState(true);
   const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
 
+    const { id } = useParams(); // Get JV ID from URL
+  const navigate = useNavigate();
   // Notifications
   const [notification, setNotification] = useState({
     visible: false,
@@ -221,6 +225,13 @@ const JournalVoucherPage = () => {
 
     return () => clearTimeout(id);
   }, [pendingFocus, entries.length]);
+
+
+    useEffect(() => {
+    if (id) {
+      fetchJournalVoucherById(Number(id));
+    }
+  }, [id]);
 
   // ---------- ADD ROW with smart defaults ----------
   const handleAddRow = () => {

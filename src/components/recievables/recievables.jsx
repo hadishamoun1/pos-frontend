@@ -7,14 +7,15 @@ import NotificationModal from "./NotificationModal";
 import { axiosClient } from "../api/axiosClient"; 
 import { io } from "socket.io-client"; 
 import RctPaper from "./rctPreview";
-
-// ✅ NEW: Statement modal (adjust path to your actual file location)
+import { createSocket } from "../api/socketClient"; 
 import StatementModal from "../pos-system/Components/StatementModal";
-
-// ✅ NEW: permissions helper
 import { hasPerm } from "../auth/authz";
+// ✅ NEW: Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 const AccountingPage = () => {
+  const navigate = useNavigate(); // ✅ Add this
+  
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -29,13 +30,13 @@ const AccountingPage = () => {
   const [notification, setNotification] = useState(null);
   const [receiptPreviewRecord, setReceiptPreviewRecord] = useState(null);
 
-  // ✅ NEW: Statement modal state
+  const [newlyAddedIds, setNewlyAddedIds] = useState(new Set());
+
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [stmtCustomerId, setStmtCustomerId] = useState(null);
   const [stmtCustomerName, setStmtCustomerName] = useState("");
   const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
 
-  // ✅ PERMISSIONS (hide buttons if not allowed)
   const canCreate = hasPerm("recievables.create");
   const canUpdate = hasPerm("recievables.update");
   const canDelete = hasPerm("recievables.delete");
@@ -97,13 +98,9 @@ const AccountingPage = () => {
   const handleDelete = async () => {
     const id = filteredData[selectedRowIndex].id;
     try {
-      // ✅ relative URL only
       await axiosClient.delete(`/recievables/${id}`);
 
       setNotification({ type: "success", message: "Deleted successfully." });
-      const next = data.filter((r) => r.id !== id);
-      setData(next);
-      setFilteredData(next);
       setSelectedRowIndex(null);
       closeDeleteModal();
     } catch {
@@ -111,7 +108,6 @@ const AccountingPage = () => {
     }
   };
 
-  // ✅ NEW: Open Statement handler
   const openStatement = () => {
     if (selectedRowIndex === null) {
       setNotification({
@@ -139,12 +135,61 @@ const AccountingPage = () => {
     setIsStatementOpen(true);
   };
 
+  // ✅ NEW: Handle View Journal Voucher
+  const handleViewJournalVoucher = async () => {
+    if (selectedRowIndex === null) {
+      setNotification({
+        type: "error",
+        message: "Please select a receipt entry first.",
+      });
+      return;
+    }
+
+    const selectedEntry = filteredData[selectedRowIndex];
+    const receiptEntryId = selectedEntry.id;
+
+    if (!receiptEntryId) {
+      setNotification({
+        type: "error",
+        message: "Selected entry has no ID.",
+      });
+      return;
+    }
+
+    try {
+      // Fetch the journal voucher for this receipt entry
+      const response = await axiosClient.get(
+        `/recievables/${receiptEntryId}/journal-voucher`
+      );
+
+      const data = response.data;
+
+      if (!data.journalVoucher) {
+        setNotification({
+          type: "info",
+          message: "No journal voucher found for this receipt entry.",
+        });
+        return;
+      }
+
+      // Navigate to journal voucher page with the JV ID
+      navigate(`/journal-voucher/${data.journalVoucher.id}`);
+    } catch (error) {
+      console.error("Error fetching journal voucher:", error);
+      setNotification({
+        type: "error",
+        message:
+          error?.response?.data?.message ||
+          "Failed to fetch journal voucher. Please try again.",
+      });
+    }
+  };
+
   useEffect(() => {
     let socket;
 
     const fetchData = async () => {
       try {
-        // ✅ relative URL only
         const res = await axiosClient.get(`/recievables/v1/summary`);
 
         const formatted = (res.data || []).map((v) => ({
@@ -181,11 +226,19 @@ const AccountingPage = () => {
     fetchData();
 
     try {
-      // ✅ IMPORTANT for nginx /api proxy:
-      // connect to same origin and set socket.io path under /api
-      socket = io(window.location.origin, { path: "/api/socket.io" });
+      socket = createSocket();
+
+      socket.on("connect", () => {
+        console.log("✅ Socket connected for receivables");
+      });
+
+      socket.on("connect_error", (err) => {
+        console.warn("Socket connection error:", err);
+      });
 
       socket.on("recievables", (updated) => {
+        console.log("📡 Received receivables update:", updated);
+        
         const fmt = (updated || []).map((v) => ({
           id: v.id,
           date: v.date.slice(0, 10),
@@ -202,14 +255,48 @@ const AccountingPage = () => {
           rct: v.jvNumber,
           type: v.type,
         }));
-        setData(fmt);
+
+        setData((prevData) => {
+          console.log("🔍 Previous data IDs:", prevData.map(item => item.id));
+          console.log("🔍 New data IDs:", fmt.map(item => item.id));
+          
+          const prevIds = new Set(prevData.map(item => item.id));
+          const newIds = new Set();
+
+          fmt.forEach(item => {
+            if (!prevIds.has(item.id)) {
+              newIds.add(item.id);
+              console.log("✨ NEW ITEM DETECTED:", item.id);
+            }
+          });
+
+          if (newIds.size > 0) {
+            console.log("💡 Setting newly added IDs:", Array.from(newIds));
+            setNewlyAddedIds(newIds);
+
+            setTimeout(() => {
+              console.log("⏰ Removing glow effect");
+              setNewlyAddedIds(new Set());
+            }, 5000);
+          } else {
+            console.log("❌ No new items detected");
+          }
+
+          return fmt;
+        });
+        
         setFilteredData(fmt);
       });
-    } catch {
-      console.warn("Socket.io not available");
+    } catch (err) {
+      console.warn("Socket.io not available:", err);
     }
 
-    return () => socket && socket.disconnect();
+    return () => {
+      if (socket) {
+        socket.disconnect();
+        console.log("🔌 Socket disconnected");
+      }
+    };
   }, []);
 
   const formatNumberWithCommas = (n) =>
@@ -219,7 +306,6 @@ const AccountingPage = () => {
     setSearchTerm(e.target.value);
   };
 
-  // Debounced server search using /journal-vouchers/search
   const searchAbortRef = useRef(null);
   useEffect(() => {
     const term = (searchTerm || "").trim();
@@ -252,7 +338,6 @@ const AccountingPage = () => {
 
       setSearching(true);
       try {
-        // ✅ relative URL only
         const resp = await axiosClient.get(`/journal-vouchers/v1/jv/search`, {
           params: { q: term, limit: 50, page: 1 },
           signal: controller.signal,
@@ -286,6 +371,10 @@ const AccountingPage = () => {
     setReceiptPreviewRecord(record);
   };
 
+  useEffect(() => {
+    console.log("🎨 newlyAddedIds updated:", Array.from(newlyAddedIds));
+  }, [newlyAddedIds]);
+
   return (
     <>
       <div className="accounting-container">
@@ -318,7 +407,6 @@ const AccountingPage = () => {
                 </button>
               )}
 
-              {/* Statement stays as-is (you can also permission it if you want) */}
               <button
                 className="action-button-stmt"
                 onClick={openStatement}
@@ -329,6 +417,19 @@ const AccountingPage = () => {
                 }
               >
                 Stmt
+              </button>
+
+              {/* ✅ NEW: View Journal Voucher Button */}
+              <button
+                className="action-button-jv"
+                onClick={handleViewJournalVoucher}
+                title={
+                  selectedRowIndex === null
+                    ? "Select a receipt entry first"
+                    : "View journal voucher for selected entry"
+                }
+              >
+                View JV
               </button>
             </div>
           </div>
@@ -358,36 +459,44 @@ const AccountingPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.map((row, idx) => (
-                    <tr key={row.id}>
-                      <td>
-                        <input
-                          type="radio"
-                          name="selectedRow"
-                          checked={selectedRowIndex === idx}
-                          onChange={() => setSelectedRowIndex(idx)}
-                        />
-                      </td>
-                      <td>{row.customerName}</td>
-                      <td>{row.currency}</td>
-                      <td>{row.exchangeRate}</td>
-                      <td>{formatNumberWithCommas(row.amountExchanged)}</td>
-                      <td>{formatNumberWithCommas(row.cashNumber)}</td>
-                      <td>{row.date}</td>
-                      <td>{row.refInvoice}</td>
-                      <td>{row.invoiceNumber}</td>
-                      <td>{row.pmtType}</td>
-                      <td>{row.comments}</td>
-                      <td>
-                        <button
-                          className="receipt-preview-button"
-                          onClick={() => handlePreviewReceipt(row)}
-                        >
-                          Receipt
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredData.map((row, idx) => {
+                    const hasGlow = newlyAddedIds.has(row.id);
+                    console.log(`Row ${row.id} has glow:`, hasGlow);
+                    
+                    return (
+                      <tr 
+                        key={row.id}
+                        className={hasGlow ? "newly-added" : ""}
+                      >
+                        <td>
+                          <input
+                            type="radio"
+                            name="selectedRow"
+                            checked={selectedRowIndex === idx}
+                            onChange={() => setSelectedRowIndex(idx)}
+                          />
+                        </td>
+                        <td>{row.customerName}</td>
+                        <td>{row.currency}</td>
+                        <td>{row.exchangeRate}</td>
+                        <td>{formatNumberWithCommas(row.amountExchanged)}</td>
+                        <td>{formatNumberWithCommas(row.cashNumber)}</td>
+                        <td>{row.date}</td>
+                        <td>{row.refInvoice}</td>
+                        <td>{row.invoiceNumber}</td>
+                        <td>{row.pmtType}</td>
+                        <td>{row.comments}</td>
+                        <td>
+                          <button
+                            className="receipt-preview-button"
+                            onClick={() => handlePreviewReceipt(row)}
+                          >
+                            Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </>
@@ -398,8 +507,6 @@ const AccountingPage = () => {
           <NewRecordModal
             onClose={closeNewModal}
             onSave={(created) => {
-              setData((d) => [...d, ...created]);
-              setFilteredData((d) => [...d, ...created]);
               closeNewModal();
             }}
           />
@@ -410,28 +517,6 @@ const AccountingPage = () => {
             selectedRow={selectedRow}
             onClose={closeEditModal}
             onSave={(updated) => {
-              const idx = data.findIndex((r) => r.id === updated.id);
-              if (idx > -1) {
-                const copy = [...data];
-                copy[idx] = {
-                  ...copy[idx],
-                  date: updated.date.slice(0, 10),
-                  customerName: updated.customerName,
-                  customerAccountId: updated.customerid,
-                  currency: updated.currency,
-                  exchangeRate: updated.exchangeRate,
-                  cashNumber: updated.cashNumber,
-                  amountExchanged: updated.amountExchanged,
-                  refInvoice: updated.invoiceId,
-                  invoiceNumber: updated.jvNumber,
-                  pmtType: updated.pmtType,
-                  comments: updated.comments,
-                  rct: updated.jvNumber,
-                  type: updated.type,
-                };
-                setData(copy);
-                setFilteredData(copy);
-              }
               closeEditModal();
             }}
           />

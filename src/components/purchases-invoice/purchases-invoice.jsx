@@ -15,7 +15,7 @@ import "./styles/invoiceModel.css";
 import AlternativeSummarySection from "./AlternativeSummarySection";
 import NotificationModal from "../recievables/NotificationModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-
+import { useNavigate } from "react-router-dom";
 // ✅ use axiosClient (auto token)
 import { axiosClient } from "../api/axiosClient";
 
@@ -189,6 +189,44 @@ const PurchasesInvoicePage = () => {
       ]);
     }
   };
+
+
+  const navigate = useNavigate();
+
+// Add this handler function
+const handleViewJournalVoucher = async () => {
+  if (!selectedInvoiceId) {
+    openNotif("warning", "Please select a purchase invoice first");
+    return;
+  }
+
+  try {
+    // Fetch the journal voucher for this invoice
+    const response = await axiosClient.get(
+      `/purchase-invoices/${selectedInvoiceId}/journal-vouchers`
+    );
+
+    const data = response.data;
+
+    if (!data.journalVouchers || data.journalVouchers.length === 0) {
+      openNotif("info", "No journal voucher found for this purchase invoice");
+      return;
+    }
+
+    // Get the first (or only) journal voucher
+    const jv = data.journalVouchers[0];
+
+    // Navigate to journal voucher page with the JV ID
+    navigate(`/journal-voucher/${jv.id}`);
+  } catch (error) {
+    console.error("Error fetching journal voucher:", error);
+    openNotif(
+      "error",
+      error?.response?.data?.message || "Failed to fetch journal voucher"
+    );
+  }
+};
+
 
   const handleUnitPriceRowsChange = (updater) => {
     setUnitPriceRows((prev) =>
@@ -839,64 +877,74 @@ const PurchasesInvoicePage = () => {
     }
   }
 
-  return (
-    <div className="main-container">
-      <div className="purchase-invoice-container">
-        <div className="header">
-          <h2>
-            {isInvoiceSelected
-              ? isEditMode
-                ? "Edit Purchase Invoice"
-                : "View Purchase Invoice"
-              : "Create Purchase Invoice"}
-          </h2>
-          <div className="button-container">
-            {isInvoiceSelected ? (
-              isEditMode ? (
-                <>
-                  <button
-                    className="save-button"
-                    onClick={() => saveInvoice(invoiceType)}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
-                  </button>
-                  <button className="cancel-button" onClick={handleCancelEdit}>
-                    Cancel
-                  </button>
-                </>
-              ) : (
+return (
+  <div className="main-container">
+    <div className="purchase-invoice-container">
+      <div className="header">
+        <h2>
+          {isInvoiceSelected
+            ? isEditMode
+              ? "Edit Purchase Invoice"
+              : "View Purchase Invoice"
+            : "Create Purchase Invoice"}
+        </h2>
+        <div className="button-container">
+          {isInvoiceSelected ? (
+            isEditMode ? (
+              <>
+                <button
+                  className="save-button"
+                  onClick={() => saveInvoice(invoiceType)}
+                  disabled={isSaving}
+                >
+                  {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
+                </button>
+                <button className="cancel-button" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              // ✅ Wrap multiple buttons in a fragment
+              <>
                 <button
                   className="edit-purch-button"
                   onClick={() => setIsEditMode(true)}
                 >
                   Edit Invoice
                 </button>
-              )
-            ) : (
-              <button
-                className="save-button"
-                onClick={() => saveInvoice(invoiceType)}
-              >
-                Save Invoice
-              </button>
-            )}
 
+                <button
+                  className="view-jv-button"
+                  onClick={handleViewJournalVoucher}
+                >
+                  View Journal Voucher
+                </button>
+              </>
+            )
+          ) : (
             <button
-              className="new-button"
-              onClick={() => {
-                resetFields();
-                setSelectedInvoiceId(null);
-                setIsEditMode(false);
-                setUnitPriceRows([]);
-                setShowUnitPriceModal(false);
-                setActiveSummary("main");
-              }}
+              className="save-button"
+              onClick={() => saveInvoice(invoiceType)}
             >
-              New
+              Save Invoice
             </button>
-          </div>
+          )}
+
+          <button
+            className="new-button"
+            onClick={() => {
+              resetFields();
+              setSelectedInvoiceId(null);
+              setIsEditMode(false);
+              setUnitPriceRows([]);
+              setShowUnitPriceModal(false);
+              setActiveSummary("main");
+            }}
+          >
+            New
+          </button>
         </div>
+      </div>
 
         <div className="invoice-details">
           {/* ----------- ROW 1 ----------- */}

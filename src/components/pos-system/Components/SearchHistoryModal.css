@@ -1,0 +1,294 @@
+/* src/pos-system/Components/SearchHistoryModal.css */
+.search-history-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.search-history-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 1400px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.search-history-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.search-history-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.search-history-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.search-history-modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.search-history-search-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.search-history-input-container {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search-history-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.search-history-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-history-search-btn {
+  padding: 0.75rem 1.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-history-search-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.search-history-search-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.search-history-clear-btn {
+  padding: 0.75rem 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-history-clear-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.search-history-filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #dbeafe;
+  border: 1px solid #3b82f6;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.search-filter-tag button {
+  background: none;
+  border: none;
+  color: #1e40af;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.search-filter-tag button:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.search-history-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.search-history-loading,
+.search-history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.search-history-results-list {
+  overflow-x: auto;
+}
+
+.search-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.search-history-table thead {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.search-history-table th {
+  padding: 1rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.search-history-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.search-history-row {
+  transition: all 0.2s;
+}
+
+.search-history-row:hover {
+  background: #f9fafb;
+}
+
+.item-name-rtl {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: right;
+}
+
+.price-cell {
+  background-color: #fef3c7;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.search-history-row:hover .price-cell {
+  background-color: #fde68a;
+}
+
+.total-cell {
+  background: #f0f9ff;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.search-history-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.search-history-pagination-btn {
+  padding: 0.625rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-history-pagination-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.search-history-pagination-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.search-history-pagination-info {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}

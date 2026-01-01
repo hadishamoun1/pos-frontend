@@ -373,7 +373,7 @@
 
 .column-account-number,
 .column-account-number-cell {
-  width: 90px;
+  width: 100px;
 }
 
 /* Account name column: fixed width, input never overflows */

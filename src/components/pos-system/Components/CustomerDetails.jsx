@@ -1,4 +1,6 @@
-import React from "react";
+// CustomerDetails.jsx
+import React, { useState } from "react";
+import HistoryModal from "./HistoryModal";
 
 const CustomerDetails = ({
   currencyRate,
@@ -17,11 +19,12 @@ const CustomerDetails = ({
   handleGetPriceClick,
   cutMode,
   onToggleCutMode,
-
-  // ✅ ADD THESE
   currencyCode,
   onCurrencyCodeChange,
 }) => {
+  // ✅ Add state for history modal
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
   return (
     <div>
       {/* Dropdowns & Checkbox Row */}
@@ -45,7 +48,6 @@ const CustomerDetails = ({
             <option value="11">11%</option>
           </select>
 
-          {/* ✅ Currency Dropdown */}
           <select
             className="pos-page-currency-dropdown"
             value={currencyCode || "USD"}
@@ -54,7 +56,7 @@ const CustomerDetails = ({
             title={!isEditable ? "Click Edit first" : "Currency"}
           >
             <option value="USD">USD</option>
-            <option value="LL">LL</option>
+            
             <option value="LBP">LBP</option>
           </select>
         </div>
@@ -172,8 +174,24 @@ const CustomerDetails = ({
           >
             Get Price
           </button>
+
+          {/* ✅ NEW: View History Button */}
+          <button
+            className="pos-page-toolbar-button pos-page-purple-button"
+          
+            onClick={() => setIsHistoryModalOpen(true)}
+            title="View Customer Price History"
+          >
+            View History
+          </button>
         </div>
       </div>
+
+      {/* ✅ History Modal */}
+      <HistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+      />
     </div>
   );
 };

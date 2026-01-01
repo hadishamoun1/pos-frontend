@@ -1,0 +1,452 @@
+/* src/pos-system/Components/HistoryModal.css */
+.history-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.history-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 1500px;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.history-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.history-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.history-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.history-modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.history-modal-search {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-search-input {
+  width: 30%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.history-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.history-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.history-loading,
+.history-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.history-customers-list {
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.history-table thead {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.history-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.history-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.history-table-row {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-table-row:hover {
+  background: #f3f4f6;
+}
+
+.history-table-row.selected {
+  background: #dbeafe;
+  border-left: 4px solid #3b82f6;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.history-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.history-pagination-btn {
+  padding: 0.625rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-pagination-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.history-pagination-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.history-pagination-info {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.history-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.history-back-button {
+  background: #f3f4f6;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.history-back-button:hover {
+  background: #e5e7eb;
+  transform: translateX(-2px);
+}
+
+.history-details-list {
+  overflow-x: auto;
+}
+
+.history-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.9rem;
+}
+
+.history-details-table thead {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.history-details-table th {
+  padding: 0.875rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.history-details-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+/* ✅ Price column (13th column) - Yellow background */
+.history-details-table tbody tr td:nth-child(13) {
+  background-color: #fef3c7;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.history-details-row {
+  transition: all 0.2s;
+}
+
+.history-details-row:hover {
+  background: #f9fafb;
+}
+
+/* ✅ Keep price column yellow even on hover */
+.history-details-row:hover td:nth-child(13) {
+  background-color: #fde68a;
+}
+
+/* ✅ Item Name column (5th column) - RTL direction */
+.item-name {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: right;
+}
+
+.total-cell {
+  background: #f0f9ff;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.history-details-search-section {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.history-details-search-container {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.history-details-search-input {
+
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  width: 35%;
+}
+
+.history-details-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.history-details-search-btn {
+  padding: 0.75rem 1.25rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.history-details-search-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.history-details-search-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.history-details-clear-btn {
+  padding: 0.75rem 1.25rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.history-details-clear-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.history-filter-tags {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.history-filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #dbeafe;
+  border: 1px solid #3b82f6;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.history-filter-tag button {
+  background: none;
+  border: none;
+  color: #1e40af;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.history-filter-tag button:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .history-details-table {
+    font-size: 0.8rem;
+  }
+
+  .history-details-table th,
+  .history-details-table td {
+    padding: 0.5rem;
+  }
+
+  .item-name {
+    max-width: 150px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .history-modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .history-table {
+    font-size: 0.85rem;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Scrollbar styling */
+.history-modal-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.history-modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.history-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.history-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

@@ -3,8 +3,9 @@ import ReactDOM from "react-dom";
 import CustomerSelectionModal from "./CustomerSelectionModal";
 import "./newRecord.css";
 import NotificationModal from "./NotificationModal";
-import { axiosClient } from "../api/axiosClient"; // ✅ added (api client)
+import { axiosClient } from "../api/axiosClient";
 
+// ✅ InvoicePicker Component (COMPLETE)
 function InvoicePicker({
   disabled,
   loading,
@@ -74,13 +75,10 @@ function InvoicePicker({
 
     const rect = btn.getBoundingClientRect();
 
-    const MENU_W = 750; // must match the width you use in portal style
+    const MENU_W = 750;
     const GAP = 6;
 
-    // ✅ align menu to the LEFT side (right-aligned to the button)
     let left = rect.right - MENU_W;
-
-    // ✅ keep inside viewport
     left = Math.max(8, Math.min(left, window.innerWidth - MENU_W - 8));
 
     const top = rect.bottom + GAP;
@@ -88,14 +86,11 @@ function InvoicePicker({
     setPos({ left, top, width: rect.width });
   };
 
-  // close on outside click / ESC
   useEffect(() => {
     if (!open) return;
 
     const onDown = (e) => {
       if (!rootRef.current) return;
-
-      // click inside button/menu? ignore
       if (rootRef.current.contains(e.target)) return;
       const inPortalMenu = e.target.closest?.(".inv-picker__menu");
       if (inPortalMenu) return;
@@ -121,7 +116,6 @@ function InvoicePicker({
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   return (
@@ -155,7 +149,7 @@ function InvoicePicker({
               position: "fixed",
               left: pos.left,
               top: pos.top,
-              width: 700, // fixed like your CSS
+              width: 700,
               zIndex: 20000,
             }}
           >
@@ -227,7 +221,7 @@ function InvoicePicker({
   );
 }
 
-/** Right click menu for rows (portaled, not clipped) */
+// ✅ RowContextMenu Component (COMPLETE)
 function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
   const menuRef = useRef(null);
 
@@ -252,7 +246,6 @@ function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
 
   if (!open) return null;
 
-  // keep inside viewport
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const W = 190;
@@ -290,20 +283,20 @@ function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
   );
 }
 
+// ✅ Main NewRecordModal Component
 const NewRecordModal = ({ onClose, onSave }) => {
   const [rows, setRows] = useState([]);
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [currentRowIndex, setCurrentRowIndex] = useState(null);
   const [notification, setNotification] = useState(null);
   const [closeAfterNotification, setCloseAfterNotification] = useState(false);
-
-  // ✅ prevents double save
   const [saving, setSaving] = useState(false);
+  
+  // ✅ NEW: Refs for input navigation
+  const inputRefs = useRef({});
 
-  // ✅ Cache invoices per customer to avoid refetching
-  const invoiceCacheRef = useRef(new Map()); // customerId -> invoices[]
+  const invoiceCacheRef = useRef(new Map());
 
-  // ✅ right click menu state
   const [rowMenu, setRowMenu] = useState({
     open: false,
     x: 0,
@@ -323,7 +316,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
-  // ✅ Fetch invoices for customer (uses cache)
   const fetchCustomerInvoices = async (customerId) => {
     const key = String(customerId || "").trim();
     if (!key) return [];
@@ -332,7 +324,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
       return invoiceCacheRef.current.get(key) || [];
     }
 
-    // ✅ FIX: relative URL only
     const url = `/recievables/v1/customers/${key}/invoices`;
     const resp = await axiosClient.get(url);
 
@@ -341,31 +332,31 @@ const NewRecordModal = ({ onClose, onSave }) => {
     return list;
   };
 
-  const handleAddRow = () => {
-    if (saving) return;
-    setRows((prev) => [
-      ...prev,
-      {
-        customerId: "",
-        customerName: "",
-        type: "S",
-        pmtType: "",
-        currency: "",
-        exchangeRate: "",
-        cashNumber: "",
-        amountExchanged: "",
-        date: "",
-
-        // ✅ invoice selection
-        invoiceId: "", // string
-        invoiceOptions: [],
-        invoiceLoading: false,
-
-        comments: "",
-      },
-    ]);
-  };
-
+const handleAddRow = () => {
+  if (saving) return;
+  
+  // ✅ Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+  
+  setRows((prev) => [
+    ...prev,
+    {
+      customerId: "",
+      customerName: "",
+      type: "S",
+      pmtType: "Cash", 
+      currency: "USD", 
+      exchangeRate: "89,500",
+      cashNumber: "",
+      amountExchanged: "",
+      date: today, 
+      invoiceId: "",
+      invoiceOptions: [],
+      invoiceLoading: false,
+      comments: "",
+    },
+  ]);
+};
   const handleInputChange = (index, field, value) => {
     if (saving) return;
 
@@ -455,6 +446,58 @@ const NewRecordModal = ({ onClose, onSave }) => {
     }
   };
 
+  // ✅ NEW: Register input refs
+  const registerRef = (rowIndex, field) => (el) => {
+    if (!inputRefs.current[rowIndex]) {
+      inputRefs.current[rowIndex] = {};
+    }
+    inputRefs.current[rowIndex][field] = el;
+  };
+
+  // ✅ NEW: Handle Enter key navigation
+  const handleKeyDown = (e, rowIndex, field) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const fieldOrder = [
+      "customerName",
+      "type",
+      "pmtType",
+      "currency",
+      "cashNumber",
+      "exchangeRate",
+      "date",
+      "comments",
+    ];
+
+    const currentFieldIndex = fieldOrder.indexOf(field);
+    if (currentFieldIndex === -1) return;
+
+    if (currentFieldIndex === fieldOrder.length - 1) {
+      if (rowIndex === rows.length - 1) {
+        handleAddRow();
+        setTimeout(() => {
+          const firstField = inputRefs.current[rowIndex + 1]?.["customerName"];
+          if (firstField) firstField.focus();
+        }, 0);
+      } else {
+        const nextRowFirstField = inputRefs.current[rowIndex + 1]?.["customerName"];
+        if (nextRowFirstField) nextRowFirstField.focus();
+      }
+    } else {
+      const nextField = fieldOrder[currentFieldIndex + 1];
+      const nextInput = inputRefs.current[rowIndex]?.[nextField];
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+   useEffect(() => {
+    if (rows.length === 0) {
+      handleAddRow();
+    }
+  
+  }, []);
+
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
@@ -516,7 +559,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
           pmtType: r.pmtType,
         };
 
-        // ✅ FIX: relative URL only
         const resp = await axiosClient.post(`/recievables`, payload);
         created.push(resp.data);
       }
@@ -564,7 +606,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
           </div>
         </div>
 
-        {/* ✅ Wrap table for horizontal scroll */}
         <div className="payments-modal-table-scroll">
           <table className="payments-modal-table">
             <thead>
@@ -589,7 +630,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
                   onContextMenu={(e) => {
                     if (saving) return;
 
-                    // Allow normal menu inside form controls or invoice portal
                     const isInteractive = e.target.closest(
                       "input, select, textarea, button"
                     );
@@ -613,6 +653,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                       value={row.customerName}
                       readOnly
                       disabled={saving}
+                      ref={registerRef(idx, "customerName")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "customerName")}
                       onClick={() => {
                         if (saving) return;
                         setCurrentRowIndex(idx);
@@ -625,6 +667,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <select
                       value={row.type}
                       disabled={saving}
+                      ref={registerRef(idx, "type")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "type")}
                       onChange={(e) =>
                         handleInputChange(idx, "type", e.target.value)
                       }
@@ -639,6 +683,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <select
                       value={row.pmtType}
                       disabled={saving}
+                      ref={registerRef(idx, "pmtType")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "pmtType")}
                       onChange={(e) =>
                         handleInputChange(idx, "pmtType", e.target.value)
                       }
@@ -653,6 +699,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                     <select
                       value={row.currency}
                       disabled={saving}
+                      ref={registerRef(idx, "currency")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "currency")}
                       onChange={(e) =>
                         handleInputChange(idx, "currency", e.target.value)
                       }
@@ -668,6 +716,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                       type="text"
                       value={row.cashNumber}
                       disabled={saving}
+                      ref={registerRef(idx, "cashNumber")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "cashNumber")}
                       onChange={(e) =>
                         handleInputChange(idx, "cashNumber", e.target.value)
                       }
@@ -679,6 +729,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                       type="text"
                       value={row.exchangeRate}
                       disabled={saving}
+                      ref={registerRef(idx, "exchangeRate")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "exchangeRate")}
                       onChange={(e) =>
                         handleInputChange(idx, "exchangeRate", e.target.value)
                       }
@@ -699,13 +751,14 @@ const NewRecordModal = ({ onClose, onSave }) => {
                       type="date"
                       value={row.date}
                       disabled={saving}
+                      ref={registerRef(idx, "date")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "date")}
                       onChange={(e) =>
                         handleInputChange(idx, "date", e.target.value)
                       }
                     />
                   </td>
 
-                  {/* ✅ Invoice picker (closed shows ONLY invoice number) */}
                   <td>
                     <InvoicePicker
                       disabled={saving || !row.customerId}
@@ -724,6 +777,8 @@ const NewRecordModal = ({ onClose, onSave }) => {
                       type="text"
                       value={row.comments}
                       disabled={saving}
+                      ref={registerRef(idx, "comments")}
+                      onKeyDown={(e) => handleKeyDown(e, idx, "comments")}
                       onChange={(e) =>
                         handleInputChange(idx, "comments", e.target.value)
                       }
@@ -761,7 +816,6 @@ const NewRecordModal = ({ onClose, onSave }) => {
         />
       )}
 
-      {/* ✅ Right-click row menu */}
       <RowContextMenu
         open={rowMenu.open}
         x={rowMenu.x}

@@ -68,6 +68,8 @@ function App() {
               <Route path="/inventory-activity" element={<InventoryActivityPage />} />
               <Route path="/cuts-control" element={<CutsQueuePage />} />
               <Route path="/viewing" element={<InvoiceDetailsPage />} />
+              <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
+
 
               {/* ✅ Admin-only */}
               <Route element={<AdminRoute />}>
