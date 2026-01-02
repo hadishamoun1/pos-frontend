@@ -28,6 +28,9 @@ const parseLooseNumber = (v) => {
   return m ? Number(m[0]) : NaN;
 };
 
+
+
+
 const toNum = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -159,6 +162,67 @@ export default function StockTotalsAudit() {
     abortRef.current = next;
     return next.signal;
   };
+
+// checks mismatch by comparing Batch Start/In/Out (+ OFR) vs Variant totals
+const isBatchMismatchToVariant = (b, ve) => {
+  const be = getEditForBatch(b); // use current edits if present
+  return (
+    r2(be.start) !== r2(ve.totalStart) ||
+    r2(be.in) !== r2(ve.totalIn) ||
+    r2(be.out) !== r2(ve.totalOut) ||
+    r2(be.startOFR) !== r2(ve.totalStartOFR) ||
+    r2(be.inOFR) !== r2(ve.totalInOFR) ||
+    r2(be.outOFR) !== r2(ve.totalOutOFR)
+  );
+};
+
+const copyVariantTotalsToMismatchedBatchesAll = () => {
+  // IMPORTANT: this only affects the rows you currently have loaded in the UI
+  const rows = filteredRows; // (or use visibleRows if you want only current page)
+
+  const updates = [];
+  for (const row of rows) {
+    const ve = getEditForVariant(row);
+    const batches = Array.isArray(row?.batches) ? row.batches : [];
+    for (const b of batches) {
+      const batchId = Number(b?.batchId ?? b?.id ?? b?.itemBatchId);
+      if (!Number.isFinite(batchId)) continue;
+
+      if (isBatchMismatchToVariant(b, ve)) {
+        updates.push({ batchId, ve, variantId: Number(row?.variantId ?? row?.id) });
+      }
+    }
+  }
+
+  if (!updates.length) {
+    setNote("No mismatched batches found to copy. (Tip: this button only checks the rows currently loaded.)");
+    return;
+  }
+
+  setBatchEdits((prev) => {
+    const next = new Map(prev);
+    for (const u of updates) {
+      const existing = next.get(u.batchId) || {};
+      next.set(u.batchId, {
+        ...existing,
+        start: String(r2(u.ve.totalStart)),
+        in: String(r2(u.ve.totalIn)),
+        out: String(r2(u.ve.totalOut)),
+        startOFR: String(r2(u.ve.totalStartOFR)),
+        inOFR: String(r2(u.ve.totalInOFR)),
+        outOFR: String(r2(u.ve.totalOutOFR)),
+      });
+    }
+    return next;
+  });
+
+  setNote(
+    `Copied Variant totals → ${updates.length} mismatched batch(es). Now click "Save All".`
+  );
+};
+
+
+
 
   const fetchOnce = async ({ page: p, limit: l, signal }) => {
     const params = {
@@ -720,6 +784,16 @@ export default function StockTotalsAudit() {
         </div>
 
         <div className="sta-header-actions">
+
+<button
+  className="sta-btn"
+  onClick={copyVariantTotalsToMismatchedBatchesAll}
+  disabled={loading || savingAll}
+  title="Copy Variant Start/In/Out + OFR Start/In/Out into ALL mismatched batches (loaded rows only)"
+>
+  Copy mismatched batches
+</button>
+
           <button className="sta-btn" onClick={fetchData} disabled={loading || savingAll}>
             {loading ? "Loading…" : "Refresh"}
           </button>
@@ -1050,6 +1124,8 @@ export default function StockTotalsAudit() {
                         <div className="sta-batches-head">
                           <div className="sta-batches-title">Batches (editable)</div>
                           <div className="sta-batches-hint">Batch balance auto: Start + In − Out</div>
+
+
                         </div>
 
                         <div className="sta-batches-wrap">
