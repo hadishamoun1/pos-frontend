@@ -317,6 +317,32 @@
   transform: none;
 }
 
+/* Add this to your recievables.css file */
+
+/* Daily Report Button Styling */
+.action-button-daily {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-button-daily:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.action-button-daily:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 /* ✅ UNIQUE CLASS: Blinking yellow animation for new receivables */
 @keyframes receivable-blink-animation {
   0% { background-color: #fbbf24 !important; }

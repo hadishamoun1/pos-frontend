@@ -10,11 +10,11 @@ import RctPaper from "./rctPreview";
 import { createSocket } from "../api/socketClient"; 
 import StatementModal from "../pos-system/Components/StatementModal";
 import { hasPerm } from "../auth/authz";
-// ✅ NEW: Import useNavigate
 import { useNavigate } from "react-router-dom";
+import DailyReceivablesModal from "./DailyReceivablesModal";
 
 const AccountingPage = () => {
-  const navigate = useNavigate(); // ✅ Add this
+  const navigate = useNavigate();
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -36,6 +36,9 @@ const AccountingPage = () => {
   const [stmtCustomerId, setStmtCustomerId] = useState(null);
   const [stmtCustomerName, setStmtCustomerName] = useState("");
   const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
+
+  // ✅ NEW: State for Daily Receivables Modal
+  const [isDailyReceivablesOpen, setIsDailyReceivablesOpen] = useState(false);
 
   const canCreate = hasPerm("recievables.create");
   const canUpdate = hasPerm("recievables.update");
@@ -135,7 +138,6 @@ const AccountingPage = () => {
     setIsStatementOpen(true);
   };
 
-  // ✅ NEW: Handle View Journal Voucher
   const handleViewJournalVoucher = async () => {
     if (selectedRowIndex === null) {
       setNotification({
@@ -157,7 +159,6 @@ const AccountingPage = () => {
     }
 
     try {
-      // Fetch the journal voucher for this receipt entry
       const response = await axiosClient.get(
         `/recievables/${receiptEntryId}/journal-voucher`
       );
@@ -172,7 +173,6 @@ const AccountingPage = () => {
         return;
       }
 
-      // Navigate to journal voucher page with the JV ID
       navigate(`/journal-voucher/${data.journalVoucher.id}`);
     } catch (error) {
       console.error("Error fetching journal voucher:", error);
@@ -183,6 +183,11 @@ const AccountingPage = () => {
           "Failed to fetch journal voucher. Please try again.",
       });
     }
+  };
+
+  // ✅ NEW: Open Daily Receivables Modal
+  const openDailyReceivables = () => {
+    setIsDailyReceivablesOpen(true);
   };
 
   useEffect(() => {
@@ -419,7 +424,6 @@ const AccountingPage = () => {
                 Stmt
               </button>
 
-              {/* ✅ NEW: View Journal Voucher Button */}
               <button
                 className="action-button-jv"
                 onClick={handleViewJournalVoucher}
@@ -430,6 +434,15 @@ const AccountingPage = () => {
                 }
               >
                 View JV
+              </button>
+
+              {/* ✅ NEW: Daily Receivables Button */}
+              <button
+                className="action-button-daily"
+                onClick={openDailyReceivables}
+                title="View daily receivables report"
+              >
+                Daily Report
               </button>
             </div>
           </div>
@@ -555,6 +568,12 @@ const AccountingPage = () => {
         customerId={stmtCustomerId}
         defaultDate={stmtDefaultDate}
         customerName={stmtCustomerName}
+      />
+
+      {/* ✅ NEW: Daily Receivables Modal */}
+      <DailyReceivablesModal
+        isOpen={isDailyReceivablesOpen}
+        onClose={() => setIsDailyReceivablesOpen(false)}
       />
     </>
   );

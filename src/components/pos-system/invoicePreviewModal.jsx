@@ -313,38 +313,65 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
   const invoiceType = (invoiceData?.invoiceType ?? invoiceData?.type ?? "").toUpperCase(); // "S","RVR","G"
   const hideTaxAccount = invoiceType === "G";
 
-  const rowsHtml =
-    items.length === 0
-      ? `<tr><td colspan="9" style="text-align:center;padding:12px">لا توجد أصناف</td></tr>`
-      : items.map((it) => {
-          const amount = it.totalAmount ?? (Number(it.unitPrice || 0) * Number(it.sqm || 0));
-          const isBox = it.itemType === "box";
-          const isSheet = it.itemType === "sheet";
-          const isSqmPiece = it.itemType === "sqm"
-          const hasThickness = it.thickness !== undefined && it.thickness !== null && String(it.thickness) !== "";
+const rowsHtml =
+  items.length === 0
+    ? `<tr><td colspan="9" style="text-align:center;padding:12px">لا توجد أصناف</td></tr>`
+    : items
+        .map((it) => {
+          const type = String(it?.itemType ?? it?.type ?? "").toLowerCase();
+
+          const isBox = type === "box";
+          const isSheet = type === "sheet";
+          const isSqmPiece = type === "sqm";
+          const isUnit = type === "unit";
+
+          const qtyNum = Number(it?.quantity);
+
+          // ✅ total fallback: unit uses quantity, others use sqm
+          const amount =
+            it?.totalAmount ??
+            (Number(it?.unitPrice || 0) *
+              Number(isUnit ? (Number.isFinite(qtyNum) ? qtyNum : 0) : it?.sqm || 0));
+
+          const sheetsPerBox =
+            it?.sheetsPerBox ??
+            it?.sheets_per_box ??
+            it?.sheetsPerCarton ??
+            it?.sheets_per_carton;
+
+          // ✅ thickness should NOT show for unit
+          const hasThickness =
+            !isUnit &&
+            it?.thickness !== undefined &&
+            it?.thickness !== null &&
+            String(it?.thickness) !== "";
+
           const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
-          const sheetsPerBox = it.sheetsPerBox ?? it.sheets_per_box ?? it.sheetsPerCarton ?? it.sheets_per_carton;
 
-const qtyNum = Number(it.quantity);
+          // ✅ لوح (Sheet) column:
+          // - sqm: show quantity but hide 0 (your existing behavior)
+          // - sheet: show quantity
+          // - unit: show quantity (NEW)
+          // - box: show sheetsPerBox (your existing behavior)
+          const sheetsCell = isSqmPiece
+            ? (Number.isFinite(qtyNum) && qtyNum !== 0 ? fmtSmart(qtyNum) : "")
+            : isSheet || isUnit
+            ? fmtOpt(it.quantity)
+            : isBox
+            ? fmtOpt(sheetsPerBox)
+            : "";
 
-const sheetsCell = isSqmPiece
-  ? (Number.isFinite(qtyNum) && qtyNum !== 0 ? fmtSmart(qtyNum) : "") // ✅ sqm: hide 0
-  : isSheet
-  ? fmtOpt(it.quantity) // sheet: keep your old behavior
-  : isBox
-  ? fmtOpt(sheetsPerBox)
-  : "";
-
+          // ✅ name: never prepend thickness for unit
           const displayName =
-  (it.invoiceItemDisplayName && String(it.invoiceItemDisplayName).trim()) ||
-  (it.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
-  `${thicknessLabel}${it.itemName ?? ""}`.trim();
+            (it?.invoiceItemDisplayName && String(it.invoiceItemDisplayName).trim()) ||
+            (it?.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
+            `${thicknessLabel}${it?.itemName ?? ""}`.trim();
 
           return `
             <tr>
               <td>${fmtSmart(amount)}</td>
               <td>${fmtSmart(it.unitPrice)}</td>
-              <td>${fmtSmart(it.sqm)}</td>
+              <td>${isUnit ? "" : fmtSmart(it.sqm)}</td>
               <td>${fmtOpt(it.width)}</td>
               <td>${fmtOpt(it.length)}</td>
               <td>${sheetsCell}</td>
@@ -352,7 +379,8 @@ const sheetsCell = isSqmPiece
               <td class="arabic-item-name">${displayName}</td>
               <td>${it.itemVariantId ?? ""}</td>
             </tr>`;
-        }).join("");
+        })
+        .join("");
 
   const baseTag  = `<base href="${baseHref}">`;
   const styleTag = `<style>${inlineCss || ""}</style>`;
