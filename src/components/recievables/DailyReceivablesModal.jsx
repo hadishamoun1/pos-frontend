@@ -44,7 +44,7 @@ const DailyReceivablesModal = ({ isOpen, onClose }) => {
   const formatNumberWithCommas = (n) =>
     n != null ? Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
 
-  // Calculate separate totals for S and G types
+  // ✅ FIXED: Calculate separate totals for S and G types with proper number conversion
   const calculateSeparateTotals = () => {
     if (!reportData?.data) return null;
 
@@ -66,7 +66,8 @@ const DailyReceivablesModal = ({ isOpen, onClose }) => {
     };
 
     reportData.data.forEach((entry) => {
-      const amount = entry.cashNumber;
+      // ✅ FIXED: Parse as number explicitly
+      const amount = parseFloat(entry.cashNumber) || 0;
       const currency = entry.currency;
       const paymentType = entry.pmtType;
       const entryType = entry.type;
@@ -288,7 +289,7 @@ const DailyReceivablesModal = ({ isOpen, onClose }) => {
             .report-table td.account-col {
               text-align: center;
               color: #5a6c7d;
-              font-style: bold;
+              font-style: italic;
             }
             
             .type-cell-s {
@@ -420,7 +421,6 @@ const DailyReceivablesModal = ({ isOpen, onClose }) => {
                 </button>
               </div>
 
-              {/* ✅ This div will be printed */}
               <div ref={printRef}>
                 {/* Summary Section */}
                 <div className="summary-section-recievables">
