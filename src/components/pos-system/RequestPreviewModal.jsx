@@ -136,7 +136,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
         </div>
 
         <div class="request-preview-totals-row">
-          <div class="request-preview-totals-label">VAT (${vatP.toFixed(2)}%)${vatLLText}</div>
+          <div class="request-preview-totals-label">VAT (${vatP.toFixed(2)}%)</div>
           <div class="request-preview-totals-value">${fmtMoneyTrim(vatAmount)}</div>
         </div>
 
@@ -167,7 +167,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     )
     .join("");
 
-  return `
+return `
 <!doctype html>
 <html>
 <head>
@@ -222,7 +222,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
 
     .request-preview-leftMeta{
       text-align: left;
-      font-size: 13px;
+      font-size: 17px;
       line-height: 1.7;
       flex: 1;
     }
@@ -239,15 +239,82 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
       min-width: 95px;
     }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; font-size: 12.5px; }
+    /* =============================
+       ✅ TABLE COLUMN WIDTH CONTROL
+       ============================= */
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      table-layout: fixed; /* ✅ important for fixed widths */
+    }
+
+th{
+
+border: 1px solid #ddd;
+      padding: 8px;
+      font-size: 14px;
+
+      /* ✅ prevent columns from expanding */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+}
+
+
+
+     td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      font-size: 16px;
+
+      /* ✅ prevent columns from expanding */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     th { background: #f6f6f6; text-align: center; }
 
     .request-preview-tc { text-align: center; }
     .request-preview-tr { text-align: right; }
     .request-preview-table-muted { color: #666; text-align: center; }
-    .request-preview-td-name { word-break: break-word; overflow-wrap: anywhere; }
 
+    /* ✅ allow only Item Name to wrap */
+    .request-preview-td-name {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      direction: rtl;
+    }
+
+    /* ✅ Column widths (9 columns)
+       1 Item No (smaller)
+       2 Item Name (bigger)
+       3 Box (same as Sheet)
+       4 Sheet (same as Box)
+       5 Length (same as Width/SQM/Price/Total)
+       6 Width
+       7 SQM
+       8 Price
+       9 Total
+    */
+
+    th:nth-child(1), td:nth-child(1) { width: 6%; }   /* Item No smaller */
+    th:nth-child(2), td:nth-child(2) { width: 25%; }  /* Name bigger */
+
+    th:nth-child(3), td:nth-child(3) { width: 8%; }   /* Box */
+    th:nth-child(4), td:nth-child(4) { width: 8%; }   /* Sheet */
+
+    /* Length/Width/SQM/Price/Total same exact width */
+    th:nth-child(5), td:nth-child(5) { width: 10%; } /* Length */
+    th:nth-child(6), td:nth-child(6) { width: 10%; } /* Width */
+    th:nth-child(7), td:nth-child(7) { width: 10%; } /* SQM */
+    th:nth-child(8), td:nth-child(8) { width: 10%; } /* Price */
+    th:nth-child(9), td:nth-child(9) { width: 12%; } /* Total */
+
+    /* totals */
     .request-preview-totals-wrap{
       display: flex;
       justify-content: flex-end;
@@ -258,7 +325,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
       border: 1px solid #ddd;
       border-radius: 10px;
       padding: 10px 12px;
-      font-size: 13px;
+      font-size: 17x;
     }
     .request-preview-totals-row{
       display:flex;
@@ -266,7 +333,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
       gap: 10px;
       padding: 4px 0;
     }
-    .request-preview-totals-row strong{ font-size: 14px; }
+    .request-preview-totals-row strong{ font-size: 17px; }
     .request-preview-totals-divider{ border-top: 1px solid #eee; margin: 6px 0; }
     .request-preview-totals-label{ color:#333; }
     .request-preview-totals-value{ text-align:right; white-space:nowrap; }
@@ -308,15 +375,15 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     <table>
       <thead>
         <tr>
-          <th>Item No</th>
+          <th>No</th>
           <th>Item Name</th>
           <th>Box</th>
           <th>Sheet</th>
           <th>Length</th>
           <th>Width</th>
           <th>SQM</th>
-          <th>Unit Price</th>
-          <th>Invoice Price</th>
+          <th>Price</th>
+          <th>Total</th>
         </tr>
       </thead>
       <tbody>
@@ -338,6 +405,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
 </body>
 </html>
 `;
+
 }
 
 export default function RequestPreviewModal({

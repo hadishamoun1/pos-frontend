@@ -49,34 +49,33 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   };
 
   // ✅ Updated: Fetch customer history with optional filters
-  const fetchCustomerHistory = async (customerName, pageNum = 1, filters = {}) => {
-    setHistoryLoading(true);
-    try {
-      const params = {
-        page: pageNum,
-        limit: 50,
-      };
+ const fetchCustomerHistory = async (customerName, pageNum = 1, filters = {}) => {
+  setHistoryLoading(true);
+  try {
+    const params = {
+      page: pageNum,
+      limit: 50,
+    };
 
-      // Add filters if provided
-      if (filters.itemName) params.itemName = filters.itemName;
-      if (filters.length) params.length = filters.length;
-      if (filters.width) params.width = filters.width;
+    if (filters.itemName) params.itemName = filters.itemName;
+    if (filters.length) params.length = filters.length;
+    if (filters.width) params.width = filters.width;
 
-      const response = await axiosClient.get(
-        `/csv-imports/search`,
-        {
-          params,
-        }
-      );
+    // ✅ IMPORTANT: customer-scoped endpoint
+    const response = await axiosClient.get(
+      `/csv-imports/customers/${encodeURIComponent(customerName)}/history`,
+      { params }
+    );
 
-      setCustomerHistory(response.data.data || []);
-      setHistoryTotalPages(response.data.meta?.pages || 1);
-    } catch (error) {
-      console.error("Error fetching customer history:", error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
+    setCustomerHistory(response.data.data || []);
+    setHistoryTotalPages(response.data.meta?.pages || 1);
+  } catch (error) {
+    console.error("Error fetching customer history:", error);
+  } finally {
+    setHistoryLoading(false);
+  }
+};
+
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
