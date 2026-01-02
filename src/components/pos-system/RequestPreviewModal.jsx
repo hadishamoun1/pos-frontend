@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./RequestPreviewModal.css";
+import html2canvas from "html2canvas";
 
 function safeNum(v, fallback = 0) {
   const n = Number(v);
@@ -55,7 +56,7 @@ function fmtMaybeBlank(v, { blankIfZero = true } = {}) {
   return s;
 }
 
-function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLabel) {
+function buildRequestHtml(request, currencyCode, vatPercent /* currencyRate, llLabel removed */) {
   const requestNumber = pick(request, ["requestNumber", "reqNumber", "requestNo", "number"], "");
   const customerName = pick(request, ["customerName", "customer", "name", "clientName"]);
   const phone = pick(request, ["telephone", "phone", "phoneNumber", "tel"]);
@@ -75,7 +76,9 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     const itemName = pick(it, ["itemName", "name", "item", "description"], "");
 
     // Keep unit only for logic (not displayed)
-    const unit = String(pick(it, ["unit", "unitName", "uom", "type", "itemType"], "")).toUpperCase();
+    const unit = String(
+      pick(it, ["unit", "unitName", "uom", "type", "itemType"], "")
+    ).toUpperCase();
 
     // box/sheet
     let box = pick(it, ["box", "boxes"], "");
@@ -124,10 +127,6 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
   const vatAmount = showVat ? subtotal * (vatP / 100) : 0;
   const grandTotal = subtotal + vatAmount;
 
-  const rate = safeNum(currencyRate, 0);
-  const vatInLL = rate > 0 ? vatAmount * rate : 0;
-  const vatLLText = rate > 0 ? ` (${fmtMoneyTrim(vatInLL)} ${llLabel})` : "";
-
   const totalsHtml = showVat
     ? `
         <div class="request-preview-totals-row">
@@ -167,7 +166,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     )
     .join("");
 
-return `
+  return `
 <!doctype html>
 <html>
 <head>
@@ -239,37 +238,26 @@ return `
       min-width: 95px;
     }
 
-    /* =============================
-       ✅ TABLE COLUMN WIDTH CONTROL
-       ============================= */
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      table-layout: fixed; /* ✅ important for fixed widths */
+      table-layout: fixed;
     }
 
-th{
-
-border: 1px solid #ddd;
+    th{
+      border: 1px solid #ddd;
       padding: 8px;
       font-size: 14px;
-
-      /* ✅ prevent columns from expanding */
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-}
+    }
 
-
-
-     td {
+    td {
       border: 1px solid #ddd;
       padding: 8px;
       font-size: 16px;
-
-      /* ✅ prevent columns from expanding */
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -281,7 +269,6 @@ border: 1px solid #ddd;
     .request-preview-tr { text-align: right; }
     .request-preview-table-muted { color: #666; text-align: center; }
 
-    /* ✅ allow only Item Name to wrap */
     .request-preview-td-name {
       white-space: normal;
       word-break: break-word;
@@ -289,32 +276,18 @@ border: 1px solid #ddd;
       direction: rtl;
     }
 
-    /* ✅ Column widths (9 columns)
-       1 Item No (smaller)
-       2 Item Name (bigger)
-       3 Box (same as Sheet)
-       4 Sheet (same as Box)
-       5 Length (same as Width/SQM/Price/Total)
-       6 Width
-       7 SQM
-       8 Price
-       9 Total
-    */
+    th:nth-child(1), td:nth-child(1) { width: 6%; }
+    th:nth-child(2), td:nth-child(2) { width: 25%; }
 
-    th:nth-child(1), td:nth-child(1) { width: 6%; }   /* Item No smaller */
-    th:nth-child(2), td:nth-child(2) { width: 25%; }  /* Name bigger */
+    th:nth-child(3), td:nth-child(3) { width: 8%; }
+    th:nth-child(4), td:nth-child(4) { width: 8%; }
 
-    th:nth-child(3), td:nth-child(3) { width: 8%; }   /* Box */
-    th:nth-child(4), td:nth-child(4) { width: 8%; }   /* Sheet */
+    th:nth-child(5), td:nth-child(5) { width: 10%; }
+    th:nth-child(6), td:nth-child(6) { width: 10%; }
+    th:nth-child(7), td:nth-child(7) { width: 10%; }
+    th:nth-child(8), td:nth-child(8) { width: 10%; }
+    th:nth-child(9), td:nth-child(9) { width: 12%; }
 
-    /* Length/Width/SQM/Price/Total same exact width */
-    th:nth-child(5), td:nth-child(5) { width: 10%; } /* Length */
-    th:nth-child(6), td:nth-child(6) { width: 10%; } /* Width */
-    th:nth-child(7), td:nth-child(7) { width: 10%; } /* SQM */
-    th:nth-child(8), td:nth-child(8) { width: 10%; } /* Price */
-    th:nth-child(9), td:nth-child(9) { width: 12%; } /* Total */
-
-    /* totals */
     .request-preview-totals-wrap{
       display: flex;
       justify-content: flex-end;
@@ -325,7 +298,7 @@ border: 1px solid #ddd;
       border: 1px solid #ddd;
       border-radius: 10px;
       padding: 10px 12px;
-      font-size: 17x;
+      font-size: 17px;
     }
     .request-preview-totals-row{
       display:flex;
@@ -402,10 +375,23 @@ border: 1px solid #ddd;
       </div>
     </div>
   </div>
+
+  <script>
+    // zoom API called from parent
+    window.__setPreviewZoom = function(z) {
+      try {
+        document.body.style.zoom = String(z);
+      } catch (e) {
+        var page = document.querySelector('.request-preview-page');
+        if (!page) return;
+        page.style.transform = 'scale(' + z + ')';
+        page.style.transformOrigin = 'top left';
+      }
+    };
+  </script>
 </body>
 </html>
 `;
-
 }
 
 export default function RequestPreviewModal({
@@ -414,10 +400,11 @@ export default function RequestPreviewModal({
   request,
   currencyCode = "USD",
   vatPercent = 11,
-  currencyRate = 0,
-  llLabel = "LL",
+  currencyRate = 0, // kept for prop compatibility (not used)
+  llLabel = "LL",   // kept for prop compatibility (not used)
 }) {
   const iframeRef = useRef(null);
+  const [zoom, setZoom] = useState(1);
 
   const srcDoc = useMemo(
     () => buildRequestHtml(request || {}, currencyCode, vatPercent, currencyRate, llLabel),
@@ -432,9 +419,75 @@ export default function RequestPreviewModal({
     return () => window.removeEventListener("keydown", onEsc);
   }, [open, onClose]);
 
+  const callIframeZoom = (z) => {
+    const w = iframeRef.current?.contentWindow;
+    try {
+      w?.__setPreviewZoom?.(z);
+    } catch {}
+  };
+
+  const handleZoomIn = () => {
+    const next = Math.min(2, +(zoom + 0.1).toFixed(2));
+    setZoom(next);
+    callIframeZoom(next);
+  };
+
+  const handleZoomOut = () => {
+    const next = Math.max(0.5, +(zoom - 0.1).toFixed(2));
+    setZoom(next);
+    callIframeZoom(next);
+  };
+
+  const handleZoomReset = () => {
+    setZoom(1);
+    callIframeZoom(1);
+  };
+
   const handlePrint = () => {
     const w = iframeRef.current?.contentWindow;
     if (w) w.print();
+  };
+
+  const handleScreenshot = async () => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return;
+
+      const target = doc.querySelector(".request-preview-page") || doc.body;
+
+      // temporarily reset zoom for clean capture
+      const prev = zoom;
+      callIframeZoom(1);
+      await new Promise((r) => setTimeout(r, 60));
+
+      const canvas = await html2canvas(target, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+      });
+
+      // restore zoom
+      callIframeZoom(prev);
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) return;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `request-${(request?.requestNumber || "preview").replace(/[^\w\-]+/g, "_")}.png`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 250);
+    } catch (err) {
+      console.error("Screenshot failed:", err);
+      alert("Screenshot failed.");
+    }
   };
 
   if (!open) return null;
@@ -444,10 +497,26 @@ export default function RequestPreviewModal({
       <div className="request-preview-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="request-preview-header">
           <div className="request-preview-title">Request Preview</div>
+
           <div className="request-preview-actions">
+            <button className="request-preview-btn" onClick={handleZoomOut} title="Zoom out">
+              -
+            </button>
+            <button className="request-preview-btn" onClick={handleZoomIn} title="Zoom in">
+              +
+            </button>
+            <button className="request-preview-btn" onClick={handleZoomReset} title="Reset zoom">
+              100%
+            </button>
+
+            <button className="request-preview-btn" onClick={handleScreenshot} title="Screenshot">
+              Screenshot
+            </button>
+
             <button className="request-preview-btn" onClick={handlePrint}>
               Print
             </button>
+
             <button
               className="request-preview-btn request-preview-danger"
               onClick={onClose}
@@ -462,7 +531,8 @@ export default function RequestPreviewModal({
           className="request-preview-iframe"
           title="Request Preview"
           srcDoc={srcDoc}
-          sandbox="allow-modals allow-same-origin"
+          sandbox="allow-modals allow-same-origin allow-scripts"
+          onLoad={() => callIframeZoom(zoom)}
         />
       </div>
     </div>
