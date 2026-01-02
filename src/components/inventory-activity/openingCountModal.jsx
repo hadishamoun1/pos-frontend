@@ -123,7 +123,8 @@ const OpeningCountModal = ({ isOpen, onClose, rows, setRows }) => {
         console.log("Sending payload:", payload);
 
         // ✅ ONLY changed this: fetch -> axiosClient.post
-        await axiosClient.post(`${baseUrl}/inventory-count/v1/opening`, payload);
+     await axiosClient.post("/inventory-count/v1/opening", payload);
+
       }
 
       setNotif({
