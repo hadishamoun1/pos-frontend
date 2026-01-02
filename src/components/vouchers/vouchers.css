@@ -395,7 +395,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.export-journal-voucher-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
+.export-journal-voucher-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  background: linear-gradient(135deg, #229954, #1e8449);
+}
+
+.export-journal-voucher-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 /* Other columns */
 .column-doc-nbr {
   width: 80px;

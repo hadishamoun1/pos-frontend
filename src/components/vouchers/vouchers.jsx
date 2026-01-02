@@ -5,7 +5,7 @@ import { axiosClient } from "../api/axiosClient";
 import NotificationModal from "../recievables/NotificationModal";
 import JournalListsModal from "./journal-list-modal";
 import { useParams, useNavigate } from "react-router-dom";
-
+import * as XLSX from 'xlsx';
 
 const JournalVoucherPage = () => {
   const [isJournalListOpen, setIsJournalListOpen] = useState(false);
@@ -122,6 +122,231 @@ const JournalVoucherPage = () => {
       maximumFractionDigits: 2,
     });
   };
+
+  const handleExportToExcel = () => {
+  if (!isSaved || !editingId) {
+    setNotification({
+      visible: true,
+      type: "warning",
+      message: "Please open or save a journal voucher first before exporting.",
+      onConfirm: null,
+    });
+    return;
+  }
+
+  try {
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Prepare header data
+    const headerData = [
+      ['Journal Voucher Export'],
+      [],
+      ['Date:', date || ''],
+      ['Type:', type || ''],
+      ['Status:', statusLabel],
+      [],
+    ];
+
+    // Prepare column headers based on type
+    let columns = [];
+    if (type === 'G') {
+      columns = [
+        '#',
+        'Acc Number',
+        'Account Name',
+        'Doc',
+        'Description',
+        'Currency',
+        'Rate',
+        'Dr OFR',
+        'Cr OFR',
+        'Dr USD OFR',
+        'Cr USD OFR',
+        'Dr LL OFR',
+        'Cr LL OFR',
+      ];
+    } else if (type === 'SR') {
+      columns = [
+        '#',
+        'Acc Number',
+        'Account Name',
+        'Doc',
+        'Description',
+        'Currency',
+        'Rate',
+        'Debit',
+        'Dr OFR',
+        'Credit',
+        'Cr OFR',
+        'Dr USD',
+        'Dr USD OFR',
+        'Cr USD',
+        'Cr USD OFR',
+        'Dr LL',
+        'Dr LL OFR',
+        'Cr LL',
+        'Cr LL OFR',
+      ];
+    } else {
+      columns = [
+        '#',
+        'Acc Number',
+        'Account Name',
+        'Doc',
+        'Description',
+        'Currency',
+        'Rate',
+        'Debit',
+        'Credit',
+        'Dr USD',
+        'Cr USD',
+        'Dr LL',
+        'Cr LL',
+      ];
+    }
+
+    // Prepare data rows
+    const dataRows = entries.map((entry, index) => {
+      const baseRow = [
+        index + 1,
+        entry.accountNumber || '',
+        entry.accountName || '',
+        entry.documentNbr || '',
+        entry.description || '',
+        entry.currency || '',
+        formatNumber(entry.exchangeRate),
+      ];
+
+      if (type === 'G') {
+        return [
+          ...baseRow,
+          formatNumber(entry.debitOFR),
+          formatNumber(entry.creditOFR),
+          formatNumber(entry.debitUSDOFR),
+          formatNumber(entry.creditUSDOFR),
+          formatNumber(entry.debitExOFR),
+          formatNumber(entry.creditExOFR),
+        ];
+      } else if (type === 'SR') {
+        return [
+          ...baseRow,
+          formatNumber(entry.debit),
+          formatNumber(entry.debitOFR),
+          formatNumber(entry.credit),
+          formatNumber(entry.creditOFR),
+          formatNumber(entry.debitUSD),
+          formatNumber(entry.debitUSDOFR),
+          formatNumber(entry.creditUSD),
+          formatNumber(entry.creditUSDOFR),
+          formatNumber(entry.debitEx),
+          formatNumber(entry.debitExOFR),
+          formatNumber(entry.creditEx),
+          formatNumber(entry.creditExOFR),
+        ];
+      } else {
+        return [
+          ...baseRow,
+          formatNumber(entry.debit),
+          formatNumber(entry.credit),
+          formatNumber(entry.debitUSD),
+          formatNumber(entry.creditUSD),
+          formatNumber(entry.debitEx),
+          formatNumber(entry.creditEx),
+        ];
+      }
+    });
+
+    // Add summary rows
+    const summaryData = [
+      [],
+      ['SUMMARY'],
+      [],
+    ];
+
+    if (type !== 'G') {
+      summaryData.push(
+        ['Total Debit (Base):', formatNumber(totalDebitBase)],
+        ['Total Credit (Base):', formatNumber(totalCreditBase)],
+        ['Difference (Base):', formatNumber(diffBase)],
+        []
+      );
+    }
+
+    if (type === 'G' || type === 'SR') {
+      summaryData.push(
+        ['Total Debit OFR:', formatNumber(totalDebitOFR)],
+        ['Total Credit OFR:', formatNumber(totalCreditOFR)],
+        ['Difference (OFR):', formatNumber(diffOFR)],
+        []
+      );
+    }
+
+    summaryData.push(
+      ['Total Debit USD:', formatNumber(totalDebitUSD)],
+      ['Total Credit USD:', formatNumber(totalCreditUSD)],
+      [],
+      ['Total Debit LL:', formatNumber(totalDebitLL)],
+      ['Total Credit LL:', formatNumber(totalCreditLL)]
+    );
+
+    // Combine all data
+    const wsData = [...headerData, columns, ...dataRows, ...summaryData];
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths
+    const colWidths = columns.map((col, idx) => {
+      if (idx === 0) return { wch: 5 };  // #
+      if (idx === 1) return { wch: 15 }; // Acc Number
+      if (idx === 2) return { wch: 30 }; // Account Name
+      if (idx === 3) return { wch: 15 }; // Doc
+      if (idx === 4) return { wch: 30 }; // Description
+      return { wch: 15 }; // Default
+    });
+    ws['!cols'] = colWidths;
+
+    // Style the header
+    const headerRange = XLSX.utils.decode_range(ws['!ref']);
+    const headerRowIndex = headerData.length;
+    
+    for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: headerRowIndex, c: C });
+      if (!ws[address]) continue;
+      ws[address].s = {
+        font: { bold: true, sz: 12 },
+        fill: { fgColor: { rgb: "4F81BD" } },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+    }
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Journal Voucher');
+
+    // Generate filename
+    const typeLabel = type === 'S' ? 'Normal' : type === 'G' ? 'Opening' : type === 'SR' ? 'Revaluation' : 'Reverse';
+    const filename = `JV_${typeLabel}_${date || 'Unknown'}_${new Date().getTime()}.xlsx`;
+
+    // Write file
+    XLSX.writeFile(wb, filename);
+
+    setNotification({
+      visible: true,
+      type: "success",
+      message: "Journal Voucher exported successfully!",
+      onConfirm: null,
+    });
+  } catch (error) {
+    console.error('Export error:', error);
+    setNotification({
+      visible: true,
+      type: "error",
+      message: "Failed to export journal voucher. Please try again.",
+      onConfirm: null,
+    });
+  }
+};
 
   // allow user to type freely (digits + single dot)
   const cleanNumericInput = (s = "") =>
@@ -2025,6 +2250,16 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <button className="new-btn" onClick={handleReset}>
                 New
               </button>
+
+               {/* ✅ NEW: Export Button */}
+      <button
+        className="export-journal-voucher-btn"
+        onClick={handleExportToExcel}
+        disabled={!isSaved}
+        title={!isSaved ? "Open or save a voucher first" : "Export to Excel"}
+      >
+        📊 Export
+      </button>
 
               <button
                 className="edit-journal-voucher"
