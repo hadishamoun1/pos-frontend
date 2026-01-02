@@ -25,14 +25,14 @@ function fmtDate(d) {
   }
 }
 
-/** 12.00 -> 12, 12.50 -> 12.50 (keeps 2 decimals if not .00) */
+/** 12.00 -> 12, 12.50 -> 12.50 */
 function fmtMoneyTrim(v) {
   const n = safeNum(v, 0);
   const s = n.toFixed(2);
   return s.endsWith(".00") ? String(Math.trunc(n)) : s;
 }
 
-/** Dimensions: drop trailing zeros always (100.00 -> 100, 100.50 -> 100.5) */
+/** Dimensions: drop trailing zeros (100.00 -> 100, 100.50 -> 100.5) */
 function fmtDimTrim(v) {
   if (v === "" || v === null || v === undefined) return "";
   const n = Number(v);
@@ -74,6 +74,7 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     const itemNumber = pick(it, ["itemNumber", "itemNo", "number", "code"], idx + 1);
     const itemName = pick(it, ["itemName", "name", "item", "description"], "");
 
+    // Keep unit only for logic (not displayed)
     const unit = String(pick(it, ["unit", "unitName", "uom", "type", "itemType"], "")).toUpperCase();
 
     // box/sheet
@@ -109,20 +110,39 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
       length,
       width,
       sqm,
-      unit,
       unitPrice,
       invoicePrice,
     };
   });
 
   const subtotal = rows.reduce((sum, r) => sum + safeNum(r.invoicePrice, 0), 0);
+
+  // ✅ hide subtotal + vat when vatPercent is 0
   const vatP = safeNum(vatPercent, 0);
-  const vatAmount = subtotal * (vatP / 100);
+  const showVat = vatP > 0;
+
+  const vatAmount = showVat ? subtotal * (vatP / 100) : 0;
   const grandTotal = subtotal + vatAmount;
 
   const rate = safeNum(currencyRate, 0);
   const vatInLL = rate > 0 ? vatAmount * rate : 0;
   const vatLLText = rate > 0 ? ` (${fmtMoneyTrim(vatInLL)} ${llLabel})` : "";
+
+  const totalsHtml = showVat
+    ? `
+        <div class="request-preview-totals-row">
+          <div class="request-preview-totals-label">Sub Total</div>
+          <div class="request-preview-totals-value">${fmtMoneyTrim(subtotal)}</div>
+        </div>
+
+        <div class="request-preview-totals-row">
+          <div class="request-preview-totals-label">VAT (${vatP.toFixed(2)}%)${vatLLText}</div>
+          <div class="request-preview-totals-value">${fmtMoneyTrim(vatAmount)}</div>
+        </div>
+
+        <div class="request-preview-totals-divider"></div>
+      `
+    : ``;
 
   const rowsHtml = rows
     .map(
@@ -138,7 +158,6 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
         <td class="request-preview-tr">${fmtDimTrim(r.width)}</td>
 
         <td class="request-preview-tr">${fmtMaybeBlank(r.sqm, { blankIfZero: false })}</td>
-        <td class="request-preview-tc">${r.unit ?? ""}</td>
 
         <!-- ✅ no $ sign -->
         <td class="request-preview-tr">${fmtMoneyTrim(r.unitPrice)}</td>
@@ -158,7 +177,6 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
   <style>
     * { box-sizing: border-box; }
 
-    /* ✅ A4 page */
     @page { size: A4; margin: 10mm; }
 
     body {
@@ -189,7 +207,6 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
       margin: 4px 0 12px;
     }
 
-    /* ✅ Header box with border */
     .request-preview-headerBox{
       border: 1px solid #ddd;
       border-radius: 10px;
@@ -231,7 +248,6 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
     .request-preview-table-muted { color: #666; text-align: center; }
     .request-preview-td-name { word-break: break-word; overflow-wrap: anywhere; }
 
-    /* totals */
     .request-preview-totals-wrap{
       display: flex;
       justify-content: flex-end;
@@ -299,29 +315,18 @@ function buildRequestHtml(request, currencyCode, vatPercent, currencyRate, llLab
           <th>Length</th>
           <th>Width</th>
           <th>SQM</th>
-          <th>Unit</th>
           <th>Unit Price</th>
           <th>Invoice Price</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || `<tr><td colspan="10" class="request-preview-table-muted">No items</td></tr>`}
+        ${rowsHtml || `<tr><td colspan="9" class="request-preview-table-muted">No items</td></tr>`}
       </tbody>
     </table>
 
     <div class="request-preview-totals-wrap">
       <div class="request-preview-totals">
-        <div class="request-preview-totals-row">
-          <div class="request-preview-totals-label">Sub Total</div>
-          <div class="request-preview-totals-value">${fmtMoneyTrim(subtotal)}</div>
-        </div>
-
-        <div class="request-preview-totals-row">
-          <div class="request-preview-totals-label">VAT (${vatP.toFixed(2)}%)${vatLLText}</div>
-          <div class="request-preview-totals-value">${fmtMoneyTrim(vatAmount)}</div>
-        </div>
-
-        <div class="request-preview-totals-divider"></div>
+        ${totalsHtml}
 
         <div class="request-preview-totals-row">
           <strong class="request-preview-totals-label">Grand Total</strong>

@@ -366,7 +366,7 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
   })),
 };
 
- const handleSelectRequest = async (reqOrId) => {
+const handleSelectRequest = async (reqOrId) => {
   const id =
     typeof reqOrId === "object"
       ? reqOrId?.id ?? reqOrId?.requestId ?? null
@@ -386,6 +386,11 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     setSelectedCustomerName(reqOrId?.customerName || "");
     setCustomerInput(reqOrId?.customerName || "");
     setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
+
+    // ✅ NEW: preload VAT% if it exists in list payload
+    if (reqOrId?.vatPercentage != null) {
+      setVat(String(parseFloat(reqOrId.vatPercentage)));
+    }
   } else {
     // if id-only (no object), clear until fetch fills it
     setSelectedRequestNumber("");
@@ -398,7 +403,9 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
 
     // ✅ IMPORTANT: set requestNumber from backend payload
     setSelectedRequestNumber(
-      request?.requestNumber || (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") || ""
+      request?.requestNumber ||
+        (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") ||
+        ""
     );
 
     setCustomerInput(request.customerName || "");
@@ -406,6 +413,13 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     setSelectedCustomerId(request.customerId || null);
     setSelectedInvoiceType(request.invoiceType || "Both");
     setDate(toYMD(request.requestDate || request.date));
+
+    // ✅ NEW: set VAT% from backend (default 0)
+    const reqVat =
+      request?.vatPercentage != null
+        ? String(parseFloat(request.vatPercentage))
+        : "0";
+    setVat(reqVat);
 
     const details = Array.isArray(request.details) ? request.details : [];
 
@@ -465,6 +479,7 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     setLoading(false);
   }
 };
+
 
 
 const deliveryDocForPreview = useMemo(() => {
@@ -1133,6 +1148,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
       totalAmount: totalAmount.toFixed(2),
       vatAmount: vatAmount.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
+      vatPercentage: Number(vat) || 0,
       details: tableData.map((item) => ({
         itemVariantId: item.itemVariantId,
         itemBatchId: item.batchId,
@@ -1300,6 +1316,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
       totalAmount: totalAmount.toFixed(2),
       vatAmount: vatAmount.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
+      vatPercentage: Number(vat) || 0,
       details: tableData.map((item) => ({
         itemVariantId: item.itemVariantId,
         itemBatchId: item.batchId,
