@@ -1,7 +1,230 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./StatementModal.css";
 import StatementReportModal from "./StatementReportModal";
 import { axiosClient } from "../../api/axiosClient"; // ✅ use your api client
+
+// ✅ Custom DateInput Component with DD/MM/YYYY format
+function DateInput({ value, min, onChange, disabled, label }) {
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [displayValue, setDisplayValue] = useState("");
+  const inputRef = useRef(null);
+  const calendarRef = useRef(null);
+
+  useEffect(() => {
+    if (value) {
+      const [year, month, day] = value.split("-");
+      setDisplayValue(`${day}/${month}/${year}`);
+    }
+  }, [value]);
+
+  useEffect(() => {
+    if (!showCalendar) return;
+
+    const handleClickOutside = (e) => {
+      if (
+        calendarRef.current &&
+        !calendarRef.current.contains(e.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target)
+      ) {
+        setShowCalendar(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showCalendar]);
+
+  const handleInputChange = (e) => {
+    const input = e.target.value;
+    setDisplayValue(input);
+
+    // Try to parse DD/MM/YYYY
+    const match = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+      const [, day, month, year] = match;
+      const isoDate = `${year}-${month}-${day}`;
+      onChange(isoDate);
+    }
+  };
+
+  const handleCalendarDateClick = (isoDate) => {
+    onChange(isoDate);
+    setShowCalendar(false);
+  };
+
+  const changeMonth = (delta) => {
+    const current = value ? new Date(`${value}T00:00:00`) : new Date();
+    const newDate = new Date(current.getFullYear(), current.getMonth() + delta, 1);
+    const newYMD = toYMDLocal(newDate);
+    onChange(newYMD);
+  };
+
+  const toYMDLocal = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const generateCalendar = () => {
+    const current = value ? new Date(`${value}T00:00:00`) : new Date();
+    const year = current.getFullYear();
+    const month = current.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+
+    const days = [];
+    for (let i = 0; i < startDay; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+
+    return { year, month, days };
+  };
+
+  const { year, month, days } = generateCalendar();
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const minDate = min ? new Date(`${min}T00:00:00`) : null;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={displayValue}
+        placeholder="DD/MM/YYYY"
+        onChange={handleInputChange}
+        onFocus={() => setShowCalendar(true)}
+        disabled={disabled}
+        maxLength={10}
+        style={{ width: "120px" }}
+      />
+      {showCalendar && !disabled && (
+        <div
+          ref={calendarRef}
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            zIndex: 1000,
+            backgroundColor: "white",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            padding: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            marginTop: "4px",
+          }}
+        >
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "space-between",
+            marginBottom: "8px",
+            gap: "8px"
+          }}>
+            <button
+              type="button"
+              onClick={() => changeMonth(-1)}
+              style={{
+                background: "transparent",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: "16px",
+                lineHeight: "1",
+              }}
+              title="Previous month"
+            >
+              ←
+            </button>
+            <div style={{ fontWeight: "bold", textAlign: "center", flex: 1 }}>
+              {monthNames[month]} {year}
+            </div>
+            <button
+              type="button"
+              onClick={() => changeMonth(1)}
+              style={{
+                background: "transparent",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                padding: "4px 8px",
+                cursor: "pointer",
+                fontSize: "16px",
+                lineHeight: "1",
+              }}
+              title="Next month"
+            >
+              →
+            </button>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 32px)",
+              gap: "2px",
+            }}
+          >
+            {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+              <div
+                key={d}
+                style={{
+                  textAlign: "center",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  padding: "4px 0",
+                }}
+              >
+                {d}
+              </div>
+            ))}
+            {days.map((day, idx) => {
+              if (!day) {
+                return <div key={`empty-${idx}`} />;
+              }
+
+              const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+                day
+              ).padStart(2, "0")}`;
+              const isDisabled = minDate && new Date(`${isoDate}T00:00:00`) < minDate;
+              const isSelected = isoDate === value;
+
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => !isDisabled && handleCalendarDateClick(isoDate)}
+                  disabled={isDisabled}
+                  style={{
+                    padding: "4px",
+                    border: "1px solid #ddd",
+                    borderRadius: "3px",
+                    backgroundColor: isSelected ? "#007bff" : isDisabled ? "#f5f5f5" : "white",
+                    color: isSelected ? "white" : isDisabled ? "#ccc" : "black",
+                    cursor: isDisabled ? "not-allowed" : "pointer",
+                    fontSize: "12px",
+                  }}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const StatementModal = ({
   isOpen,
@@ -10,7 +233,6 @@ const StatementModal = ({
   defaultDate,
   customerName,
 }) => {
-  const today = defaultDate || new Date().toISOString().split("T")[0];
   const [type, setType] = useState("ALL");
 
   const [loading, setLoading] = useState(false);
@@ -19,13 +241,28 @@ const StatementModal = ({
   const [showReportModal, setShowReportModal] = useState(false);
 
   // ✅ Minimum date restriction
-  const MIN_DATE = "2025-01-02";
+  const MIN_DATE = "2026-01-02";
 
   const toYMDLocal = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  };
+
+  // ✅ Convert YYYY-MM-DD to DD/MM/YYYY for display
+  const formatDateDisplay = (ymdString) => {
+    if (!ymdString) return "";
+    const [year, month, day] = ymdString.split("-");
+    return `${day}/${month}/${year}`;
+  };
+
+  // ✅ Convert DD/MM/YYYY to YYYY-MM-DD for internal use
+  const parseDateInput = (displayString) => {
+    if (!displayString) return "";
+    const [day, month, year] = displayString.split("/");
+    if (!day || !month || !year) return "";
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   };
 
   const addMonthsSafe = (date, deltaMonths) => {
@@ -38,27 +275,32 @@ const StatementModal = ({
     return d;
   };
 
-  const base = defaultDate ? new Date(`${defaultDate}T00:00:00`) : new Date();
-  const baseYMD = toYMDLocal(base);
-  const fromDefault = toYMDLocal(addMonthsSafe(base, -1));
-  const toDefault = baseYMD;
+  // ✅ Calculate initial dates with MIN_DATE check
+  const getInitialDates = () => {
+    const base = defaultDate ? new Date(`${defaultDate}T00:00:00`) : new Date();
+    const fromDate = addMonthsSafe(base, -1);
+    const fromYMD = toYMDLocal(fromDate);
+    const toYMD = toYMDLocal(base);
+    
+    // Ensure from date is not before MIN_DATE
+    const adjustedFrom = fromYMD < MIN_DATE ? MIN_DATE : fromYMD;
+    
+    return { from: adjustedFrom, to: toYMD };
+  };
 
-  // ✅ Ensure fromDefault is not before MIN_DATE
-  const adjustedFromDefault = fromDefault < MIN_DATE ? MIN_DATE : fromDefault;
-
-  const [from, setFrom] = useState(adjustedFromDefault);
-  const [to, setTo] = useState(toDefault);
+  const [from, setFrom] = useState(() => getInitialDates().from);
+  const [to, setTo] = useState(() => getInitialDates().to);
 
   useEffect(() => {
     if (isOpen) {
-      const calculatedFrom = fromDefault < MIN_DATE ? MIN_DATE : fromDefault;
+      const { from: calculatedFrom, to: calculatedTo } = getInitialDates();
       setFrom(calculatedFrom);
-      setTo(toDefault);
+      setTo(calculatedTo);
       setType("ALL");
       setData(null);
       setErr("");
     }
-  }, [isOpen, today]); // keep your deps as-is
+  }, [isOpen, defaultDate]);
 
   const fmt = (v) => {
     if (v === null || v === undefined || v === "") return "0.00";
@@ -182,22 +424,20 @@ const StatementModal = ({
 
             <label>
               From
-              <input
-                type="date"
+              <DateInput
                 value={from}
                 min={MIN_DATE}
-                onChange={(e) => handleFromChange(e.target.value)}
+                onChange={handleFromChange}
                 disabled={loading}
               />
             </label>
 
             <label>
               To
-              <input
-                type="date"
+              <DateInput
                 value={to}
                 min={MIN_DATE}
-                onChange={(e) => handleToChange(e.target.value)}
+                onChange={handleToChange}
                 disabled={loading}
               />
             </label>
