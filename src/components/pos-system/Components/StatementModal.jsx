@@ -18,6 +18,9 @@ const StatementModal = ({
   const [err, setErr] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
 
+  // ✅ Minimum date restriction
+  const MIN_DATE = "2025-01-02";
+
   const toYMDLocal = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -40,12 +43,16 @@ const StatementModal = ({
   const fromDefault = toYMDLocal(addMonthsSafe(base, -1));
   const toDefault = baseYMD;
 
-  const [from, setFrom] = useState(fromDefault);
+  // ✅ Ensure fromDefault is not before MIN_DATE
+  const adjustedFromDefault = fromDefault < MIN_DATE ? MIN_DATE : fromDefault;
+
+  const [from, setFrom] = useState(adjustedFromDefault);
   const [to, setTo] = useState(toDefault);
 
   useEffect(() => {
     if (isOpen) {
-      setFrom(fromDefault);
+      const calculatedFrom = fromDefault < MIN_DATE ? MIN_DATE : fromDefault;
+      setFrom(calculatedFrom);
       setTo(toDefault);
       setType("ALL");
       setData(null);
@@ -83,6 +90,17 @@ const StatementModal = ({
 
   const fetchStatement = async () => {
     if (!customerId) return;
+    
+    // ✅ Validate dates before fetching
+    if (from < MIN_DATE) {
+      setErr(`From date cannot be before ${MIN_DATE}`);
+      return;
+    }
+    if (to < MIN_DATE) {
+      setErr(`To date cannot be before ${MIN_DATE}`);
+      return;
+    }
+    
     setLoading(true);
     setErr("");
     setData(null);
@@ -102,6 +120,23 @@ const StatementModal = ({
       setErr(e?.response?.data?.message || e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Handle date change with validation
+  const handleFromChange = (newFrom) => {
+    if (newFrom < MIN_DATE) {
+      setFrom(MIN_DATE);
+    } else {
+      setFrom(newFrom);
+    }
+  };
+
+  const handleToChange = (newTo) => {
+    if (newTo < MIN_DATE) {
+      setTo(MIN_DATE);
+    } else {
+      setTo(newTo);
     }
   };
 
@@ -150,7 +185,8 @@ const StatementModal = ({
               <input
                 type="date"
                 value={from}
-                onChange={(e) => setFrom(e.target.value)}
+                min={MIN_DATE}
+                onChange={(e) => handleFromChange(e.target.value)}
                 disabled={loading}
               />
             </label>
@@ -160,7 +196,8 @@ const StatementModal = ({
               <input
                 type="date"
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
+                min={MIN_DATE}
+                onChange={(e) => handleToChange(e.target.value)}
                 disabled={loading}
               />
             </label>
