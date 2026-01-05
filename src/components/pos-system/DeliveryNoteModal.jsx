@@ -182,7 +182,7 @@ function buildDeliveryHtml(doc) {
     .delivery-note-tc { text-align: center; }
     .delivery-note-tr { text-align: right; }
     .delivery-note-table-muted { color:#666; text-align:center; }
-    .delivery-note-td-name { word-break: break-word; overflow-wrap: anywhere; }
+    .delivery-note-td-name { word-break: break-word; overflow-wrap: anywhere; direction: rtl; }
 
     @media print {
       body { background: #fff; }

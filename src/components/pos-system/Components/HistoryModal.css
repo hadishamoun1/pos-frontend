@@ -153,7 +153,7 @@
 
 .text-right {
   text-align: right;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   font-weight: 500;
 }
 
@@ -301,7 +301,6 @@
 }
 
 .history-details-search-input {
-
   padding: 0.75rem 1rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
@@ -449,4 +448,19 @@
 
 .history-modal-body::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ✅ Highlight latest row per Item # */
+.history-details-row.history-latest-row td {
+  background-color: #fff7cc !important;
+}
+
+/* Keep price column stronger on latest row */
+.history-details-row.history-latest-row td:nth-child(13) {
+  background-color: #fde68a !important;
+}
+
+/* Hover for latest rows */
+.history-details-row.history-latest-row:hover td {
+  background-color: #fde68a !important;
 }

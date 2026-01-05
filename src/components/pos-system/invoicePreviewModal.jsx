@@ -367,6 +367,9 @@ const rowsHtml =
             (it?.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
             `${thicknessLabel}${it?.itemName ?? ""}`.trim();
 
+          // ✅ NEW: Get itemNumber (fallback to empty string if not present)
+          const itemNumber = it?.itemNumber ?? "";
+
           return `
             <tr>
               <td>${fmtSmart(amount)}</td>
@@ -377,7 +380,7 @@ const rowsHtml =
               <td>${sheetsCell}</td>
               <td>${isBox ? fmtOpt(it.quantity) : ""}</td>
               <td class="arabic-item-name">${displayName}</td>
-              <td>${it.itemVariantId ?? ""}</td>
+              <td>${itemNumber}</td>
             </tr>`;
         })
         .join("");
@@ -451,11 +454,11 @@ ${styleTag}
       </div>
     </div>
 
-    <div class="invoice-footer" id="source-footer" data-grandtotal="${grandTotal}" data-currency="${currencyCode}">
+    <div class="invoice-footer" id="source-footer" data-grandtotal="${grandTotal}" data-currency="${currencyCode}" data-vat="${vatPercentage}">
       <div class="footer-right">
+        ${Number(vatPercentage) > 0 ? `
         <div class="footer-row">
           <span class="footer-label">${isLLCurrency ? "VAT" : "VAT LBP"}</span>
-
           <span class="footer-label">${invoiceType === "G" ? "القيمة" : "المجموع"}</span>
           <span class="footer-value">${fmtSmart(totalWithoutVAT)}</span>
         </div>
@@ -464,7 +467,8 @@ ${styleTag}
           <span class="footer-label">V.A.T ${fmtSmart(vatPercentage)}%</span>
           <span class="footer-value">${fmtSmart(totalVAT)}</span>
         </div>
-        <div class="footer-total-line">
+        ` : ''}
+        <div class="footer-total-line" style="${Number(vatPercentage) === 0 ? 'padding-top: 80px;' : ''}">
           <strong class="footer-total-label">${invoiceType === "G" ? "المجموع" : "المجموع الصافي"}</strong>
           <span class="footer-total-amount">${fmtSmart(grandTotal)} ${currencyCode}</span>
         </div>
@@ -908,7 +912,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
       } catch (err) {
         console.error("Print failed:", err);
         document.body.removeChild(printFrame);
-        alert("Unable to print. Please check your browser’s print permissions.");
+        alert("Unable to print. Please check your browser's print permissions.");
       }
     };
 

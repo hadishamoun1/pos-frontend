@@ -1,5 +1,5 @@
 // src/pos-system/Components/HistoryModal.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { axiosClient } from "../../api/axiosClient";
 import "./HistoryModal.css";
 
@@ -9,18 +9,50 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const [selectedCustomerName, setSelectedCustomerName] = useState(null);
-  const [customerHistory, setCustomerHistory] = useState([]);
+  const [allCustomerHistory, setAllCustomerHistory] = useState([]); // ✅ Store ALL history
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
 
-  // ✅ Search filters for customer history
+  // ✅ Search input (live)
   const [historySearchInput, setHistorySearchInput] = useState("");
+
+  // ✅ Pinned filters (Enter-to-pin)
   const [itemNameFilter, setItemNameFilter] = useState("");
-  const [dimensionsFilter, setDimensionsFilter] = useState({ length: "", width: "" });
+  const [dimensionsFilter, setDimensionsFilter] = useState({
+    length: "",
+    width: "",
+  });
+
+  // ✅ Helper: parse MM/DD/YY to Date
+  const parseMMDDYY = (dateStr) => {
+    if (!dateStr) return new Date(0);
+
+    const parts = String(dateStr).split("/");
+    if (parts.length === 3) {
+      const month = parseInt(parts[0], 10);
+      const day = parseInt(parts[1], 10);
+      let year = parseInt(parts[2], 10);
+
+      if (year < 100) year += year <= 50 ? 2000 : 1900;
+      return new Date(year, month - 1, day);
+    }
+
+    return new Date(dateStr);
+  };
+
+  // ✅ Helper: format to dd/mm/yyyy
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
+    const date = parseMMDDYY(dateStr);
+    if (isNaN(date.getTime())) return "—";
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   useEffect(() => {
     if (isOpen && !showDetails) {
@@ -48,34 +80,151 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     }
   };
 
-  // ✅ Updated: Fetch customer history with optional filters
- const fetchCustomerHistory = async (customerName, pageNum = 1, filters = {}) => {
-  setHistoryLoading(true);
-  try {
-    const params = {
-      page: pageNum,
-      limit: 50,
-    };
+  // ✅ Fetch ALL customer history at once
+  const fetchAllCustomerHistory = async (customerName) => {
+    setHistoryLoading(true);
+    try {
+      const response = await axiosClient.get(
+        `/csv-imports/customers/${encodeURIComponent(customerName)}/history`,
+        { params: { limit: 100000 } }
+      );
 
-    if (filters.itemName) params.itemName = filters.itemName;
-    if (filters.length) params.length = filters.length;
-    if (filters.width) params.width = filters.width;
+      setAllCustomerHistory(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching customer history:", error);
+      setAllCustomerHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
-    // ✅ IMPORTANT: customer-scoped endpoint
-    const response = await axiosClient.get(
-      `/csv-imports/customers/${encodeURIComponent(customerName)}/history`,
-      { params }
-    );
+  /**
+   * ✅ REQUIRED BEHAVIOR:
+   * - While typing in historySearchInput:
+   *    - ignore pinned filters
+   *    - filter only by the search input
+   *    - sort ONLY by date desc (latest -> oldest)
+   * - When search input is empty:
+   *    - apply pinned filters
+   *    - sort by itemNumber asc, then date desc inside group
+   */
+  const filteredAndSortedHistory = useMemo(() => {
+    let filtered = [...allCustomerHistory];
 
-    setCustomerHistory(response.data.data || []);
-    setHistoryTotalPages(response.data.meta?.pages || 1);
-  } catch (error) {
-    console.error("Error fetching customer history:", error);
-  } finally {
-    setHistoryLoading(false);
-  }
-};
+    const quickSearch = (historySearchInput || "").trim();
+    const quickSearchActive = quickSearch.length > 0;
 
+    // ✅ MODE 1: while typing -> IGNORE pinned filters, only search input + date sort
+    if (quickSearchActive) {
+      if (quickSearch.includes("*")) {
+        const parts = quickSearch.split("*").map((p) => p.trim());
+        if (parts.length === 2) {
+          const searchLength = parts[0];
+          const searchWidth = parts[1];
+
+          filtered = filtered.filter((item) => {
+            // ✅ SWAP: DB width = actual length, DB length = actual width
+            const actualLength = String(Math.round(Number(item.width || 0)));
+            const actualWidth = String(Math.round(Number(item.length || 0)));
+
+            const matchLength = searchLength
+              ? actualLength === searchLength || actualLength.includes(searchLength)
+              : true;
+            const matchWidth = searchWidth
+              ? actualWidth === searchWidth || actualWidth.includes(searchWidth)
+              : true;
+
+            return matchLength && matchWidth;
+          });
+        }
+      } else {
+        const q = quickSearch.toLowerCase();
+
+        filtered = filtered.filter((item) => {
+          const itemName = String(item.itemName || "").toLowerCase();
+          const itemNumber = String(item.itemNumber || "").toLowerCase();
+          const invoiceNbr = String(item.invoiceNbr || "").toLowerCase();
+          const propertyCode = String(item.propertyCode || "").toLowerCase();
+          const brand = String(item.itemBrand || "").toLowerCase();
+
+          return (
+            itemName.includes(q) ||
+            itemNumber.includes(q) ||
+            invoiceNbr.includes(q) ||
+            propertyCode.includes(q) ||
+            brand.includes(q)
+          );
+        });
+      }
+
+      // ✅ ONLY date sort
+      filtered.sort((a, b) => parseMMDDYY(b.invoiceDate) - parseMMDDYY(a.invoiceDate));
+      return filtered;
+    }
+
+    // ✅ MODE 2: search empty -> APPLY pinned filters, then sort by item# then date desc
+    if (itemNameFilter) {
+      const searchLower = itemNameFilter.toLowerCase();
+      filtered = filtered.filter((item) =>
+        String(item.itemName || "").toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (dimensionsFilter.length || dimensionsFilter.width) {
+      filtered = filtered.filter((item) => {
+        // ✅ SWAP
+        const actualLength = String(Math.round(Number(item.width || 0)));
+        const actualWidth = String(Math.round(Number(item.length || 0)));
+
+        const searchLength = dimensionsFilter.length;
+        const searchWidth = dimensionsFilter.width;
+
+        const matchLength = searchLength
+          ? actualLength === searchLength || actualLength.includes(searchLength)
+          : true;
+        const matchWidth = searchWidth
+          ? actualWidth === searchWidth || actualWidth.includes(searchWidth)
+          : true;
+
+        return matchLength && matchWidth;
+      });
+    }
+
+    // ✅ item# grouping sort + date inside group
+    filtered.sort((a, b) => {
+      const numA = String(a.itemNumber || "");
+      const numB = String(b.itemNumber || "");
+
+      const itemCompare = numA.localeCompare(numB, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+
+      if (itemCompare === 0) {
+        return parseMMDDYY(b.invoiceDate) - parseMMDDYY(a.invoiceDate);
+      }
+      return itemCompare;
+    });
+
+    return filtered;
+  }, [allCustomerHistory, itemNameFilter, dimensionsFilter, historySearchInput]);
+
+  // ✅ Latest row per Item # (within CURRENT results set)
+  const latestStampByItemNumber = useMemo(() => {
+    const m = new Map();
+
+    for (const row of filteredAndSortedHistory) {
+      const key = String(row?.itemNumber ?? "").trim();
+      if (!key) continue;
+
+      const t = parseMMDDYY(row.invoiceDate).getTime();
+      const prev = m.get(key);
+
+      if (prev == null || t > prev) m.set(key, t);
+    }
+
+    return m;
+  }, [filteredAndSortedHistory]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -85,110 +234,52 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   const handleCustomerClick = (customer) => {
     setSelectedCustomerName(customer.customerName);
     setShowDetails(true);
-    setHistoryPage(1);
+
     // Reset filters when selecting a new customer
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
-    fetchCustomerHistory(customer.customerName, 1);
+
+    fetchAllCustomerHistory(customer.customerName);
   };
 
   const handleBackToList = () => {
     setShowDetails(false);
     setSelectedCustomerName(null);
-    setCustomerHistory([]);
+    setAllCustomerHistory([]);
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
   };
 
-  // ✅ Execute search with current filters
-  const executeHistorySearch = () => {
-    if (!selectedCustomerName) return;
-
-    const filters = {};
-    if (itemNameFilter) filters.itemName = itemNameFilter;
-    if (dimensionsFilter.length) filters.length = dimensionsFilter.length;
-    if (dimensionsFilter.width) filters.width = dimensionsFilter.width;
-
-    setHistoryPage(1);
-    fetchCustomerHistory(selectedCustomerName, 1, filters);
-  };
-
-  // ✅ Handle search input in customer details - AUTO SEARCH on Enter
+  // ✅ Enter pins the filter
   const handleHistorySearchKeyDown = (e) => {
     if (e.key === "Enter" && historySearchInput.trim()) {
       e.preventDefault();
 
-      // Check if input contains dimensions (has *)
       if (historySearchInput.includes("*")) {
         const parts = historySearchInput.split("*").map((p) => p.trim());
         if (parts.length === 2) {
-          const newDimensions = {
-            length: parts[0],
-            width: parts[1],
-          };
-          setDimensionsFilter(newDimensions);
+          setDimensionsFilter({ length: parts[0], width: parts[1] });
           setHistorySearchInput("");
-          
-          // ✅ AUTO SEARCH with new dimensions
-          const filters = {};
-          if (itemNameFilter) filters.itemName = itemNameFilter;
-          if (parts[0]) filters.length = parts[0];
-          if (parts[1]) filters.width = parts[1];
-          
-          setHistoryPage(1);
-          fetchCustomerHistory(selectedCustomerName, 1, filters);
           return;
         }
       }
 
-      // Otherwise, it's an item name
-      const newItemName = historySearchInput;
-      setItemNameFilter(newItemName);
+      setItemNameFilter(historySearchInput);
       setHistorySearchInput("");
-      
-      // ✅ AUTO SEARCH with new item name
-      const filters = { itemName: newItemName };
-      if (dimensionsFilter.length) filters.length = dimensionsFilter.length;
-      if (dimensionsFilter.width) filters.width = dimensionsFilter.width;
-      
-      setHistoryPage(1);
-      fetchCustomerHistory(selectedCustomerName, 1, filters);
     }
   };
 
-  // ✅ Clear filters and reload all data
   const handleClearHistoryFilters = () => {
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
-    setHistoryPage(1);
-    fetchCustomerHistory(selectedCustomerName, 1);
   };
 
-  const handleRemoveItemNameFilter = () => {
-    setItemNameFilter("");
-    
-    // ✅ AUTO SEARCH after removing filter
-    const filters = {};
-    if (dimensionsFilter.length) filters.length = dimensionsFilter.length;
-    if (dimensionsFilter.width) filters.width = dimensionsFilter.width;
-    
-    setHistoryPage(1);
-    fetchCustomerHistory(selectedCustomerName, 1, filters);
-  };
-
-  const handleRemoveDimensionsFilter = () => {
+  const handleRemoveItemNameFilter = () => setItemNameFilter("");
+  const handleRemoveDimensionsFilter = () =>
     setDimensionsFilter({ length: "", width: "" });
-    
-    // ✅ AUTO SEARCH after removing filter
-    const filters = {};
-    if (itemNameFilter) filters.itemName = itemNameFilter;
-    
-    setHistoryPage(1);
-    fetchCustomerHistory(selectedCustomerName, 1, filters);
-  };
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -198,35 +289,14 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     if (page < totalPages) setPage(page + 1);
   };
 
-  const handleHistoryPreviousPage = () => {
-    if (historyPage > 1) {
-      const newPage = historyPage - 1;
-      setHistoryPage(newPage);
-      
-      const filters = {};
-      if (itemNameFilter) filters.itemName = itemNameFilter;
-      if (dimensionsFilter.length) filters.length = dimensionsFilter.length;
-      if (dimensionsFilter.width) filters.width = dimensionsFilter.width;
-      
-      fetchCustomerHistory(selectedCustomerName, newPage, filters);
-    }
-  };
-
-  const handleHistoryNextPage = () => {
-    if (historyPage < historyTotalPages) {
-      const newPage = historyPage + 1;
-      setHistoryPage(newPage);
-      
-      const filters = {};
-      if (itemNameFilter) filters.itemName = itemNameFilter;
-      if (dimensionsFilter.length) filters.length = dimensionsFilter.length;
-      if (dimensionsFilter.width) filters.width = dimensionsFilter.width;
-      
-      fetchCustomerHistory(selectedCustomerName, newPage, filters);
-    }
-  };
-
   if (!isOpen) return null;
+
+  const quickSearchActive = (historySearchInput || "").trim().length > 0;
+  const committedFiltersActive = !!(
+    itemNameFilter ||
+    dimensionsFilter.length ||
+    dimensionsFilter.width
+  );
 
   return (
     <div className="history-modal-overlay" onClick={onClose}>
@@ -238,10 +308,7 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
         <div className="history-modal-header">
           <div className="history-header-left">
             {showDetails && (
-              <button
-                className="history-back-button"
-                onClick={handleBackToList}
-              >
+              <button className="history-back-button" onClick={handleBackToList}>
                 ← Back
               </button>
             )}
@@ -256,7 +323,7 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
           </button>
         </div>
 
-        {/* Search Bar (only show in customer list view) */}
+        {/* Search customers */}
         {!showDetails && (
           <div className="history-modal-search">
             <input
@@ -269,13 +336,13 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
           </div>
         )}
 
-        {/* ✅ Search Bar for Customer History Details - NO SEARCH BUTTON */}
+        {/* Customer history search + pinned filters */}
         {showDetails && (
           <div className="history-details-search-section">
             <div className="history-details-search-container">
               <input
                 type="text"
-                placeholder="Type item name or dimensions (e.g., 225*321) and press Enter to search"
+                placeholder="Type to search (live). Press Enter to pin. Example dims: 225*321"
                 value={historySearchInput}
                 onChange={(e) => setHistorySearchInput(e.target.value)}
                 onKeyDown={handleHistorySearchKeyDown}
@@ -289,8 +356,25 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
               </button>
             </div>
 
-            {/* Active Filters */}
-            {(itemNameFilter || dimensionsFilter.length || dimensionsFilter.width) && (
+            {/* Results count */}
+            {(quickSearchActive || committedFiltersActive) && (
+              <div className="history-results-info">
+                {quickSearchActive ? (
+                  <>
+                    Searching “{historySearchInput.trim()}” — Showing{" "}
+                    {filteredAndSortedHistory.length} of {allCustomerHistory.length}
+                  </>
+                ) : (
+                  <>
+                    Showing {filteredAndSortedHistory.length} of{" "}
+                    {allCustomerHistory.length} results
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Pinned tags (hidden while typing) */}
+            {!quickSearchActive && committedFiltersActive && (
               <div className="history-filter-tags">
                 {itemNameFilter && (
                   <div className="history-filter-tag">
@@ -312,9 +396,9 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
           </div>
         )}
 
-        {/* Modal Body */}
+        {/* Body */}
         <div className="history-modal-body">
-          {/* Customer List View */}
+          {/* Customer list */}
           {!showDetails && (
             <>
               {loading ? (
@@ -341,45 +425,27 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
                           className="history-table-row"
                           onClick={() => handleCustomerClick(customer)}
                         >
-                          <td className="customer-name">
-                            {customer.customerName}
-                          </td>
-                          <td className="text-center">
-                            {customer.totalOrders}
-                          </td>
+                          <td className="customer-name">{customer.customerName}</td>
+                          <td className="text-center">{customer.totalOrders}</td>
                           <td className="text-right">
                             $
                             {Number(customer.totalSales || 0).toLocaleString(
                               "en-US",
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }
+                              { minimumFractionDigits: 2, maximumFractionDigits: 2 }
                             )}
                           </td>
                           <td className="text-right">
                             $
-                            {Number(customer.totalVat || 0).toLocaleString(
-                              "en-US",
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              }
-                            )}
+                            {Number(customer.totalVat || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
                           </td>
                           <td className="text-center">
-                            {customer.firstOrder
-                              ? new Date(
-                                  customer.firstOrder
-                                ).toLocaleDateString()
-                              : "—"}
+                            {customer.firstOrder ? formatDate(customer.firstOrder) : "—"}
                           </td>
                           <td className="text-center">
-                            {customer.lastOrder
-                              ? new Date(
-                                  customer.lastOrder
-                                ).toLocaleDateString()
-                              : "—"}
+                            {customer.lastOrder ? formatDate(customer.lastOrder) : "—"}
                           </td>
                         </tr>
                       ))}
@@ -390,13 +456,17 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
             </>
           )}
 
-          {/* Customer Details View - WITH ALL FIELDS */}
+          {/* Customer history table */}
           {showDetails && (
             <>
               {historyLoading ? (
                 <div className="history-loading">Loading history...</div>
-              ) : customerHistory.length === 0 ? (
-                <div className="history-empty">No purchase history found</div>
+              ) : filteredAndSortedHistory.length === 0 ? (
+                <div className="history-empty">
+                  {allCustomerHistory.length === 0
+                    ? "No purchase history found"
+                    : "No results match your search"}
+                </div>
               ) : (
                 <div className="history-details-list">
                   <table className="history-details-table">
@@ -420,67 +490,66 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {customerHistory.map((item, index) => (
-                        <tr key={index} className="history-details-row">
-                          <td className="text-center">
-                            {item.invoiceDate
-                              ? new Date(item.invoiceDate).toLocaleDateString()
-                              : "—"}
-                          </td>
-                          <td>{item.invoiceNbr || "—"}</td>
-                          <td>{item.itemNumber || "—"}</td>
-                          <td>{item.propertyCode || "—"}</td>
-                          <td className="item-name" title={item.itemName}>
-                            {item.itemName || "—"}
-                          </td>
-                          <td>{item.itemBrand || "—"}</td>
-                          <td className="text-right">
-                            {item.length ? Number(item.length).toFixed(2) : "—"}
-                          </td>
-                          <td className="text-right">
-                            {item.width ? Number(item.width).toFixed(2) : "—"}
-                          </td>
-                          <td className="text-right">
-                            {Number(item.qty || 0).toFixed(2)}
-                          </td>
-                          <td className="text-center">
-                            {item.qtyUnit || "—"}
-                          </td>
-                          <td className="text-center">
-                            {item.sheet || "—"}
-                          </td>
-                          <td className="text-right">
-                            {item.sqm ? Number(item.sqm).toFixed(2) : "—"}
-                          </td>
-                          <td className="text-right">
-                            $
-                            {Number(item.itemSalePrice || 0).toLocaleString(
-                              "en-US",
-                              {
+                      {filteredAndSortedHistory.map((item, index) => {
+                        const key = String(item?.itemNumber ?? "").trim();
+                        const t = parseMMDDYY(item.invoiceDate).getTime();
+                        const isLatestForItem =
+                          key && latestStampByItemNumber.get(key) === t;
+
+                        return (
+                          <tr
+                            key={index}
+                            className={`history-details-row ${
+                              isLatestForItem ? "history-latest-row" : ""
+                            }`}
+                          >
+                            <td className="text-center">{formatDate(item.invoiceDate)}</td>
+                            <td>{item.invoiceNbr || "—"}</td>
+                            <td>{item.itemNumber || "—"}</td>
+                            <td>{item.propertyCode || "—"}</td>
+                            <td className="item-name" title={item.itemName}>
+                              {item.itemName || "—"}
+                            </td>
+                            <td>{item.itemBrand || "—"}</td>
+
+                            {/* ✅ SWAP: DB width = actual length, DB length = actual width */}
+                            <td className="text-right">
+                              {item.width ? Number(item.width).toFixed(2) : "—"}
+                            </td>
+                            <td className="text-right">
+                              {item.length ? Number(item.length).toFixed(2) : "—"}
+                            </td>
+
+                            <td className="text-right">{Number(item.qty || 0).toFixed(2)}</td>
+                            <td className="text-center">{item.qtyUnit || "—"}</td>
+                            <td className="text-center">{item.sheet || "—"}</td>
+                            <td className="text-right">
+                              {item.sqm ? Number(item.sqm).toFixed(2) : "—"}
+                            </td>
+                            <td className="text-right">
+                              $
+                              {Number(item.itemSalePrice || 0).toLocaleString("en-US", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
-                              }
-                            )}
-                          </td>
-                          <td className="text-right">
-                            %
-                            {Number(item.vat || 0).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </td>
-                          <td className="text-right total-cell">
-                            $
-                            {Number(item.lineTotal || 0).toLocaleString(
-                              "en-US",
-                              {
+                              })}
+                            </td>
+                            <td className="text-right">
+                              %
+                              {Number(item.vat || 0).toLocaleString("en-US", {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2,
-                              }
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                              })}
+                            </td>
+                            <td className="text-right total-cell">
+                              $
+                              {Number(item.lineTotal || 0).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -489,9 +558,9 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
           )}
         </div>
 
-        {/* Pagination */}
+        {/* Pagination footer (customer list only) */}
         <div className="history-modal-footer">
-          {!showDetails ? (
+          {!showDetails && (
             <>
               <button
                 className="history-pagination-btn"
@@ -507,26 +576,6 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
                 className="history-pagination-btn"
                 onClick={handleNextPage}
                 disabled={page === totalPages}
-              >
-                Next →
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="history-pagination-btn"
-                onClick={handleHistoryPreviousPage}
-                disabled={historyPage === 1}
-              >
-                ← Previous
-              </button>
-              <span className="history-pagination-info">
-                Page {historyPage} of {historyTotalPages}
-              </span>
-              <button
-                className="history-pagination-btn"
-                onClick={handleHistoryNextPage}
-                disabled={historyPage === historyTotalPages}
               >
                 Next →
               </button>
