@@ -292,7 +292,7 @@ const NewRecordModal = ({ onClose, onSave }) => {
   const [closeAfterNotification, setCloseAfterNotification] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // ✅ NEW: Refs for input navigation
+  // ✅ Refs for input navigation
   const inputRefs = useRef({});
 
   const invoiceCacheRef = useRef(new Map());
@@ -332,31 +332,32 @@ const NewRecordModal = ({ onClose, onSave }) => {
     return list;
   };
 
-const handleAddRow = () => {
-  if (saving) return;
-  
-  // ✅ Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
-  
-  setRows((prev) => [
-    ...prev,
-    {
-      customerId: "",
-      customerName: "",
-      type: "S",
-      pmtType: "Cash", 
-      currency: "USD", 
-      exchangeRate: "89,500",
-      cashNumber: "",
-      amountExchanged: "",
-      date: today, 
-      invoiceId: "",
-      invoiceOptions: [],
-      invoiceLoading: false,
-      comments: "",
-    },
-  ]);
-};
+  const handleAddRow = () => {
+    if (saving) return;
+    
+    // ✅ Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    
+    setRows((prev) => [
+      ...prev,
+      {
+        customerId: "",
+        customerName: "",
+        type: "S",
+        pmtType: "Cash", 
+        currency: "USD", 
+        exchangeRate: "89,500",
+        cashNumber: "",
+        amountExchanged: "",
+        date: today, 
+        invoiceId: "",
+        invoiceOptions: [],
+        invoiceLoading: false,
+        comments: "",
+      },
+    ]);
+  };
+
   const handleInputChange = (index, field, value) => {
     if (saving) return;
 
@@ -446,7 +447,7 @@ const handleAddRow = () => {
     }
   };
 
-  // ✅ NEW: Register input refs
+  // ✅ Register input refs
   const registerRef = (rowIndex, field) => (el) => {
     if (!inputRefs.current[rowIndex]) {
       inputRefs.current[rowIndex] = {};
@@ -454,7 +455,7 @@ const handleAddRow = () => {
     inputRefs.current[rowIndex][field] = el;
   };
 
-  // ✅ NEW: Handle Enter key navigation
+  // ✅ Handle Enter key navigation
   const handleKeyDown = (e, rowIndex, field) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -491,11 +492,10 @@ const handleAddRow = () => {
     }
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (rows.length === 0) {
       handleAddRow();
     }
-  
   }, []);
 
   const handleSave = async () => {
@@ -505,46 +505,63 @@ const handleAddRow = () => {
     try {
       if (!rows.length) throw new Error("Add at least one row.");
 
-      const created = [];
-
-      for (const r of rows) {
-        if (!r.customerId) throw new Error("Customer is required.");
-        if (!r.type) throw new Error("JV Type is required.");
-        if (!r.pmtType) throw new Error("Payment Type is required.");
-        if (!r.currency) throw new Error("Currency is required.");
-        if (!r.cashNumber) throw new Error("Cash number is required.");
+      // ✅ STEP 1: Validate ALL rows first before making ANY API calls
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const rowNum = i + 1;
+        
+        if (!r.customerId) throw new Error(`Row ${rowNum}: Customer is required.`);
+        if (!r.type) throw new Error(`Row ${rowNum}: JV Type is required.`);
+        if (!r.pmtType) throw new Error(`Row ${rowNum}: Payment Type is required.`);
+        if (!r.currency) throw new Error(`Row ${rowNum}: Currency is required.`);
+        if (!r.cashNumber) throw new Error(`Row ${rowNum}: Cash number is required.`);
 
         if (r.currency === "LL" && !r.exchangeRate)
-          throw new Error("Exchange rate is required for LL.");
+          throw new Error(`Row ${rowNum}: Exchange rate is required for LL.`);
 
         if (!r.amountExchanged)
-          throw new Error("Amount exchanged is required.");
-        if (!r.date) throw new Error("Date is required.");
+          throw new Error(`Row ${rowNum}: Amount exchanged is required.`);
+        if (!r.date) throw new Error(`Row ${rowNum}: Date is required.`);
 
         const cashNumber = parseFloat((r.cashNumber || "").replace(/,/g, ""));
         if (!Number.isFinite(cashNumber))
-          throw new Error("Invalid cash number.");
+          throw new Error(`Row ${rowNum}: Invalid cash number.`);
 
         const exchangeRateRaw = (r.exchangeRate || "").replace(/,/g, "");
         const exchangeRate =
           exchangeRateRaw === "" ? null : parseFloat(exchangeRateRaw);
 
         if (r.currency === "LL" && !Number.isFinite(exchangeRate)) {
-          throw new Error("Invalid exchange rate.");
+          throw new Error(`Row ${rowNum}: Invalid exchange rate.`);
         }
 
         const amountExchanged = parseFloat(
           (r.amountExchanged || "").replace(/,/g, "")
         );
         if (!Number.isFinite(amountExchanged))
-          throw new Error("Invalid amount exchanged.");
+          throw new Error(`Row ${rowNum}: Invalid amount exchanged.`);
 
         const invoiceId =
           r.invoiceId === "" || r.invoiceId == null ? null : Number(r.invoiceId);
 
         if (invoiceId !== null && !Number.isFinite(invoiceId)) {
-          throw new Error("Invalid invoice selection.");
+          throw new Error(`Row ${rowNum}: Invalid invoice selection.`);
         }
+      }
+
+      // ✅ STEP 2: All validation passed, now create the records
+      const created = [];
+
+      for (const r of rows) {
+        const cashNumber = parseFloat((r.cashNumber || "").replace(/,/g, ""));
+        const exchangeRateRaw = (r.exchangeRate || "").replace(/,/g, "");
+        const exchangeRate =
+          exchangeRateRaw === "" ? null : parseFloat(exchangeRateRaw);
+        const amountExchanged = parseFloat(
+          (r.amountExchanged || "").replace(/,/g, "")
+        );
+        const invoiceId =
+          r.invoiceId === "" || r.invoiceId == null ? null : Number(r.invoiceId);
 
         const payload = {
           customerId: Number(r.customerId),
@@ -571,8 +588,7 @@ const handleAddRow = () => {
         type: "error",
         message: e?.response?.data?.message || e?.message,
       });
-    } finally {
-      setSaving(false);
+      setSaving(false); // ✅ Reset saving state on error to allow retry
     }
   };
 
