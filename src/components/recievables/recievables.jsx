@@ -459,11 +459,13 @@ const AccountingPage = () => {
                   <tr>
                     <th>Select</th>
                     <th>Customer Name</th>
+                    <th>Date</th>
+                    <th>Cash Number</th>
                     <th>Cur</th>
                     <th>Ex Rate</th>
                     <th>Amount Ex</th>
-                    <th>Cash Number</th>
-                    <th>Date</th>
+                    
+                    
                     <th>Ref Invoice</th>
                     <th>JV Number</th>
                     <th>PMT Type</th>
@@ -490,11 +492,13 @@ const AccountingPage = () => {
                           />
                         </td>
                         <td>{row.customerName}</td>
+                        <td>{row.date}</td>
+                        <td>{formatNumberWithCommas(row.cashNumber)}</td>
                         <td>{row.currency}</td>
                         <td>{row.exchangeRate}</td>
                         <td>{formatNumberWithCommas(row.amountExchanged)}</td>
-                        <td>{formatNumberWithCommas(row.cashNumber)}</td>
-                        <td>{row.date}</td>
+                        
+                        
                         <td>{row.refInvoice}</td>
                         <td>{row.invoiceNumber}</td>
                         <td>{row.pmtType}</td>

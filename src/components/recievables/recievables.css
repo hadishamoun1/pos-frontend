@@ -216,31 +216,31 @@
   width: 20%;
 }
 
-/* 3rd col: "Currency" */
+/* 3rd col: "date" */
 .accounting-table th:nth-child(3),
 .accounting-table td:nth-child(3) {
+  width: 8%;
+}
+
+/* 4th col: "cash number" */
+.accounting-table th:nth-child(4),
+.accounting-table td:nth-child(4) {
+  width: 11%;
+}
+
+/* 5th col: "currency" */
+.accounting-table th:nth-child(5),
+.accounting-table td:nth-child(5) {
   width: 4%;
 }
 
-/* 4th col: "Ex Rate" */
-.accounting-table th:nth-child(4),
-.accounting-table td:nth-child(4) {
-  width: 10%;
-}
-
-/* 5th col: "Amount Ex" */
-.accounting-table th:nth-child(5),
-.accounting-table td:nth-child(5) {
-  width: 10%;
-}
-
-/* 6th col: "Cash Number" */
+/* 6th col: "Ex Rtae" */
 .accounting-table th:nth-child(6),
 .accounting-table td:nth-child(6) {
   width: 10%;
 }
 
-/* 7th col: "Date" */
+/* 7th col: "Amount Ex" */
 .accounting-table th:nth-child(7),
 .accounting-table td:nth-child(7) {
   width: 9%;
