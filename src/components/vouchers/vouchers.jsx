@@ -75,12 +75,12 @@ const JournalVoucherPage = () => {
       supplierId: null,
       accountNumber: "",
       accountName: "",
-      currency: "",
+      currency: "USD",
       debit: "",
       debitOFR: "",
       credit: "",
       creditOFR: "",
-      exchangeRate: "1",
+      exchangeRate: "89500",
       exchangeRateEURtoUSD: "",
       debitUSD: "",
       debitUSDOFR: "",
@@ -97,6 +97,9 @@ const JournalVoucherPage = () => {
 
   // ---------- READ-ONLY MODE ----------
   const readOnlyMode = isSaved && !isEditing;
+  
+  // ---------- TABLE DISABLED MODE ----------
+  const isTableDisabled = !date || !type || readOnlyMode;
 
   // Status pill
   const statusLabel = !isSaved ? "New" : isEditing ? "Editing" : "Saved";
@@ -460,7 +463,7 @@ const JournalVoucherPage = () => {
 
   // ---------- ADD ROW with smart defaults ----------
   const handleAddRow = () => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     setEntries((prev) => {
       const last = prev[prev.length - 1];
       return [
@@ -668,7 +671,7 @@ const JournalVoucherPage = () => {
   ]);
 
   const handleInputChange = (index, field, value) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     const updated = [...entries];
     const entry = updated[index];
 
@@ -686,7 +689,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleInputBlur = (index, field) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     const updated = [...entries];
     const entry = updated[index];
 
@@ -697,7 +700,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleCellKeyDown = (e, rowIndex, field) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
 
     // Enter navigation
     if (e.key === "Enter") {
@@ -752,7 +755,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleAccountSelection = (entity) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     if (currentRowRid === null) {
       alert("Please select a row to assign an account.");
       return;
@@ -779,7 +782,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleAccountNumberClick = (indexOrRid) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     const rid =
       typeof indexOrRid === "string"
         ? indexOrRid
@@ -791,7 +794,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleRightClick = (event, rowIndex, rowRid) => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     event.preventDefault();
     setActiveRowIndex(rowIndex);
     setContextMenu({
@@ -804,7 +807,7 @@ const JournalVoucherPage = () => {
   };
 
   const handleDeleteRow = () => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     if (contextMenu.rowRid) {
       setEntries((prev) => prev.filter((r) => r.rid !== contextMenu.rowRid));
       setContextMenu({
@@ -830,7 +833,7 @@ const JournalVoucherPage = () => {
 
   // ---------- DUPLICATE ROW ----------
   const handleDuplicateRow = () => {
-    if (readOnlyMode) return;
+    if (isTableDisabled) return;
     if (contextMenu.rowIndex == null) return;
     setEntries((prev) => {
       const row = prev[contextMenu.rowIndex];
@@ -916,7 +919,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
   // ---------- BALANCE LAST ROW (Base) ----------
   const fillBalanceOnLastRow = () => {
-    if (type === "G" || readOnlyMode) return; // G uses OFR, skip
+    if (type === "G" || isTableDisabled) return; // G uses OFR, skip
     setEntries((prev) => {
       if (!prev.length) return prev;
 
@@ -1479,7 +1482,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <tr
             key={entry.rid}
             className={index === activeRowIndex ? "row-active" : ""}
-            onClick={() => setActiveRowIndex(index)}
+            onClick={() => !isTableDisabled && setActiveRowIndex(index)}
             onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
           >
             <td className="column-line-cell">{index + 1}</td>
@@ -1493,7 +1496,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 value={entry.accountNumber}
                 placeholder="Acc Nb"
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-account-number"
               />
             </td>
@@ -1503,7 +1506,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.accountName}
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 placeholder="Account Name"
                 className={`general-vouchers-input account-name-input ${
                   /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
@@ -1522,7 +1525,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1537,7 +1540,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1549,7 +1552,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 }
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-currency"
               >
                 <option value="" disabled hidden>
@@ -1565,7 +1568,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <input
                 type="text"
                 value={
-                  readOnlyMode
+                  isTableDisabled
                     ? formatNumber(entry.exchangeRate)
                     : entry.exchangeRate
                 }
@@ -1577,15 +1580,15 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
                 className="general-vouchers-input column-exchange-rate"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
             <td>
               <input
                 type="text"
-                value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
+                value={isTableDisabled ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
                 onChange={(e) =>
                   handleInputChange(index, "debit", e.target.value)
@@ -1594,15 +1597,15 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
                 ref={registerInputRef(index, "debit")}
                 className="general-vouchers-input column-debit"
-                readOnly={readOnlyMode || type === "G"}
-                disabled={readOnlyMode || type === "G"}
+                readOnly={isTableDisabled || type === "G"}
+                disabled={isTableDisabled || type === "G"}
               />
             </td>
 
             <td>
               <input
                 type="text"
-                value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
+                value={isTableDisabled ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
                 onChange={(e) =>
                   handleInputChange(index, "credit", e.target.value)
@@ -1611,8 +1614,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
                 ref={registerInputRef(index, "credit")}
                 className="general-vouchers-input column-credit"
-                readOnly={readOnlyMode || type === "G"}
-                disabled={readOnlyMode || type === "G"}
+                readOnly={isTableDisabled || type === "G"}
+                disabled={isTableDisabled || type === "G"}
               />
             </td>
 
@@ -1689,7 +1692,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <tr
             key={entry.rid}
             className={index === activeRowIndex ? "row-active" : ""}
-            onClick={() => setActiveRowIndex(index)}
+            onClick={() => !isTableDisabled && setActiveRowIndex(index)}
             onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
           >
             <td className="column-line-cell">{index + 1}</td>
@@ -1703,7 +1706,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 value={entry.accountNumber}
                 placeholder="Acc Nb"
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-account-number"
               />
             </td>
@@ -1713,7 +1716,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.accountName}
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 placeholder="Account Name"
                 className={`general-vouchers-input account-name-input ${
                   /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
@@ -1732,7 +1735,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1747,7 +1750,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1759,7 +1762,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 }
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-currency"
               >
                 <option value="" disabled hidden>
@@ -1775,7 +1778,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <input
                 type="text"
                 value={
-                  readOnlyMode
+                  isTableDisabled
                     ? formatNumber(entry.exchangeRate)
                     : entry.exchangeRate
                 }
@@ -1787,8 +1790,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
                 className="general-vouchers-input column-exchange-rate"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1796,7 +1799,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <input
                 type="text"
                 value={
-                  readOnlyMode ? formatNumber(entry.debitOFR) : entry.debitOFR
+                  isTableDisabled ? formatNumber(entry.debitOFR) : entry.debitOFR
                 }
                 placeholder="Dr OFR"
                 onChange={(e) =>
@@ -1806,8 +1809,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debitOFR")}
                 ref={registerInputRef(index, "debitOFR")}
                 className="general-vouchers-input column-debit-ofr"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1815,7 +1818,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <input
                 type="text"
                 value={
-                  readOnlyMode ? formatNumber(entry.creditOFR) : entry.creditOFR
+                  isTableDisabled ? formatNumber(entry.creditOFR) : entry.creditOFR
                 }
                 placeholder="Cr OFR"
                 onChange={(e) =>
@@ -1825,8 +1828,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "creditOFR")}
                 ref={registerInputRef(index, "creditOFR")}
                 className="general-vouchers-input column-credit-ofr"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1909,7 +1912,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <tr
             key={entry.rid}
             className={index === activeRowIndex ? "row-active" : ""}
-            onClick={() => setActiveRowIndex(index)}
+            onClick={() => !isTableDisabled && setActiveRowIndex(index)}
             onContextMenu={(e) => handleRightClick(e, index, entry.rid)}
           >
             <td className="column-line-cell">{index + 1}</td>
@@ -1923,7 +1926,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 value={entry.accountNumber}
                 placeholder="Acc Nb"
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-account-number"
               />
             </td>
@@ -1933,7 +1936,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.accountName}
                 readOnly
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 placeholder="Account Name"
                 className={`general-vouchers-input account-name-input ${
                   /[\u0600-\u06FF]/.test(entry.accountName) ? "is-arabic" : ""
@@ -1952,7 +1955,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1967,7 +1970,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -1979,7 +1982,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 }
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
-                disabled={readOnlyMode}
+                disabled={isTableDisabled}
                 className="general-vouchers-input column-currency"
               >
                 <option value="" disabled hidden>
@@ -1995,7 +1998,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               <input
                 type="text"
                 value={
-                  readOnlyMode
+                  isTableDisabled
                     ? formatNumber(entry.exchangeRate)
                     : entry.exchangeRate
                 }
@@ -2007,15 +2010,15 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
                 className="general-vouchers-input column-exchange-rate"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
             <td>
               <input
                 type="text"
-                value={readOnlyMode ? formatNumber(entry.debit) : entry.debit}
+                value={isTableDisabled ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
                 onChange={(e) =>
                   handleInputChange(index, "debit", e.target.value)
@@ -2024,8 +2027,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
                 ref={registerInputRef(index, "debit")}
                 className="general-vouchers-input column-debit"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -2043,7 +2046,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={readOnlyMode ? formatNumber(entry.credit) : entry.credit}
+                value={isTableDisabled ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
                 onChange={(e) =>
                   handleInputChange(index, "credit", e.target.value)
@@ -2052,8 +2055,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
                 ref={registerInputRef(index, "credit")}
                 className="general-vouchers-input column-credit"
-                readOnly={readOnlyMode}
-                disabled={readOnlyMode}
+                readOnly={isTableDisabled}
+                disabled={isTableDisabled}
               />
             </td>
 
@@ -2251,7 +2254,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 New
               </button>
 
-               {/* ✅ NEW: Export Button */}
+               {/* ✅ Export Button */}
       <button
         className="export-journal-voucher-btn"
         onClick={handleExportToExcel}
@@ -2309,6 +2312,21 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           </div>
         </div>
 
+        {/* Warning message when table is disabled */}
+        {isTableDisabled && !readOnlyMode && (
+          <div style={{ 
+            padding: '10px', 
+            backgroundColor: '#fff3cd', 
+            color: '#856404',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            marginBottom: '10px',
+            textAlign: 'center'
+          }}>
+            ⚠️ Please select both Date and Type to enable the table
+          </div>
+        )}
+
         {/* TABLE AREA */}
         <div className="general-vouchers-table-container">
           {(!type || type === "S" || type === "RVR") && renderTypeSOrRVR()}
@@ -2321,8 +2339,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <button
             className="general-vouchers-new-btn"
             onClick={handleAddRow}
-            disabled={readOnlyMode}
-            title={readOnlyMode ? "Click Edit to modify rows" : ""}
+            disabled={isTableDisabled}
+            title={isTableDisabled ? "Set Date and Type first, or click Edit to modify rows" : ""}
           >
             Add Row
           </button>
@@ -2336,7 +2354,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               type="button"
               className="balance-last-row-button"
               onClick={fillBalanceOnLastRow}
-              disabled={readOnlyMode || type === "G"}
+              disabled={isTableDisabled || type === "G"}
             >
               Balance last row (Base)
             </button>
@@ -2432,7 +2450,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
         </div>
 
         {/* Context menu */}
-        {contextMenu.visible && !readOnlyMode && (
+        {contextMenu.visible && !isTableDisabled && (
           <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
             <button className="context-menu-item" onClick={handleDuplicateRow}>
               Duplicate row
