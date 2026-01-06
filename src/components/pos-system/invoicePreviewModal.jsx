@@ -1,6 +1,6 @@
 // src/components/pos-system/invoicePreviewModal.jsx
 import React, { useMemo, useRef, useEffect, useState } from "react";
-import html2pdf from "html2pdf.js";
+import html2pdf from "html2pdf.js"; // (kept if you use it elsewhere)
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
@@ -8,11 +8,14 @@ import { jsPDF } from "jspdf";
    Helpers: numbers & dates
    ========================= */
 function fmtSmart(n) {
-  const num = Number(n);
+  const num = Number(String(n ?? "").replace(/,/g, ""));
   if (!Number.isFinite(num)) return n ?? "";
   return Number.isInteger(num)
     ? num.toLocaleString("en-US")
-    : num.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+    : num.toLocaleString("en-US", {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+      });
 }
 function fmtOpt(n) {
   if (n === null || n === undefined || n === "") return "";
@@ -22,7 +25,20 @@ function fmtOpt(n) {
 function fmtDate(input) {
   if (!input) return "";
 
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const MONTHS = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   if (typeof input === "string") {
     let m = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -40,15 +56,31 @@ function fmtDate(input) {
     m = input.match(/^(\d{2})-([a-zA-Z]{3})-(\d{4})$/);
     if (m) {
       const d = m[1];
-      const mon3 = m[2].slice(0,3).toLowerCase();
-      const idx = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"].indexOf(mon3);
-      const Mon = idx >= 0 ? MONTHS[idx] : (mon3.charAt(0).toUpperCase() + mon3.slice(1));
+      const mon3 = m[2].slice(0, 3).toLowerCase();
+      const idx = [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+      ].indexOf(mon3);
+      const Mon =
+        idx >= 0
+          ? MONTHS[idx]
+          : mon3.charAt(0).toUpperCase() + mon3.slice(1);
       const y = m[3];
       return `${d}-${Mon}-${y}`;
     }
   }
 
-  const d = (input instanceof Date) ? input : new Date(input);
+  const d = input instanceof Date ? input : new Date(input);
   if (Number.isNaN(d.getTime())) return "";
   const day = String(d.getUTCDate()).padStart(2, "0");
   const mon = MONTHS[d.getUTCMonth()];
@@ -74,45 +106,53 @@ const MODAL_CSS = `
 .invoice-modal-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; background: #ffffff; border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap; gap: 8px;
 }
-.invoice-modal-title { font-size: 16px; font-weight: 700; color: #0f172a; }
-.invoice-modal-controls { display: flex; gap: 8px; }
+.invoice-modal-title-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.invoice-modal-title { font-size: 15px; font-weight: 700; color: #0f172a; }
+.edit-mode-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 6px; background: #fef3c7;
+  border: 1px solid #f59e0b; font-size: 11px; font-weight: 600;
+  color: #92400e;
+}
+.invoice-modal-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
   border: 1px solid transparent; background: #fff; padding: 10px 14px;
-  border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 700;
+  border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700;
   line-height: 1; display: inline-flex; align-items: center; gap: 10px;
   transition: background .15s ease, color .15s ease, border-color .15s ease, transform .04s ease;
 }
 .btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-.btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
 .btn-secondary { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
-.btn-secondary:hover { background: #0284c7; border-color: #0284c7; }
+.btn-secondary:hover:not(:disabled) { background: #0284c7; border-color: #0284c7; }
 .btn-tertiary { background: #22c55e; color: #fff; border-color: #22c55e; }
-.btn-tertiary:hover { background: #16a34a; border-color: #16a34a; }
+.btn-tertiary:hover:not(:disabled) { background: #16a34a; border-color: #16a34a; }
+.btn-warning { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.btn-warning:hover:not(:disabled) { background: #d97706; border-color: #d97706; }
 .btn-outline { background: #fff; color: #0f172a; border-color: #e5e7eb; }
-.btn-outline:hover { background: #f8fafc; }
+.btn-outline:hover:not(:disabled) { background: #f8fafc; }
 .invoice-modal-content { background: #f8fafc; padding: 12px; overflow: auto; flex: 1; }
 .invoice-layout { background: #e5e7eb; border: 1px dashed #cbd5e1; padding: 8px; }
 `;
 
 /* =========================
-   Invoice (inside iframe)
+   Invoice (inside iframe) - WITH EDIT MODE STYLES
    ========================= */
 const INLINE_INVOICE_CSS = `
 :root {
   --a4-w-mm: 210mm;
   --a4-h-mm: 297mm;
-  --a4-w-px: 794px;
+  --a4-w-px: 770px;
   --a4-h-px: 1123px;
 }
 #pages-root { display: flex; flex-direction: column; gap: 16px; }
-#pages-root[data-invoice-type="G"] .invoice-meta {
-  height: 95px;
-}
-
-/* G case report customizations */
-
+#pages-root[data-invoice-type="G"] .invoice-meta { height: 95px; }
 #pages-root[data-invoice-type="G"] .footer-value{border:none}
 #pages-root[data-invoice-type="G"] .footer-left{border:none}
 #pages-root[data-invoice-type="G"] .footer-left-label-row{height:90px; }
@@ -123,58 +163,48 @@ const INLINE_INVOICE_CSS = `
   height: var(--a4-h-px);
   margin: 0 auto; padding: 0; background: #fff;
   box-shadow: 0 0 10px rgba(0,0,0,0.1); box-sizing: border-box;
-  font-family: "Times New Roman", Times, serif; font-size: 12px; direction: rtl;
+  font-family: "Times New Roman", Times, serif; font-size: 11px; direction: rtl;
   display: flex; flex-direction: column;
   transform-origin: top left; transition: transform .2s ease;
 }
-.footer-page { /* marker class for dedicated footer page */ }
-@media print {
-#pages-root { display: flex; flex-direction: column; gap: 16px; }
-#pages-root[data-invoice-type="G"] .invoice-meta {
-  height: 95px;
-}
+.footer-page {}
 
-/* G case report customizations */
-
-#pages-root[data-invoice-type="G"] .footer-value{border:none}
-#pages-root[data-invoice-type="G"] .footer-left{border:none}
-#pages-root[data-invoice-type="G"] .footer-left-label-row{height:90px; }
-#pages-root[data-invoice-type="G"] .footer-left-label{padding:15px}
-  #pages-root { gap: 0; }
-  .invoice-a4-wrapper {
-    width: var(--a4-w-mm) !important; height: var(--a4-h-mm) !important;
-    box-shadow: none !important; border: none !important; position: relative !important; page-break-after: always;
-  }
-  .invoice-a4-wrapper:last-child { page-break-after: auto; }
-}
 .page-body { flex: 1; display: flex; flex-direction: column; }
 .invoice-header { display: flex; justify-content: space-between; padding: 5px; border: 1px solid #000; margin: 7px; height: 150px; }
-.invoice-header .left-info { direction: ltr; text-align: left; font-size: 15px; line-height: 1.4; }
-.invoice-header .right-info { text-align: right; direction: rtl; font-size: 15px; line-height: 1.4; }
-.company-title, .company-subtitle { font-family: Arial, sans-serif; font-size: 26px; margin: 0; }
-.company-arabic-title, .company-arabic-subtitle { font-family: Arial, sans-serif; font-size: 26px; margin: 0; font-weight: bold; }
+.invoice-header .left-info { direction: ltr; text-align: left; font-size: 14px; line-height: 1.4; }
+.invoice-header .right-info { text-align: right; direction: rtl; font-size: 14px; line-height: 1.4; }
+.company-title, .company-subtitle { font-family: Arial, sans-serif; font-size: 25px; margin: 0; }
+.company-arabic-title, .company-arabic-subtitle { font-family: Arial, sans-serif; font-size: 25px; margin: 0; font-weight: bold; }
 .small-subtitle { font-weight: normal; }
-.left-info { font-family: "Times New Roman", Times, serif; line-height: 1.4; font-size: 14px; }
+.left-info { font-family: "Times New Roman", Times, serif; line-height: 1.4; font-size: 13px; }
 .invoice-header .left-info h2, .invoice-header .left-info p, .invoice-header .right-info h2, .invoice-header .right-info p { margin: 0; padding: 0; }
-.invoice-arabic-contact { font-family: "Times New Roman", Times, serif; font-size: 15px; display: flex; flex-direction: column; direction: rtl; }
+.invoice-arabic-contact { font-family: "Times New Roman", Times, serif; font-size: 14px; display: flex; flex-direction: column; direction: rtl; }
 .invoice-arabic-line { display: flex; align-items: center; }
 .invoice-arabic-label { width: 80px; text-align: right; }
 .invoice-arabic-colon { width: 10px; text-align: center; display: inline-block; }
 .invoice-arabic-value { flex: 1; text-align: right; }
+
 .invoice-meta {
   display: flex; justify-content: space-between; padding: 5px; margin: 0 7px 7px 7px; border: 1px solid #000;
-  font-family: Arial, sans-serif; font-size: 16px; box-sizing: border-box; height: 135px;
+  font-family: Arial, sans-serif; font-size: 15px; box-sizing: border-box; height: 135px;
 }
 .meta-right, .meta-left { display: flex; flex-direction: column; text-align: right; }
 .meta-left { margin-left: 25px; }
-.meta-line { display: flex; align-items: center; font-size: 17px; line-height: 1.2; margin: 2px 0; }
+.meta-line { display: flex; align-items: center; font-size: 16px; line-height: 1.2; margin: 2px 0; }
 .meta-label { width: 90px; text-align: right; font-weight: bold; }
 .meta-colon { width: 10px; text-align: center; }
 .meta-value { flex: 1; text-align: right; }
-.meta-name-cus{font-size:18px;font-weight:bold;}
+.meta-name-cus{font-size:17px;font-weight:bold;}
+.meta-value.date-ltr {
+  direction: ltr;
+  unicode-bidi: embed;
+  text-align: left;
+  display: inline-block; 
+}
+
 .invoice-table {
   width: calc(100% - 15px); margin: 0 7px 7px 7px; border-collapse: collapse;
-  font-family: Arial, sans-serif; font-size: 15px; direction: rtl; border: 0.5px solid #000;
+  font-family: Arial, sans-serif; font-size: 14px; direction: rtl; border: 0.5px solid #000;
 }
 .invoice-table thead { display: table-header-group; }
 .invoice-table th {
@@ -182,15 +212,76 @@ const INLINE_INVOICE_CSS = `
   padding: 6px; text-align: center;
 }
 .invoice-table tr, .invoice-table td, .invoice-table th { page-break-inside: auto; break-inside: auto; }
-.invoice-table td { padding: 6px; border-left: 0.5px solid #9c9c9cff; }
+.invoice-table td { padding: 6px; border-left: 0.5px solid #9c9c9cff; position: relative; }
 .invoice-table td:first-child { border-right: 0.5px solid #000; }
-.arabic-item-name { font-size: 17px; text-align: left;}
+
+/* ✅ EDITABLE CELL STYLES */
+.invoice-table td.editable {
+  background: #fffbeb;
+  cursor: text;
+  transition: background 0.15s ease;
+}
+.invoice-table td.editable:hover { background: #fef3c7; }
+.invoice-table td.editable:focus {
+  outline: 2px solid #f59e0b;
+  outline-offset: -2px;
+  background: #fef3c7;
+}
+
+/* ✅ ROW ACTIONS */
+.row-actions {
+  position: absolute;
+  right: -35px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+}
+.invoice-table tbody tr:hover .row-actions { display: flex; }
+.row-action-btn {
+  width: 26px; height: 26px;
+  border: 1px solid #e5e7eb; border-radius: 4px;
+  background: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.row-action-btn:hover { background: #f3f4f6; border-color: #d1d5db; transform: scale(1.05); }
+.row-action-btn.delete { color: #dc2626; }
+.row-action-btn.delete:hover { background: #fee2e2; border-color: #fca5a5; }
+
+/* ✅ ADD ROW BUTTON */
+.add-row-container {
+  margin: 8px 7px;
+  padding: 10px;
+  border: 1px dashed #9ca3af;
+  background: #f9fafb;
+  cursor: pointer;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  font-family: Arial, sans-serif;
+}
+.add-row-container:hover {
+  background: #f3f4f6;
+  border-color: #6b7280;
+  color: #374151;
+  border-style: solid;
+}
+
+.arabic-item-name { font-size: 16px; text-align: left;}
 .col-small { width: 40px; }
 .col-price { width: 40px; }
 .col-amount { width: 90px; }
 .col-area { width: 75px; }
 .col-description { width: 190px; text-align: left; white-space: normal; word-break: break-word; vertical-align: top; }
 .col-item { width: 90px; text-align: left; }
+
 .invoice-footer {
   display: flex; justify-content: space-between; padding: 10px;
   font-family: "Arial", sans-serif; font-size: 12px; height: 180px; box-sizing: border-box;
@@ -198,14 +289,12 @@ const INLINE_INVOICE_CSS = `
 }
 .footer-spacer { height: 0; }
 .footer-left { width: 55%; border: 0.5px solid #000; padding: 5px; box-sizing: border-box; }
-
-/* NEW: Amount-in-words ROW placed inside the left table, shown only for G */
 .footer-left-amount-words-row {
   display: none;
   border: 1px solid #000;
   padding: 6px 8px;
   margin: 6px 0;
-  font-size: 14px;
+  font-size: 13px;
   align-items: center;
   gap: 8px;
 }
@@ -213,68 +302,110 @@ const INLINE_INVOICE_CSS = `
   display: flex;
   justify-content: flex-end;
 }
-
-/* NEW: Plain amount-in-words for S (no border, light padding) */
 .footer-left-amount-words-plain {
   display: none;
   padding: 4px 6px;
-  font-size: 14px;
+  font-size: 13px;
   direction: ltr;      
   text-align: left;
 }
-#pages-root[data-invoice-type="S"] .footer-left-amount-words-plain {
-  display: block;
-}
-
-
-  .meta-value.date-ltr {
-  direction: ltr;
-  unicode-bidi: embed;
-  text-align: left;
-  display: inline-block; 
-}
-
-.amount-in-words { margin-bottom: 5px; font-size: 14px; display: flex; justify-content: flex-end; }
-.footer-left-cells { display: flex; width: 70%; height: 50px; border: 1px solid #000; }
-.footer-left-cell { flex: 1; }
-.border-left { border-left: 1px solid #000; }
+#pages-root[data-invoice-type="S"] .footer-left-amount-words-plain { display: block; }
 .footer-left-label-row { display: flex; flex-direction: column; justify-content: space-between; padding: 0 10px; height: 60px; border: 1px solid #000; }
-.footer-left-label { border-left: 0.5px solid #000; width: 50%; font-size: 14px; text-align: right; padding: 7px; }
-
-/* Show notes only for S or RVR */
-.footer-left-note,
-.footer-left-label-note { display: none; }
+.footer-left-label { border-left: 0.5px solid #000; width: 50%; font-size: 13px; text-align: right; padding: 7px; }
+.footer-left-note, .footer-left-label-note { display: none; }
 #pages-root[data-invoice-type="S"] .footer-left-note,
 #pages-root[data-invoice-type="S"] .footer-left-label-note,
-#pages-root[data-invoice-type="RVR"] .footer-left-label-note {
-  display: block;
-}
-
+#pages-root[data-invoice-type="RVR"] .footer-left-label-note { display: block; }
 .footer-left-note {margin-top:10px;}
 .footer-right { width: 44%; display: flex; flex-direction: column; padding: 40px 10px 10px; border: 0.5px solid #000; box-sizing: border-box; }
-.footer-row { display: flex; justify-content: space-between; direction: ltr; margin-bottom: 6px; font-size: 16px; }
+.footer-row { display: flex; justify-content: space-between; direction: ltr; margin-bottom: 6px; font-size: 15px; }
 .footer-row span { width: 32%; text-align: right; }
 .footer-row span:nth-child(1) { text-align: left; }
 .footer-row span:last-child { text-align: left; }
-.footer-total-line { width:100%; padding-top: 6px; display: flex; justify-content: space-around; direction: ltr; font-size: 15px; }
-.footer-total-label { font-weight: bold; font-size: 21px; }
-.footer-total-amount { font-weight: bolder; font-size: 18px; text-align: left; border: 0.5px solid #000; padding: 3px 0 3px 3px; width: 50%; }
+.footer-total-line { width:100%; padding-top: 6px; display: flex; justify-content: space-around; direction: ltr; font-size: 14px; }
+.footer-total-label { font-weight: bold; font-size: 20px; }
+.footer-total-amount { font-weight: bolder; font-size: 17px; text-align: left; border: 0.5px solid #000; padding: 3px 0 3px 3px; width: 50%; }
 .footer-label{font-weight:bold;}
 .footer-value{border: 0.5px solid #000;padding:2px;}
-@page { size: A4; margin: 0; }
+
+@page { size: A4; margin: 6mm; }
+
 @media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
   html, body {
-    margin: 0 !important; padding: 0 !important; background: #fff !important;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
   }
-  .invoice-footer { break-inside: avoid; page-break-inside: avoid; }
+
+  #pages-root { gap: 0 !important; margin: 0 !important; padding: 0 !important; }
+
+  .invoice-a4-wrapper {
+    width: 198mm !important;
+    height: 285mm !important;
+    padding-top: 2mm !important;
+    padding-left: 2mm !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    transform: none !important;
+  }
+
+  .invoice-a4-wrapper:last-child { page-break-after: auto !important; break-after: auto !important; }
+
+  .invoice-header, .invoice-meta {
+    margin: 0 0 2mm 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .invoice-table {
+    width: calc(100% ) !important;
+    margin-left: 2mm !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    table-layout: fixed !important;
+  }
+
+  .invoice-table th, .invoice-table td {
+    padding-left: 3mm !important;
+    box-sizing: border-box !important;
+  }
+
+  .invoice-footer {
+    width: calc(100% ) !important;
+    margin-left: 2mm !important;
+    margin-right: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .row-actions, .add-row-container { display: none !important; }
 }
 `;
 
 /* =========================
-   Build full iframe HTML (with pagination)
+   Build full iframe HTML
+   FIX: صندوق editable for ANY type (sheet/unit/sqm/box)
    ========================= */
-function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) {
+function buildInvoiceHtml(
+  invoiceData = {},
+  { inlineCss, baseHref = "/", editMode = false } = {}
+) {
   const {
     invoiceNumber = "",
     date = "",
@@ -284,7 +415,7 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
     customerAccountNumber = "",
     customerTaxNumber = "",
     currencyRate = 1,
-    vatPercentage = 11, // default 11%
+    vatPercentage = 11,
     totalWithoutVAT = 0,
     totalVAT = 0,
     grandTotal = 0,
@@ -292,101 +423,182 @@ function buildInvoiceHtml(invoiceData = {}, { inlineCss, baseHref = "/" } = {}) 
     currencyCode = "USD",
   } = invoiceData;
 
-  // ✅ detect currency FIRST (so we can safely use it below)
   const currNorm = String(currencyCode ?? "")
     .toUpperCase()
     .replace(/[^A-Z]/g, "")
     .trim();
   const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
-  // ✅ numeric safety
   const rate = Number(currencyRate || 1) || 1;
-
-  // ✅ VAT LBP = VAT only when currency is LL/LBP, otherwise convert VAT to LBP
   const totalVatLBP = isLLCurrency
-    ? Number(totalVAT || 0)
-    : Number(totalVAT || 0) * rate;
-
-  // keep your existing variable name usage
+    ? Number(String(totalVAT || 0).replace(/,/g, "")) || 0
+    : (Number(String(totalVAT || 0).replace(/,/g, "")) || 0) * rate;
   const totalVatLL = totalVatLBP;
 
-  const invoiceType = (invoiceData?.invoiceType ?? invoiceData?.type ?? "").toUpperCase(); // "S","RVR","G"
+  const invoiceType = String(
+    invoiceData?.invoiceType ?? invoiceData?.type ?? ""
+  ).toUpperCase();
   const hideTaxAccount = invoiceType === "G";
 
-const rowsHtml =
-  items.length === 0
-    ? `<tr><td colspan="9" style="text-align:center;padding:12px">لا توجد أصناف</td></tr>`
-    : items
-        .map((it) => {
-          const type = String(it?.itemType ?? it?.type ?? "").toLowerCase();
+  const toNumLoose = (v) => {
+    if (v === null || v === undefined || v === "") return 0;
+    const n = Number(String(v).replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  };
 
-          const isBox = type === "box";
-          const isSheet = type === "sheet";
-          const isSqmPiece = type === "sqm";
-          const isUnit = type === "unit";
+  const rowsHtml =
+    items.length === 0
+      ? `<tr><td colspan="9" style="text-align:center;padding:12px">لا توجد أصناف</td></tr>`
+      : items
+          .map((it, idx) => {
+            const type = String(it?.itemType ?? it?.type ?? "").toLowerCase();
+            const isBox = type === "box";
+            const isSheet = type === "sheet";
+            const isSqmPiece = type === "sqm";
+            const isUnit = type === "unit";
 
-          const qtyNum = Number(it?.quantity);
+            const itemId = it?._id ?? idx;
+            const itemNumber = it?.itemNumber ?? "";
 
-          // ✅ total fallback: unit uses quantity, others use sqm
-          const amount =
-            it?.totalAmount ??
-            (Number(it?.unitPrice || 0) *
-              Number(isUnit ? (Number.isFinite(qtyNum) ? qtyNum : 0) : it?.sqm || 0));
+            // ✅ BOX compatibility values
+            const sheetsPerBoxVal =
+              it?.sheetsPerBox ??
+              it?.sheets_per_box ??
+              it?.sheetsPerCarton ??
+              it?.sheets_per_carton ??
+              "";
 
-          const sheetsPerBox =
-            it?.sheetsPerBox ??
-            it?.sheets_per_box ??
-            it?.sheetsPerCarton ??
-            it?.sheets_per_carton;
+            // ✅ IMPORTANT: boxQty is now allowed for ALL types
+            // - for BOX: default from boxQty OR quantity
+            // - for others: default from boxQty only (no fallback to quantity)
+            const boxQtyVal = isBox
+              ? it?.boxQty ?? it?.boxQuantity ?? it?.quantity ?? ""
+              : it?.boxQty ?? it?.boxQuantity ?? "";
 
-          // ✅ thickness should NOT show for unit
-          const hasThickness =
-            !isUnit &&
-            it?.thickness !== undefined &&
-            it?.thickness !== null &&
-            String(it?.thickness) !== "";
+            // ✅ لوح column behavior stays:
+            // - BOX => sheetsPerBox
+            // - SHEET/UNIT/SQM => quantity
+            const lohField = isBox ? "sheetsPerBox" : "quantity";
+            const lohValue = isBox ? fmtOpt(sheetsPerBoxVal) : fmtOpt(it?.quantity);
 
-          const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
+            const qtyForUnit = toNumLoose(it?.quantity);
+            const amount =
+              it?.totalAmount ??
+              toNumLoose(it?.unitPrice) * (isUnit ? qtyForUnit : toNumLoose(it?.sqm));
 
-          // ✅ لوح (Sheet) column:
-          // - sqm: show quantity but hide 0 (your existing behavior)
-          // - sheet: show quantity
-          // - unit: show quantity (NEW)
-          // - box: show sheetsPerBox (your existing behavior)
-          const sheetsCell = isSqmPiece
-            ? (Number.isFinite(qtyNum) && qtyNum !== 0 ? fmtSmart(qtyNum) : "")
-            : isSheet || isUnit
-            ? fmtOpt(it.quantity)
-            : isBox
-            ? fmtOpt(sheetsPerBox)
-            : "";
+            const hasThickness =
+              !isUnit &&
+              it?.thickness !== undefined &&
+              it?.thickness !== null &&
+              String(it?.thickness) !== "";
 
-          // ✅ name: never prepend thickness for unit
-          const displayName =
-            (it?.invoiceItemDisplayName && String(it.invoiceItemDisplayName).trim()) ||
-            (it?.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
-            `${thicknessLabel}${it?.itemName ?? ""}`.trim();
+            const thicknessLabel = hasThickness ? fmtSmart(it.thickness) + " ملم " : "";
 
-          // ✅ NEW: Get itemNumber (fallback to empty string if not present)
-          const itemNumber = it?.itemNumber ?? "";
+            const displayName =
+              (it?.invoiceItemDisplayName &&
+                String(it.invoiceItemDisplayName).trim()) ||
+              (it?.invoiceDisplayName && String(it.invoiceDisplayName).trim()) ||
+              `${thicknessLabel}${it?.itemName ?? ""}`.trim();
 
-          return `
-            <tr>
-              <td>${fmtSmart(amount)}</td>
-              <td>${fmtSmart(it.unitPrice)}</td>
-              <td>${isUnit ? "" : fmtSmart(it.sqm)}</td>
-              <td>${fmtOpt(it.width)}</td>
-              <td>${fmtOpt(it.length)}</td>
-              <td>${sheetsCell}</td>
-              <td>${isBox ? fmtOpt(it.quantity) : ""}</td>
-              <td class="arabic-item-name">${displayName}</td>
-              <td>${itemNumber}</td>
-            </tr>`;
-        })
-        .join("");
+            if (editMode) {
+              return `
+                <tr data-item-id="${itemId}" data-item-type="${type}">
+                  <td class="editable" contenteditable="true" data-field="totalAmount">${fmtSmart(amount)}</td>
+                  <td class="editable" contenteditable="true" data-field="unitPrice">${fmtOpt(it?.unitPrice)}</td>
+                  <td class="editable" contenteditable="true" data-field="sqm">${isUnit ? "" : fmtOpt(it?.sqm)}</td>
+                  <td class="editable" contenteditable="true" data-field="width">${fmtOpt(it?.width)}</td>
+                  <td class="editable" contenteditable="true" data-field="length">${fmtOpt(it?.length)}</td>
 
-  const baseTag  = `<base href="${baseHref}">`;
+                  <!-- ✅ لوح -->
+                  <td class="editable" contenteditable="true" data-field="${lohField}">${lohValue}</td>
+
+                  <!-- ✅ صندوق: ALWAYS editable now -->
+                  <td class="editable" contenteditable="true" data-field="boxQty">${fmtOpt(boxQtyVal)}</td>
+
+                  <td class="arabic-item-name editable" contenteditable="true" data-field="itemName">${displayName}</td>
+
+                  <!-- actions inside TD (valid HTML) -->
+                  <td class="editable" contenteditable="true" data-field="itemNumber">
+                    ${itemNumber}
+                    <div class="row-actions">
+                      <button class="row-action-btn delete" onclick="window.deleteRow(${itemId})" title="Delete row">🗑</button>
+                    </div>
+                  </td>
+                </tr>`;
+            }
+
+            // non-edit display
+            const sheetsCell = isBox
+              ? fmtOpt(sheetsPerBoxVal)
+              : isSqmPiece
+              ? fmtOpt(it?.quantity)
+              : isSheet || isUnit
+              ? fmtOpt(it?.quantity)
+              : "";
+
+            // ✅ show boxQty if user stored it, even for non-box
+            const boxCell = fmtOpt(boxQtyVal);
+
+            return `
+                <tr>
+                  <td>${fmtSmart(amount)}</td>
+                  <td>${fmtOpt(it?.unitPrice)}</td>
+                  <td>${isUnit ? "" : fmtOpt(it?.sqm)}</td>
+                  <td>${fmtOpt(it?.width)}</td>
+                  <td>${fmtOpt(it?.length)}</td>
+                  <td>${sheetsCell}</td>
+                  <td>${boxCell}</td>
+                  <td class="arabic-item-name">${displayName}</td>
+                  <td>${itemNumber}</td>
+                </tr>`;
+          })
+          .join("");
+
+  const addRowButton = editMode
+    ? `<div class="add-row-container" onclick="window.addRow()">+ Add Row</div>`
+    : "";
+
+  const baseTag = `<base href="${baseHref}">`;
   const styleTag = `<style>${inlineCss || ""}</style>`;
+
+  const editModeScript = editMode
+    ? `
+  <script>
+    window.deleteRow = function(itemId) {
+      window.parent.postMessage({ type: 'deleteRow', itemId }, '*');
+    };
+    window.addRow = function() {
+      window.parent.postMessage({ type: 'addRow' }, '*');
+    };
+
+    document.addEventListener('blur', function(e) {
+      if (e.target.hasAttribute('contenteditable') && e.target.getAttribute('contenteditable') === 'true') {
+        const row = e.target.closest('tr');
+        const itemId = row?.dataset?.itemId;
+        const itemType = row?.dataset?.itemType;
+        const field = e.target.dataset?.field;
+        const value = e.target.textContent.trim();
+
+        if (itemId !== undefined && field) {
+          window.parent.postMessage({
+            type: 'itemChange',
+            itemId: parseInt(itemId),
+            itemType,
+            field,
+            value
+          }, '*');
+        }
+      }
+    }, true);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.target.hasAttribute('contenteditable') && e.key === 'Enter') {
+        e.preventDefault();
+      }
+    });
+  </script>
+  `
+    : "";
 
   return `<!doctype html>
 <html lang="ar">
@@ -399,7 +611,6 @@ ${styleTag}
 <body>
   <div id="pages-root" data-invoice-type="${invoiceType}"></div>
 
-  <!-- Hidden source nodes (rows + repeated table head) -->
   <div id="source" style="display:none">
     <table class="invoice-table" id="source-table">
       <thead>
@@ -417,6 +628,7 @@ ${styleTag}
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
+    ${addRowButton}
 
     <div class="invoice-header" id="source-header">
       <div class="right-info">
@@ -441,22 +653,24 @@ ${styleTag}
 
     <div class="invoice-meta" id="source-meta">
       <div class="meta-right">
-        <div class="meta-line"><span class="meta-label">اسم الزبون</span><span class="meta-colون">:</span><span class="meta-name-cus">${customerName || "-"}</span></div>
-        <div class="meta-line"><span class="meta-label">العنوان</span><span class="meta-colون">:</span><span class="meta-value">${customerAddress || "-"}</span></div>
-        <div class="meta-line"><span class="meta-label">تلفون</span><span class="meta-colون">:</span><span class="meta-value">${customerPhone || "-"}</span></div>
-        ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">رقم الحساب</span><span class="meta-colون">:</span><span class="meta-value">${customerAccountNumber || "-"}</span></div>`}
-        ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">الرقم الضريبي</span><span class="meta-colون">:</span><span class="meta-value">${customerTaxNumber || "-"}</span></div>`}
+        <div class="meta-line"><span class="meta-label">اسم الزبون</span><span class="meta-colon">:</span><span class="meta-name-cus">${customerName || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">العنوان</span><span class="meta-colon">:</span><span class="meta-value">${customerAddress || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">تلفون</span><span class="meta-colon">:</span><span class="meta-value">${customerPhone || "-"}</span></div>
+        ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">رقم الحساب</span><span class="meta-colon">:</span><span class="meta-value">${customerAccountNumber || "-"}</span></div>`}
+        ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">الرقم الضريبي</span><span class="meta-colon">:</span><span class="meta-value">${customerTaxNumber || "-"}</span></div>`}
       </div>
       <div class="meta-left">
-        <div class="meta-line"><span class="meta-label">${invoiceType === "G" ? "Proforma #" : "رقم الفاتورة"}</span><span class="meta-colون">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
-        <div class="meta-line"><span class="meta-label">التاريخ</span><span class="meta-colون">:</span><span class="meta-value date-ltr">${fmtDate(date)}</span></div>
-        <div class="meta-line"><span class="meta-label">العملة</span><span class="meta-colون">:</span><span class="meta-value">${currencyCode}</span></div>
+        <div class="meta-line"><span class="meta-label">${invoiceType === "G" ? "Proforma #" : "رقم الفاتورة"}</span><span class="meta-colon">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">التاريخ</span><span class="meta-colon">:</span><span class="meta-value date-ltr">${fmtDate(date)}</span></div>
+        <div class="meta-line"><span class="meta-label">العملة</span><span class="meta-colon">:</span><span class="meta-value">${currencyCode}</span></div>
       </div>
     </div>
 
     <div class="invoice-footer" id="source-footer" data-grandtotal="${grandTotal}" data-currency="${currencyCode}" data-vat="${vatPercentage}">
       <div class="footer-right">
-        ${Number(vatPercentage) > 0 ? `
+        ${
+          Number(vatPercentage) > 0
+            ? `
         <div class="footer-row">
           <span class="footer-label">${isLLCurrency ? "VAT" : "VAT LBP"}</span>
           <span class="footer-label">${invoiceType === "G" ? "القيمة" : "المجموع"}</span>
@@ -467,9 +681,15 @@ ${styleTag}
           <span class="footer-label">V.A.T ${fmtSmart(vatPercentage)}%</span>
           <span class="footer-value">${fmtSmart(totalVAT)}</span>
         </div>
-        ` : ''}
-        <div class="footer-total-line" style="${Number(vatPercentage) === 0 ? 'padding-top: 80px;' : ''}">
-          <strong class="footer-total-label">${invoiceType === "G" ? "المجموع" : "المجموع الصافي"}</strong>
+        `
+            : ""
+        }
+        <div class="footer-total-line" style="${
+          Number(vatPercentage) === 0 ? "padding-top: 80px;" : ""
+        }">
+          <strong class="footer-total-label">${
+            invoiceType === "G" ? "المجموع" : "المجموع الصافي"
+          }</strong>
           <span class="footer-total-amount">${fmtSmart(grandTotal)} ${currencyCode}</span>
         </div>
       </div>
@@ -490,11 +710,12 @@ ${styleTag}
             <span class="footer-left-label">الإمضاء:</span>
           </div>
         </div>
- ${invoiceType === "G"
-    ? ""
-    : `<div class="footer-left-note"><span class="footer-left-label-note">ملاحظات:</span></div>`}      </div>
+        ${invoiceType === "G" ? "" : `<div class="footer-left-note"><span class="footer-left-label-note">ملاحظات:</span></div>`}
+      </div>
     </div>
   </div>
+
+  ${editModeScript}
 
   <script>
     (function () {
@@ -585,6 +806,7 @@ ${styleTag}
         const srcTable = sel('#source-table');
         const srcRows = Array.from(srcTable.tBodies[0].rows);
         const thead = srcTable.tHead;
+        const addRowBtn = document.querySelector('.add-row-container');
 
         const invoiceTypeAttr = (pagesRoot?.getAttribute('data-invoice-type') || '').toUpperCase();
         const shouldShowHeaderOnFirstPage = invoiceTypeAttr !== 'G';
@@ -613,6 +835,7 @@ ${styleTag}
         pagesRoot.appendChild(page);
 
         const PAGE_H = round(page.getBoundingClientRect().height);
+        const SAFETY = 8;
 
         for (let i = 0; i < srcRows.length; i++) {
           const row = srcRows[i].cloneNode(true);
@@ -620,7 +843,7 @@ ${styleTag}
 
           const tableRect = table.getBoundingClientRect();
           const currentBottom = round(tableRect.bottom - page.getBoundingClientRect().top);
-          if (currentBottom > PAGE_H) {
+          if (currentBottom > (PAGE_H - SAFETY)) {
             tbody.removeChild(row);
             ({ page, body, table, tbody } = makePage({
               includeHeader: false,
@@ -631,6 +854,15 @@ ${styleTag}
             }));
             pagesRoot.appendChild(page);
             tbody.appendChild(row);
+          }
+        }
+
+        if (addRowBtn) {
+          const lastPageBody = pagesRoot.lastChild?.querySelector('.page-body');
+          if (lastPageBody) {
+            const addRowClone = addRowBtn.cloneNode(true);
+            addRowClone.onclick = () => window.addRow();
+            lastPageBody.insertBefore(addRowClone, lastPageBody.querySelector('.invoice-footer'));
           }
         }
 
@@ -691,9 +923,8 @@ ${styleTag}
       window.repaginateAndAdjust = function() { paginate(); };
       window.applyPreviewZoom = function (scale) {
         const root = document.body;
-        if ('zoom' in root.style) {
-          root.style.zoom = String(scale);
-        } else {
+        if ('zoom' in root.style) root.style.zoom = String(scale);
+        else {
           const pages = document.querySelectorAll('.invoice-a4-wrapper');
           pages.forEach(p => {
             p.style.transform = 'scale(' + scale + ')';
@@ -718,16 +949,126 @@ ${styleTag}
 
 /* =========================
    Popup component
+   - keeps "لوح" and "صندوق" independent
+   - does not reload iframe on each blur (prevents jump)
    ========================= */
-const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
+const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
   const iframeRef = useRef(null);
   const [zoom, setZoom] = useState(1);
+  const [editMode, setEditMode] = useState(false);
+  const [editedItems, setEditedItems] = useState([]);
+  const editedItemsRef = useRef([]);
+  const [savedEditedData, setSavedEditedData] = useState(null);
+
+  const [renderVersion, setRenderVersion] = useState(0);
+
+  useEffect(() => {
+    editedItemsRef.current = editedItems;
+  }, [editedItems]);
+
+  useEffect(() => {
+    if (isOpen && invoiceData?.items) {
+      setEditedItems(
+        invoiceData.items.map((item, idx) => ({
+          ...item,
+          _id: idx,
+          itemNumber: item.itemNumber ?? idx + 1,
+          boxQty: item.boxQty ?? item.boxQuantity ?? "",
+          sheetsPerBox:
+            item.sheetsPerBox ??
+            item.sheets_per_box ??
+            item.sheetsPerCarton ??
+            item.sheets_per_carton ??
+            "",
+        }))
+      );
+    }
+    if (!isOpen) {
+      setSavedEditedData(null);
+      setEditMode(false);
+      setRenderVersion(0);
+    }
+  }, [isOpen, invoiceData]);
 
   const html = useMemo(() => {
     const baseHref =
       typeof window !== "undefined" ? window.location.origin + "/" : "/";
-    return buildInvoiceHtml(invoiceData, { inlineCss: INLINE_INVOICE_CSS, baseHref });
-  }, [invoiceData]);
+
+    let dataToRender;
+
+    if (savedEditedData) dataToRender = savedEditedData;
+    else if (editMode) dataToRender = { ...invoiceData, items: editedItemsRef.current };
+    else dataToRender = invoiceData;
+
+    return buildInvoiceHtml(dataToRender, {
+      inlineCss: INLINE_INVOICE_CSS,
+      baseHref,
+      editMode: editMode && !savedEditedData,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceData, editMode, savedEditedData, renderVersion]);
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (!editMode || savedEditedData) return;
+
+      const { type, itemId, field, value } = event.data || {};
+
+      if (type === "itemChange") {
+        setEditedItems((prev) =>
+          prev.map((item) => {
+            if (item._id !== itemId) return item;
+
+            const itemType = String(item?.itemType ?? item?.type ?? "").toLowerCase();
+            const updated = { ...item };
+
+            if (field === "boxQty") {
+              // ✅ always editable for ALL types
+              updated.boxQty = value;
+
+              // ✅ compatibility only for BOX: quantity = number of boxes
+              if (itemType === "box") updated.quantity = value;
+            } else if (field === "sheetsPerBox") {
+              updated.sheetsPerBox = value;
+              updated.sheets_per_box = value;
+            } else if (field === "quantity") {
+              updated.quantity = value;
+            } else {
+              updated[field] = value;
+            }
+
+            return updated;
+          })
+        );
+      } else if (type === "deleteRow") {
+        setEditedItems((prev) => prev.filter((item) => item._id !== itemId));
+        setRenderVersion((v) => v + 1);
+      } else if (type === "addRow") {
+        setEditedItems((prev) => [
+          ...prev,
+          {
+            _id: Math.max(...prev.map((i) => i._id || 0), 0) + 1,
+            itemNumber: prev.length + 1,
+            itemName: "",
+            itemType: "sheet",
+            type: "sheet",
+            quantity: "",
+            unitPrice: "",
+            sqm: "",
+            totalAmount: "",
+            length: "",
+            width: "",
+            boxQty: "",
+            sheetsPerBox: "",
+          },
+        ]);
+        setRenderVersion((v) => v + 1);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [editMode, savedEditedData]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -745,16 +1086,10 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     if (e.target.classList.contains("invoice-modal-overlay")) onClose?.();
   };
 
-  const ensurePaginationReady = () => {
-    const win =
-      iframeRef.current?.contentWindow || iframeRef.current?.contentDocument?.defaultView;
-    win?.repaginateAndAdjust?.();
-    return win;
-  };
-
   const applyZoom = (z) => {
     const win =
-      iframeRef.current?.contentWindow || iframeRef.current?.contentDocument?.defaultView;
+      iframeRef.current?.contentWindow ||
+      iframeRef.current?.contentDocument?.defaultView;
     if (!win) return;
     try {
       win.applyPreviewZoom?.(z);
@@ -772,6 +1107,45 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     applyZoom(next);
   };
 
+  const handleToggleEdit = () => {
+    if (savedEditedData) {
+      setSavedEditedData(null);
+      setEditMode(true);
+      setRenderVersion((v) => v + 1);
+    } else {
+      setEditMode((prev) => !prev);
+      setRenderVersion((v) => v + 1);
+    }
+  };
+
+  const handleSaveEdited = () => {
+    const keepAsTyped = (val) => {
+      if (val === null || val === undefined) return val;
+      return String(val);
+    };
+
+    const processedItems = editedItems.map((item) => ({
+      ...item,
+      quantity: keepAsTyped(item?.quantity),
+      unitPrice: keepAsTyped(item?.unitPrice),
+      sqm: keepAsTyped(item?.sqm),
+      width: keepAsTyped(item?.width),
+      length: keepAsTyped(item?.length),
+      totalAmount: keepAsTyped(item?.totalAmount),
+      boxQty: keepAsTyped(item?.boxQty),
+      sheetsPerBox: keepAsTyped(item?.sheetsPerBox),
+    }));
+
+    const editedInvoiceData = {
+      ...invoiceData,
+      items: processedItems,
+    };
+
+    setSavedEditedData(editedInvoiceData);
+    onSaveEdited?.(editedInvoiceData);
+    setEditMode(false);
+  };
+
   const getPagesFromIframe = (win) => {
     const root = win.document.getElementById("pages-root");
     if (!root) return [];
@@ -784,7 +1158,6 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
     );
   };
 
-  // ======= PDF export (exact, with amount-in-words, no duplicates) =======
   const handleDownloadPDF = async () => {
     try {
       const win =
@@ -804,11 +1177,17 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
         let stable = 0;
         while (Date.now() - t0 < timeoutMs) {
           const pages = getPagesFromIframe(win);
-          const sig = pages.length + ":" + pages.map(p => Math.round(p.getBoundingClientRect().height)).join(",");
+          const sig =
+            pages.length +
+            ":" +
+            pages.map((p) => Math.round(p.getBoundingClientRect().height)).join(",");
           if (sig === lastSig && pages.length) stable++;
-          else { stable = 0; lastSig = sig; }
+          else {
+            stable = 0;
+            lastSig = sig;
+          }
           if (stable >= stableTicks) return pages;
-          await new Promise(r => setTimeout(r, 60));
+          await new Promise((r) => setTimeout(r, 60));
         }
         return getPagesFromIframe(win);
       };
@@ -823,7 +1202,6 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
       const origRoot = win.document.getElementById("pages-root");
       const invoiceTypeAttr = origRoot?.getAttribute("data-invoice-type") || "";
 
-      // Staging area (VISIBLE size off-screen, not 0x0)
       let stage = win.document.getElementById("pdf-stage");
       if (!stage) {
         stage = win.document.createElement("div");
@@ -840,12 +1218,13 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
       }
 
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const baseName = `Invoice-${invoiceData?.invoiceNumber || "Preview"}`;
+      const baseName = `Invoice-${invoiceData?.invoiceNumber || "Preview"}${
+        savedEditedData ? "-edited" : ""
+      }`;
 
       for (let i = 0; i < pages.length; i++) {
         const orig = pages[i];
 
-        // Prepare wrapper that mimics #pages-root for CSS
         stage.innerHTML = "";
         const wrapper = win.document.createElement("div");
         wrapper.id = "pages-root";
@@ -856,14 +1235,13 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
         clone.style.border = "none";
 
         const r = orig.getBoundingClientRect();
-        clone.style.width  = `${Math.ceil(r.width)}px`;
+        clone.style.width = `${Math.ceil(r.width)}px`;
         clone.style.height = `${Math.ceil(r.height)}px`;
 
         wrapper.appendChild(clone);
         stage.appendChild(wrapper);
 
-        // Make stage big enough (avoid 0×0 white renders)
-        stage.style.width  = `${Math.ceil(r.width)}px`;
+        stage.style.width = `${Math.ceil(r.width)}px`;
         stage.style.height = `${Math.ceil(r.height)}px`;
 
         void clone.offsetHeight;
@@ -875,7 +1253,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth:  clone.scrollWidth  || Math.ceil(r.width),
+          windowWidth: clone.scrollWidth || Math.ceil(r.width),
           windowHeight: clone.scrollHeight || Math.ceil(r.height),
         });
 
@@ -895,32 +1273,92 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
   const handlePrint = () => {
     const printFrame = document.createElement("iframe");
     Object.assign(printFrame.style, {
-      position: "fixed", right: "0", bottom: "0", width: "0", height: "0", border: "0",
+      position: "fixed",
+      right: "0",
+      bottom: "0",
+      width: "1px",
+      height: "1px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none",
     });
     document.body.appendChild(printFrame);
 
-    const onLoad = () => {
+    const cleanup = () => {
       try {
-        const win = printFrame.contentWindow;
+        document.body.removeChild(printFrame);
+      } catch {}
+    };
+
+    const waitForPagesStable = async (win, timeoutMs = 6000, stableTicks = 3) => {
+      const t0 = Date.now();
+      let lastSig = "";
+      let stable = 0;
+
+      while (Date.now() - t0 < timeoutMs) {
         win?.repaginateAndAdjust?.();
         win?.applyPreviewZoom?.(1);
+
+        const pages = getPagesFromIframe(win);
+        const sig =
+          pages.length +
+          ":" +
+          pages.map((p) => Math.round(p.getBoundingClientRect().height)).join(",");
+
+        if (sig === lastSig && pages.length) stable++;
+        else {
+          stable = 0;
+          lastSig = sig;
+        }
+
+        if (stable >= stableTicks) return true;
+        await new Promise((r) => setTimeout(r, 80));
+      }
+      return false;
+    };
+
+    printFrame.onload = async () => {
+      try {
+        const win = printFrame.contentWindow;
+
+        if (win?.document?.fonts?.ready) {
+          try {
+            await win.document.fonts.ready;
+          } catch {}
+        }
+
+        await waitForPagesStable(win);
+
         win.focus();
+        win.onafterprint = cleanup;
+
         setTimeout(() => {
           win.print();
-          setTimeout(() => document.body.removeChild(printFrame), 400);
-        }, 40);
+          setTimeout(cleanup, 2000);
+        }, 200);
       } catch (err) {
         console.error("Print failed:", err);
-        document.body.removeChild(printFrame);
+        cleanup();
         alert("Unable to print. Please check your browser's print permissions.");
       }
     };
 
-    printFrame.onload = onLoad;
-    printFrame.srcdoc = html;
+    const baseHref = typeof window !== "undefined" ? window.location.origin + "/" : "/";
+
+    let dataForPrint;
+    if (savedEditedData) dataForPrint = savedEditedData;
+    else if (editMode) dataForPrint = { ...invoiceData, items: editedItems };
+    else dataForPrint = invoiceData;
+
+    const printHtml = buildInvoiceHtml(dataForPrint, {
+      inlineCss: INLINE_INVOICE_CSS,
+      baseHref,
+      editMode: false,
+    });
+
+    printFrame.srcdoc = printHtml;
   };
 
-  // ======= PNG screenshots (exact, with amount-in-words, no duplicates) =======
   const handleScreenshot = async () => {
     try {
       const win =
@@ -942,11 +1380,17 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
         let stable = 0;
         while (Date.now() - t0 < timeoutMs) {
           const pages = getPagesFromIframe(win);
-          const sig = pages.length + ":" + pages.map(p => Math.round(p.getBoundingClientRect().height)).join(",");
+          const sig =
+            pages.length +
+            ":" +
+            pages.map((p) => Math.round(p.getBoundingClientRect().height)).join(",");
           if (sig === lastSig && pages.length) stable++;
-          else { stable = 0; lastSig = sig; }
+          else {
+            stable = 0;
+            lastSig = sig;
+          }
           if (stable >= stableTicks) return pages;
-          await new Promise(r => setTimeout(r, 60));
+          await new Promise((r) => setTimeout(r, 60));
         }
         return getPagesFromIframe(win);
       };
@@ -975,7 +1419,9 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
         win.document.body.appendChild(stage);
       }
 
-      const baseName = `Invoice-${invoiceData?.invoiceNumber || "Preview"}`;
+      const baseName = `Invoice-${invoiceData?.invoiceNumber || "Preview"}${
+        savedEditedData ? "-edited" : ""
+      }`;
 
       const downloadCanvas = (canvas, name) =>
         new Promise((resolve) => {
@@ -1019,13 +1465,13 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
         clone.style.border = "none";
 
         const r = orig.getBoundingClientRect();
-        clone.style.width  = `${Math.ceil(r.width)}px`;
+        clone.style.width = `${Math.ceil(r.width)}px`;
         clone.style.height = `${Math.ceil(r.height)}px`;
 
         wrapper.appendChild(clone);
         stage.appendChild(wrapper);
 
-        stage.style.width  = `${Math.ceil(r.width)}px`;
+        stage.style.width = `${Math.ceil(r.width)}px`;
         stage.style.height = `${Math.ceil(r.height)}px`;
 
         void clone.offsetHeight;
@@ -1037,21 +1483,19 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth:  clone.scrollWidth  || Math.ceil(r.width),
+          windowWidth: clone.scrollWidth || Math.ceil(r.width),
           windowHeight: clone.scrollHeight || Math.ceil(r.height),
         });
 
         const filename = `${baseName}-page-${i + 1}.png`;
         await downloadCanvas(canvas, filename);
-        await new Promise(r => setTimeout(r, 150));
+        await new Promise((r) => setTimeout(r, 150));
       }
-
     } catch (e) {
       console.error("Screenshot failed:", e);
       alert("Could not capture the invoice screenshots.");
     }
   };
-
 
   if (!isOpen) return null;
 
@@ -1067,14 +1511,57 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData }) => {
       >
         <div className="invoice-modal-shell" onMouseDown={(e) => e.stopPropagation()}>
           <div className="invoice-modal-header">
-            <div className="invoice-modal-title">Invoice Preview</div>
+            <div className="invoice-modal-title-row">
+              <div className="invoice-modal-title">Invoice Preview</div>
+              {editMode && <div className="edit-mode-badge">✏️ Edit Mode</div>}
+            </div>
+
             <div className="invoice-modal-controls">
-              <button onClick={handlePrint} className="btn btn-primary" title="Print (A4)">🖨 Print</button>
-              <button onClick={handleZoomOut} className="btn btn-outline" title="Zoom out">➖ Zoom</button>
-              <button onClick={handleZoomIn} className="btn btn-outline" title="Zoom in">➕ Zoom</button>
-              <button onClick={handleDownloadPDF} className="btn btn-secondary" title="Download PDF">⬇ Download PDF</button>
-              <button onClick={handleScreenshot} className="btn btn-tertiary" title="Save PNG">📸 Screenshot</button>
-              <button onClick={onClose} className="btn btn-outline" title="Close">✕ Close</button>
+              <button
+                onClick={() => {
+                  if (savedEditedData) {
+                    setSavedEditedData(null);
+                    setEditMode(true);
+                    setRenderVersion((v) => v + 1);
+                  } else {
+                    setEditMode((p) => !p);
+                    setRenderVersion((v) => v + 1);
+                  }
+                }}
+                className={`btn ${editMode ? "btn-warning" : "btn-outline"}`}
+                title="Toggle edit mode"
+              >
+                {editMode ? "📝 Exit Edit" : "✏️ Edit"}
+              </button>
+
+              {editMode && (
+                <button
+                  onClick={handleSaveEdited}
+                  className="btn btn-tertiary"
+                  title="Save edited version"
+                >
+                  💾 Save Edited
+                </button>
+              )}
+
+              <button onClick={handlePrint} className="btn btn-primary" title="Print (A4)">
+                🖨 Print
+              </button>
+              <button onClick={handleZoomOut} className="btn btn-outline" title="Zoom out">
+                ➖ Zoom
+              </button>
+              <button onClick={handleZoomIn} className="btn btn-outline" title="Zoom in">
+                ➕ Zoom
+              </button>
+              <button onClick={handleDownloadPDF} className="btn btn-secondary" title="Download PDF">
+                ⬇ Download PDF
+              </button>
+              <button onClick={handleScreenshot} className="btn btn-tertiary" title="Save PNG">
+                📸 Screenshot
+              </button>
+              <button onClick={onClose} className="btn btn-outline" title="Close">
+                ✕ Close
+              </button>
             </div>
           </div>
 
