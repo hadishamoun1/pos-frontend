@@ -254,36 +254,33 @@ export default function TransferModal({
   };
 
   const updateRowField = (idx, field, value) =>
-    setRows((rs) => {
-      const copy = [...rs];
-      const row = { ...copy[idx], [field]: value };
+  setRows((rs) => {
+    const copy = [...rs];
+    const row = { ...copy[idx], [field]: value };
 
-      const len = toNum(row.length, 0);
-      const wid = toNum(row.width, 0);
-      const m2 = (len / 100) * (wid / 100);
-      const qty = toNum(row.quantity, 0);
+    const len = toNum(row.length, 0);
+    const wid = toNum(row.width, 0);
+    const m2 = (len / 100) * (wid / 100);
+    const qty = toNum(row.quantity, 0);
 
-      if (field === "quantity") {
-        if (details.location === "FJ" && row.type === "sheet") {
-          if (row.toSheetsPerBox) {
-            row.sqm = (m2 * toNum(row.toSheetsPerBox, 0) * qty).toFixed(2);
-          } else {
-            row.sqm = "";
-          }
-        } else {
-          if (row.type === "box") {
-            row.sqm = (m2 * toNum(row.sheetsPerBox, 0) * qty).toFixed(2);
-          } else if (row.type === "sheet") {
-            row.sqm = (m2 * qty).toFixed(2);
-          } else if (row.type === "sqm") {
-            row.sqm = qty.toFixed(2);
-          }
+    if (field === "quantity") {
+      if (details.location === "FJ" && row.type === "sheet") {
+        // ✅ FIX: Calculate SQM from the SHEET dimensions, not the box
+        row.sqm = (m2 * qty).toFixed(2);
+      } else {
+        if (row.type === "box") {
+          row.sqm = (m2 * toNum(row.sheetsPerBox, 0) * qty).toFixed(2);
+        } else if (row.type === "sheet") {
+          row.sqm = (m2 * qty).toFixed(2);
+        } else if (row.type === "sqm") {
+          row.sqm = qty.toFixed(2);
         }
       }
+    }
 
-      copy[idx] = row;
-      return copy;
-    });
+    copy[idx] = row;
+    return copy;
+  });
 
   const closeNotif = () => {
     setNotif((n) => ({ ...n, open: false }));
