@@ -346,15 +346,18 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
   };
 
   
-    const requestForPreview = {
-      requestNumber: selectedRequestNumber || "", 
+const requestForPreview = {
+  requestNumber: selectedRequestNumber || "", 
   customerName: selectedCustomerName || customerInput || "",
   requestDate: date,
   address: customerPreview?.customerAddress || "",
   telephone: customerPreview?.customerPhone || "",
   items: (tableData || []).map((r, i) => ({
     itemNumber: i + 1,
-    itemName: r.item || "",
+    
+    // ✅ Use invoiceDisplayName if available, otherwise use item
+    itemName: r.invoiceDisplayName || r.item || "",
+    
     box: r.box ?? "",
     sheet: r.sheet ?? "",
     length: r.length ?? "",
@@ -365,6 +368,8 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     invoicePrice: r.total ?? "",
   })),
 };
+
+
 
 const handleSelectRequest = async (reqOrId) => {
   const id =
@@ -380,28 +385,23 @@ const handleSelectRequest = async (reqOrId) => {
   setLoading(true);
   setIsEditable(false);
 
-  // ✅ if we clicked from RequestCard, set some fields immediately (including requestNumber)
   if (typeof reqOrId === "object") {
     setSelectedRequestNumber(reqOrId?.requestNumber || "");
     setSelectedCustomerName(reqOrId?.customerName || "");
     setCustomerInput(reqOrId?.customerName || "");
     setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
 
-    // ✅ NEW: preload VAT% if it exists in list payload
     if (reqOrId?.vatPercentage != null) {
       setVat(String(parseFloat(reqOrId.vatPercentage)));
     }
   } else {
-    // if id-only (no object), clear until fetch fills it
     setSelectedRequestNumber("");
   }
 
   try {
-    // ✅ fetch full request
     const { data: request } = await axiosClient.get(`/requests/${id}`);
     console.log("Fetched Request:", request);
 
-    // ✅ IMPORTANT: set requestNumber from backend payload
     setSelectedRequestNumber(
       request?.requestNumber ||
         (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") ||
@@ -414,7 +414,6 @@ const handleSelectRequest = async (reqOrId) => {
     setSelectedInvoiceType(request.invoiceType || "Both");
     setDate(toYMD(request.requestDate || request.date));
 
-    // ✅ NEW: set VAT% from backend (default 0)
     const reqVat =
       request?.vatPercentage != null
         ? String(parseFloat(request.vatPercentage))
@@ -446,7 +445,12 @@ const handleSelectRequest = async (reqOrId) => {
         batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
 
         origin: detail?.origin || "",
+        
+        // ✅ Keep normal formatting for table display
         item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
+        
+        // ✅ Store invoiceDisplayName separately for preview modal ONLY
+        invoiceDisplayName: detail?.invoiceDisplayName || null,
 
         type: itemType,
 
