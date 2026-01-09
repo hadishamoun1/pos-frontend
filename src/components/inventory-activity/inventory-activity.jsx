@@ -101,6 +101,8 @@ export default function InventoryActivityPage() {
   const [showTransferModal, setShowTransferModal] = useState(false);
 
   const [columnOrder, setColumnOrder] = useState([]);
+  const [hiddenColumns, setHiddenColumns] = useState(() => new Set());
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
 
   const [activeFilters, setActiveFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -170,7 +172,7 @@ export default function InventoryActivityPage() {
     setSelectedTxIds(new Set());
   }, [activeFilters, sortConfig, page]);
 
-  /** Cell right-click menu (kept, for quick “Add this exact value”) */
+  /** Cell right-click menu (kept, for quick "Add this exact value") */
   const [contextMenu, setContextMenu] = useState({
     visible: false,
     x: 0,
@@ -197,6 +199,29 @@ export default function InventoryActivityPage() {
     placeholder: "",
     value: "",
   });
+
+  /** ---------- Column visibility functions ---------- */
+  const toggleColumn = useCallback((columnId) => {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(columnId)) {
+        next.delete(columnId);
+      } else {
+        next.add(columnId);
+      }
+      return next;
+    });
+  }, []);
+
+  const showAllColumns = useCallback(() => {
+    setHiddenColumns(new Set());
+  }, []);
+
+  const hideAllColumns = useCallback(() => {
+    // Keep select column visible
+    const allIds = defaultColumns.map(c => c.accessor || c.id).filter(id => id !== 'select');
+    setHiddenColumns(new Set(allIds));
+  }, []);
 
   /** ---------- Columns ---------- */
   const defaultColumns = useMemo(
@@ -261,6 +286,14 @@ export default function InventoryActivityPage() {
     ],
     [selectedTxIds, visibleIds, toggleAllVisible, toggleTx]
   );
+
+  /** Filter columns based on hidden state */
+  const visibleColumns = useMemo(() => {
+    return defaultColumns.filter(col => {
+      const id = col.accessor || col.id;
+      return !hiddenColumns.has(id);
+    });
+  }, [defaultColumns, hiddenColumns]);
 
   /** ---------- react-table setup ---------- */
   const data = useMemo(() => {
@@ -333,17 +366,17 @@ export default function InventoryActivityPage() {
     rows: tableRows,
     prepareRow,
     setColumnOrder: updateColumnOrder,
-  } = useTable({ columns: defaultColumns, data }, useColumnOrder);
+  } = useTable({ columns: visibleColumns, data }, useColumnOrder);
 
   /** init column order only once */
   useEffect(() => {
     if (columnOrder.length === 0) {
-      const initial = defaultColumns.map((c) => c.accessor);
+      const initial = visibleColumns.map((c) => c.accessor || c.id);
       setColumnOrder(initial);
       updateColumnOrder(initial);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultColumns]);
+  }, [visibleColumns]);
 
   /** ---------- DnD for columns ---------- */
   const sensors = useSensors(useSensor(PointerSensor));
@@ -566,7 +599,10 @@ export default function InventoryActivityPage() {
 
   /** ---------- Close menus on outside click ---------- */
   useEffect(() => {
-    const closeMenus = () => {
+    const closeMenus = (e) => {
+      // Don't close if clicking the sidebar toggle button itself
+      if (e.target.closest('.column-sidebar-toggle-btn')) return;
+      
       if (contextMenu.visible) setContextMenu((p) => ({ ...p, visible: false }));
       if (colMenu.visible) setColMenu((p) => ({ ...p, visible: false }));
     };
@@ -574,7 +610,7 @@ export default function InventoryActivityPage() {
     return () => window.removeEventListener("click", closeMenus);
   }, [contextMenu.visible, colMenu.visible]);
 
-  /** ---------- Cell right-click: quick “Add this value” ---------- */
+  /** ---------- Cell right-click: quick "Add this value" ---------- */
   const addFilterFromCell = (column, value, record, op = "eq") => {
     if (value === "—" || value == null) return;
 
@@ -661,8 +697,114 @@ export default function InventoryActivityPage() {
           >
             {deleting ? "Deleting..." : `Delete (${selectedTxIds.size})`}
           </button>
+          
+          {/* Column visibility sidebar toggle */}
+          <button 
+            className="column-sidebar-toggle-btn" 
+            onClick={() => setShowColumnPicker(!showColumnPicker)}
+            title="Manage Columns"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Column Picker Sidebar */}
+      {showColumnPicker && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="column-sidebar-backdrop" 
+            onClick={() => setShowColumnPicker(false)}
+          />
+          
+          {/* Sidebar Panel */}
+          <div className="column-sidebar-panel">
+            <div className="column-sidebar-header">
+              <div>
+                <div className="column-sidebar-title">Manage Columns</div>
+                <div className="column-sidebar-subtitle">
+                  {visibleColumns.length - 1} of {defaultColumns.length - 1} visible
+                </div>
+              </div>
+              <button
+                className="column-sidebar-close"
+                onClick={() => setShowColumnPicker(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="column-sidebar-actions">
+              <button className="column-sidebar-action-btn" onClick={showAllColumns}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Show All
+              </button>
+              <button className="column-sidebar-action-btn" onClick={hideAllColumns}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Hide All
+              </button>
+            </div>
+
+            <div className="column-sidebar-search">
+              <input 
+                type="text" 
+                placeholder="Search columns..." 
+                className="column-sidebar-search-input"
+              />
+            </div>
+
+            <div className="column-sidebar-body">
+              {defaultColumns.map((col) => {
+                const id = col.accessor || col.id;
+                if (id === 'select') return null;
+                
+                const isHidden = hiddenColumns.has(id);
+                const label = typeof col.Header === 'string' ? col.Header : id;
+
+                return (
+                  <label key={id} className="column-sidebar-item">
+                    <div className="column-sidebar-item-content">
+                      <input
+                        type="checkbox"
+                        checked={!isHidden}
+                        onChange={() => toggleColumn(id)}
+                      />
+                      <span className="column-sidebar-item-label">{label}</span>
+                    </div>
+                    <div className="column-sidebar-item-indicator">
+                      {!isHidden && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="column-sidebar-footer">
+              <button
+                className="column-sidebar-btn-done"
+                onClick={() => setShowColumnPicker(false)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Active filters */}
       {activeFilters.length > 0 && (

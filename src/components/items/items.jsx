@@ -84,22 +84,22 @@ const UniqueItemsPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editVariantId, setEditVariantId] = useState(null);
   const [editCtx, setEditCtx] = useState({ itemId: null, thicknessId: null });
-  const [editForm, setEditForm] = useState({
-    itemName: "",
-    type: "",
-    stockMode: "", // ✅ NEW
-    thickness: "",
-    length: "",
-    width: "",
-    sheetsPerBox: "",
-    origin: "",
-    descriptionId: null,
-    itemNumber: "",
-    categoryName: "",
-    subCategory: "",
-    colorName: "",
-    designName: "",
-  });
+const [editForm, setEditForm] = useState({
+  itemName: "",
+  type: "",
+  stockMode: "",
+  thickness: "", // ✅ Now editable
+  length: "",
+  width: "",
+  sheetsPerBox: "",
+  origin: "",
+  descriptionId: null,
+  itemNumber: "",
+  categoryName: "",
+  subCategory: "",
+  colorName: "",
+  designName: "",
+});
 
   // Debug: show last sent payload
   const [lastSentPayload, setLastSentPayload] = useState(null);
@@ -878,35 +878,35 @@ const UniqueItemsPage = () => {
     return null;
   };
 
-  const openEditSelected = () => {
-    if (selectedVariantIds.length !== 1) return;
-    const onlyKey = Array.from(selectedRowKeys)[0];
-    const snap = getRowSnapshotByKey(onlyKey);
-    if (!snap) return;
+const openEditSelected = () => {
+  if (selectedVariantIds.length !== 1) return;
+  const onlyKey = Array.from(selectedRowKeys)[0];
+  const snap = getRowSnapshotByKey(onlyKey);
+  if (!snap) return;
 
-    setEditVariantId(snap.variantId);
-    setEditCtx({
-      itemId: Number(snap.itemId),
-      thicknessId: Number(snap.thicknessId),
-    });
-    setEditForm({
-      itemName: snap.itemName,
-      type: snap.type,
-      stockMode: snap.stockMode, // ✅ NEW
-      thickness: snap.thickness,
-      length: snap.length,
-      width: snap.width,
-      sheetsPerBox: snap.sheetsPerBox,
-      origin: snap.origin,
-      descriptionId: snap.descriptionId ?? null,
-      itemNumber: snap.itemNumber,
-      categoryName: snap.categoryName,
-      subCategory: snap.subCategory,
-      colorName: snap.colorName,
-      designName: snap.designName,
-    });
-    setEditOpen(true);
-  };
+  setEditVariantId(snap.variantId);
+  setEditCtx({
+    itemId: Number(snap.itemId),
+    thicknessId: Number(snap.thicknessId),
+  });
+  setEditForm({
+    itemName: snap.itemName, 
+    type: snap.type,
+    stockMode: snap.stockMode,
+    thickness: snap.thickness, 
+    length: snap.length,
+    width: snap.width,
+    sheetsPerBox: snap.sheetsPerBox,
+    origin: snap.origin,
+    descriptionId: snap.descriptionId ?? null,
+    itemNumber: snap.itemNumber,
+    categoryName: snap.categoryName,
+    subCategory: snap.subCategory,
+    colorName: snap.colorName,
+    designName: snap.designName,
+  });
+  setEditOpen(true);
+};
 
   const closeEdit = () => {
     setEditOpen(false);
@@ -943,58 +943,54 @@ const UniqueItemsPage = () => {
   };
 
   // Build payload for editFullItem API
-  const buildEditPayload = () => {
-    const t = String(editForm.type || "").toLowerCase();
-    const v = { id: Number(editVariantId) };
+const buildEditPayload = () => {
+  const t = String(editForm.type || "").toLowerCase();
+  const v = { id: Number(editVariantId) };
 
-    // dims behavior depends on type
-    if (t !== "sqm" && t !== "unit") {
-      if (editForm.length !== "") v.length = Number(editForm.length);
-      if (editForm.width !== "") v.width = Number(editForm.width);
-      if (t === "box" && editForm.sheetsPerBox !== "") {
-        v.sheetsPerBox = Number(editForm.sheetsPerBox);
-      }
-      if (editForm.origin !== "") v.origin = String(editForm.origin).trim();
+  if (t !== "sqm" && t !== "unit") {
+    if (editForm.length !== "") v.length = Number(editForm.length);
+    if (editForm.width !== "") v.width = Number(editForm.width);
+    if (t === "box" && editForm.sheetsPerBox !== "") {
+      v.sheetsPerBox = Number(editForm.sheetsPerBox);
+    }
+    if (editForm.origin !== "") v.origin = String(editForm.origin).trim();
+  } else {
+    if (t === "unit" && editForm.origin !== "") {
+      v.origin = String(editForm.origin).trim();
+    }
+  }
+
+  if (Number.isFinite(Number(editForm.descriptionId))) {
+    if (descMode === "name") {
+      v.description = { id: Number(editForm.descriptionId) };
     } else {
-      // unit/sqm: only origin is meaningful (optional); backend will enforce 0/1 defaults
-      if (t === "unit" && editForm.origin !== "") {
-        v.origin = String(editForm.origin).trim();
-      }
+      v.realDescription = { id: Number(editForm.descriptionId) };
     }
+  }
 
-    // ✅ re-link description:
-    // - name-mode => itemNameDescription
-    // - real-mode => realDescription
-    if (Number.isFinite(Number(editForm.descriptionId))) {
-      if (descMode === "name") {
-        v.description = { id: Number(editForm.descriptionId) };
-      } else {
-        v.realDescription = { id: Number(editForm.descriptionId) };
-      }
-    }
+  const resolvedItemId = resolveItemIdFromThicknessId(editCtx.thicknessId);
+  const finalItemId = Number.isFinite(resolvedItemId)
+    ? resolvedItemId
+    : Number(editCtx.itemId);
 
-    const resolvedItemId = resolveItemIdFromThicknessId(editCtx.thicknessId);
-    const finalItemId = Number.isFinite(resolvedItemId)
-      ? resolvedItemId
-      : Number(editCtx.itemId);
-
-    const payload = {
-      itemId: Number(finalItemId),
-      type: t, // ✅ NEW: allow editing item.type
-      stockMode: editForm.stockMode || undefined, // ✅ NEW: allow editing stockMode
-      thicknesses: [
-        {
-          thicknessId: Number(editCtx.thicknessId),
-          variants: [v],
-        },
-      ],
-    };
-
-    // remove undefined to keep request clean
-    if (!payload.stockMode) delete payload.stockMode;
-
-    return payload;
+  const payload = {
+    itemId: Number(finalItemId),
+    itemName: editForm.itemName, // ✅ Now sent to backend
+    type: editForm.type,
+    stockMode: editForm.stockMode || undefined,
+    thicknesses: [
+      {
+        thicknessId: Number(editCtx.thicknessId),
+        thickness: Number(editForm.thickness), // ✅ Now sent to backend
+        variants: [v],
+      },
+    ],
   };
+
+  if (!payload.stockMode) delete payload.stockMode;
+
+  return payload;
+};
 
   const saveEdit = async (e) => {
     e?.preventDefault?.();
@@ -1483,142 +1479,148 @@ const UniqueItemsPage = () => {
       )}
 
       {/* EDIT VARIANT MODAL */}
-      {editOpen && (
-        <div className="items-creation-modal">
-          <div className="items-creation-modal-content">
-            <h2>Edit Variant</h2>
+     {editOpen && (
+  <div className="items-creation-modal">
+    <div className="items-creation-modal-content">
+      <h2>Edit Variant</h2>
 
-            {/* Read-only context */}
-            <div style={{ marginBottom: 12, opacity: 0.85, fontSize: 14 }}>
-              <div className="ar-rtl">
-                <b>الاسم:</b> {editForm.itemName}
-              </div>
-              <div className="ar-rtl">
-                <b>الوصف:</b>{" "}
-                {[
-                  editForm.itemNumber,
-                  editForm.categoryName,
-                  editForm.subCategory,
-                  editForm.colorName,
-                  editForm.designName,
-                ]
-                  .filter(Boolean)
-                  .join(" • ")}
-              </div>
-            </div>
+      <form
+        onSubmit={saveEdit}
+        className="items-creation-form-grid"
+        style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+      >
+        {/* ✅ Item Name - Now Editable */}
+        <label>
+          Item Name:
+          <input
+            type="text"
+            name="itemName"
+            value={editForm.itemName}
+            onChange={handleEditChange}
+            className="ar-rtl"
+            required
+          />
+        </label>
 
-            <form
-              onSubmit={saveEdit}
-              className="items-creation-form-grid"
-              style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
-            >
-              {/* ✅ allow editing item.type + stockMode */}
-              <label>
-                Type:
-                <select
-                  name="type"
-                  value={editForm.type}
-                  onChange={handleEditChange}
-                >
-                  <option value="box">box</option>
-                  <option value="sheet">sheet</option>
-                  <option value="sqm">sqm</option>
-                  <option value="unit">unit</option>
-                </select>
-              </label>
+        {/* ✅ Thickness - Now Editable */}
+        <label>
+          Thickness (mm):
+          <input
+            type="number"
+            step="0.1"
+            name="thickness"
+            value={editForm.thickness}
+            onChange={handleEditChange}
+            className="ltr"
+            required
+          />
+        </label>
 
-              <label>
-                Stock Mode:
-                <select
-                  name="stockMode"
-                  value={editForm.stockMode}
-                  onChange={handleEditChange}
-                >
-                  <option value="SQM">SQM</option>
-                  <option value="QTY">QTY</option>
-                  <option value="NONE">NONE</option>
-                </select>
-              </label>
+        <label>
+          Type:
+          <select
+            name="type"
+            value={editForm.type}
+            onChange={handleEditChange}
+          >
+            <option value="box">box</option>
+            <option value="sheet">sheet</option>
+            <option value="sqm">sqm</option>
+            <option value="unit">unit</option>
+          </select>
+        </label>
 
-              <label>
-                Length (cm):
-                <input
-                  type="number"
-                  name="length"
-                  value={editForm.length}
-                  onChange={handleEditChange}
-                  className="ltr"
-                  disabled={editForm.type === "sqm" || editForm.type === "unit"}
-                />
-              </label>
+        <label>
+          Stock Mode:
+          <select
+            name="stockMode"
+            value={editForm.stockMode}
+            onChange={handleEditChange}
+          >
+            <option value="SQM">SQM</option>
+            <option value="QTY">QTY</option>
+            <option value="NONE">NONE</option>
+          </select>
+        </label>
 
-              <label>
-                Width (cm):
-                <input
-                  type="number"
-                  name="width"
-                  value={editForm.width}
-                  onChange={handleEditChange}
-                  className="ltr"
-                  disabled={editForm.type === "sqm" || editForm.type === "unit"}
-                />
-              </label>
+        <label>
+          Length (cm):
+          <input
+            type="number"
+            name="length"
+            value={editForm.length}
+            onChange={handleEditChange}
+            className="ltr"
+            disabled={editForm.type === "sqm" || editForm.type === "unit"}
+          />
+        </label>
 
-              <label>
-                Sheets/Box:
-                <input
-                  type="number"
-                  name="sheetsPerBox"
-                  value={editForm.sheetsPerBox}
-                  onChange={handleEditChange}
-                  className="ltr"
-                  disabled={
-                    editForm.type === "sheet" ||
-                    editForm.type === "sqm" ||
-                    editForm.type === "unit"
-                  }
-                />
-              </label>
+        <label>
+          Width (cm):
+          <input
+            type="number"
+            name="width"
+            value={editForm.width}
+            onChange={handleEditChange}
+            className="ltr"
+            disabled={editForm.type === "sqm" || editForm.type === "unit"}
+          />
+        </label>
 
-              <label>
-                Origin:
-                <input
-                  type="text"
-                  name="origin"
-                  value={editForm.origin}
-                  onChange={handleEditChange}
-                  className="ar-rtl"
-                  disabled={editForm.type === "sqm"}
-                />
-              </label>
+        <label>
+          Sheets/Box:
+          <input
+            type="number"
+            name="sheetsPerBox"
+            value={editForm.sheetsPerBox}
+            onChange={handleEditChange}
+            className="ltr"
+            disabled={
+              editForm.type === "sheet" ||
+              editForm.type === "sqm" ||
+              editForm.type === "unit"
+            }
+          />
+        </label>
 
-              <div
-                className="items-creation-button-row"
-                style={{ gridColumn: "1 / -1" }}
-              >
-                <button type="submit">Save</button>
-                <button type="button" onClick={closeEdit}>
-                  Cancel
-                </button>
-              </div>
-            </form>
+        <label>
+          Origin:
+          <input
+            type="text"
+            name="origin"
+            value={editForm.origin}
+            onChange={handleEditChange}
+            className="ar-rtl"
+            disabled={editForm.type === "sqm"}
+          />
+        </label>
 
-            {/* Optional debug */}
-            {lastSentPayload && (
-              <pre
-                style={{
-                  marginTop: 12,
-                  fontSize: 11,
-                  opacity: 0.7,
-                  overflowX: "auto",
-                }}
-              >
-                {JSON.stringify(lastSentPayload, null, 2)}
-              </pre>
-            )}
-          </div>
+        <div
+          className="items-creation-button-row"
+          style={{ gridColumn: "1 / -1" }}
+        >
+          <button type="submit">Save</button>
+          <button type="button" onClick={closeEdit}>
+            Cancel
+          </button>
         </div>
+      </form>
+
+      {lastSentPayload && (
+        <pre
+          style={{
+            marginTop: 12,
+            fontSize: 11,
+            opacity: 0.7,
+            overflowX: "auto",
+          }}
+        >
+          {JSON.stringify(lastSentPayload, null, 2)}
+        </pre>
       )}
+    </div>
+  </div>
+)}
 
       {/* Status modal */}
       {modalContent && (
