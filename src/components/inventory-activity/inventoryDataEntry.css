@@ -1,8 +1,9 @@
+/* src/components/inventory-activity/inventoryDataEntry.css */
+
 .inventory-date-table-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  width: 600px;
+  width: 1100px;
   min-height: 540px;
   max-height: 900px;
   margin: 50px auto;
@@ -25,6 +26,13 @@
   padding-bottom: 10px;
 }
 
+.inventory-date-table-title {
+  color: #0056b3;
+}
+
+/* =========================
+   Table
+   ========================= */
 .inventory-table {
   width: 100%;
   border-collapse: collapse;
@@ -43,11 +51,37 @@
   background-color: #f9fafb;
   color: #374151;
   font-weight: 600;
-  width: 40%;
+  white-space: nowrap;
 }
 
-.inventory-table td input[type="number"],
-.inventory-table td input[type="month"] {
+
+.inventory-table { table-layout: fixed; }
+
+.inventory-table th:nth-child(1),
+.inventory-table td:nth-child(1) { width: 120px; }   /* Count */
+
+.inventory-table th:nth-child(2),
+.inventory-table td:nth-child(2) { width: 110px; }  /* Status */
+
+.inventory-table th:nth-child(3),
+.inventory-table td:nth-child(3) { width: 170px; }  /* Date */
+
+.inventory-table th:nth-child(4),
+.inventory-table td:nth-child(4) { width: 150px; }  /* Condition */
+
+.inventory-table th:nth-child(5),
+.inventory-table td:nth-child(5) { width: 200px; }  /* Target */
+
+.inventory-table th:nth-child(6),
+.inventory-table td:nth-child(6) { width: 70px; }   /* Action */
+
+
+/* =========================
+   ✅ Unified input/select style
+   (fixes missing CSS on text + select)
+   ========================= */
+.inventory-table td input,
+.inventory-table td select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #d1d5db;
@@ -56,14 +90,48 @@
   background-color: #f9fafb;
   transition: all 0.2s ease;
   box-sizing: border-box;
+  color: #111827;
 }
 
-.inventory-table td input:focus {
+/* Specific: select arrow spacing */
+.inventory-table td select {
+  cursor: pointer;
+}
+
+/* Focus */
+.inventory-table td input:focus,
+.inventory-table td select:focus {
   border-color: #3b82f6;
   background: #ffffff;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+/* Disabled */
+.inventory-table td input:disabled,
+.inventory-table td select:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* Placeholder */
+.inventory-table td input::placeholder {
+  color: #9ca3af;
+}
+
+/* =========================
+   Status column sizing
+   ========================= */
+.inventory-table .status-col {
+  width: 120px;
+  min-width: 100px;
+  max-width: 150px;
+}
+
+/* =========================
+   Remove button
+   ========================= */
 .remove-btn {
   background: transparent;
   border: none;
@@ -78,6 +146,32 @@
   color: #b91c1c;
 }
 
+/* =========================
+   Summary
+   ========================= */
+.dual-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 20px;
+}
+
+.summary-column {
+  flex: 1;
+  padding: 0 10px;
+}
+
+/* =========================
+   Actions
+   ========================= */
+.inventory-actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: auto;
+  gap: 12px;
+}
+
 .inventory-actions {
   display: flex;
   justify-content: space-between;
@@ -85,11 +179,6 @@
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 10px;
-}
-
-.inventory-actions .action-group {
-  display: flex;
-  gap: 12px;
 }
 
 .inventory-actions button {
@@ -129,79 +218,24 @@
   background-color: #dc2626;
 }
 
-.dual-summary {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-
-.summary-column {
-  flex: 1;
-  padding: 0 15px;
-}
-
-.summary-column:first-child {
-  border-left: none;
-}
-
-/* New: Warning Message Styling */
-.inventory-actions-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  margin-top: auto;
-  gap: 12px;
-}
-
+/* Warning message */
 .inventory-warning-msg {
-  color: red;
+  color: #b91c1c;
   font-weight: bold;
   background: #ffeaea;
   padding: 10px 16px;
-  border-left: 4px solid red;
+  border-left: 4px solid #b91c1c;
   border-radius: 6px;
   text-align: left;
   font-size: 0.95rem;
 }
 
-.inventory-date-table-title {
-  color: #0056b3;
-}
-
-/* Status dropdown style inside the table */
-.inventory-table select {
-  width: 100%;
-  padding: 6px 8px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background-color: #fff;
-  color: #333;
-  box-sizing: border-box;
-}
-
-.inventory-table select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 4px rgba(0, 123, 255, 0.3);
-}
-
-/* Make status column narrower */
-.inventory-table .status-col {
-  width: 120px; 
-  min-width: 100px;
-  max-width: 150px;
-}
-
-.inventory-table .status-col select {
-  width: 100%;
-  padding: 6px 8px;
-  font-size: 13px;
-}
-
-/* Mobile responsiveness */
+/* =========================
+   Mobile responsiveness
+   ========================= */
 @media (max-width: 640px) {
   .inventory-date-table-container {
+    width: 95%;
     padding: 20px;
   }
 
@@ -216,12 +250,6 @@
   }
 
   .inventory-actions button {
-    width: 100%;
-  }
-
-  .inventory-actions .action-group {
-    flex-direction: column;
-    gap: 10px;
     width: 100%;
   }
 }
