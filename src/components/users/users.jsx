@@ -102,6 +102,7 @@ const PERMISSION_GROUPS = [
       "cuts.view",
       "inventory.view",
 
+"settings.accountRoles",
 
 
 "settings.general",

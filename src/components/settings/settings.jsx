@@ -15,6 +15,7 @@ import StockTotalsAudit from "./StockTotalsAudit";
 import LogoutAllUsersPage from "./LogoutAllUsersPage";
 import InventoryAuditPage from "./Inventory-Audit";
 import InvoiceAuditPage from "./InvoiceAuditPage";
+import AccountingRoleSettings from "./AccountingRoleSettings"; // ✅ NEW
 import { hasPerm } from "../auth/authz"; // ✅ adjust path if different
 import "./settings.css";
 
@@ -32,6 +33,10 @@ const SettingsPage = () => {
       { key: "descriptions-editor", label: "Edit Descriptions", perm: "settings.editDescriptions", component: <DescriptionEditor /> },
       { key: "year-settings", label: "Fiscal Year", perm: "settings.fiscalYear", component: <YearSettings /> },
       { key: "currency-settings", label: "Currency", perm: "settings.currency", component: <CurrencySettings /> },
+
+      // ✅ NEW TAB
+      { key: "account-roles", label: "Account Roles", perm: "settings.accountRoles", component: <AccountingRoleSettings /> },
+
       { key: "invoice-display-name-settings", label: "Invoice display", perm: "settings.invoiceDisplay", component: <InvoiceDisplayNamesPanel /> },
       { key: "stock-totals-audit", label: "Stock Totals / Audit", perm: "settings.stockTotalsAudit", component: <StockTotalsAudit /> },
       { key: "inventory-audit", label: "Inventory Audit", perm: "settings.inventoryAudit", component: <InventoryAuditPage /> },
