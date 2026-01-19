@@ -420,6 +420,16 @@ const handleSelectRequest = async (reqOrId) => {
         : "0";
     setVat(reqVat);
 
+    // ✅ FIX: overwrite customerPreview from REQUEST response
+    setCustomerPreview((prev) => ({
+      ...prev,
+      customerName: request?.customerName || prev.customerName || "",
+      customerAddress: request?.customerAddress ?? request?.address ?? "",
+      customerPhoneNumber: request?.customerPhoneNumber ?? request?.telephone ?? "",
+      // keep your existing keys used elsewhere:
+      customerPhone: request?.customerPhoneNumber ?? request?.telephone ?? "",
+    }));
+
     const details = Array.isArray(request.details) ? request.details : [];
 
     const updatedData = details.map((detail) => {
@@ -429,8 +439,6 @@ const handleSelectRequest = async (reqOrId) => {
       const qty = Number(detail?.quantity ?? 0);
 
       const isBox = itemType === "box";
-      const isSheet = itemType === "sheet";
-      const isSqm = itemType === "sqm";
       const isUnit = itemType === "unit";
 
       const boxVal = isBox ? qty : "";
@@ -445,10 +453,10 @@ const handleSelectRequest = async (reqOrId) => {
         batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
 
         origin: detail?.origin || "",
-        
+
         // ✅ Keep normal formatting for table display
         item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
-        
+
         // ✅ Store invoiceDisplayName separately for preview modal ONLY
         invoiceDisplayName: detail?.invoiceDisplayName || null,
 
@@ -483,6 +491,7 @@ const handleSelectRequest = async (reqOrId) => {
     setLoading(false);
   }
 };
+
 
 
 
