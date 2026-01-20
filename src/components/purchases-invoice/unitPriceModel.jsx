@@ -85,10 +85,17 @@ export default function UnitPriceModal({
         valueExchOFR: 0,
         addToItemCost: false,
         invoiceNbTax: "",
-        supplierId: null,
+        supplierId: null, // (legacy/optional)
         supplierOfTax: "",
         accNbOfSupplier: "",
         shipping: false,
+
+        // ✅ NEW persisted fields (match backend)
+        taxAccountId: null,
+        taxSupplierId: null,
+
+        // UI helper
+        supplierOfTaxType: "supplier", // "supplier" | "account"
       },
     ]);
   };
@@ -110,6 +117,22 @@ export default function UnitPriceModal({
       .catch(console.error);
   }, [isVisible]);
 
+  // ───────────────────────── 4619 accounts (from Charge Account list) ─────────────────────────
+  const flattenAccounts = useCallback((list, out = []) => {
+    (list || []).forEach((a) => {
+      out.push(a);
+      if (a.children?.length) flattenAccounts(a.children, out);
+    });
+    return out;
+  }, []);
+
+  const taxAccounts4619 = useMemo(() => {
+    const flat = flattenAccounts(accounts || []);
+    return flat.filter((a) =>
+      String(a.accountNumber || "").startsWith("4619")
+    );
+  }, [accounts, flattenAccounts]);
+
   // Prefer already-typed rows from parent; only fetch rows if none exist
   useEffect(() => {
     if (!isVisible) return;
@@ -120,25 +143,51 @@ export default function UnitPriceModal({
         const { data } = await axiosClient.get(
           `/purchase-invoices/${invoiceId}`
         );
-        const mapped = (data.unitPriceRows || []).map((r) => ({
-          id: r.id,
-          purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
-          chargeName: r.chargeName,
-          accountId: r.accountId,
-          accountNumber: r.account?.accountNumber || "",
-          chargeType: r.chargeType,
-          value: Number(r.value),
-          valueOFR: Number(r.valueOFR),
-          currency: (r.currency || "USD").toLowerCase(),
-          valueExch: Number(r.valueExch),
-          valueExchOFR: Number(r.valueExchOFR),
-          addToItemCost: !!r.addToItemCost,
-          invoiceNbTax: r.invoiceNbTax,
-          supplierId: r.supplierId,
-          supplierOfTax: r.supplier?.supplierName || "",
-          accNbOfSupplier: r.supplier?.account?.accountNumber || "",
-          shipping: !!r.shipping,
-        }));
+
+        const mapped = (data.unitPriceRows || []).map((r) => {
+          // ✅ backend persisted fields
+          const taxAccountId =
+            r.taxAccountId ?? (r.taxAccount?.id ?? null);
+
+          const taxSupplierId =
+            r.taxSupplierId ?? (r.taxSupplier?.id ?? null);
+
+          const supplierOfTaxType =
+            taxAccountId != null
+              ? "account"
+              : "supplier";
+
+          return {
+            id: r.id,
+            purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
+            chargeName: r.chargeName,
+            accountId: r.accountId,
+            accountNumber: r.account?.accountNumber || "",
+            chargeType: r.chargeType,
+            value: Number(r.value),
+            valueOFR: Number(r.valueOFR),
+            currency: (r.currency || "USD").toLowerCase(),
+            valueExch: Number(r.valueExch),
+            valueExchOFR: Number(r.valueExchOFR),
+            addToItemCost: !!r.addToItemCost,
+            invoiceNbTax: r.invoiceNbTax,
+
+            // keep legacy fields if present
+            supplierId: r.supplierId ?? null,
+
+            supplierOfTax: "",
+            accNbOfSupplier: "",
+            shipping: !!r.shipping,
+
+            // ✅ persisted selection
+            taxAccountId,
+            taxSupplierId,
+
+            // UI helper
+            supplierOfTaxType,
+          };
+        });
+
         setRows(mapped);
       } catch (e) {
         console.error(e);
@@ -166,6 +215,13 @@ export default function UnitPriceModal({
           supplierOfTax: "",
           accNbOfSupplier: "",
           shipping: !!row.shipping,
+
+          // ✅ persisted selection
+          taxAccountId: null,
+          taxSupplierId: null,
+
+          // UI helper
+          supplierOfTaxType: "supplier",
         }));
         setRows(mapped);
       } catch (e) {
@@ -178,30 +234,71 @@ export default function UnitPriceModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVisible, invoiceId, safeRows.length]);
 
-  // once suppliers load, fill in derived fields (accNbOfSupplier) for selected supplier rows
+  // Once suppliers/accounts load, fill in derived fields for display (accNbOfSupplier + supplierOfTax)
   useEffect(() => {
-    if (!suppliers.length) return;
+    if (!isVisible) return;
+    if (!suppliers.length && !accounts.length) return;
+
+    const flat = flattenAccounts(accounts || []);
+    const accById = new Map(flat.map((a) => [Number(a.id), a]));
+
     setRows((prev) =>
       (prev || []).map((r) => {
-        if (r.supplierId) {
-          const sup = suppliers.find((s) => s.id === r.supplierId);
+        // account selected for tax
+        if (r.taxAccountId) {
+          const acc = accById.get(Number(r.taxAccountId));
           return {
             ...r,
+            supplierOfTaxType: "account",
+            supplierOfTax: acc
+              ? `${acc.accountNumber} – ${acc.accountName}`
+              : "",
+            accNbOfSupplier: acc?.accountNumber || "",
+          };
+        }
+
+        // supplier selected for tax
+        const taxSupId = r.taxSupplierId ?? null;
+        if (taxSupId) {
+          const sup = suppliers.find((s) => Number(s.id) === Number(taxSupId));
+          return {
+            ...r,
+            supplierOfTaxType: "supplier",
+            supplierOfTax: sup?.supplierName || "",
             accNbOfSupplier: sup?.supplierAccountNumber || "",
           };
         }
-        return r;
+
+        // none selected
+        return {
+          ...r,
+          supplierOfTax: r.supplierOfTax || "",
+          accNbOfSupplier: r.accNbOfSupplier || "",
+        };
       })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suppliers]);
+  }, [isVisible, suppliers, accounts, flattenAccounts]);
 
   // ───────────────────────── inputs & toggles ─────────────────────────
   const handleInput = (i, field, val) => {
     setRows((prev) => {
       const copy = [...(prev || [])];
       copy[i] = { ...copy[i] };
-      copy[i][field] = field === "chargeType" ? val : +val || val;
+
+      // keep chargeType/currency/name/text fields as string; numeric as number
+      if (
+        field === "chargeType" ||
+        field === "currency" ||
+        field === "chargeName" ||
+        field === "invoiceNbTax"
+      ) {
+        copy[i][field] = val;
+      } else {
+        copy[i][field] = val === "" ? "" : Number(val);
+        if (!Number.isFinite(copy[i][field])) copy[i][field] = 0;
+      }
+
       return copy;
     });
   };
@@ -214,18 +311,7 @@ export default function UnitPriceModal({
     });
   };
 
-  const handleSupplierChange = (i, supId) => {
-    setRows((prev) => {
-      const copy = [...(prev || [])];
-      copy[i] = { ...copy[i] };
-      copy[i].supplierId = +supId || null;
-      const sup = suppliers.find((s) => s.id === +supId);
-      copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
-      copy[i].supplierOfTax = sup?.supplierName || "";
-      return copy;
-    });
-  };
-
+  // Charge account (JV debit uses this.accountId)
   const handleAccountChange = (i, acctId, e) => {
     const acctNumber =
       e.target.selectedOptions[0]?.getAttribute("data-account-number") || "";
@@ -240,7 +326,77 @@ export default function UnitPriceModal({
     });
   };
 
-  const save = () => onSave(safeRows);
+  // Supplier of Tax dropdown change:
+  // - If supplier selected -> set taxSupplierId, clear taxAccountId
+  // - If 4619 account selected -> set taxAccountId, clear taxSupplierId
+  // IMPORTANT: does NOT touch charge accountId
+  const handleSupplierOfTaxChange = (i, rawVal) => {
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      copy[i] = { ...copy[i] };
+
+      const v = String(rawVal || "");
+      if (!v) {
+        copy[i].taxSupplierId = null;
+        copy[i].taxAccountId = null;
+        copy[i].supplierOfTaxType = "supplier";
+        copy[i].supplierOfTax = "";
+        copy[i].accNbOfSupplier = "";
+        return copy;
+      }
+
+      const [kind, idStr] = v.split(":");
+      const id = Number(idStr);
+
+      if (kind === "sup") {
+        const sup = suppliers.find((s) => s.id === id);
+
+        copy[i].supplierOfTaxType = "supplier";
+        copy[i].taxSupplierId = Number.isFinite(id) ? id : null;
+        copy[i].taxAccountId = null;
+
+        // optional legacy mirror (safe with your backend fallback)
+        copy[i].supplierId = Number.isFinite(id) ? id : null;
+
+        copy[i].supplierOfTax = sup?.supplierName || "";
+        copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
+      } else if (kind === "acc") {
+        const acc = taxAccounts4619.find((a) => a.id === id);
+
+        copy[i].supplierOfTaxType = "account";
+        copy[i].taxAccountId = Number.isFinite(id) ? id : null;
+        copy[i].taxSupplierId = null;
+
+        // if selecting an account, legacy supplierId should be cleared
+        copy[i].supplierId = null;
+
+        copy[i].supplierOfTax = acc
+          ? `${acc.accountNumber} – ${acc.accountName}`
+          : "";
+        copy[i].accNbOfSupplier = acc?.accountNumber || "";
+      }
+
+      return copy;
+    });
+  };
+
+  // ✅ When saving, send only what backend expects (keep extra UI fields if you want, backend ignores them)
+  const save = () => {
+    const payload = (safeRows || []).map((r) => ({
+      ...r,
+      // ensure numbers/nulls
+      accountId: r.accountId != null ? Number(r.accountId) : null,
+      supplierId: r.supplierId != null ? Number(r.supplierId) : null, // legacy
+      taxAccountId: r.taxAccountId != null ? Number(r.taxAccountId) : null,
+      taxSupplierId: r.taxSupplierId != null ? Number(r.taxSupplierId) : null,
+      value: r.value === "" ? 0 : Number(r.value ?? 0),
+      valueOFR: r.valueOFR === "" ? 0 : Number(r.valueOFR ?? 0),
+      valueExch: r.valueExch === "" ? 0 : Number(r.valueExch ?? 0),
+      valueExchOFR: r.valueExchOFR === "" ? 0 : Number(r.valueExchOFR ?? 0),
+    }));
+
+    onSave(payload);
+  };
 
   const renderAccountOptions = (list, level = 0) =>
     (list || []).map((acc) => (
@@ -312,6 +468,7 @@ export default function UnitPriceModal({
                 <th>Shipping</th>
               </tr>
             </thead>
+
             <tbody>
               {safeRows.map((r, i) => (
                 <tr key={i} onContextMenu={(e) => handleRowContext(e, i)}>
@@ -326,7 +483,7 @@ export default function UnitPriceModal({
                     />
                   </td>
 
-                  {/* Charge Account */}
+                  {/* Charge Account (JV Debit uses row.accountId) */}
                   <td>
                     <select
                       disabled={!isEditable}
@@ -437,24 +594,43 @@ export default function UnitPriceModal({
                     />
                   </td>
 
+                  {/* ✅ Supplier of Tax: Suppliers + 4619 Accounts */}
                   <td>
                     <select
                       disabled={!isEditable}
-                      value={r.supplierId || ""}
+                      value={
+                        r.taxAccountId
+                          ? `acc:${r.taxAccountId}`
+                          : r.taxSupplierId
+                          ? `sup:${r.taxSupplierId}`
+                          : ""
+                      }
                       onChange={(e) =>
-                        handleSupplierChange(i, e.target.value)
+                        handleSupplierOfTaxChange(i, e.target.value)
                       }
                       onKeyDown={handleEnterNav}
                     >
                       <option value="">-- select --</option>
-                      {supplierOptions.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.supplierName}
-                        </option>
-                      ))}
+
+                      <optgroup label="Suppliers">
+                        {supplierOptions.map((s) => (
+                          <option key={`sup:${s.id}`} value={`sup:${s.id}`}>
+                            {s.supplierName}
+                          </option>
+                        ))}
+                      </optgroup>
+
+                      <optgroup label="4619 Accounts">
+                        {taxAccounts4619.map((a) => (
+                          <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
+                            {a.accountNumber} – {a.accountName}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </td>
 
+                  {/* Acc Nb: shows supplier account number OR 4619 account number */}
                   <td>
                     <input
                       readOnly

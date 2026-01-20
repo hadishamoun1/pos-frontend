@@ -366,22 +366,37 @@ const handleViewJournalVoucher = async () => {
         shippingCostInput,
         finalCost,
         items: enrichedItems,
-        unitPriceRows: unitPriceRows.map((row) => ({
-          id: row.id,
-          purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
-          accountId: row.accountId,
-          chargeName: row.chargeName,
-          chargeType: row.chargeType,
-          value: row.value,
-          valueOFR: row.valueOFR,
-          currency: row.currency?.toUpperCase(),
-          valueExch: row.valueExch,
-          valueExchOFR: row.valueExchOFR,
-          addToItemCost: row.addToItemCost,
-          invoiceNbTax: row.invoiceNbTax,
-          supplierId: row.supplierId,
-          shipping: row.shipping,
-        })),
+unitPriceRows: (unitPriceRows || []).map((row) => ({
+  id: row.id,
+  purchaseInvoiceSettingId: row.purchaseInvoiceSettingId,
+
+  // ✅ charge account
+  accountId: row.accountId != null ? Number(row.accountId) : null,
+
+  chargeName: row.chargeName,
+  chargeType: row.chargeType ?? "amount",
+
+  value: row.value === "" ? 0 : Number(row.value ?? 0),
+  valueOFR: row.valueOFR === "" ? 0 : Number(row.valueOFR ?? 0),
+
+  currency: (row.currency || "USD").toUpperCase(),
+
+  valueExch: row.valueExch === "" ? 0 : Number(row.valueExch ?? 0),
+  valueExchOFR: row.valueExchOFR === "" ? 0 : Number(row.valueExchOFR ?? 0),
+
+  addToItemCost: !!row.addToItemCost,
+  invoiceNbTax: row.invoiceNbTax ?? "",
+
+  // legacy (keep if backend still expects it)
+  supplierId: row.supplierId != null ? Number(row.supplierId) : null,
+
+  shipping: !!row.shipping,
+
+  // ✅✅✅ THIS IS WHAT YOU WERE MISSING
+  taxAccountId: row.taxAccountId != null ? Number(row.taxAccountId) : null,
+  taxSupplierId: row.taxSupplierId != null ? Number(row.taxSupplierId) : null,
+})),
+
       };
 
       let res;
@@ -570,29 +585,40 @@ const handleViewJournalVoucher = async () => {
     );
 
     // 5) unit price rows
-    setUnitPriceRows(
-      fullInvoice.unitPriceRows.map((r) => ({
-        id: r.id,
-        purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
-        supplierId: r.supplierId,
-        chargeName: r.chargeName,
-        chargeType: r.chargeType,
-        value: Number(r.value),
-        valueOFR: Number(r.valueOFR),
-        currency: r.currency,
-        valueExch: Number(r.valueExch),
-        valueExchOFR: Number(r.valueExchOFR),
-        addToItemCost: r.addToItemCost,
-        invoiceNbTax: r.invoiceNbTax,
-        shipping: r.shipping,
-        accountId: r.accountId ?? null,
-        accountNumber: r.account?.accountNumber || "",
+setUnitPriceRows(
+  (fullInvoice.unitPriceRows || []).map((r) => ({
+    id: r.id,
+    purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
 
-        supplierId: r.supplierId ?? null,
-        supplierOfTax: r.supplier?.supplierName || "",
-        accNbOfSupplier: r.supplier?.account?.accountNumber || "",
-      }))
-    );
+    accountId: r.accountId ?? null,
+    accountNumber: r.account?.accountNumber || "",
+
+    chargeName: r.chargeName,
+    chargeType: r.chargeType ?? "amount",
+
+    value: Number(r.value ?? 0),
+    valueOFR: Number(r.valueOFR ?? 0),
+    currency: r.currency,
+
+    valueExch: Number(r.valueExch ?? 0),
+    valueExchOFR: Number(r.valueExchOFR ?? 0),
+
+    addToItemCost: !!r.addToItemCost,
+    invoiceNbTax: r.invoiceNbTax ?? "",
+    shipping: !!r.shipping,
+
+    supplierId: r.supplierId ?? null,
+
+    // ✅ add these
+    taxAccountId: r.taxAccountId ?? (r.taxAccount?.id ?? null),
+    taxSupplierId: r.taxSupplierId ?? (r.taxSupplier?.id ?? null),
+
+    // UI helpers (optional)
+    supplierOfTax: r.taxSupplier?.supplierName || "",
+    accNbOfSupplier: r.taxSupplier?.supplierAccountNumber || "",
+  }))
+);
+
   }, [fullInvoice]);
 
   const populateFromInvoice = (inv) => {
@@ -664,31 +690,40 @@ const handleViewJournalVoucher = async () => {
 
     setItems(mapped);
 
-    setUnitPriceRows(
-      inv.unitPriceRows.map((r) => ({
-        id: r.id,
-        purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
-        chargeName: r.chargeName,
-        chargeType: r.chargeType,
-        value: Number(r.value),
-        valueOFR: Number(r.valueOFR),
-        currency: r.currency,
-        valueExch: Number(r.valueExch),
-        valueExchOFR: Number(r.valueExchOFR),
-        addToItemCost: r.addToItemCost,
-        invoiceNbTax: r.invoiceNbTax,
-        supplierId: r.supplierId,
-        shipping: r.shipping,
-        // 🔹 account fields (needed for dropdown pre-select)
-        accountId: r.accountId ?? null,
-        accountNumber: r.account?.accountNumber || "",
+setUnitPriceRows(
+  (fullInvoice.unitPriceRows || []).map((r) => ({
+    id: r.id,
+    purchaseInvoiceSettingId: r.purchaseInvoiceSettingId,
 
-        // 🔹 supplier fields (for Supplier of Tax + Acc. Nb)
-        supplierId: r.supplierId ?? null,
-        supplierOfTax: r.supplier?.supplierName || "",
-        accNbOfSupplier: r.supplier?.account?.accountNumber || "",
-      }))
-    );
+    accountId: r.accountId ?? null,
+    accountNumber: r.account?.accountNumber || "",
+
+    chargeName: r.chargeName,
+    chargeType: r.chargeType ?? "amount",
+
+    value: Number(r.value ?? 0),
+    valueOFR: Number(r.valueOFR ?? 0),
+    currency: r.currency,
+
+    valueExch: Number(r.valueExch ?? 0),
+    valueExchOFR: Number(r.valueExchOFR ?? 0),
+
+    addToItemCost: !!r.addToItemCost,
+    invoiceNbTax: r.invoiceNbTax ?? "",
+    shipping: !!r.shipping,
+
+    supplierId: r.supplierId ?? null,
+
+    // ✅ add these
+    taxAccountId: r.taxAccountId ?? (r.taxAccount?.id ?? null),
+    taxSupplierId: r.taxSupplierId ?? (r.taxSupplier?.id ?? null),
+
+    // UI helpers (optional)
+    supplierOfTax: r.taxSupplier?.supplierName || "",
+    accNbOfSupplier: r.taxSupplier?.supplierAccountNumber || "",
+  }))
+);
+
   };
 
   useEffect(() => {
