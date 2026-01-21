@@ -5,7 +5,7 @@ import { axiosClient } from "../api/axiosClient";
 import NotificationModal from "../recievables/NotificationModal";
 import JournalListsModal from "./journal-list-modal";
 import { useParams, useNavigate } from "react-router-dom";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 const JournalVoucherPage = () => {
   const [isJournalListOpen, setIsJournalListOpen] = useState(false);
@@ -14,7 +14,9 @@ const JournalVoucherPage = () => {
 
   // Header / meta
   const [date, setDate] = useState("");
-  const [type, setType] = useState(""); // S | G | SR | RVR
+  const [type, setType] = useState(""); // S | G | SR | RVR | R | RG (UI types)
+  const isOFRType = (t) => ["G", "RG"].includes(String(t || "").toUpperCase());
+  const isBaseType = (t) => ["S", "R", "RVR"].includes(String(t || "").toUpperCase());
 
   // Summary list search
   const [summarySeq, setSummarySeq] = useState("");
@@ -32,8 +34,9 @@ const JournalVoucherPage = () => {
   const [hasMoreSummary, setHasMoreSummary] = useState(true);
   const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
 
-    const { id } = useParams(); // Get JV ID from URL
+  const { id } = useParams(); // Get JV ID from URL
   const navigate = useNavigate();
+
   // Notifications
   const [notification, setNotification] = useState({
     visible: false,
@@ -97,7 +100,7 @@ const JournalVoucherPage = () => {
 
   // ---------- READ-ONLY MODE ----------
   const readOnlyMode = isSaved && !isEditing;
-  
+
   // ---------- TABLE DISABLED MODE ----------
   const isTableDisabled = !date || !type || readOnlyMode;
 
@@ -126,230 +129,301 @@ const JournalVoucherPage = () => {
     });
   };
 
-  const handleExportToExcel = () => {
-  if (!isSaved || !editingId) {
-    setNotification({
-      visible: true,
-      type: "warning",
-      message: "Please open or save a journal voucher first before exporting.",
-      onConfirm: null,
-    });
-    return;
-  }
+  // =========================
+  // Type mapping (Backend <-> UI)
+  // Backend can return: RTN
+  // UI uses: R or RG
+  // =========================
+  const normType = (t) => String(t || "").toUpperCase().trim();
 
-  try {
-    // Create workbook
-    const wb = XLSX.utils.book_new();
+  // Backend -> UI
+  const apiTypeToUiType = (jv) => {
+    const t = normType(jv?.jvType);
 
-    // Prepare header data
-    const headerData = [
-      ['Journal Voucher Export'],
-      [],
-      ['Date:', date || ''],
-      ['Type:', type || ''],
-      ['Status:', statusLabel],
-      [],
-    ];
+    if (t === "RTN") {
+      const details = jv?.details || [];
+      const hasBase = details.some((d) => parseNumber(d?.dr) !== 0 || parseNumber(d?.cr) !== 0);
+      const hasOFR = details.some(
+        (d) => parseNumber(d?.drOFR) !== 0 || parseNumber(d?.crOFR) !== 0
+      );
 
-    // Prepare column headers based on type
-    let columns = [];
-    if (type === 'G') {
-      columns = [
-        '#',
-        'Acc Number',
-        'Account Name',
-        'Doc',
-        'Description',
-        'Currency',
-        'Rate',
-        'Dr OFR',
-        'Cr OFR',
-        'Dr USD OFR',
-        'Cr USD OFR',
-        'Dr LL OFR',
-        'Cr LL OFR',
-      ];
-    } else if (type === 'SR') {
-      columns = [
-        '#',
-        'Acc Number',
-        'Account Name',
-        'Doc',
-        'Description',
-        'Currency',
-        'Rate',
-        'Debit',
-        'Dr OFR',
-        'Credit',
-        'Cr OFR',
-        'Dr USD',
-        'Dr USD OFR',
-        'Cr USD',
-        'Cr USD OFR',
-        'Dr LL',
-        'Dr LL OFR',
-        'Cr LL',
-        'Cr LL OFR',
-      ];
-    } else {
-      columns = [
-        '#',
-        'Acc Number',
-        'Account Name',
-        'Doc',
-        'Description',
-        'Currency',
-        'Rate',
-        'Debit',
-        'Credit',
-        'Dr USD',
-        'Cr USD',
-        'Dr LL',
-        'Cr LL',
-      ];
+      // If it has only OFR numbers, show RG
+      if (hasOFR && !hasBase) return "RG";
+      return "R";
     }
 
-    // Prepare data rows
-    const dataRows = entries.map((entry, index) => {
-      const baseRow = [
-        index + 1,
-        entry.accountNumber || '',
-        entry.accountName || '',
-        entry.documentNbr || '',
-        entry.description || '',
-        entry.currency || '',
-        formatNumber(entry.exchangeRate),
+    return t; // S, G, SR, RVR, R, RG ...
+  };
+
+  // UI -> Backend
+  const uiTypeToApiType = (uiType) => {
+    const t = normType(uiType);
+    if (t === "R" || t === "RG") return "RTN";
+    return t;
+  };
+
+  const handleExportToExcel = () => {
+    if (!isSaved || !editingId) {
+      setNotification({
+        visible: true,
+        type: "warning",
+        message: "Please open or save a journal voucher first before exporting.",
+        onConfirm: null,
+      });
+      return;
+    }
+
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // Prepare header data
+      const headerData = [
+        ["Journal Voucher Export"],
+        [],
+        ["Date:", date || ""],
+        ["Type:", type || ""],
+        ["Status:", statusLabel],
+        [],
       ];
 
-      if (type === 'G') {
-        return [
-          ...baseRow,
-          formatNumber(entry.debitOFR),
-          formatNumber(entry.creditOFR),
-          formatNumber(entry.debitUSDOFR),
-          formatNumber(entry.creditUSDOFR),
-          formatNumber(entry.debitExOFR),
-          formatNumber(entry.creditExOFR),
+      // Prepare column headers based on type
+      let columns = [];
+      if (isOFRType(type)) {
+        columns = [
+          "#",
+          "Acc Number",
+          "Account Name",
+          "Doc",
+          "Description",
+          "Currency",
+          "Rate",
+          "Dr OFR",
+          "Cr OFR",
+          "Dr USD OFR",
+          "Cr USD OFR",
+          "Dr LL OFR",
+          "Cr LL OFR",
         ];
-      } else if (type === 'SR') {
-        return [
-          ...baseRow,
-          formatNumber(entry.debit),
-          formatNumber(entry.debitOFR),
-          formatNumber(entry.credit),
-          formatNumber(entry.creditOFR),
-          formatNumber(entry.debitUSD),
-          formatNumber(entry.debitUSDOFR),
-          formatNumber(entry.creditUSD),
-          formatNumber(entry.creditUSDOFR),
-          formatNumber(entry.debitEx),
-          formatNumber(entry.debitExOFR),
-          formatNumber(entry.creditEx),
-          formatNumber(entry.creditExOFR),
+      } else if (type === "SR") {
+        columns = [
+          "#",
+          "Acc Number",
+          "Account Name",
+          "Doc",
+          "Description",
+          "Currency",
+          "Rate",
+          "Debit",
+          "Dr OFR",
+          "Credit",
+          "Cr OFR",
+          "Dr USD",
+          "Dr USD OFR",
+          "Cr USD",
+          "Cr USD OFR",
+          "Dr LL",
+          "Dr LL OFR",
+          "Cr LL",
+          "Cr LL OFR",
         ];
       } else {
-        return [
-          ...baseRow,
-          formatNumber(entry.debit),
-          formatNumber(entry.credit),
-          formatNumber(entry.debitUSD),
-          formatNumber(entry.creditUSD),
-          formatNumber(entry.debitEx),
-          formatNumber(entry.creditEx),
+        columns = [
+          "#",
+          "Acc Number",
+          "Account Name",
+          "Doc",
+          "Description",
+          "Currency",
+          "Rate",
+          "Debit",
+          "Credit",
+          "Dr USD",
+          "Cr USD",
+          "Dr LL",
+          "Cr LL",
         ];
       }
-    });
 
-    // Add summary rows
-    const summaryData = [
-      [],
-      ['SUMMARY'],
-      [],
-    ];
+      // Prepare data rows
+      const dataRows = entries.map((entry, index) => {
+        const baseRow = [
+          index + 1,
+          entry.accountNumber || "",
+          entry.accountName || "",
+          entry.documentNbr || "",
+          entry.description || "",
+          entry.currency || "",
+          formatNumber(entry.exchangeRate),
+        ];
 
-    if (type !== 'G') {
-      summaryData.push(
-        ['Total Debit (Base):', formatNumber(totalDebitBase)],
-        ['Total Credit (Base):', formatNumber(totalCreditBase)],
-        ['Difference (Base):', formatNumber(diffBase)],
-        []
+        if (isOFRType(type)) {
+          return [
+            ...baseRow,
+            formatNumber(entry.debitOFR),
+            formatNumber(entry.creditOFR),
+            formatNumber(entry.debitUSDOFR),
+            formatNumber(entry.creditUSDOFR),
+            formatNumber(entry.debitExOFR),
+            formatNumber(entry.creditExOFR),
+          ];
+        } else if (type === "SR") {
+          return [
+            ...baseRow,
+            formatNumber(entry.debit),
+            formatNumber(entry.debitOFR),
+            formatNumber(entry.credit),
+            formatNumber(entry.creditOFR),
+            formatNumber(entry.debitUSD),
+            formatNumber(entry.debitUSDOFR),
+            formatNumber(entry.creditUSD),
+            formatNumber(entry.creditUSDOFR),
+            formatNumber(entry.debitEx),
+            formatNumber(entry.debitExOFR),
+            formatNumber(entry.creditEx),
+            formatNumber(entry.creditExOFR),
+          ];
+        } else {
+          return [
+            ...baseRow,
+            formatNumber(entry.debit),
+            formatNumber(entry.credit),
+            formatNumber(entry.debitUSD),
+            formatNumber(entry.creditUSD),
+            formatNumber(entry.debitEx),
+            formatNumber(entry.creditEx),
+          ];
+        }
+      });
+
+      // ===== Totals (same as UI) =====
+      const totalDebitBase = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0)
       );
-    }
-
-    if (type === 'G' || type === 'SR') {
-      summaryData.push(
-        ['Total Debit OFR:', formatNumber(totalDebitOFR)],
-        ['Total Credit OFR:', formatNumber(totalCreditOFR)],
-        ['Difference (OFR):', formatNumber(diffOFR)],
-        []
+      const totalCreditBase = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0)
       );
+
+      const totalDebitOFR = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.debitOFR), 0)
+      );
+      const totalCreditOFR = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.creditOFR), 0)
+      );
+
+      const totalDebitUSD = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0)
+      );
+      const totalCreditUSD = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.creditUSD), 0)
+      );
+      const totalDebitLL = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.debitEx), 0)
+      );
+      const totalCreditLL = parseNumber(
+        entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
+      );
+
+      const diffBase = totalDebitBase - totalCreditBase;
+      const diffOFR = totalDebitOFR - totalCreditOFR;
+
+      // Add summary rows
+      const summaryData = [[], ["SUMMARY"], []];
+
+      if (!isOFRType(type)) {
+        summaryData.push(
+          ["Total Debit (Base):", formatNumber(totalDebitBase)],
+          ["Total Credit (Base):", formatNumber(totalCreditBase)],
+          ["Difference (Base):", formatNumber(diffBase)],
+          []
+        );
+      }
+
+      if (isOFRType(type) || type === "SR") {
+        summaryData.push(
+          ["Total Debit OFR:", formatNumber(totalDebitOFR)],
+          ["Total Credit OFR:", formatNumber(totalCreditOFR)],
+          ["Difference (OFR):", formatNumber(diffOFR)],
+          []
+        );
+      }
+
+      summaryData.push(
+        ["Total Debit USD:", formatNumber(totalDebitUSD)],
+        ["Total Credit USD:", formatNumber(totalCreditUSD)],
+        [],
+        ["Total Debit LL:", formatNumber(totalDebitLL)],
+        ["Total Credit LL:", formatNumber(totalCreditLL)]
+      );
+
+      // Combine all data
+      const wsData = [...headerData, columns, ...dataRows, ...summaryData];
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // Set column widths
+      const colWidths = columns.map((col, idx) => {
+        if (idx === 0) return { wch: 5 }; // #
+        if (idx === 1) return { wch: 15 }; // Acc Number
+        if (idx === 2) return { wch: 30 }; // Account Name
+        if (idx === 3) return { wch: 15 }; // Doc
+        if (idx === 4) return { wch: 30 }; // Description
+        return { wch: 15 }; // Default
+      });
+      ws["!cols"] = colWidths;
+
+      // Style the header
+      const headerRange = XLSX.utils.decode_range(ws["!ref"]);
+      const headerRowIndex = headerData.length;
+
+      for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+        const address = XLSX.utils.encode_cell({ r: headerRowIndex, c: C });
+        if (!ws[address]) continue;
+        ws[address].s = {
+          font: { bold: true, sz: 12 },
+          fill: { fgColor: { rgb: "4F81BD" } },
+          alignment: { horizontal: "center", vertical: "center" },
+        };
+      }
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, "Journal Voucher");
+
+      // Generate filename
+      const typeLabel =
+        type === "S"
+          ? "Normal"
+          : type === "G"
+          ? "Opening"
+          : type === "RG"
+          ? "Return_OFR"
+          : type === "R"
+          ? "Return"
+          : type === "SR"
+          ? "Revaluation"
+          : "Reverse";
+      const filename = `JV_${typeLabel}_${date || "Unknown"}_${new Date().getTime()}.xlsx`;
+
+      // Write file
+      XLSX.writeFile(wb, filename);
+
+      setNotification({
+        visible: true,
+        type: "success",
+        message: "Journal Voucher exported successfully!",
+        onConfirm: null,
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      setNotification({
+        visible: true,
+        type: "error",
+        message: "Failed to export journal voucher. Please try again.",
+        onConfirm: null,
+      });
     }
-
-    summaryData.push(
-      ['Total Debit USD:', formatNumber(totalDebitUSD)],
-      ['Total Credit USD:', formatNumber(totalCreditUSD)],
-      [],
-      ['Total Debit LL:', formatNumber(totalDebitLL)],
-      ['Total Credit LL:', formatNumber(totalCreditLL)]
-    );
-
-    // Combine all data
-    const wsData = [...headerData, columns, ...dataRows, ...summaryData];
-
-    // Create worksheet
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Set column widths
-    const colWidths = columns.map((col, idx) => {
-      if (idx === 0) return { wch: 5 };  // #
-      if (idx === 1) return { wch: 15 }; // Acc Number
-      if (idx === 2) return { wch: 30 }; // Account Name
-      if (idx === 3) return { wch: 15 }; // Doc
-      if (idx === 4) return { wch: 30 }; // Description
-      return { wch: 15 }; // Default
-    });
-    ws['!cols'] = colWidths;
-
-    // Style the header
-    const headerRange = XLSX.utils.decode_range(ws['!ref']);
-    const headerRowIndex = headerData.length;
-    
-    for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
-      const address = XLSX.utils.encode_cell({ r: headerRowIndex, c: C });
-      if (!ws[address]) continue;
-      ws[address].s = {
-        font: { bold: true, sz: 12 },
-        fill: { fgColor: { rgb: "4F81BD" } },
-        alignment: { horizontal: "center", vertical: "center" }
-      };
-    }
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Journal Voucher');
-
-    // Generate filename
-    const typeLabel = type === 'S' ? 'Normal' : type === 'G' ? 'Opening' : type === 'SR' ? 'Revaluation' : 'Reverse';
-    const filename = `JV_${typeLabel}_${date || 'Unknown'}_${new Date().getTime()}.xlsx`;
-
-    // Write file
-    XLSX.writeFile(wb, filename);
-
-    setNotification({
-      visible: true,
-      type: "success",
-      message: "Journal Voucher exported successfully!",
-      onConfirm: null,
-    });
-  } catch (error) {
-    console.error('Export error:', error);
-    setNotification({
-      visible: true,
-      type: "error",
-      message: "Failed to export journal voucher. Please try again.",
-      onConfirm: null,
-    });
-  }
-};
+  };
 
   // allow user to type freely (digits + single dot)
   const cleanNumericInput = (s = "") =>
@@ -376,11 +450,7 @@ const JournalVoucherPage = () => {
 
     const typ =
       entity?.entityType ||
-      (entity?.supplierId
-        ? "supplier"
-        : entity?.customerId
-        ? "customer"
-        : "account");
+      (entity?.supplierId ? "supplier" : entity?.customerId ? "customer" : "account");
 
     const number =
       entity?.accountNumber ??
@@ -397,9 +467,7 @@ const JournalVoucherPage = () => {
       "";
 
     const numericId =
-      id !== null && id !== undefined && !Number.isNaN(Number(id))
-        ? Number(id)
-        : id;
+      id !== null && id !== undefined && !Number.isNaN(Number(id)) ? Number(id) : id;
 
     return { id: numericId, type: typ, number, name };
   };
@@ -419,9 +487,13 @@ const JournalVoucherPage = () => {
 
   const INPUT_ORDER_BY_TYPE = {
     S: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
-    RVR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
-    SR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+    R: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+
     G: ["documentNbr", "description", "currency", "exchangeRate", "debitOFR", "creditOFR"],
+    RG: ["documentNbr", "description", "currency", "exchangeRate", "debitOFR", "creditOFR"],
+
+    SR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
+    RVR: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
     default: ["documentNbr", "description", "currency", "exchangeRate", "debit", "credit"],
   };
 
@@ -454,8 +526,7 @@ const JournalVoucherPage = () => {
     return () => clearTimeout(id);
   }, [pendingFocus, entries.length]);
 
-
-    useEffect(() => {
+  useEffect(() => {
     if (id) {
       fetchJournalVoucherById(Number(id));
     }
@@ -518,7 +589,7 @@ const JournalVoucherPage = () => {
     entry.debitExOFR = 0;
     entry.creditExOFR = 0;
 
-    if (type === "S") {
+    if (type === "S" || type === "R") {
       if (entry.currency === "USD") {
         entry.debit = String(entry.debit);
         entry.credit = String(entry.credit);
@@ -556,7 +627,7 @@ const JournalVoucherPage = () => {
       }
     }
 
-    if (type === "G") {
+    if (type === "G" || type === "RG") {
       const ofrD = parseNumber(entry.debitOFR);
       const ofrC = parseNumber(entry.creditOFR);
 
@@ -675,9 +746,7 @@ const JournalVoucherPage = () => {
     const updated = [...entries];
     const entry = updated[index];
 
-    const next = EDITABLE_NUM_FIELDS.has(field)
-      ? cleanNumericInput(value)
-      : value;
+    const next = EDITABLE_NUM_FIELDS.has(field) ? cleanNumericInput(value) : value;
 
     entry[field] = next;
 
@@ -784,9 +853,7 @@ const JournalVoucherPage = () => {
   const handleAccountNumberClick = (indexOrRid) => {
     if (isTableDisabled) return;
     const rid =
-      typeof indexOrRid === "string"
-        ? indexOrRid
-        : entries[indexOrRid]?.rid ?? null;
+      typeof indexOrRid === "string" ? indexOrRid : entries[indexOrRid]?.rid ?? null;
 
     setCurrentRowIndex(typeof indexOrRid === "number" ? indexOrRid : null);
     setCurrentRowRid(rid);
@@ -870,67 +937,41 @@ const JournalVoucherPage = () => {
   };
 
   // ===== Totals =====
-  const totalDebitBase = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0)
-  );
-  const totalCreditBase = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0)
-  );
+  const totalDebitBase = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.debit), 0));
+  const totalCreditBase = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.credit), 0));
 
-  const totalDebitOFR = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.debitOFR), 0)
-  );
-  const totalCreditOFR = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.creditOFR), 0)
-  );
+  const totalDebitOFR = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.debitOFR), 0));
+  const totalCreditOFR = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.creditOFR), 0));
 
-  const totalDebitUSD = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0)
-  );
-  const totalCreditUSD = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.creditUSD), 0)
-  );
-  const totalDebitLL = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.debitEx), 0)
-  );
-  const totalCreditLL = parseNumber(
-    entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0)
-  );
+  const totalDebitUSD = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.debitUSD), 0));
+  const totalCreditUSD = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.creditUSD), 0));
+  const totalDebitLL = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.debitEx), 0));
+  const totalCreditLL = parseNumber(entries.reduce((sum, entry) => sum + parseNumber(entry.creditEx), 0));
 
-  const round2 = (n) =>
-    Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
   const isEqualBase =
-    round2(totalDebitBase) === round2(totalCreditBase) &&
-    round2(totalDebitBase) !== 0;
+    round2(totalDebitBase) === round2(totalCreditBase) && round2(totalDebitBase) !== 0;
 
   const isEqualOFR =
-    round2(totalDebitOFR) === round2(totalCreditOFR) &&
-    round2(totalDebitOFR) !== 0;
+    round2(totalDebitOFR) === round2(totalCreditOFR) && round2(totalDebitOFR) !== 0;
 
-const isUSDEqual = round2(totalDebitUSD) === round2(totalCreditUSD);
-const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
+  const isUSDEqual = round2(totalDebitUSD) === round2(totalCreditUSD);
+  const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
   const diffBase = round2(totalDebitBase - totalCreditBase);
   const diffOFR = round2(totalDebitOFR - totalCreditOFR);
 
-  const submitBlocked =
-    !type || !date || (type === "G" ? !isEqualOFR : !isEqualBase);
+  const submitBlocked = !type || !date || (isOFRType(type) ? !isEqualOFR : !isEqualBase);
 
   // ---------- BALANCE LAST ROW (Base) ----------
   const fillBalanceOnLastRow = () => {
-    if (type === "G" || isTableDisabled) return; // G uses OFR, skip
+    if (isOFRType(type) || isTableDisabled) return; // OFR types use OFR, skip
     setEntries((prev) => {
       if (!prev.length) return prev;
 
-      const totalDeb = prev.reduce(
-        (sum, e) => sum + parseNumber(e.debit),
-        0
-      );
-      const totalCred = prev.reduce(
-        (sum, e) => sum + parseNumber(e.credit),
-        0
-      );
+      const totalDeb = prev.reduce((sum, e) => sum + parseNumber(e.debit), 0);
+      const totalCred = prev.reduce((sum, e) => sum + parseNumber(e.credit), 0);
       const diff = round2(totalDeb - totalCred);
       if (diff === 0) return prev;
 
@@ -965,7 +1006,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
     return {
       date,
-      jvType: type,
+      jvType: uiTypeToApiType(type),
       details: entries
         .filter((e) => {
           const isZero = (v) => {
@@ -1002,7 +1043,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             creditLLOFR: removeCommas(entry.creditExOFR),
           };
 
-          if (type === "G") {
+          if (isOFRType(type)) {
             return {
               ...base,
               debit: "0",
@@ -1063,29 +1104,28 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           creditLLOFR: nzOfr(entry.creditExOFR),
         };
 
-        const baseFields =
-          type === "G"
-            ? {
-                debit: "0",
-                debitUSD: "0",
-                debitLL: "0",
-                credit: "0",
-                creditUSD: "0",
-                creditLL: "0",
-              }
-            : {
-                debit: nzBase(entry.debit),
-                debitUSD: nzBase(entry.debitUSD),
-                debitLL: nzBase(entry.debitEx),
-                credit: nzBase(entry.credit),
-                creditUSD: nzBase(entry.creditUSD),
-                creditLL: nzBase(entry.creditEx),
-              };
+        const baseFields = isOFRType(type)
+          ? {
+              debit: "0",
+              debitUSD: "0",
+              debitLL: "0",
+              credit: "0",
+              creditUSD: "0",
+              creditLL: "0",
+            }
+          : {
+              debit: nzBase(entry.debit),
+              debitUSD: nzBase(entry.debitUSD),
+              debitLL: nzBase(entry.debitEx),
+              credit: nzBase(entry.credit),
+              creditUSD: nzBase(entry.creditUSD),
+              creditLL: nzBase(entry.creditEx),
+            };
 
         return { ...common, ...baseFields };
       });
 
-    return { date, jvType: type, details };
+    return { date, jvType: uiTypeToApiType(type), details };
   };
 
   // -------- CREATE (POST) --------
@@ -1197,10 +1237,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
     try {
       const payload = buildEditPayload();
-      const response = await axiosClient.put(
-        `/journal-vouchers/${editingId}`,
-        payload
-      );
+      const response = await axiosClient.put(`/journal-vouchers/${editingId}`, payload);
 
       if (response.status === 200) {
         setNotification({
@@ -1239,9 +1276,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
     if (kind) qs.set("type", kind);
     if (seq) qs.set("seq", seq);
 
-    const url = seq
-      ? `${base}/search-by-seq?${qs.toString()}`
-      : `${base}/list?${qs.toString()}`;
+    const url = seq ? `${base}/search-by-seq?${qs.toString()}` : `${base}/list?${qs.toString()}`;
 
     const response = await axiosClient.get(url);
     return response.data;
@@ -1315,7 +1350,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
       const { data: jv } = await axiosClient.get(`/journal-vouchers/${id}`);
 
       setDate(jv.date);
-      setType(jv.jvType);
+      setType(apiTypeToUiType(jv)); // ✅ RTN -> R/RG (UI)
       setEditingId(jv.id);
       setIsSaved(true);
       setIsEditing(false);
@@ -1327,10 +1362,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           d.customer?.customerAccountNumber ||
           "";
         const entityName =
-          d.account?.arabicAccountName ||
-          d.supplier?.supplierName ||
-          d.customer?.customerName ||
-          "";
+          d.account?.arabicAccountName || d.supplier?.supplierName || d.customer?.customerName || "";
 
         return {
           rid: makeRid(),
@@ -1367,9 +1399,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
       });
 
       setEntries(rows);
-      setOriginalDetailIds(
-        rows.filter((r) => r.detailId).map((r) => r.detailId)
-      );
+      setOriginalDetailIds(rows.filter((r) => r.detailId).map((r) => r.detailId));
     } catch (error) {
       setNotification({
         visible: true,
@@ -1519,9 +1549,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.documentNbr}
                 placeholder="Doc"
-                onChange={(e) =>
-                  handleInputChange(index, "documentNbr", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "documentNbr", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
@@ -1534,9 +1562,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.description}
                 placeholder="Description"
-                onChange={(e) =>
-                  handleInputChange(index, "description", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "description", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
@@ -1547,9 +1573,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <select
                 value={entry.currency}
-                onChange={(e) =>
-                  handleInputChange(index, "currency", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "currency", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
                 disabled={isTableDisabled}
@@ -1567,15 +1591,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={
-                  isTableDisabled
-                    ? formatNumber(entry.exchangeRate)
-                    : entry.exchangeRate
-                }
+                value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate}
                 placeholder="Rate"
-                onChange={(e) =>
-                  handleInputChange(index, "exchangeRate", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)}
                 onBlur={() => handleInputBlur(index, "exchangeRate")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
@@ -1590,15 +1608,13 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={isTableDisabled ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
-                onChange={(e) =>
-                  handleInputChange(index, "debit", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "debit", e.target.value)}
                 onBlur={() => handleInputBlur(index, "debit")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
                 ref={registerInputRef(index, "debit")}
                 className="general-vouchers-input column-debit"
-                readOnly={isTableDisabled || type === "G"}
-                disabled={isTableDisabled || type === "G"}
+                readOnly={isTableDisabled || isOFRType(type)}
+                disabled={isTableDisabled || isOFRType(type)}
               />
             </td>
 
@@ -1607,15 +1623,13 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={isTableDisabled ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
-                onChange={(e) =>
-                  handleInputChange(index, "credit", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "credit", e.target.value)}
                 onBlur={() => handleInputBlur(index, "credit")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
                 ref={registerInputRef(index, "credit")}
                 className="general-vouchers-input column-credit"
-                readOnly={isTableDisabled || type === "G"}
-                disabled={isTableDisabled || type === "G"}
+                readOnly={isTableDisabled || isOFRType(type)}
+                disabled={isTableDisabled || isOFRType(type)}
               />
             </td>
 
@@ -1729,9 +1743,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.documentNbr}
                 placeholder="Doc"
-                onChange={(e) =>
-                  handleInputChange(index, "documentNbr", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "documentNbr", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
@@ -1744,9 +1756,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.description}
                 placeholder="Description"
-                onChange={(e) =>
-                  handleInputChange(index, "description", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "description", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
@@ -1757,9 +1767,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <select
                 value={entry.currency}
-                onChange={(e) =>
-                  handleInputChange(index, "currency", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "currency", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
                 disabled={isTableDisabled}
@@ -1777,15 +1785,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={
-                  isTableDisabled
-                    ? formatNumber(entry.exchangeRate)
-                    : entry.exchangeRate
-                }
+                value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate}
                 placeholder="Rate"
-                onChange={(e) =>
-                  handleInputChange(index, "exchangeRate", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)}
                 onBlur={() => handleInputBlur(index, "exchangeRate")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
@@ -1798,13 +1800,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={
-                  isTableDisabled ? formatNumber(entry.debitOFR) : entry.debitOFR
-                }
+                value={isTableDisabled ? formatNumber(entry.debitOFR) : entry.debitOFR}
                 placeholder="Dr OFR"
-                onChange={(e) =>
-                  handleInputChange(index, "debitOFR", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)}
                 onBlur={() => handleInputBlur(index, "debitOFR")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debitOFR")}
                 ref={registerInputRef(index, "debitOFR")}
@@ -1817,13 +1815,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={
-                  isTableDisabled ? formatNumber(entry.creditOFR) : entry.creditOFR
-                }
+                value={isTableDisabled ? formatNumber(entry.creditOFR) : entry.creditOFR}
                 placeholder="Cr OFR"
-                onChange={(e) =>
-                  handleInputChange(index, "creditOFR", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "creditOFR", e.target.value)}
                 onBlur={() => handleInputBlur(index, "creditOFR")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "creditOFR")}
                 ref={registerInputRef(index, "creditOFR")}
@@ -1949,9 +1943,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.documentNbr}
                 placeholder="Doc"
-                onChange={(e) =>
-                  handleInputChange(index, "documentNbr", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "documentNbr", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "documentNbr")}
                 ref={registerInputRef(index, "documentNbr")}
                 className="general-vouchers-input column-doc-nbr"
@@ -1964,9 +1956,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={entry.description}
                 placeholder="Description"
-                onChange={(e) =>
-                  handleInputChange(index, "description", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "description", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "description")}
                 ref={registerInputRef(index, "description")}
                 className="general-vouchers-input column-description"
@@ -1977,9 +1967,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <select
                 value={entry.currency}
-                onChange={(e) =>
-                  handleInputChange(index, "currency", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "currency", e.target.value)}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "currency")}
                 ref={registerInputRef(index, "currency")}
                 disabled={isTableDisabled}
@@ -1997,15 +1985,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             <td>
               <input
                 type="text"
-                value={
-                  isTableDisabled
-                    ? formatNumber(entry.exchangeRate)
-                    : entry.exchangeRate
-                }
+                value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate}
                 placeholder="Rate"
-                onChange={(e) =>
-                  handleInputChange(index, "exchangeRate", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)}
                 onBlur={() => handleInputBlur(index, "exchangeRate")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")}
                 ref={registerInputRef(index, "exchangeRate")}
@@ -2020,9 +2002,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={isTableDisabled ? formatNumber(entry.debit) : entry.debit}
                 placeholder="Debit"
-                onChange={(e) =>
-                  handleInputChange(index, "debit", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "debit", e.target.value)}
                 onBlur={() => handleInputBlur(index, "debit")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "debit")}
                 ref={registerInputRef(index, "debit")}
@@ -2048,9 +2028,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 type="text"
                 value={isTableDisabled ? formatNumber(entry.credit) : entry.credit}
                 placeholder="Credit"
-                onChange={(e) =>
-                  handleInputChange(index, "credit", e.target.value)
-                }
+                onChange={(e) => handleInputChange(index, "credit", e.target.value)}
                 onBlur={() => handleInputBlur(index, "credit")}
                 onKeyDown={(e) => handleCellKeyDown(e, index, "credit")}
                 ref={registerInputRef(index, "credit")}
@@ -2166,10 +2144,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
   return (
     <div>
-      <div
-        className="general-vouchers-container"
-        onClick={handleCloseContextMenu}
-      >
+      <div className="general-vouchers-container" onClick={handleCloseContextMenu}>
         {/* Account picker modal */}
         <AccountSelectionModal
           isOpen={isModalOpen}
@@ -2256,15 +2231,15 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                 New
               </button>
 
-               {/* ✅ Export Button */}
-      <button
-        className="export-journal-voucher-btn"
-        onClick={handleExportToExcel}
-        disabled={!isSaved}
-        title={!isSaved ? "Open or save a voucher first" : "Export to Excel"}
-      >
-        📊 Export
-      </button>
+              {/* ✅ Export Button */}
+              <button
+                className="export-journal-voucher-btn"
+                onClick={handleExportToExcel}
+                disabled={!isSaved}
+                title={!isSaved ? "Open or save a voucher first" : "Export to Excel"}
+              >
+                📊 Export
+              </button>
 
               <button
                 className="edit-journal-voucher"
@@ -2276,37 +2251,23 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               </button>
 
               {isEditing && (
-                <button
-                  className="edit-journal-voucher"
-                  onClick={handleCancelEdit}
-                >
+                <button className="edit-journal-voucher" onClick={handleCancelEdit}>
                   Cancel Edit
                 </button>
               )}
 
-              <button
-                className="open-journal-list-btn"
-                onClick={() => setIsJournalListOpen(true)}
-              >
+              <button className="open-journal-list-btn" onClick={() => setIsJournalListOpen(true)}>
                 Open List
               </button>
 
               {!isSaved && !isEditing && (
-                <button
-                  className="general-vouchers-submit-btn"
-                  onClick={handleSubmit}
-                  disabled={submitBlocked}
-                >
+                <button className="general-vouchers-submit-btn" onClick={handleSubmit} disabled={submitBlocked}>
                   Submit
                 </button>
               )}
 
               {isEditing && (
-                <button
-                  className="general-vouchers-submit-btn"
-                  onClick={handleSaveEdit}
-                  disabled={submitBlocked}
-                >
+                <button className="general-vouchers-submit-btn" onClick={handleSaveEdit} disabled={submitBlocked}>
                   Save
                 </button>
               )}
@@ -2316,23 +2277,25 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
 
         {/* Warning message when table is disabled */}
         {isTableDisabled && !readOnlyMode && (
-          <div style={{ 
-            padding: '10px', 
-            backgroundColor: '#fff3cd', 
-            color: '#856404',
-            border: '1px solid #ffc107',
-            borderRadius: '4px',
-            marginBottom: '10px',
-            textAlign: 'center'
-          }}>
+          <div
+            style={{
+              padding: "10px",
+              backgroundColor: "#fff3cd",
+              color: "#856404",
+              border: "1px solid #ffc107",
+              borderRadius: "4px",
+              marginBottom: "10px",
+              textAlign: "center",
+            }}
+          >
             ⚠️ Please select both Date and Type to enable the table
           </div>
         )}
 
         {/* TABLE AREA */}
         <div className="general-vouchers-table-container">
-          {(!type || type === "S" || type === "RVR") && renderTypeSOrRVR()}
-          {type === "G" && renderTypeG()}
+          {(!type || isBaseType(type)) && renderTypeSOrRVR()}
+          {isOFRType(type) && renderTypeG()}
           {type === "SR" && renderTypeSR()}
         </div>
 
@@ -2342,7 +2305,9 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
             className="general-vouchers-new-btn"
             onClick={handleAddRow}
             disabled={isTableDisabled}
-            title={isTableDisabled ? "Set Date and Type first, or click Edit to modify rows" : ""}
+            title={
+              isTableDisabled ? "Set Date and Type first, or click Edit to modify rows" : ""
+            }
           >
             Add Row
           </button>
@@ -2356,7 +2321,7 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
               type="button"
               className="balance-last-row-button"
               onClick={fillBalanceOnLastRow}
-              disabled={isTableDisabled || type === "G"}
+              disabled={isTableDisabled || isOFRType(type)}
             >
               Balance last row (Base)
             </button>
@@ -2365,21 +2330,13 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit (Base):{" "}
-              <span
-                className={`number ${
-                  type === "G" ? "" : isEqualBase ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isOFRType(type) ? "" : isEqualBase ? "equal" : "not-equal"}`}>
                 {formatNumber(totalDebitBase)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit (Base):{" "}
-              <span
-                className={`number ${
-                  type === "G" ? "" : isEqualBase ? "equal" : "not-equal"
-                }`}
-              >
+              <span className={`number ${isOFRType(type) ? "" : isEqualBase ? "equal" : "not-equal"}`}>
                 {formatNumber(totalCreditBase)}
               </span>
             </span>
@@ -2394,21 +2351,13 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
           <div className="summary-row">
             <span className="summary-total-txt">
               Total Debit OFR:{" "}
-              <span
-                className={`number ${
-                  type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""
-                }`}
-              >
+              <span className={`number ${isOFRType(type) ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
                 {formatNumber(totalDebitOFR)}
               </span>
             </span>
             <span className="summary-total-txt">
               Total Credit OFR:{" "}
-              <span
-                className={`number ${
-                  type === "G" ? (isEqualOFR ? "equal" : "not-equal") : ""
-                }`}
-              >
+              <span className={`number ${isOFRType(type) ? (isEqualOFR ? "equal" : "not-equal") : ""}`}>
                 {formatNumber(totalCreditOFR)}
               </span>
             </span>
