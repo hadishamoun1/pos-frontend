@@ -2245,6 +2245,8 @@ const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
                   <option value="G">G – Opening / OFR only</option>
                   <option value="SR">SR – Revaluation</option>
                   <option value="RVR">RVR – Reverse OFR</option>
+                  <option value="R">R – Return</option>
+                  <option value="RG">RG – Return OFR</option>
                 </select>
               </label>
             </div>
