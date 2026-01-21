@@ -11,26 +11,28 @@ const InventoryTable = ({
   allowReorder = true,
   emptyHint = "No items selected. Click “Search” to add item batches.",
   cutMode = false,
-  currencyCode = "USD", 
+  currencyCode = "USD",
+
+  // ✅ Return selection mode
+  returnMode = false,
+  returnSelection = {},
+  onToggleReturnRow = () => {},
+  onReturnQtyChange = () => {},
 }) => {
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
-const currRaw = String(currencyCode ?? "").toUpperCase().trim();
-const currNorm = currRaw.replace(/[^A-Z]/g, "");
-const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
-          
 
+  const currRaw = String(currencyCode ?? "").toUpperCase().trim();
+  const currNorm = currRaw.replace(/[^A-Z]/g, "");
+  const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
   // Only allow dragging when both flags permit it
   const canReorder = Boolean(allowReorder && isEditable);
 
   // === Grid navigation setup ===
-  // Order of inputs we want to navigate with arrows/enter
   const COLS = ["length", "width", "box", "sheet", "price"];
 
-  // store refs by rowKey + colKey
   const inputRefs = useRef(new Map()); // key => HTMLInputElement | null
-
   const refKey = (rowKey, colKey) => `${rowKey}::${colKey}`;
 
   const setRef = (rowKey, colKey) => (el) => {
@@ -43,7 +45,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
     const el = inputRefs.current.get(refKey(row.__rowKey, colKey));
     if (!el || el.disabled) return false;
     el.focus();
-    // select content so editing is fast
     if (typeof el.select === "function") el.select();
     return true;
   };
@@ -59,8 +60,7 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
     const canEditBox = isEditable && type === "box";
     const canEditSheet =
-      isEditable &&
-      (type === "sheet" || type === "sqm" || type === "unit" || allowCutSPB);
+      isEditable && (type === "sheet" || type === "sqm" || type === "unit" || allowCutSPB);
 
     const canEditLength = isEditable && (isSQM || allowCutDims);
     const canEditWidth = isEditable && (isSQM || allowCutDims);
@@ -87,19 +87,16 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
     const row = tableData?.[rowIdx];
     if (!row) return null;
 
-    // try preferred first
     if (preferredColIdx >= 0 && preferredColIdx < COLS.length) {
       const k = COLS[preferredColIdx];
       if (canEditField(row, k)) return { rowIdx, colKey: k };
     }
 
-    // scan right
     for (let c = preferredColIdx + 1; c < COLS.length; c++) {
       const k = COLS[c];
       if (canEditField(row, k)) return { rowIdx, colKey: k };
     }
 
-    // scan left
     for (let c = preferredColIdx - 1; c >= 0; c--) {
       const k = COLS[c];
       if (canEditField(row, k)) return { rowIdx, colKey: k };
@@ -115,7 +112,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
     const fromColIdx = COLS.indexOf(fromColKey);
     if (fromColIdx < 0) return;
 
-    // RIGHT / ENTER: go next col; if end row -> next row start
     if (dir === "right" || dir === "enter") {
       let r = fromRowIdx;
       let c = fromColIdx + 1;
@@ -133,7 +129,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
       return;
     }
 
-    // LEFT: go previous col; if start row -> previous row end
     if (dir === "left") {
       let r = fromRowIdx;
       let c = fromColIdx - 1;
@@ -151,7 +146,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
       return;
     }
 
-    // DOWN: same col in next row (fallback to nearest enabled in that row)
     if (dir === "down") {
       for (let r = fromRowIdx + 1; r < len; r++) {
         const pick = findFocusableInRow(r, fromColIdx);
@@ -160,7 +154,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
       return;
     }
 
-    // UP: same col in prev row (fallback to nearest enabled in that row)
     if (dir === "up") {
       for (let r = fromRowIdx - 1; r >= 0; r--) {
         const pick = findFocusableInRow(r, fromColIdx);
@@ -171,7 +164,6 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
   };
 
   const handleGridKeyDown = (e, rowIdx, colKey) => {
-    // don’t hijack shortcuts
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     const k = e.key;
@@ -194,15 +186,13 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
     }
   };
 
-  // ✅ Wheel fix: prevent number stepping + avoid React event null crash
-  // Using capture + preventDefault ONLY when focused. It will not crash.
   const handleWheelNoStep = (e) => {
     const el = e.currentTarget;
     if (!el) return;
 
     if (document.activeElement === el) {
-      e.preventDefault(); // stops the value increment/decrement
-      el.blur();          // next wheel scroll will work normally
+      e.preventDefault();
+      el.blur();
     }
   };
 
@@ -256,13 +246,18 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
     setDragOverIndex(null);
   };
 
-  const columns = 10;
+  // ✅ show RTN columns only in returnMode
+  const showRTN = Boolean(returnMode);
+  const columns = showRTN ? 12 : 10;
+
   const isEmpty = !Array.isArray(tableData) || tableData.length === 0;
 
   return (
     <table className="pos-page-inventory-table">
       <thead>
         <tr>
+          {showRTN && <th>RTN</th>}
+          {showRTN && <th>RTN Qty</th>}
           <th>Origin</th>
           <th>Item</th>
           <th>Type</th>
@@ -327,6 +322,20 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
                   })
                 : null;
 
+            // ✅ Return selection info
+            const invoiceItemId = row.invoiceItemId ?? row.id ?? null;
+         const sel = showRTN && invoiceItemId != null ? returnSelection[invoiceItemId] : null;
+const checked = !!sel;
+const rtnQty = sel ? sel.quantity : "";
+
+
+            const baseQty = (() => {
+              const t = String(row?.type ?? row?.itemType ?? "").toLowerCase();
+              if (t === "box") return Number(row.box) || 0;
+              return Number(row.sheet) || Number(row.quantity) || 0;
+            })();
+
+
             return (
               <tr
                 key={row.__rowKey}
@@ -347,6 +356,40 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
                   .join(" ")
                   .trim()}
               >
+                {/* ✅ RTN Columns (ONLY when returnMode) */}
+               {showRTN && (
+  <td className="rtn-td" style={{ textAlign: "center" }}>
+    <input
+      className="rtn-checkbox"
+      type="checkbox"
+      checked={checked}
+      disabled={!invoiceItemId}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onChange={(e) => onToggleReturnRow(invoiceItemId, e.target.checked, row)}
+    />
+  </td>
+)}
+
+{showRTN && (
+  <td className="rtnqty-td">
+    <input
+      className="rtn-qty-input"
+      type="number"
+      value={rtnQty}
+      disabled={!checked}
+      min="0"
+      step="1"
+      placeholder={String(baseQty || "")}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onChange={(e) => onReturnQtyChange(invoiceItemId, e.target.value)}
+      onWheelCapture={handleWheelNoStep}
+    />
+  </td>
+)}
+
+
                 <td>
                   <input type="text" value={row.origin ?? ""} readOnly />
                 </td>
@@ -359,7 +402,10 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
                 {/* LENGTH */}
                 <td>
-                  <div className={"pos-tooltip-wrapper" + (hasOrigDims ? " has-tooltip" : "")} data-tooltip={dimsTooltip}>
+                  <div
+                    className={"pos-tooltip-wrapper" + (hasOrigDims ? " has-tooltip" : "")}
+                    data-tooltip={dimsTooltip}
+                  >
                     <input
                       ref={setRef(row.__rowKey, "length")}
                       type="number"
@@ -375,7 +421,10 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
                 {/* WIDTH */}
                 <td>
-                  <div className={"pos-tooltip-wrapper" + (hasOrigDims ? " has-tooltip" : "")} data-tooltip={dimsTooltip}>
+                  <div
+                    className={"pos-tooltip-wrapper" + (hasOrigDims ? " has-tooltip" : "")}
+                    data-tooltip={dimsTooltip}
+                  >
                     <input
                       ref={setRef(row.__rowKey, "width")}
                       type="number"
@@ -405,7 +454,10 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
 
                 {/* SHEET */}
                 <td>
-                  <div className={"pos-tooltip-wrapper" + (hasOrigSpb ? " has-tooltip" : "")} data-tooltip={spbTooltip}>
+                  <div
+                    className={"pos-tooltip-wrapper" + (hasOrigSpb ? " has-tooltip" : "")}
+                    data-tooltip={spbTooltip}
+                  >
                     <input
                       ref={setRef(row.__rowKey, "sheet")}
                       type="number"
@@ -441,22 +493,29 @@ const isLLCurrency = currNorm === "LL" || currNorm === "LBP";
                   />
                 </td>
 
-            {/* SQM */}
-<td>
-  <input
-    type="number"
-    value={row.sqm ?? ""}
-    readOnly={!(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"}
-    disabled={!(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"}
-    onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
-    onWheelCapture={handleWheelNoStep}
-  />
-</td>
-
+                {/* SQM */}
+                <td>
+                  <input
+                    type="number"
+                    value={row.sqm ?? ""}
+                    readOnly={
+                      !(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"
+                    }
+                    disabled={
+                      !(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"
+                    }
+                    onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
+                    onWheelCapture={handleWheelNoStep}
+                  />
+                </td>
 
                 {/* TOTAL */}
                 <td>
-                  <input type="text" value={type === "unit" ? unitTotal ?? "" : row.total ?? ""} readOnly />
+                  <input
+                    type="text"
+                    value={type === "unit" ? unitTotal ?? "" : row.total ?? ""}
+                    readOnly
+                  />
                 </td>
               </tr>
             );

@@ -773,6 +773,45 @@ input:disabled {
   background: rgba(249, 115, 22, 0.04);
 }
 
+/* ================= RTN columns styling ================= */
+
+/* Make RTN columns narrow and stable */
+.pos-page-inventory-table th.rtn-th,
+.pos-page-inventory-table td.rtn-td {
+  width: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  padding: 0.25rem;
+}
+
+.pos-page-inventory-table th.rtnqty-th,
+.pos-page-inventory-table td.rtnqty-td {
+  width: 50px;       
+ 
+  
+  padding: 0.25rem;
+}
+
+/* Checkbox look */
+.pos-page-inventory-table td.rtn-td .rtn-checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 0 auto;
+  display: block;
+  cursor: pointer;
+  accent-color: #0d6efd; /* modern browsers */
+}
+
+/* RTN Qty input: smaller than normal inputs */
+.pos-page-inventory-table td.rtnqty-td .rtn-qty-input {
+  width: 64px;        /* ✅ smaller input */
+  height: 2.1rem;     /* a bit shorter than 2.5rem */
+  padding-left: 0;
+  font-size: 0.95rem;
+  border-radius: 8px;
+}
+
+
 
 
 

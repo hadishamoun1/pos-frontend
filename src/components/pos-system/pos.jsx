@@ -49,6 +49,11 @@ const POSSystemPage = () => {
 const [showRequestPreview, setShowRequestPreview] = useState(false);
   const [cutMode, setCutMode] = useState(false);
   const [showDeliveryNotePreview, setShowDeliveryNotePreview] = useState(false);
+    const [returnMode, setReturnMode] = useState(false);
+
+  // invoiceItemId -> qty
+  const [returnSelection, setReturnSelection] = useState({});
+
 
   const [selectedRequestNumber, setSelectedRequestNumber] = useState("");
 
@@ -108,6 +113,147 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     });
   };
 
+  const getRowBaseReturnQty = (row) => {
+    const t = String(row?.type ?? row?.itemType ?? "").toLowerCase();
+
+    // For BOX: return boxes
+    if (t === "box") return Number(row.box) || 0;
+
+    // For SHEET / SQM / UNIT: return "sheet" qty
+    return Number(row.sheet) || Number(row.quantity) || 0;
+  };
+
+  const startReturnSelection = () => {
+    if (!selectedInvoiceId) {
+      showNotification("error", "Please select an invoice first.");
+      return;
+    }
+    if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
+      showNotification("error", "You cannot create a return from an RTN invoice.");
+      return;
+    }
+    if (isEditable) {
+      showNotification("error", "Finish editing before creating a return.");
+      return;
+    }
+
+    // default: nothing selected (user will choose)
+    setReturnSelection({});
+    setReturnMode(true);
+    showNotification("info", "Select the items you want to return, then click Return Selected.");
+  };
+
+  const cancelReturnSelection = () => {
+    setReturnMode(false);
+    setReturnSelection({});
+  };
+
+  const toggleReturnRow = (invoiceItemId, checked, row) => {
+  if (!invoiceItemId) return;
+
+  setReturnSelection((prev) => {
+    const next = { ...prev };
+
+    if (!checked) {
+      delete next[invoiceItemId];
+      return next;
+    }
+
+    const baseQty = getRowBaseReturnQty(row);
+
+    next[invoiceItemId] = {
+      invoiceItemId: Number(invoiceItemId),
+      itemBatchId: row?.batchId != null ? Number(row.batchId) : null, // ✅ REQUIRED
+      itemVariantId: row?.itemVariantId != null ? Number(row.itemVariantId) : null,
+      itemType: String(row?.itemType ?? row?.type ?? "").toLowerCase(),
+      sqmPieceId: row?.sqmPieceId ?? null,
+      maxQty: baseQty > 0 ? baseQty : null,
+      quantity: baseQty > 0 ? Math.min(1, baseQty) : 1,
+    };
+
+    return next;
+  });
+};
+
+const changeReturnQty = (invoiceItemId, value) => {
+  if (!invoiceItemId) return;
+
+  setReturnSelection((prev) => {
+    const curr = prev[invoiceItemId];
+    if (!curr) return prev;
+
+    const n = Math.max(0, Math.floor(Number(value || 0)));
+    const capped = curr.maxQty ? Math.min(n, curr.maxQty) : n;
+
+    return {
+      ...prev,
+      [invoiceItemId]: { ...curr, quantity: capped },
+    };
+  });
+};
+
+const handleCreateReturnInvoiceSelected = async () => {
+  if (!selectedInvoiceId) {
+    showNotification("error", "Please select an invoice first.");
+    return;
+  }
+
+  const lines = Object.values(returnSelection || {}).filter(
+    (l) => Number(l.quantity) > 0
+  );
+
+  if (!lines.length) {
+    showNotification("error", "Select at least 1 item and enter a quantity > 0.");
+    return;
+  }
+
+  const missing = lines.find((l) => !l.itemBatchId);
+  if (missing) {
+    showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
+    return;
+  }
+
+  confirmAction(`Create return invoice for ${lines.length} item(s)?`, async () => {
+    try {
+      setLoading(true);
+      const returnDate = new Date().toISOString().slice(0, 10);
+
+      const payload = {
+        date: returnDate,
+        items: lines.map((l) => ({
+          invoiceItemId: Number(l.invoiceItemId),
+          itemBatchId: Number(l.itemBatchId), // ✅ REQUIRED
+          itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
+          itemType: l.itemType || undefined,
+          sqmPieceId: l.sqmPieceId ?? undefined,
+          quantity: Number(l.quantity),
+        })),
+      };
+
+      console.log("📤 RTN payload:", payload);
+
+      const res = await axiosClient.post(
+        `/invoices/${selectedInvoiceId}/return`,
+        payload
+      );
+
+      const rtn = res.data;
+      showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+
+      cancelReturnSelection();
+      await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
+    } catch (err) {
+      console.error("❌ Return invoice failed:", err);
+      showNotification(
+        "error",
+        `Failed to create return invoice. ${err.response?.data?.message || err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  });
+};
+
 
 
   const handleCreateInvoiceConfirmed = (type) => {
@@ -134,48 +280,74 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     );
   };
 
-  const handleCreateReturnInvoice = async () => {
-    if (!selectedInvoiceId) {
-      showNotification("error", "Please select an invoice first.");
-      return;
-    }
+const handleCreateReturnInvoice = async () => {
+  if (!selectedInvoiceId) {
+    showNotification("error", "Please select an invoice first.");
+    return;
+  }
 
-    if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
-      showNotification("error", "You cannot create a return from an RTN invoice.");
-      return;
-    }
+  if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
+    showNotification("error", "You cannot create a return from an RTN invoice.");
+    return;
+  }
 
-    try {
-      setLoading(true);
+  const lines = Object.values(returnSelection || {})
+    .filter((l) => Number(l.quantity) > 0);
 
-      // ✅ return date should be "today" (date of return creation)
-      const returnDate = new Date().toISOString().slice(0, 10);
+  if (!lines.length) {
+    showNotification("error", "Select at least one item and enter RTN Qty.");
+    return;
+  }
 
-      // ✅ FIX: axiosClient + relative path only
-      const res = await axiosClient.post(
-        `/invoices/${selectedInvoiceId}/return`,
-        { date: returnDate }
-      );
+  // ✅ Validate required fields
+  const missing = lines.find((l) => !l.itemBatchId);
+  if (missing) {
+    showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
+    return;
+  }
 
-      const rtn = res.data;
-      showNotification(
-        "success",
-        `Return invoice created: ${rtn.invoiceNumber || "RTN"}`
-      );
+  try {
+    setLoading(true);
 
-      await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
-    } catch (err) {
-      console.error("❌ Return invoice failed:", err);
-      showNotification(
-        "error",
-        `Failed to create return invoice. ${
-          err.response?.data?.message || err.message
-        }`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const returnDate = new Date().toISOString().slice(0, 10);
+
+    const payload = {
+      date: returnDate,
+      items: lines.map((l) => ({
+        invoiceItemId: Number(l.invoiceItemId),
+        itemBatchId: Number(l.itemBatchId),      // ✅ REQUIRED by backend
+        itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
+        itemType: l.itemType || undefined,
+        sqmPieceId: l.sqmPieceId ?? undefined,
+        quantity: Number(l.quantity),
+      })),
+    };
+
+    console.log("📤 RTN payload:", payload);
+
+    const res = await axiosClient.post(
+      `/invoices/${selectedInvoiceId}/return`,
+      payload
+    );
+
+    const rtn = res.data;
+    showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+
+    // cleanup
+    setReturnSelection({});
+    setReturnMode(false);
+
+    await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
+  } catch (err) {
+    console.error("❌ Return invoice failed:", err);
+    showNotification(
+      "error",
+      `Failed to create return invoice. ${err.response?.data?.message || err.message}`
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -669,6 +841,8 @@ const deliveryDocForPreview = useMemo(() => {
     setCutMode(false);
     setDate(today);
     setSelectedRequestNumber("");
+        setReturnMode(false);
+    setReturnSelection({});
   };
 
   const handleInputChange = (index, field, value) => {
@@ -996,6 +1170,8 @@ const deliveryDocForPreview = useMemo(() => {
     }
 
     setSelectedInvoiceId(invId);
+      setReturnMode(false);
+    setReturnSelection({});
     setSelectedRequestId(null);
     setEditingInvoiceType(invoiceSummary.invoiceType || "S");
 
@@ -1385,6 +1561,11 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
       <div className={`pos-page-center ${showOnlyCenter ? "expanded-center" : ""}`}>
         <div className="pos-page-toolbar">
           <Toolbar
+            returnMode={returnMode}
+  returnSelectedCount={Object.keys(returnSelection).length}
+  onStartReturnSelection={startReturnSelection}
+  onCancelReturnSelection={cancelReturnSelection}
+  onConfirmReturnSelected={handleCreateReturnInvoiceSelected}
             handleNewTransaction={handleNewTransaction}
             handleEditInvoice={handleEditInvoice}
             handleSaveRequest={handleSaveRequest}
@@ -1485,6 +1666,10 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
             onReorder={handleReorder}
             cutMode={cutMode}
             currencyCode={customerPreview.currencyCode}
+            returnMode={returnMode}
+            returnSelection={returnSelection}
+            onToggleReturnRow={toggleReturnRow}
+            onReturnQtyChange={changeReturnQty}
           />
         </div>
       </div>

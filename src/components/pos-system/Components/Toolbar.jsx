@@ -17,6 +17,12 @@ const Toolbar = ({
   handleSaveInvoice,
   isEditable,
   setShowPreview, // invoice preview
+    returnMode = false,
+  returnSelectedCount = 0,
+  onStartReturnSelection = () => {},
+  onCancelReturnSelection = () => {},
+  onConfirmReturnSelected = () => {},
+
   handleOpenStatement = () => {},
   canOpenStatement = true,
   setShowDeliveryNotePreview = () => {},
@@ -52,21 +58,45 @@ const Toolbar = ({
           </button>
 
           {/* ✅ Return button (permission controlled) */}
-          {canReturn && (
-            <button
-              className="pos-page-toolbar-button pos-page-purple-button"
-              onClick={handleCreateReturnInvoice}
-              disabled={loading || isEditable || !canCreateReturnInvoice}
-              title={
-                !canCreateReturnInvoice
-                  ? "Return is not available for this invoice"
-                  : isEditable
-                  ? "Finish editing before returning"
-                  : "Create Return Invoice (RTN)"
-              }
-            >
-              {loading ? "Processing..." : "Return"}
-            </button>
+     {canReturn && (
+            <>
+              {!returnMode ? (
+                <button
+                  className="pos-page-toolbar-button pos-page-purple-button"
+                  onClick={onStartReturnSelection}
+                  disabled={loading || isEditable || !canCreateReturnInvoice}
+                  title={
+                    !canCreateReturnInvoice
+                      ? "Return is not available for this invoice"
+                      : isEditable
+                      ? "Finish editing before returning"
+                      : "Select items to return"
+                  }
+                >
+                  {loading ? "Processing..." : "Return"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="pos-page-toolbar-button pos-page-purple-button"
+                    onClick={onConfirmReturnSelected}
+                    disabled={loading}
+                    title="Create return invoice from selected rows"
+                  >
+                    {loading ? "Processing..." : `Return Selected (${returnSelectedCount || 0})`}
+                  </button>
+
+                  <button
+                    className="pos-page-toolbar-button pos-page-blue-button"
+                    onClick={onCancelReturnSelection}
+                    disabled={loading}
+                    title="Cancel return selection"
+                  >
+                    Cancel Return
+                  </button>
+                </>
+              )}
+            </>
           )}
         </>
       ) : (
