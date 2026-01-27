@@ -1,3 +1,4 @@
+// JournalVoucherPage.jsx
 import React, { useState, useEffect, useRef } from "react";
 import "./vouchers.css";
 import AccountSelectionModal from "./acc-modal-selection";
@@ -22,6 +23,7 @@ const JournalVoucherPage = () => {
   const [summarySeq, setSummarySeq] = useState("");
   const searchDebounceRef = useRef();
   const [kindFilter, setKindFilter] = useState(""); // "" | "INVOICE" | "RECEIVABLE" | "JV"
+  const [searchText, setSearchText] = useState("");
 
   // Edit / saved state
   const [isEditing, setIsEditing] = useState(false);
@@ -62,8 +64,7 @@ const JournalVoucherPage = () => {
   // Active row (for highlight)
   const [activeRowIndex, setActiveRowIndex] = useState(null);
 
-  const makeRid = () =>
-    `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const makeRid = () => `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   const [entries, setEntries] = useState([
     {
@@ -142,7 +143,9 @@ const JournalVoucherPage = () => {
 
     if (t === "RTN") {
       const details = jv?.details || [];
-      const hasBase = details.some((d) => parseNumber(d?.dr) !== 0 || parseNumber(d?.cr) !== 0);
+      const hasBase = details.some(
+        (d) => parseNumber(d?.dr) !== 0 || parseNumber(d?.cr) !== 0
+      );
       const hasOFR = details.some(
         (d) => parseNumber(d?.drOFR) !== 0 || parseNumber(d?.crOFR) !== 0
       );
@@ -514,7 +517,7 @@ const JournalVoucherPage = () => {
       return;
     }
 
-    const id = setTimeout(() => {
+    const idt = setTimeout(() => {
       const el2 = inputRefs.current?.[rowIndex]?.[field];
       if (el2 && typeof el2.focus === "function") {
         el2.focus();
@@ -523,13 +526,37 @@ const JournalVoucherPage = () => {
       }
     }, 0);
 
-    return () => clearTimeout(id);
+    return () => clearTimeout(idt);
   }, [pendingFocus, entries.length]);
+
+
+  const runJournalListSearch = async (override = {}) => {
+  try {
+    setLoading(true);
+    setSummaryPage(1);
+
+    const digits = (override.summarySeq ?? summarySeq ?? "").replace(/\D+/g, "");
+    const k = override.kindFilter ?? kindFilter ?? "";
+    const q = override.searchText ?? searchText ?? "";
+
+    const res = await fetchJournalData(1, digits, k, q);
+
+    setJournalData(res.data || []);
+    setHasMoreSummary(Boolean(res.hasMore));
+  } catch (e) {
+    setJournalData([]);
+    setHasMoreSummary(false);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     if (id) {
       fetchJournalVoucherById(Number(id));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // ---------- ADD ROW with smart defaults ----------
@@ -852,8 +879,7 @@ const JournalVoucherPage = () => {
 
   const handleAccountNumberClick = (indexOrRid) => {
     if (isTableDisabled) return;
-    const rid =
-      typeof indexOrRid === "string" ? indexOrRid : entries[indexOrRid]?.rid ?? null;
+    const rid = typeof indexOrRid === "string" ? indexOrRid : entries[indexOrRid]?.rid ?? null;
 
     setCurrentRowIndex(typeof indexOrRid === "number" ? indexOrRid : null);
     setCurrentRowRid(rid);
@@ -950,11 +976,8 @@ const JournalVoucherPage = () => {
 
   const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
-  const isEqualBase =
-    round2(totalDebitBase) === round2(totalCreditBase) && round2(totalDebitBase) !== 0;
-
-  const isEqualOFR =
-    round2(totalDebitOFR) === round2(totalCreditOFR) && round2(totalDebitOFR) !== 0;
+  const isEqualBase = round2(totalDebitBase) === round2(totalCreditBase) && round2(totalDebitBase) !== 0;
+  const isEqualOFR = round2(totalDebitOFR) === round2(totalCreditOFR) && round2(totalDebitOFR) !== 0;
 
   const isUSDEqual = round2(totalDebitUSD) === round2(totalCreditUSD);
   const isLLEqual = round2(totalDebitLL) === round2(totalCreditLL);
@@ -1001,8 +1024,7 @@ const JournalVoucherPage = () => {
 
   // ---------- payload builders ----------
   const buildCreatePayload = () => {
-    const removeCommas = (value) =>
-      typeof value === "string" ? value.replace(/,/g, "") : value;
+    const removeCommas = (value) => (typeof value === "string" ? value.replace(/,/g, "") : value);
 
     return {
       date,
@@ -1157,9 +1179,7 @@ const JournalVoucherPage = () => {
         return;
       }
 
-      const invalidEntries = effectiveEntries.filter(
-        (e) => !e.accountId && !e.customerId && !e.supplierId
-      );
+      const invalidEntries = effectiveEntries.filter((e) => !e.accountId && !e.customerId && !e.supplierId);
       if (invalidEntries.length > 0) {
         setNotification({
           visible: true,
@@ -1216,8 +1236,7 @@ const JournalVoucherPage = () => {
         visible: true,
         type: "error",
         message:
-          error?.response?.data?.message ||
-          "Failed to submit the journal voucher. Please try again.",
+          error?.response?.data?.message || "Failed to submit the journal voucher. Please try again.",
         onConfirm: null,
       });
     }
@@ -1256,32 +1275,101 @@ const JournalVoucherPage = () => {
         visible: true,
         type: "error",
         message:
-          error?.response?.data?.message ||
-          "Failed to update the journal voucher. Please try again.",
+          error?.response?.data?.message || "Failed to update the journal voucher. Please try again.",
         onConfirm: null,
       });
     }
   };
 
   // ====== PAGINATED fetch for the modal list ======
-  const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "") => {
+  const fetchJournalData = async (pageArg = 1, seqArg = "", kindArg = "", qArg = "") => {
     const base = `/journal-vouchers/v1`;
 
     const seq = (seqArg || "").replace(/\D+/g, "");
     const kind = (kindArg || "").trim();
+    const q = (qArg || "").trim();
 
     const qs = new URLSearchParams();
     qs.set("page", String(pageArg));
     qs.set("limit", "100");
     if (kind) qs.set("type", kind);
     if (seq) qs.set("seq", seq);
+    if (q) qs.set("q", q); // ✅ NEW
 
-    const url = seq ? `${base}/search-by-seq?${qs.toString()}` : `${base}/list?${qs.toString()}`;
+    // IMPORTANT:
+    // If there is ANY filter (seq OR q OR kind) we should use search endpoint
+    const hasSearch = !!seq || !!q || !!kind;
+
+    const url = hasSearch ? `${base}/search-by-seq?${qs.toString()}` : `${base}/list?${qs.toString()}`;
 
     const response = await axiosClient.get(url);
     return response.data;
   };
 
+  // ✅ FIX: handlers are PURE state updates (API is in a single effect below)
+ const handleSearchTextChange = (val) => {
+  setSearchText(val);
+
+  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+  searchDebounceRef.current = setTimeout(async () => {
+    runJournalListSearch({ searchText: val }); // ✅ keeps seq + kind
+  }, 300);
+};
+
+  const handleSearchSeqChange = (val) => {
+  const digits = (val || "").replace(/\D+/g, "");
+  setSummarySeq(val);
+
+  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+  searchDebounceRef.current = setTimeout(async () => {
+    runJournalListSearch({ summarySeq: digits }); // ✅ keeps text + kind
+  }, 300);
+};
+
+
+  // ✅ FIX: single search runner (used by effect + optional Enter key in modal)
+  const runSearchNow = async () => {
+    try {
+      setLoading(true);
+      setSummaryPage(1);
+
+      const digits = (summarySeq || "").replace(/\D+/g, "");
+      const res = await fetchJournalData(1, digits, kindFilter, searchText);
+
+      setJournalData(res.data || []);
+      setHasMoreSummary(Boolean(res.hasMore));
+    } catch (e) {
+      setJournalData([]);
+      setHasMoreSummary(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ FIX: one debounced effect that triggers API whenever filters change (ONLY when modal is open)
+  useEffect(() => {
+    if (!isJournalListOpen) return;
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    searchDebounceRef.current = setTimeout(() => {
+      runSearchNow();
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isJournalListOpen, summarySeq, kindFilter, searchText]);
+
+  // ---------------------------
+  // (KEEPING YOUR OLD LOGIC)
+  // This block used to do API calls directly inside handlers + only on open.
+  // It is kept here but effectively replaced by the debounced effect above.
+  // ---------------------------
+  /*
   useEffect(() => {
     if (isJournalListOpen) {
       (async () => {
@@ -1289,7 +1377,7 @@ const JournalVoucherPage = () => {
           setLoading(true);
           setSummaryPage(1);
           const digits = (summarySeq || "").replace(/\D+/g, "");
-          const res = await fetchJournalData(1, digits, kindFilter);
+          const res = await fetchJournalData(1, digits, kindFilter, searchText);
 
           setJournalData(res.data || []);
           setHasMoreSummary(Boolean(res.hasMore));
@@ -1301,30 +1389,16 @@ const JournalVoucherPage = () => {
         }
       })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isJournalListOpen]);
+  */
 
-  const handleSearchSeqChange = (val) => {
-    const digits = (val || "").replace(/\D+/g, "");
-    setSummarySeq(val);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  useEffect(() => {
+  if (isJournalListOpen) {
+    runJournalListSearch();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isJournalListOpen]);
 
-    searchDebounceRef.current = setTimeout(async () => {
-      try {
-        setLoading(true);
-        setSummaryPage(1);
-        const res = await fetchJournalData(1, digits, kindFilter);
-
-        setJournalData(res.data || []);
-        setHasMoreSummary(Boolean(res.hasMore));
-      } catch (e) {
-        setJournalData([]);
-        setHasMoreSummary(false);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-  };
 
   const handleLoadMore = async () => {
     if (!hasMoreSummary || loadingMoreSummary) return;
@@ -1333,7 +1407,7 @@ const JournalVoucherPage = () => {
       const next = summaryPage + 1;
 
       const digits = (summarySeq || "").replace(/\D+/g, "");
-      const res = await fetchJournalData(next, digits, kindFilter);
+      const res = await fetchJournalData(next, digits, kindFilter, searchText);
 
       setJournalData((prev) => [...prev, ...(res.data || [])]);
       setSummaryPage(next);
@@ -1517,10 +1591,7 @@ const JournalVoucherPage = () => {
           >
             <td className="column-line-cell">{index + 1}</td>
 
-            <td
-              className="column-account-number-cell"
-              onClick={() => handleAccountNumberClick(entry.rid)}
-            >
+            <td className="column-account-number-cell" onClick={() => handleAccountNumberClick(entry.rid)}>
               <input
                 type="text"
                 value={entry.accountNumber}
@@ -1711,10 +1782,7 @@ const JournalVoucherPage = () => {
           >
             <td className="column-line-cell">{index + 1}</td>
 
-            <td
-              className="column-account-number-cell"
-              onClick={() => handleAccountNumberClick(entry.rid)}
-            >
+            <td className="column-account-number-cell" onClick={() => handleAccountNumberClick(entry.rid)}>
               <input
                 type="text"
                 value={entry.accountNumber}
@@ -1911,10 +1979,7 @@ const JournalVoucherPage = () => {
           >
             <td className="column-line-cell">{index + 1}</td>
 
-            <td
-              className="column-account-number-cell"
-              onClick={() => handleAccountNumberClick(entry.rid)}
-            >
+            <td className="column-account-number-cell" onClick={() => handleAccountNumberClick(entry.rid)}>
               <input
                 type="text"
                 value={entry.accountNumber}
@@ -2153,36 +2218,26 @@ const JournalVoucherPage = () => {
         />
 
         {/* Journal list modal */}
-        <JournalListsModal
-          isOpen={isJournalListOpen}
-          onClose={() => setIsJournalListOpen(false)}
-          journalData={journalData}
-          onView={handleView}
-          onLoadMore={handleLoadMore}
-          hasMore={hasMoreSummary}
-          loadingMoreSummary={loadingMoreSummary}
-          searchSeq={summarySeq}
-          onSearchSeqChange={handleSearchSeqChange}
-          kindFilter={kindFilter}
-          onKindFilterChange={(val) => {
-            setKindFilter(val);
-            const digits = (summarySeq || "").replace(/\D+/g, "");
-            (async () => {
-              try {
-                setLoading(true);
-                setSummaryPage(1);
-                const res = await fetchJournalData(1, digits, val);
-                setJournalData(res.data || []);
-                setHasMoreSummary(Boolean(res.hasMore));
-              } catch (e) {
-                setJournalData([]);
-                setHasMoreSummary(false);
-              } finally {
-                setLoading(false);
-              }
-            })();
-          }}
-        />
+  <JournalListsModal
+  isOpen={isJournalListOpen}
+  onClose={() => setIsJournalListOpen(false)}
+  journalData={journalData}
+  onView={handleView}
+  onLoadMore={handleLoadMore}
+  hasMore={hasMoreSummary}
+  loadingMore={loadingMoreSummary}
+  searchSeq={summarySeq}
+  onSearchSeqChange={handleSearchSeqChange}
+  searchText={searchText}
+  onSearchTextChange={handleSearchTextChange}
+  kindFilter={kindFilter}
+  onKindFilterChange={(val) => {
+    setKindFilter(val);
+    runJournalListSearch({ kindFilter: val });
+  }}
+  onSearchNow={() => runJournalListSearch()}
+/>
+
 
         {/* HEADER */}
         <div className="general-vouchers-header">
@@ -2305,9 +2360,7 @@ const JournalVoucherPage = () => {
             className="general-vouchers-new-btn"
             onClick={handleAddRow}
             disabled={isTableDisabled}
-            title={
-              isTableDisabled ? "Set Date and Type first, or click Edit to modify rows" : ""
-            }
+            title={isTableDisabled ? "Set Date and Type first, or click Edit to modify rows" : ""}
           >
             Add Row
           </button>

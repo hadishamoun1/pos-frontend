@@ -334,6 +334,70 @@
   color: #64748b;
   font-weight: 850;
 }
+/* =========================
+   Journal List Controls - Dropdown
+   ========================= */
+
+.journal-list-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* the select itself */
+.journal-list-filter-select {
+  height: 40px;
+  min-width: 140px;
+  padding: 0 12px;
+
+  border: 1px solid #d1d5db;          /* gray-300 */
+  border-radius: 10px;
+
+  background: #fff;
+  color: #111827;                     /* gray-900 */
+  font-size: 14px;
+  font-weight: 600;
+
+  outline: none;
+  cursor: pointer;
+
+  /* nicer arrow space */
+  padding-right: 34px;
+
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.journal-list-filter-select:hover {
+  border-color: #9ca3af;              /* gray-400 */
+}
+
+.journal-list-filter-select:focus {
+  border-color: #2563eb;              /* blue-600 */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+/* disabled state */
+.journal-list-filter-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: #f9fafb;               /* gray-50 */
+}
+
+/* optional: style options */
+.journal-list-filter-select option {
+  font-weight: 600;
+}
+
+/* =========================
+   Responsive (if controls wrap)
+   ========================= */
+@media (max-width: 900px) {
+  .journal-list-filter-select {
+    min-width: 120px;
+    width: 100%;
+  }
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {

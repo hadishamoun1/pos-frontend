@@ -23,19 +23,35 @@ const JournalListsModal = ({
   onClose,
   journalData,
   onView,
+
   // pagination
   onLoadMore,
   hasMore,
   loadingMore,
-  // search props
+
+  // search props (seq)
   searchSeq,
   onSearchSeqChange,
 
-  // ✅ NEW: type filter
-  kindFilter, // "" | "INVOICE" | "RECEIVABLE" | "JV"  (optional "PURCHASE")
-  onKindFilterChange, // (val) => void
+  // text search
+  searchText,
+  onSearchTextChange,
+
+  // type filter
+  kindFilter,
+  onKindFilterChange,
+
+  // OPTIONAL: force search on Enter (provided by parent)
+  onSearchNow,
 }) => {
   if (!isOpen) return null;
+
+  const handleEnter = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onSearchNow?.();
+    }
+  };
 
   return (
     <div className="journal-list-modal-overlay">
@@ -48,15 +64,24 @@ const JournalListsModal = ({
         </div>
 
         <div className="journal-list-body">
-          {/* ✅ Controls row: search + filter */}
           <div className="journal-list-controls">
             <input
               type="text"
-              value={searchSeq}
-              onChange={(e) => onSearchSeqChange(e.target.value)}
+              value={searchSeq || ""}
+              onChange={(e) => onSearchSeqChange?.(e.target.value)}
+              onKeyDown={handleEnter}
               placeholder="Search by trailing number… e.g. 3 or 003 or 25"
               className="journal-list-search"
               inputMode="numeric"
+            />
+
+            <input
+              type="text"
+              value={searchText || ""}
+              onChange={(e) => onSearchTextChange?.(e.target.value)}
+              onKeyDown={handleEnter}
+              placeholder="Search by customer / supplier / account name or number…"
+              className="journal-list-search"
             />
 
             <div className="journal-list-filter">
@@ -69,8 +94,6 @@ const JournalListsModal = ({
                 <option value="INVOICE">{kindOptionLabel("INVOICE")}</option>
                 <option value="RECEIVABLE">{kindOptionLabel("RECEIVABLE")}</option>
                 <option value="JV">{kindOptionLabel("JV")}</option>
-
-                {/* optional: enable if you also want purchase in filter */}
                 {/* <option value="PURCHASE">{kindOptionLabel("PURCHASE")}</option> */}
               </select>
             </div>
@@ -145,7 +168,7 @@ const JournalListsModal = ({
                         <td className="mono">{item.jvType}</td>
 
                         <td>
-                          <button className="view-btn" onClick={() => onView(item)}>
+                          <button className="view-btn" onClick={() => onView?.(item)}>
                             View
                           </button>
                         </td>
