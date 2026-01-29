@@ -30,6 +30,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import MaintenanceModePage from "./components/settings/MaintenanceModePage";
 import MaintenanceGate from "./components/settings/MaintenanceGate"; // ✅ FIX
+import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,9 @@ function App() {
               <Route path="/cuts-control" element={<CutsQueuePage />} />
               <Route path="/viewing" element={<InvoiceDetailsPage />} />
               <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
+                <Route path="/cash-collections" element={<CashCollectionsPage />} />
+                
+
 
 
               {/* ✅ Admin-only */}

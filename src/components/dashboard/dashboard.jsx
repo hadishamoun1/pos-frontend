@@ -35,6 +35,9 @@ const sections = [
   { name: "Cuts Control", image: "/assets/payment-voucher.webp", perm: "cuts.view" },
   { name: "Viewing", image: "/assets/payment-voucher.webp", perm: "viewing.view" },
 
+  // ✅ Cash Collections access
+  { name: "Cash Collections", image: "/assets/settings.png", perm: "cashFlow.view" },
+
   // Admin-only
   { name: "Users", image: "/assets/settings.png", perm: "users.manage" },
 ];

@@ -30,7 +30,9 @@ const PERMISSION_GROUPS = [
       "sqm.view",
       "cuts.view",
       "viewing.view",
-      
+
+      // ✅ NEW: Cash Flow / Cash Collections page access
+      "cashFlow.view",
     ],
   },
   {
@@ -102,41 +104,43 @@ const PERMISSION_GROUPS = [
       "cuts.view",
       "inventory.view",
 
-"settings.accountRoles",
+      "settings.accountRoles",
+      "settings.general",
+      "settings.invoice",
+      "settings.permissions",
+      "settings.purchaseInvoice",
+      "settings.itemBatches",
+      "settings.descriptionsReal",
+      "settings.descriptionsItemName",
+      "settings.variantRelinker",
+      "settings.editDescriptions",
+      "settings.fiscalYear",
+      "settings.currency",
+      "settings.invoiceDisplay",
+      "settings.stockTotalsAudit",
+      "settings.inventoryAudit",
+      "settings.logoutUsers",
+      "settings.invoiceAudit",
 
+      "pos.search.stockTab",
+      "pos.search.allTab",
+      "pos.search.sqmTab",
+      "pos.rvr",
+      "pos.return",
 
-"settings.general",
-"settings.invoice",
-"settings.permissions",
-"settings.purchaseInvoice",
-"settings.itemBatches",
-"settings.descriptionsReal",
-"settings.descriptionsItemName",
-"settings.variantRelinker",
-"settings.editDescriptions",
-"settings.fiscalYear",
-"settings.currency",
-"settings.invoiceDisplay",
-"settings.stockTotalsAudit",
-"settings.inventoryAudit",
-"settings.logoutUsers",
+      "recievables.create",
+      "recievables.update",
+      "recievables.delete",
 
-"pos.search.stockTab",
-"pos.search.allTab",
-"pos.search.sqmTab",
-"pos.rvr",
-"pos.return",
+      "customers.update",
+      "sqm.update",
 
-"recievables.create",
-"recievables.update",
-"recievables.delete",
-
- "settings.invoiceAudit",
-
- "customers.update",
-
-"sqm.update"
-
+      // ✅ NEW: Cash Flow actions (optional but recommended)
+      "cashFlow.create",
+      "cashFlow.delete",
+      "cashFlow.print",
+      "cashFlow.viewAny",
+      "users.list",
     ],
   },
   {
