@@ -1,6 +1,6 @@
-// src/pages/CashCollectionsPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { axiosClient } from "../api/axiosClient";
+import CashCollectionsPreviewModal from "./CashCollectionsPreviewModal";
 import "./cash-collections.css";
 
 function todayYmd() {
@@ -28,7 +28,14 @@ function currencyCodeFromRow(r) {
   return String(code || "").toUpperCase();
 }
 
-function buildPrintHtml({ groupedRows, filters, printDate }) {
+/**
+ * ✅ Build the exact paper HTML.
+ * - Adds driver column
+ * - Adds totals row at the bottom for USD + LL
+ * - Notes line is VERY BOLD
+ * - autoPrint controls if the HTML triggers window.print()
+ */
+function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
   const esc = (s) =>
     String(s ?? "")
       .replaceAll("&", "&amp;")
@@ -45,13 +52,38 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
   if (filters?.q) filterLineParts.push(`بحث: ${esc(filters.q)}`);
   const filterLine = filterLineParts.join("  |  ");
 
-  // ✅ رقم المستند = رقم السطر (1..N) فقط
+  const totalUsd = groupedRows.reduce((s, g) => s + Number(g.usd || 0), 0);
+  const totalLl = groupedRows.reduce((s, g) => s + Number(g.ll || 0), 0);
+
+  const detailsHtml = (g) => {
+    const parts = [];
+
+    // customer
+    parts.push(`<span class="d-customer">${esc(g.customerName || "")}</span>`);
+
+    // notes VERY bold
+    if (g.notes) {
+      parts.push(
+        `<strong class="d-notes">${esc(g.notes)}</strong>`
+      );
+    }
+
+    // method
+    if (g.method) {
+      parts.push(`<span class="d-method">${esc(g.method)}</span>`);
+    }
+
+    return parts.join(` <span class="sep">—</span> `);
+  };
+
+  // ✅ body rows
   const bodyRows = groupedRows
     .map((g, idx) => {
       return `
         <tr>
           <td class="c-doc">${idx + 1}</td>
-          <td class="c-details">${esc(g.details || "")}</td>
+          <td class="c-details">${detailsHtml(g)}</td>
+          <td class="c-driver">${esc(g.driverName || "")}</td>
           <td class="c-rec">${esc(g.employeeName || "")}</td>
           <td class="c-usd">${g.usd ? esc(fmt(g.usd)) : ""}</td>
           <td class="c-ll">${g.ll ? esc(fmt(g.ll)) : ""}</td>
@@ -60,6 +92,7 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
     })
     .join("");
 
+  // ✅ pad to keep paper stable
   const MIN_ROWS = 18;
   const padCount = Math.max(0, MIN_ROWS - groupedRows.length);
   const padRows = Array.from({ length: padCount })
@@ -68,6 +101,7 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
       <tr>
         <td class="c-doc">${groupedRows.length + i + 1}</td>
         <td class="c-details"></td>
+        <td class="c-driver"></td>
         <td class="c-rec"></td>
         <td class="c-usd"></td>
         <td class="c-ll"></td>
@@ -75,6 +109,16 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
     `
     )
     .join("");
+
+  // ✅ totals row at the bottom (last row)
+  const totalsRow = `
+    <tr class="total-row">
+      <td class="c-doc"></td>
+      <td class="c-details total-label" colspan="3">المجموع</td>
+      <td class="c-usd total-num">${totalUsd ? esc(fmt(totalUsd)) : ""}</td>
+      <td class="c-ll total-num">${totalLl ? esc(fmt(totalLl)) : ""}</td>
+    </tr>
+  `;
 
   return `
 <!doctype html>
@@ -133,7 +177,8 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      font-size: 12.5px;
+      font-size: 13px;
+      
     }
     th, td {
       border: 1px solid #000;
@@ -143,15 +188,37 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
     th { text-align: center; font-weight: 700; }
 
     .c-doc     { width: 5%; text-align: center; white-space: nowrap; }
-    .c-details { width: 55%; white-space: normal; line-height: 1.35; word-break: break-word; }
+    .c-details { width: 48%; white-space: normal; line-height: 1.35; word-break: break-word; }
+    .c-driver  { width: 10%; text-align: center; white-space: nowrap; }
     .c-rec     { width: 9%; text-align: center; white-space: nowrap; }
-    .c-usd     { width: 13%; text-align: center; white-space: nowrap; }
-    .c-ll      { width: 13%; text-align: center; white-space: nowrap; }
+    .c-usd     { width: 14%; text-align: center; white-space: nowrap; }
+    .c-ll      { width: 14%; text-align: center; white-space: nowrap; }
 
     tbody tr td { height: 28px; }
-
     tr { page-break-inside: avoid; }
     thead { display: table-header-group; }
+
+    /* details formatting */
+    .sep { opacity: 0.9; }
+    .d-notes {
+      font-weight: 900;
+      font-size: 13px;
+    }
+   
+
+    /* total row */
+    .total-row td {
+      font-weight: 900;
+      background: #f5f5f5;
+    }
+    .total-label {
+      text-align: center;
+      font-size: 13px;
+    }
+    .total-num {
+      text-align: center;
+      font-size: 13px;
+    }
 
     .footerNote {
       margin-top: 8px;
@@ -177,6 +244,7 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
         <tr>
           <th class="c-doc">رقم</th>
           <th class="c-details">البيانات</th>
+          <th class="c-driver">الشوفير</th>
           <th class="c-rec">المستلم</th>
           <th class="c-usd">القبضة $$</th>
           <th class="c-ll">القبضة LL</th>
@@ -185,6 +253,7 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
       <tbody>
         ${bodyRows}
         ${padRows}
+        ${totalsRow}
       </tbody>
     </table>
 
@@ -193,17 +262,83 @@ function buildPrintHtml({ groupedRows, filters, printDate }) {
     </div>
   </div>
 
+  ${
+    autoPrint
+      ? `
   <script>
     window.onload = function () {
       setTimeout(function () {
         window.focus();
         window.print();
-      }, 150);
+      }, 120);
     };
   </script>
+  `
+      : ""
+  }
 </body>
 </html>
   `;
+}
+
+/**
+ * ✅ Group rows into "paper rows"
+ * - grouped by date+customer+employee+driver+ref+notes+method
+ * - combines USD + LL into one row
+ */
+function groupRowsForPaper(allRows) {
+  const map = new Map();
+
+  for (const r of allRows) {
+    const driverName = String(r?.driverName || "").trim();
+
+    const key = [
+      r?.date || "",
+      r?.customerId || "",
+      r?.employeeId || "",
+      driverName,
+      (r?.reference || "").trim(),
+      (r?.notes || "").trim(),
+      (r?.method || "").trim(),
+    ].join("|");
+
+    const customerName = safeName(r?.customer, r?.customerId ?? "");
+    const employeeName = safeName(r?.employee, r?.employeeId ?? "");
+
+    const amt = Number(r?.amount || 0);
+    const code = currencyCodeFromRow(r);
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        customerName,
+        notes: r?.notes ? String(r.notes) : "",
+        method: r?.method ? String(r.method) : "",
+        driverName: driverName || "",
+        employeeName,
+        usd: 0,
+        ll: 0,
+      });
+    }
+
+    const g = map.get(key);
+
+    if (code === "USD" || code === "$" || String(code).includes("USD")) {
+      g.usd += Number.isFinite(amt) ? amt : 0;
+    } else if (
+      code === "LL" ||
+      code === "LBP" ||
+      String(code).includes("LBP") ||
+      String(code).includes("LL")
+    ) {
+      g.ll += Number.isFinite(amt) ? amt : 0;
+    } else {
+      // fallback
+      g.usd += Number.isFinite(amt) ? amt : 0;
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 export default function CashCollectionsPage() {
@@ -223,6 +358,9 @@ export default function CashCollectionsPage() {
 
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+
+  // ✅ NEW: driver name
+  const [driverName, setDriverName] = useState("");
 
   const [saving, setSaving] = useState(false);
 
@@ -248,8 +386,12 @@ export default function CashCollectionsPage() {
 
   const suggestBoxRef = useRef(null);
 
+  // hidden print iframe (auto print)
   const printFrameRef = useRef(null);
-  const [printing, setPrinting] = useState(false);
+
+  // ✅ preview modal
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
 
   const pageSum = useMemo(
     () => rows.reduce((s, r) => s + Number(r.amount || 0), 0),
@@ -258,7 +400,9 @@ export default function CashCollectionsPage() {
 
   function findCurrencyIdByCode(code) {
     const want = String(code || "").toUpperCase();
-    const found = currencies.find((c) => String(c.currencyCode || "").toUpperCase() === want);
+    const found = currencies.find(
+      (c) => String(c.currencyCode || "").toUpperCase() === want
+    );
     return found ? Number(found.id) : null;
   }
 
@@ -284,14 +428,18 @@ export default function CashCollectionsPage() {
     }
   }
 
+  /**
+   * Employees dropdown:
+   * ✅ Best practice: create backend endpoint like:
+   * GET /users/v1/dropdown (RequirePerms: users.list OR cashFlow.viewAny)
+   *
+   * Here we try multiple endpoints.
+   */
   async function loadEmployees() {
     const tries = [
-      { url: "/users", params: {} },
-      { url: "/user", params: {} },
-      { url: "/user/v1/list", params: {} },
-      { url: "/users/v1/list", params: {} },
-      { url: "/user/v1/dropdown", params: {} },
       { url: "/users/v1/dropdown", params: {} },
+      { url: "/user/v1/dropdown", params: {} },
+      { url: "/users", params: {} }, // might 403 for non-admin
     ];
 
     for (const t of tries) {
@@ -374,11 +522,19 @@ export default function CashCollectionsPage() {
     const llId = hasLl ? findCurrencyIdLL() : null;
 
     if (hasUsd && !usdId) {
-      setNotif({ open: true, type: "error", message: "USD currency not found in currencies table" });
+      setNotif({
+        open: true,
+        type: "error",
+        message: "USD currency not found in currencies table",
+      });
       return;
     }
     if (hasLl && !llId) {
-      setNotif({ open: true, type: "error", message: "LL (or LBP) currency not found in currencies table" });
+      setNotif({
+        open: true,
+        type: "error",
+        message: "LL (or LBP) currency not found in currencies table",
+      });
       return;
     }
 
@@ -392,6 +548,9 @@ export default function CashCollectionsPage() {
         method,
         reference: refFinal,
         notes: notes.trim() ? notes.trim() : null,
+
+        // ✅ NEW: driver
+        driverName: driverName.trim() ? driverName.trim() : null,
       };
 
       const requests = [];
@@ -418,6 +577,7 @@ export default function CashCollectionsPage() {
 
       setNotif({ open: true, type: "success", message: "Saved" });
 
+      // reset
       setCustomerId(null);
       setCustomerInput("");
       setCustomerPickLabel("");
@@ -429,6 +589,7 @@ export default function CashCollectionsPage() {
       setMethod("CASH");
       setReference("");
       setNotes("");
+      setDriverName("");
 
       const next = { ...filters, page: 1 };
       setFilters(next);
@@ -459,7 +620,7 @@ export default function CashCollectionsPage() {
     }
   }
 
-  async function fetchAllForPrint(appliedFilters) {
+  async function fetchAllForPaper(appliedFilters) {
     const base = { ...appliedFilters, page: 1, limit: 200 };
     const all = [];
     let page = 1;
@@ -481,80 +642,51 @@ export default function CashCollectionsPage() {
     return all;
   }
 
-  function groupRowsForPrint(allRows) {
-    const map = new Map();
+  async function buildPaperHtmlForCurrentFilters({ autoPrint }) {
+    const applied = { ...filters };
+    const allRows = await fetchAllForPaper(applied);
+    const groupedRows = groupRowsForPaper(allRows);
 
-    for (const r of allRows) {
-      const key = [
-        r?.date || "",
-        r?.customerId || "",
-        r?.employeeId || "",
-        (r?.reference || "").trim(),
-        (r?.notes || "").trim(),
-        (r?.method || "").trim(),
-      ].join("|");
-
-      const customer = safeName(r?.customer, r?.customerId ?? "");
-      const employee = safeName(r?.employee, r?.employeeId ?? "");
-
-      const detailsParts = [];
-      detailsParts.push(`${customer}`);
-      if (r?.notes) detailsParts.push(`ملاحظات: ${r.notes}`);
-      if (r?.method) detailsParts.push(`الطريقة: ${r.method}`);
-      const details = detailsParts.join(" — ");
-
-      const amt = Number(r?.amount || 0);
-      const code = currencyCodeFromRow(r);
-
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          details,
-          employeeName: employee,
-          usd: 0,
-          ll: 0,
-        });
-      }
-
-      const g = map.get(key);
-
-      if (code === "USD" || code === "$" || code.includes("USD")) g.usd += Number.isFinite(amt) ? amt : 0;
-      else if (code === "LL" || code === "LBP" || code.includes("LBP") || code.includes("LL")) g.ll += Number.isFinite(amt) ? amt : 0;
-      else g.usd += Number.isFinite(amt) ? amt : 0;
-    }
-
-    return Array.from(map.values());
+    return buildPaperHtml({
+      groupedRows,
+      filters: applied,
+      printDate: todayYmd(),
+      autoPrint,
+    });
   }
 
   async function printFiltered() {
     try {
-      setPrinting(true);
-
-      const applied = { ...filters };
-      const allRows = await fetchAllForPrint(applied);
-
-      const groupedRows = groupRowsForPrint(allRows);
-
-      const html = buildPrintHtml({
-        groupedRows,
-        filters: applied,
-        printDate: todayYmd(),
-      });
-
+      const html = await buildPaperHtmlForCurrentFilters({ autoPrint: true });
       const iframe = printFrameRef.current;
       if (!iframe) throw new Error("Print iframe missing");
-
       iframe.srcdoc = html;
-
-      setTimeout(() => setPrinting(false), 800);
     } catch (e) {
-      setPrinting(false);
       setNotif({
         open: true,
         type: "error",
         message: e?.response?.data?.message || e?.message || "Failed to print",
       });
     }
+  }
+
+  async function viewFiltered() {
+    try {
+      const html = await buildPaperHtmlForCurrentFilters({ autoPrint: false });
+      setPreviewHtml(html);
+      setPreviewOpen(true);
+    } catch (e) {
+      setNotif({
+        open: true,
+        type: "error",
+        message: e?.response?.data?.message || e?.message || "Failed to build preview",
+      });
+    }
+  }
+
+  async function printFromPreview() {
+    // Reuse print pipeline to guarantee same HTML and totals
+    await printFiltered();
   }
 
   useEffect(() => {
@@ -580,6 +712,7 @@ export default function CashCollectionsPage() {
 
   return (
     <div className="cc-page">
+      {/* hidden print iframe */}
       <iframe
         ref={printFrameRef}
         title="print-frame"
@@ -591,6 +724,16 @@ export default function CashCollectionsPage() {
           height: 0,
           border: 0,
         }}
+      />
+
+      {/* Preview modal */}
+      <CashCollectionsPreviewModal
+        open={previewOpen}
+        title="حركة الصندوق اليومية — Preview"
+        html={previewHtml}
+        onClose={() => setPreviewOpen(false)}
+        onPrint={printFromPreview}
+         fontScale={1.35}
       />
 
       <div className="cc-header">
@@ -718,6 +861,18 @@ export default function CashCollectionsPage() {
             />
           </div>
 
+          {/* ✅ NEW driver input */}
+          <div className="cc-field">
+            <label>الشوفير</label>
+            <input
+              dir="auto"
+              lang="ar"
+              value={driverName}
+              onChange={(e) => setDriverName(e.target.value)}
+              placeholder="اسم الشوفير (اختياري)"
+            />
+          </div>
+
           <div className="cc-field cc-wide">
             <label>Notes</label>
             <input
@@ -737,8 +892,12 @@ export default function CashCollectionsPage() {
           <div className="cc-card-title">Filters</div>
 
           <div className="cc-card-actions">
-            <button className="btn" disabled={printing} onClick={printFiltered}>
-              {printing ? "Printing..." : "Print"}
+            <button className="btn" onClick={viewFiltered}>
+              View
+            </button>
+
+            <button className="btn" onClick={printFiltered}>
+              Print
             </button>
 
             <button
@@ -781,7 +940,9 @@ export default function CashCollectionsPage() {
             <input
               type="date"
               value={filters.from}
-              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))
+              }
             />
           </div>
 
@@ -801,7 +962,7 @@ export default function CashCollectionsPage() {
               lang="ar"
               value={filters.q}
               onChange={(e) => setFilters((p) => ({ ...p, q: e.target.value, page: 1 }))}
-              placeholder="customer / reference / notes"
+              placeholder="customer / reference / notes / driver"
             />
           </div>
 
@@ -809,7 +970,9 @@ export default function CashCollectionsPage() {
             <label>Employee</label>
             <select
               value={filters.employeeId}
-              onChange={(e) => setFilters((p) => ({ ...p, employeeId: e.target.value, page: 1 }))}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, employeeId: e.target.value, page: 1 }))
+              }
             >
               <option value="">All</option>
               {employees.map((u) => (
@@ -839,7 +1002,9 @@ export default function CashCollectionsPage() {
             <div className="cc-sortRow">
               <select
                 value={filters.sortBy}
-                onChange={(e) => setFilters((p) => ({ ...p, sortBy: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, sortBy: e.target.value, page: 1 }))
+                }
               >
                 <option value="date">Date</option>
                 <option value="createdAt">Created</option>
@@ -847,7 +1012,9 @@ export default function CashCollectionsPage() {
               </select>
               <select
                 value={filters.sortDir}
-                onChange={(e) => setFilters((p) => ({ ...p, sortDir: e.target.value, page: 1 }))}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, sortDir: e.target.value, page: 1 }))
+                }
               >
                 <option value="DESC">DESC</option>
                 <option value="ASC">ASC</option>
@@ -859,7 +1026,9 @@ export default function CashCollectionsPage() {
             <label>Rows</label>
             <select
               value={filters.limit}
-              onChange={(e) => setFilters((p) => ({ ...p, limit: Number(e.target.value), page: 1 }))}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, limit: Number(e.target.value), page: 1 }))
+              }
             >
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -906,6 +1075,7 @@ export default function CashCollectionsPage() {
                 <tr>
                   <th style={{ width: 110 }}>Date</th>
                   <th>Customer</th>
+                  <th style={{ width: 150 }}>الشوفير</th>
                   <th style={{ width: 170 }}>Employee</th>
                   <th style={{ width: 130 }} className="num">
                     Amount
@@ -917,11 +1087,13 @@ export default function CashCollectionsPage() {
                   <th style={{ width: 90 }}></th>
                 </tr>
               </thead>
+
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td>{r.date}</td>
                     <td dir="auto">{safeName(r.customer, r.customerId)}</td>
+                    <td dir="auto">{r.driverName || "-"}</td>
                     <td dir="auto">{safeName(r.employee, r.employeeId)}</td>
                     <td className="num">{fmt(r.amount)}</td>
                     <td>
