@@ -4,18 +4,22 @@ import "./recievables.css";
 import NewRecordModal from "./newRecord";
 import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";
-import { axiosClient } from "../api/axiosClient"; 
-import { io } from "socket.io-client"; 
+import { axiosClient } from "../api/axiosClient";
+import { io } from "socket.io-client";
 import RctPaper from "./rctPreview";
-import { createSocket } from "../api/socketClient"; 
+import { createSocket } from "../api/socketClient";
 import StatementModal from "../pos-system/Components/StatementModal";
 import { hasPerm } from "../auth/authz";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import DailyReceivablesModal from "./DailyReceivablesModal";
+
+// ✅ MUST MATCH ViewCashflowModal
+const DRAFT_KEY = "__receivables_create_draft__";
 
 const AccountingPage = () => {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -40,12 +44,19 @@ const AccountingPage = () => {
   // ✅ NEW: State for Daily Receivables Modal
   const [isDailyReceivablesOpen, setIsDailyReceivablesOpen] = useState(false);
 
+  // ✅ NEW: incoming draft from CashCollections preview
+  const [incomingDraft, setIncomingDraft] = useState(null);
+
   const canCreate = hasPerm("recievables.create");
   const canUpdate = hasPerm("recievables.update");
   const canDelete = hasPerm("recievables.delete");
 
   const openNewModal = () => setIsNewModalOpen(true);
-  const closeNewModal = () => setIsNewModalOpen(false);
+  const closeNewModal = () => {
+    setIsNewModalOpen(false);
+    // keep incomingDraft unless you want to clear it
+    // setIncomingDraft(null);
+  };
 
   const openEditModal = () => {
     if (selectedRowIndex === null) {
@@ -190,6 +201,61 @@ const AccountingPage = () => {
     setIsDailyReceivablesOpen(true);
   };
 
+  // ✅ NEW: detect draft coming from CashCollections preview
+  useEffect(() => {
+    // DEBUG: show what we received
+
+    let draft = location.state?.draft || null;
+
+
+    if (!draft) {
+      try {
+        const raw = sessionStorage.getItem(DRAFT_KEY);
+
+        if (raw) {
+          draft = JSON.parse(raw);
+        }
+      } catch (err) {
+        console.warn("🧾 [Receivables] failed to parse draft:", err);
+      }
+    }
+
+
+    // If no draft, nothing to do
+    if (!draft || !draft?.rows?.length) {
+      if (draft && Array.isArray(draft.rows) && draft.rows.length === 0) {
+        console.warn("❌ [Receivables] Draft exists but rows is empty []");
+      }
+      return;
+    }
+
+    // Permission check
+    if (!canCreate) {
+      setNotification({
+        type: "error",
+        message: "No permission: recievables.create",
+      });
+      return;
+    }
+
+    // Save to local state so we can pass it to modal
+    setIncomingDraft(draft);
+
+    // Open the modal
+    setIsNewModalOpen(true);
+
+    // Clear session storage (optional, but helps prevent reuse)
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {}
+
+    // Clear router state so refresh/back doesn't reopen
+    try {
+      navigate(location.pathname, { replace: true, state: {} });
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
   useEffect(() => {
     let socket;
 
@@ -242,8 +308,8 @@ const AccountingPage = () => {
       });
 
       socket.on("recievables", (updated) => {
-        console.log("📡 Received receivables update:", updated);
         
+
         const fmt = (updated || []).map((v) => ({
           id: v.id,
           date: v.date.slice(0, 10),
@@ -262,25 +328,24 @@ const AccountingPage = () => {
         }));
 
         setData((prevData) => {
-          console.log("🔍 Previous data IDs:", prevData.map(item => item.id));
-          console.log("🔍 New data IDs:", fmt.map(item => item.id));
-          
-          const prevIds = new Set(prevData.map(item => item.id));
+ 
+
+          const prevIds = new Set(prevData.map((item) => item.id));
           const newIds = new Set();
 
-          fmt.forEach(item => {
+          fmt.forEach((item) => {
             if (!prevIds.has(item.id)) {
               newIds.add(item.id);
-              console.log("✨ NEW ITEM DETECTED:", item.id);
+          
             }
           });
 
           if (newIds.size > 0) {
-            console.log("💡 Setting newly added IDs:", Array.from(newIds));
+            
             setNewlyAddedIds(newIds);
 
             setTimeout(() => {
-              console.log("⏰ Removing glow effect");
+             
               setNewlyAddedIds(new Set());
             }, 5000);
           } else {
@@ -289,7 +354,7 @@ const AccountingPage = () => {
 
           return fmt;
         });
-        
+
         setFilteredData(fmt);
       });
     } catch (err) {
@@ -299,7 +364,6 @@ const AccountingPage = () => {
     return () => {
       if (socket) {
         socket.disconnect();
-        console.log("🔌 Socket disconnected");
       }
     };
   }, []);
@@ -377,8 +441,9 @@ const AccountingPage = () => {
   };
 
   useEffect(() => {
-    console.log("🎨 newlyAddedIds updated:", Array.from(newlyAddedIds));
   }, [newlyAddedIds]);
+
+  // ✅ DEBUG: see exactly what will be passed to the modal
 
   return (
     <>
@@ -447,6 +512,8 @@ const AccountingPage = () => {
             </div>
           </div>
 
+          
+
           {loading ? (
             <p>Loading data...</p>
           ) : error ? (
@@ -464,8 +531,6 @@ const AccountingPage = () => {
                     <th>Cur</th>
                     <th>Ex Rate</th>
                     <th>Amount Ex</th>
-                    
-                    
                     <th>Ref Invoice</th>
                     <th>JV Number</th>
                     <th>PMT Type</th>
@@ -476,13 +541,9 @@ const AccountingPage = () => {
                 <tbody>
                   {filteredData.map((row, idx) => {
                     const hasGlow = newlyAddedIds.has(row.id);
-                    console.log(`Row ${row.id} has glow:`, hasGlow);
-                    
+
                     return (
-                      <tr 
-                        key={row.id}
-                        className={hasGlow ? "newly-added" : ""}
-                      >
+                      <tr key={row.id} className={hasGlow ? "newly-added" : ""}>
                         <td>
                           <input
                             type="radio"
@@ -497,8 +558,6 @@ const AccountingPage = () => {
                         <td>{row.currency}</td>
                         <td>{row.exchangeRate}</td>
                         <td>{formatNumberWithCommas(row.amountExchanged)}</td>
-                        
-                        
                         <td>{row.refInvoice}</td>
                         <td>{row.invoiceNumber}</td>
                         <td>{row.pmtType}</td>
@@ -526,6 +585,9 @@ const AccountingPage = () => {
             onSave={(created) => {
               closeNewModal();
             }}
+            // ✅ PASS DRAFT (we pass 2 prop names to be safe)
+            prefillDraft={incomingDraft}
+            draft={incomingDraft}
           />
         )}
 

@@ -1,6 +1,8 @@
+// src/components/cash-collection/CashCollectionsPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { axiosClient } from "../api/axiosClient";
-import CashCollectionsPreviewModal from "./CashCollectionsPreviewModal";
+import ViewCashflowModal from "./CashCollectionsPreviewModal";
+import NotificationModal from "../recievables/NotificationModal"; 
 import "./cash-collections.css";
 
 function todayYmd() {
@@ -30,10 +32,6 @@ function currencyCodeFromRow(r) {
 
 /**
  * ✅ Build the exact paper HTML.
- * - Adds driver column
- * - Adds totals row at the bottom for USD + LL
- * - Notes line is VERY BOLD
- * - autoPrint controls if the HTML triggers window.print()
  */
 function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
   const esc = (s) =>
@@ -57,30 +55,16 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
 
   const detailsHtml = (g) => {
     const parts = [];
-
-    // customer
     parts.push(`<span class="d-customer">${esc(g.customerName || "")}</span>`);
-
-    // notes VERY bold
-    if (g.notes) {
-      parts.push(
-        `<strong class="d-notes">${esc(g.notes)}</strong>`
-      );
-    }
-
-    // method
-    if (g.method) {
-      parts.push(`<span class="d-method">${esc(g.method)}</span>`);
-    }
-
+    if (g.notes) parts.push(`<strong class="d-notes">${esc(g.notes)}</strong>`);
+    if (g.method) parts.push(`<span class="d-method">${esc(g.method)}</span>`);
     return parts.join(` <span class="sep">—</span> `);
   };
 
-  // ✅ body rows
   const bodyRows = groupedRows
     .map((g, idx) => {
       return `
-        <tr>
+        <tr class="${g.isCreated ? "row-created" : ""}">
           <td class="c-doc">${idx + 1}</td>
           <td class="c-details">${detailsHtml(g)}</td>
           <td class="c-driver">${esc(g.driverName || "")}</td>
@@ -92,7 +76,6 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
     })
     .join("");
 
-  // ✅ pad to keep paper stable
   const MIN_ROWS = 18;
   const padCount = Math.max(0, MIN_ROWS - groupedRows.length);
   const padRows = Array.from({ length: padCount })
@@ -110,7 +93,6 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
     )
     .join("");
 
-  // ✅ totals row at the bottom (last row)
   const totalsRow = `
     <tr class="total-row">
       <td class="c-doc"></td>
@@ -135,9 +117,7 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
       color: #000;
       direction: rtl;
     }
-
     .sheet { width: 100%; }
-
     .top {
       display: grid;
       grid-template-columns: 1fr auto 1fr;
@@ -145,18 +125,8 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
       gap: 8px;
       margin-bottom: 8px;
     }
-
-    .top .left, .top .right {
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .top .title {
-      text-align: center;
-      font-weight: 700;
-      font-size: 18px;
-    }
-
+    .top .left, .top .right { font-size: 13px; white-space: nowrap; }
+    .top .title { text-align: center; font-weight: 700; font-size: 18px; }
     .meta {
       display: flex;
       justify-content: space-between;
@@ -172,13 +142,11 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
       font-size: 13px;
-      
     }
     th, td {
       border: 1px solid #000;
@@ -198,33 +166,14 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
     tr { page-break-inside: avoid; }
     thead { display: table-header-group; }
 
-    /* details formatting */
     .sep { opacity: 0.9; }
-    .d-notes {
-      font-weight: 900;
-      font-size: 13px;
-    }
-   
+    .d-notes { font-weight: 900; font-size: 13px; }
 
-    /* total row */
-    .total-row td {
-      font-weight: 900;
-      background: #f5f5f5;
-    }
-    .total-label {
-      text-align: center;
-      font-size: 13px;
-    }
-    .total-num {
-      text-align: center;
-      font-size: 13px;
-    }
+    .total-row td { font-weight: 900; background: #f5f5f5; }
+    .total-label { text-align: center; font-size: 13px; }
+    .total-num { text-align: center; font-size: 13px; }
 
-    .footerNote {
-      margin-top: 8px;
-      font-size: 11px;
-      opacity: 0.85;
-    }
+    .footerNote { margin-top: 8px; font-size: 11px; opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -283,8 +232,6 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
 
 /**
  * ✅ Group rows into "paper rows"
- * - grouped by date+customer+employee+driver+ref+notes+method
- * - combines USD + LL into one row
  */
 function groupRowsForPaper(allRows) {
   const map = new Map();
@@ -318,10 +265,12 @@ function groupRowsForPaper(allRows) {
         employeeName,
         usd: 0,
         ll: 0,
+        isCreated: !!r?.receivableEntryId,
       });
     }
 
     const g = map.get(key);
+    g.isCreated = g.isCreated || !!r?.receivableEntryId;
 
     if (code === "USD" || code === "$" || String(code).includes("USD")) {
       g.usd += Number.isFinite(amt) ? amt : 0;
@@ -333,12 +282,20 @@ function groupRowsForPaper(allRows) {
     ) {
       g.ll += Number.isFinite(amt) ? amt : 0;
     } else {
-      // fallback
       g.usd += Number.isFinite(amt) ? amt : 0;
     }
   }
 
   return Array.from(map.values());
+}
+
+// ✅ helper: convert method to receivable pmtType
+function mapMethodToPmtType(method) {
+  const m = String(method || "").toUpperCase();
+  if (m === "WHISH") return "Whish";
+  if (m === "CHEQUE") return "Cheque";
+  if (m === "OTHER") return "Other";
+  return "Cash";
 }
 
 export default function CashCollectionsPage() {
@@ -358,22 +315,19 @@ export default function CashCollectionsPage() {
 
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
-
-  // ✅ NEW: driver name
   const [driverName, setDriverName] = useState("");
 
   const [saving, setSaving] = useState(false);
-
   const [employees, setEmployees] = useState([]);
 
   const [filters, setFilters] = useState({
-    from: "",
-    to: "",
+  from: todayYmd(),   
+  to: todayYmd(), 
     q: "",
     method: "",
     employeeId: "",
     page: 1,
-    limit: 50,
+    limit: 200,
     sortBy: "date",
     sortDir: "DESC",
   });
@@ -385,13 +339,11 @@ export default function CashCollectionsPage() {
   const [notif, setNotif] = useState({ open: false, type: "info", message: "" });
 
   const suggestBoxRef = useRef(null);
-
-  // hidden print iframe (auto print)
   const printFrameRef = useRef(null);
 
-  // ✅ preview modal
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
+  const [previewDraft, setPreviewDraft] = useState(null);
 
   const pageSum = useMemo(
     () => rows.reduce((s, r) => s + Number(r.amount || 0), 0),
@@ -428,18 +380,11 @@ export default function CashCollectionsPage() {
     }
   }
 
-  /**
-   * Employees dropdown:
-   * ✅ Best practice: create backend endpoint like:
-   * GET /users/v1/dropdown (RequirePerms: users.list OR cashFlow.viewAny)
-   *
-   * Here we try multiple endpoints.
-   */
   async function loadEmployees() {
     const tries = [
       { url: "/users/v1/dropdown", params: {} },
       { url: "/user/v1/dropdown", params: {} },
-      { url: "/users", params: {} }, // might 403 for non-admin
+      { url: "/users", params: {} },
     ];
 
     for (const t of tries) {
@@ -450,7 +395,7 @@ export default function CashCollectionsPage() {
           setEmployees(list);
           return;
         }
-      } catch (e) {}
+      } catch {}
     }
     setEmployees([]);
   }
@@ -497,6 +442,119 @@ export default function CashCollectionsPage() {
     }
   }
 
+  function buildDraftFromCreateForm() {
+    if (!customerId) return null;
+
+    const usd = Number(amountUSD);
+    const ll = Number(amountLL);
+
+    const hasUsd = Number.isFinite(usd) && usd > 0;
+    const hasLl = Number.isFinite(ll) && ll > 0;
+    if (!hasUsd && !hasLl) return null;
+
+    const common = {
+      customerId: String(customerId),
+      customerName: customerPickLabel || "",
+      date,
+      type: "S",
+      pmtType: mapMethodToPmtType(method),
+      invoiceId: "",
+      comments: notes || "",
+      exchangeRate: "89,500",
+    };
+
+    const out = [];
+    if (hasUsd) {
+      out.push({ ...common, currency: "USD", cashNumber: String(usd), amountExchanged: "" });
+    }
+    if (hasLl) {
+      out.push({ ...common, currency: "LL", cashNumber: String(ll), amountExchanged: "" });
+    }
+    return { rows: out };
+  }
+
+  function buildDraftFromFilteredRows(allRows) {
+    const list = Array.isArray(allRows) ? allRows : [];
+    if (!list.length) return null;
+
+    const pending = list.filter((r) => !r?.receivableEntryId);
+    if (!pending.length) {
+      return { rows: [], __info: "ALL_ALREADY_CONVERTED" };
+    }
+
+    const byCustomer = new Map();
+
+    for (const r of pending) {
+      const cid = String(r.customerId ?? "");
+      if (!cid) continue;
+
+      const customerName = safeName(r?.customer, cid);
+      const code = currencyCodeFromRow(r);
+      const amt = Number(r?.amount || 0);
+      const method = String(r?.method || "CASH");
+
+      if (!byCustomer.has(cid)) {
+        byCustomer.set(cid, {
+          customerId: cid,
+          customerName,
+          usd: 0,
+          ll: 0,
+          usdIds: [],
+          llIds: [],
+          method,
+        });
+      }
+
+      const g = byCustomer.get(cid);
+
+      if (code.includes("USD") || code === "$") {
+        g.usd += Number.isFinite(amt) ? amt : 0;
+        g.usdIds.push(r.id);
+      } else if (code === "LL" || code === "LBP" || code.includes("LBP") || code.includes("LL")) {
+        g.ll += Number.isFinite(amt) ? amt : 0;
+        g.llIds.push(r.id);
+      } else {
+        g.usd += Number.isFinite(amt) ? amt : 0;
+        g.usdIds.push(r.id);
+      }
+    }
+
+    const out = [];
+    for (const g of byCustomer.values()) {
+      const common = {
+        customerId: String(g.customerId),
+        customerName: g.customerName,
+        date: todayYmd(),
+        type: "S",
+        pmtType: mapMethodToPmtType(filters.method || g.method || "CASH"),
+        invoiceId: "",
+        comments: "",
+        exchangeRate: "89,500",
+      };
+
+      if (g.usd > 0) {
+        out.push({
+          ...common,
+          currency: "USD",
+          cashNumber: String(g.usd),
+          amountExchanged: "",
+          sourceCashCollectionIds: g.usdIds,
+        });
+      }
+      if (g.ll > 0) {
+        out.push({
+          ...common,
+          currency: "LL",
+          cashNumber: String(g.ll),
+          amountExchanged: "",
+          sourceCashCollectionIds: g.llIds,
+        });
+      }
+    }
+
+    return { rows: out };
+  }
+
   async function createCollection() {
     if (!customerId) {
       setNotif({ open: true, type: "error", message: "Please select a customer" });
@@ -522,19 +580,11 @@ export default function CashCollectionsPage() {
     const llId = hasLl ? findCurrencyIdLL() : null;
 
     if (hasUsd && !usdId) {
-      setNotif({
-        open: true,
-        type: "error",
-        message: "USD currency not found in currencies table",
-      });
+      setNotif({ open: true, type: "error", message: "USD currency not found in currencies table" });
       return;
     }
     if (hasLl && !llId) {
-      setNotif({
-        open: true,
-        type: "error",
-        message: "LL (or LBP) currency not found in currencies table",
-      });
+      setNotif({ open: true, type: "error", message: "LL (or LBP) currency not found in currencies table" });
       return;
     }
 
@@ -548,8 +598,6 @@ export default function CashCollectionsPage() {
         method,
         reference: refFinal,
         notes: notes.trim() ? notes.trim() : null,
-
-        // ✅ NEW: driver
         driverName: driverName.trim() ? driverName.trim() : null,
       };
 
@@ -575,9 +623,9 @@ export default function CashCollectionsPage() {
 
       await Promise.all(requests);
 
+      // ✅ show modal success
       setNotif({ open: true, type: "success", message: "Saved" });
 
-      // reset
       setCustomerId(null);
       setCustomerInput("");
       setCustomerPickLabel("");
@@ -595,11 +643,8 @@ export default function CashCollectionsPage() {
       setFilters(next);
       await loadList(next);
     } catch (e) {
-      setNotif({
-        open: true,
-        type: "error",
-        message: e?.response?.data?.message || "Failed to save",
-      });
+      // ✅ show modal error
+      setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to save" });
     } finally {
       setSaving(false);
     }
@@ -612,11 +657,7 @@ export default function CashCollectionsPage() {
       await loadList(filters);
       setNotif({ open: true, type: "success", message: "Deleted" });
     } catch (e) {
-      setNotif({
-        open: true,
-        type: "error",
-        message: e?.response?.data?.message || "Failed to delete",
-      });
+      setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to delete" });
     }
   }
 
@@ -662,18 +703,41 @@ export default function CashCollectionsPage() {
       if (!iframe) throw new Error("Print iframe missing");
       iframe.srcdoc = html;
     } catch (e) {
-      setNotif({
-        open: true,
-        type: "error",
-        message: e?.response?.data?.message || e?.message || "Failed to print",
-      });
+      setNotif({ open: true, type: "error", message: e?.response?.data?.message || e?.message || "Failed to print" });
     }
   }
 
   async function viewFiltered() {
     try {
-      const html = await buildPaperHtmlForCurrentFilters({ autoPrint: false });
+      const applied = { ...filters };
+      const allRows = await fetchAllForPaper(applied);
+
+      const groupedRows = groupRowsForPaper(allRows);
+      const html = buildPaperHtml({
+        groupedRows,
+        filters: applied,
+        printDate: todayYmd(),
+        autoPrint: false,
+      });
+
       setPreviewHtml(html);
+
+      const draftFromForm = buildDraftFromCreateForm();
+      const draftFromFilters = buildDraftFromFilteredRows(allRows);
+
+      if (draftFromForm) {
+        setPreviewDraft(draftFromForm);
+      } else {
+        if (draftFromFilters?.__info === "ALL_ALREADY_CONVERTED") {
+          setPreviewDraft({ rows: [] });
+         
+        } else {
+          setPreviewDraft(draftFromFilters);
+        }
+      }
+
+      console.log("📦 previewDraft sending to modal:", draftFromForm || draftFromFilters);
+
       setPreviewOpen(true);
     } catch (e) {
       setNotif({
@@ -685,7 +749,6 @@ export default function CashCollectionsPage() {
   }
 
   async function printFromPreview() {
-    // Reuse print pipeline to guarantee same HTML and totals
     await printFiltered();
   }
 
@@ -710,30 +773,37 @@ export default function CashCollectionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.limit, filters.sortBy, filters.sortDir]);
 
+  // ✅ NotificationModal expects: success | error | warning
+  const modalType =
+    notif.type === "success" ? "success" : notif.type === "error" ? "error" : "warning";
+
   return (
     <div className="cc-page">
-      {/* hidden print iframe */}
+      {/* ✅ Notification Modal */}
+      {notif.open && (
+        <NotificationModal
+          type={modalType}
+          message={notif.message}
+          onClose={() => setNotif((p) => ({ ...p, open: false }))}
+          confirmLabel="OK"
+        />
+      )}
+
       <iframe
         ref={printFrameRef}
         title="print-frame"
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: "-9999px",
-          width: 0,
-          height: 0,
-          border: 0,
-        }}
+        style={{ position: "absolute", left: "-9999px", top: "-9999px", width: 0, height: 0, border: 0 }}
       />
 
-      {/* Preview modal */}
-      <CashCollectionsPreviewModal
+      <ViewCashflowModal
         open={previewOpen}
         title="حركة الصندوق اليومية — Preview"
         html={previewHtml}
         onClose={() => setPreviewOpen(false)}
         onPrint={printFromPreview}
-         fontScale={1.35}
+        fontScale={1.35}
+        prefillDraft={previewDraft}
+        receivablesRoute="/recivables"
       />
 
       <div className="cc-header">
@@ -742,16 +812,6 @@ export default function CashCollectionsPage() {
           <div className="cc-subtitle">Track who collected money from which customer</div>
         </div>
       </div>
-
-      {notif.open && (
-        <div
-          className={`cc-notif ${notif.type}`}
-          onClick={() => setNotif((p) => ({ ...p, open: false }))}
-          title="Click to close"
-        >
-          {notif.message}
-        </div>
-      )}
 
       {/* ================== CREATE CARD ================== */}
       <div className="cc-card">
@@ -861,7 +921,6 @@ export default function CashCollectionsPage() {
             />
           </div>
 
-          {/* ✅ NEW driver input */}
           <div className="cc-field">
             <label>الشوفير</label>
             <input
@@ -915,13 +974,13 @@ export default function CashCollectionsPage() {
               className="btn"
               onClick={() => {
                 const next = {
-                  from: "",
-                  to: "",
+                  from: todayYmd(), 
+                  to: todayYmd(),
                   q: "",
                   method: "",
                   employeeId: "",
                   page: 1,
-                  limit: 50,
+                  limit: 200,
                   sortBy: "date",
                   sortDir: "DESC",
                 };
@@ -940,9 +999,7 @@ export default function CashCollectionsPage() {
             <input
               type="date"
               value={filters.from}
-              onChange={(e) =>
-                setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))
-              }
+              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value, page: 1 }))}
             />
           </div>
 
@@ -970,9 +1027,7 @@ export default function CashCollectionsPage() {
             <label>Employee</label>
             <select
               value={filters.employeeId}
-              onChange={(e) =>
-                setFilters((p) => ({ ...p, employeeId: e.target.value, page: 1 }))
-              }
+              onChange={(e) => setFilters((p) => ({ ...p, employeeId: e.target.value, page: 1 }))}
             >
               <option value="">All</option>
               {employees.map((u) => (
@@ -1002,9 +1057,7 @@ export default function CashCollectionsPage() {
             <div className="cc-sortRow">
               <select
                 value={filters.sortBy}
-                onChange={(e) =>
-                  setFilters((p) => ({ ...p, sortBy: e.target.value, page: 1 }))
-                }
+                onChange={(e) => setFilters((p) => ({ ...p, sortBy: e.target.value, page: 1 }))}
               >
                 <option value="date">Date</option>
                 <option value="createdAt">Created</option>
@@ -1012,9 +1065,7 @@ export default function CashCollectionsPage() {
               </select>
               <select
                 value={filters.sortDir}
-                onChange={(e) =>
-                  setFilters((p) => ({ ...p, sortDir: e.target.value, page: 1 }))
-                }
+                onChange={(e) => setFilters((p) => ({ ...p, sortDir: e.target.value, page: 1 }))}
               >
                 <option value="DESC">DESC</option>
                 <option value="ASC">ASC</option>
@@ -1077,20 +1128,19 @@ export default function CashCollectionsPage() {
                   <th>Customer</th>
                   <th style={{ width: 150 }}>الشوفير</th>
                   <th style={{ width: 170 }}>Employee</th>
-                  <th style={{ width: 130 }} className="num">
-                    Amount
-                  </th>
+                  <th style={{ width: 130 }} className="num">Amount</th>
                   <th style={{ width: 120 }}>Currency</th>
                   <th style={{ width: 110 }}>Method</th>
                   <th style={{ width: 140 }}>Reference</th>
                   <th>Notes</th>
+                  <th style={{ width: 120 }}>Receivable</th>
                   <th style={{ width: 90 }}></th>
                 </tr>
               </thead>
 
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} style={r?.receivableEntryId ? { opacity: 0.75 } : undefined}>
                     <td>{r.date}</td>
                     <td dir="auto">{safeName(r.customer, r.customerId)}</td>
                     <td dir="auto">{r.driverName || "-"}</td>
@@ -1103,8 +1153,13 @@ export default function CashCollectionsPage() {
                     </td>
                     <td>{r.method}</td>
                     <td dir="auto">{r.reference || "-"}</td>
-                    <td className="notes" dir="auto">
-                      {r.notes || "-"}
+                    <td className="notes" dir="auto">{r.notes || "-"}</td>
+                    <td>
+                      {r?.receivableEntryId ? (
+                        <span title={`ReceiptEntry #${r.receivableEntryId}`}>✅ Created</span>
+                      ) : (
+                        <span>⏳ Not yet</span>
+                      )}
                     </td>
                     <td className="actions">
                       <button className="btn danger" onClick={() => deleteRow(r.id)}>
