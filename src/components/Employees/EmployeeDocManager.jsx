@@ -1,72 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { axiosClient } from '../api/axiosClient';
 import './EmployeeDocManager.css';
 
 const EmployeeDocManager = () => {
-  const [employees, setEmployees] = useState([
-    {
-      id: 1,
-      name: "Ahmed Mohamed",
-      nationality: "Egyptian",
-      position: "Accountant",
-      phone: "+961 71 123 456",
-      passport: {
-        number: "A12345678",
-        issueDate: "2020-03-15",
-        expiryDate: "2025-03-15"
-      },
-      iqama: {
-        number: "IQ987654",
-        issueDate: "2023-06-01",
-        expiryDate: "2025-05-31"
-      },
-      files: [
-        { name: "passport_scan.pdf", type: "Passport" },
-        { name: "iqama_copy.pdf", type: "Work Permit" }
-      ]
-    },
-    {
-      id: 2,
-      name: "Fatima Hassan",
-      nationality: "Sudanese",
-      position: "Sales Manager",
-      phone: "+961 76 234 567",
-      passport: {
-        number: "S98765432",
-        issueDate: "2019-08-20",
-        expiryDate: "2024-08-20"
-      },
-      iqama: {
-        number: "IQ456789",
-        issueDate: "2023-01-15",
-        expiryDate: "2024-12-31"
-      },
-      files: [
-        { name: "fatima_passport.pdf", type: "Passport" },
-        { name: "work_permit.pdf", type: "Work Permit" }
-      ]
-    },
-    {
-      id: 3,
-      name: "Kwame Osei",
-      nationality: "Ghanaian",
-      position: "IT Specialist",
-      phone: "+961 78 345 678",
-      passport: {
-        number: "G55667788",
-        issueDate: "2021-02-10",
-        expiryDate: "2026-02-10"
-      },
-      iqama: {
-        number: "IQ123456",
-        issueDate: "2023-09-01",
-        expiryDate: "2025-08-31"
-      },
-      files: [
-        { name: "kwame_documents.pdf", type: "All Documents" }
-      ]
-    }
-  ]);
-
+  const [employees, setEmployees] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -79,12 +18,40 @@ const EmployeeDocManager = () => {
     position: '',
     phone: '',
     passportNumber: '',
-    passportIssue: '',
-    passportExpiry: '',
+    passportIssueDate: '',
+    passportExpiryDate: '',
     iqamaNumber: '',
-    iqamaIssue: '',
-    iqamaExpiry: ''
+    iqamaIssueDate: '',
+    iqamaExpiryDate: ''
   });
+
+  // Fetch employees on component mount
+  useEffect(() => {
+    fetchEmployees();
+    fetchAlerts();
+  }, []);
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosClient.get('/employees');
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      alert('Failed to fetch employees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await axiosClient.get('/employees/alerts');
+      setAlerts(response.data);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+    }
+  };
 
   const calculateDaysUntilExpiry = (expiryDate) => {
     const today = new Date();
@@ -110,57 +77,37 @@ const EmployeeDocManager = () => {
     });
   };
 
-  const getAlerts = () => {
-    const alerts = [];
-    employees.forEach(emp => {
-      const passportDays = calculateDaysUntilExpiry(emp.passport.expiryDate);
-      const iqamaDays = calculateDaysUntilExpiry(emp.iqama.expiryDate);
-
-      if (passportDays <= 90) {
-        alerts.push({
-          employee: emp.name,
-          document: 'Passport',
-          days: passportDays,
-          urgent: passportDays <= 30
-        });
-      }
-
-      if (iqamaDays <= 90) {
-        alerts.push({
-          employee: emp.name,
-          document: 'Work Permit (إقامة)',
-          days: iqamaDays,
-          urgent: iqamaDays <= 30
-        });
-      }
-    });
-    return alerts;
-  };
-
   const getFilteredEmployees = () => {
-    return employees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          emp.nationality.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (!matchesSearch) return false;
+    let filtered = employees;
 
-      if (currentFilter === 'all') return true;
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(emp => 
+        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        emp.nationality.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-      const passportStatus = getDocumentStatus(emp.passport.expiryDate);
-      const iqamaStatus = getDocumentStatus(emp.iqama.expiryDate);
+    // Apply status filter
+    if (currentFilter !== 'all') {
+      filtered = filtered.filter(emp => {
+        const passportStatus = getDocumentStatus(emp.passport.expiryDate);
+        const iqamaStatus = getDocumentStatus(emp.iqama.expiryDate);
 
-      if (currentFilter === 'expired') {
-        return passportStatus === 'expired' || iqamaStatus === 'expired';
-      }
-      if (currentFilter === 'expiring') {
-        return passportStatus === 'expiring' || iqamaStatus === 'expiring';
-      }
-      if (currentFilter === 'valid') {
-        return passportStatus === 'valid' && iqamaStatus === 'valid';
-      }
+        if (currentFilter === 'expired') {
+          return passportStatus === 'expired' || iqamaStatus === 'expired';
+        }
+        if (currentFilter === 'expiring') {
+          return passportStatus === 'expiring' || iqamaStatus === 'expiring';
+        }
+        if (currentFilter === 'valid') {
+          return passportStatus === 'valid' && iqamaStatus === 'valid';
+        }
+        return true;
+      });
+    }
 
-      return true;
-    });
+    return filtered;
   };
 
   const openAddEmployeeModal = () => {
@@ -171,34 +118,31 @@ const EmployeeDocManager = () => {
       position: '',
       phone: '',
       passportNumber: '',
-      passportIssue: '',
-      passportExpiry: '',
+      passportIssueDate: '',
+      passportExpiryDate: '',
       iqamaNumber: '',
-      iqamaIssue: '',
-      iqamaExpiry: ''
+      iqamaIssueDate: '',
+      iqamaExpiryDate: ''
     });
     setUploadedFiles([]);
     setShowModal(true);
   };
 
-  const openEditEmployeeModal = (id) => {
-    const emp = employees.find(e => e.id === id);
-    if (!emp) return;
-
-    setEditingEmployeeId(id);
+  const openEditEmployeeModal = (emp) => {
+    setEditingEmployeeId(emp.id);
     setFormData({
       name: emp.name,
       nationality: emp.nationality,
       position: emp.position || '',
       phone: emp.phone || '',
-      passportNumber: emp.passport.number,
-      passportIssue: emp.passport.issueDate,
-      passportExpiry: emp.passport.expiryDate,
-      iqamaNumber: emp.iqama.number,
-      iqamaIssue: emp.iqama.issueDate,
-      iqamaExpiry: emp.iqama.expiryDate
+      passportNumber: emp.passport.number || '',
+      passportIssueDate: emp.passport.issueDate || '',
+      passportExpiryDate: emp.passport.expiryDate || '',
+      iqamaNumber: emp.iqama.number || '',
+      iqamaIssueDate: emp.iqama.issueDate || '',
+      iqamaExpiryDate: emp.iqama.expiryDate || ''
     });
-    setUploadedFiles([...emp.files]);
+    setUploadedFiles(emp.files || []);
     setShowModal(true);
   };
 
@@ -213,59 +157,96 @@ const EmployeeDocManager = () => {
     });
   };
 
+  // ✅ UPDATED: Store actual File objects
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
-    const newFiles = files.map(file => ({
+    const fileObjects = files.map(file => ({
+      file: file, // Store actual File object
       name: file.name,
-      type: 'Document'
+      type: file.type.includes('pdf') ? 'PDF' : 'Image'
     }));
-    setUploadedFiles([...uploadedFiles, ...newFiles]);
+    setUploadedFiles([...uploadedFiles, ...fileObjects]);
   };
 
   const removeFile = (index) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  // ✅ UPDATED: Upload files separately with FormData
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    const employeeData = {
-      id: editingEmployeeId || Date.now(),
-      name: formData.name,
-      nationality: formData.nationality,
-      position: formData.position,
-      phone: formData.phone,
-      passport: {
-        number: formData.passportNumber,
-        issueDate: formData.passportIssue,
-        expiryDate: formData.passportExpiry
-      },
-      iqama: {
-        number: formData.iqamaNumber,
-        issueDate: formData.iqamaIssue,
-        expiryDate: formData.iqamaExpiry
-      },
-      files: uploadedFiles
-    };
+    try {
+      const employeeData = {
+        name: formData.name,
+        nationality: formData.nationality,
+        position: formData.position,
+        phone: formData.phone,
+        passportNumber: formData.passportNumber,
+        passportIssueDate: formData.passportIssueDate,
+        passportExpiryDate: formData.passportExpiryDate,
+        iqamaNumber: formData.iqamaNumber,
+        iqamaIssueDate: formData.iqamaIssueDate,
+        iqamaExpiryDate: formData.iqamaExpiryDate,
+        files: [] // Empty for now, will upload separately
+      };
 
-    if (editingEmployeeId) {
-      setEmployees(employees.map(e => 
-        e.id === editingEmployeeId ? employeeData : e
-      ));
-    } else {
-      setEmployees([...employees, employeeData]);
+      let employeeId;
+
+      if (editingEmployeeId) {
+        // Update existing employee
+        await axiosClient.patch(`/employees/${editingEmployeeId}`, employeeData);
+        employeeId = editingEmployeeId;
+      } else {
+        // Create new employee
+        const response = await axiosClient.post('/employees', employeeData);
+        employeeId = response.data.id;
+      }
+
+      // ✅ Upload files if any
+      if (uploadedFiles.length > 0 && uploadedFiles.some(f => f.file)) {
+        const formDataUpload = new FormData();
+        uploadedFiles.forEach((fileObj) => {
+          if (fileObj.file) {
+            formDataUpload.append('files', fileObj.file);
+          }
+        });
+
+        await axiosClient.post(`/employees/${employeeId}/upload`, formDataUpload, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      }
+
+      closeModal();
+      fetchEmployees();
+      fetchAlerts();
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      alert('Failed to save employee: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
     }
-
-    closeModal();
   };
 
-  const deleteEmployee = (id) => {
+  const deleteEmployee = async (id) => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
-      setEmployees(employees.filter(e => e.id !== id));
+      setLoading(true);
+      try {
+        await axiosClient.delete(`/employees/${id}`);
+        fetchEmployees();
+        fetchAlerts();
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+        alert('Failed to delete employee');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const alerts = getAlerts();
   const filteredEmployees = getFilteredEmployees();
 
   return (
@@ -311,7 +292,11 @@ const EmployeeDocManager = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="employee-doc-manager-btn employee-doc-manager-btn-primary" onClick={openAddEmployeeModal}>
+        <button 
+          className="employee-doc-manager-btn employee-doc-manager-btn-primary" 
+          onClick={openAddEmployeeModal}
+          disabled={loading}
+        >
           ➕ Add New Employee
         </button>
       </div>
@@ -343,6 +328,8 @@ const EmployeeDocManager = () => {
         </button>
       </div>
 
+      {loading && !showModal && <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>}
+
       <div className="employee-doc-manager-employees-grid">
         {filteredEmployees.length === 0 ? (
           <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px', color: '#7f8c8d' }}>
@@ -370,7 +357,7 @@ const EmployeeDocManager = () => {
                   <div className="employee-doc-manager-document-item">
                     <div className="employee-doc-manager-document-row">
                       <span className="employee-doc-manager-document-label">Number:</span>
-                      <span className="employee-doc-manager-document-value">{emp.passport.number}</span>
+                      <span className="employee-doc-manager-document-value">{emp.passport.number || '-'}</span>
                     </div>
                     <div className="employee-doc-manager-document-row">
                       <span className="employee-doc-manager-document-label">Expiry Date:</span>
@@ -397,7 +384,7 @@ const EmployeeDocManager = () => {
                   <div className="employee-doc-manager-document-item">
                     <div className="employee-doc-manager-document-row">
                       <span className="employee-doc-manager-document-label">Number:</span>
-                      <span className="employee-doc-manager-document-value">{emp.iqama.number}</span>
+                      <span className="employee-doc-manager-document-value">{emp.iqama.number || '-'}</span>
                     </div>
                     <div className="employee-doc-manager-document-row">
                       <span className="employee-doc-manager-document-label">Expiry Date:</span>
@@ -419,23 +406,44 @@ const EmployeeDocManager = () => {
                   </div>
                 </div>
 
+                {/* ✅ UPDATED: Clickable file links */}
                 <div className="employee-doc-manager-files-section">
                   <h5>📎 Uploaded Files</h5>
                   <div className="employee-doc-manager-file-list">
-                    {emp.files.map((file, index) => (
-                      <div key={index} className="employee-doc-manager-file-item">
-                        <span className="employee-doc-manager-file-name">📄 {file.name}</span>
-                        <span style={{ fontSize: '11px', color: '#7f8c8d' }}>{file.type}</span>
-                      </div>
-                    ))}
+                    {emp.files && emp.files.length > 0 ? (
+                      emp.files.map((file, index) => (
+                        <div key={index} className="employee-doc-manager-file-item">
+                          <a 
+                            href={`${axiosClient.defaults.baseURL}${file.url}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="employee-doc-manager-file-name"
+                            style={{ cursor: 'pointer', textDecoration: 'none', color: '#3498db' }}
+                          >
+                            📄 {file.name}
+                          </a>
+                          <span style={{ fontSize: '11px', color: '#7f8c8d' }}>{file.type}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '12px', color: '#aaa' }}>No files uploaded</div>
+                    )}
                   </div>
                 </div>
 
                 <div className="employee-doc-manager-action-buttons">
-                  <button className="employee-doc-manager-btn employee-doc-manager-btn-primary employee-doc-manager-btn-small" onClick={() => openEditEmployeeModal(emp.id)}>
+                  <button 
+                    className="employee-doc-manager-btn employee-doc-manager-btn-primary employee-doc-manager-btn-small" 
+                    onClick={() => openEditEmployeeModal(emp)}
+                    disabled={loading}
+                  >
                     ✏️ Edit
                   </button>
-                  <button className="employee-doc-manager-btn employee-doc-manager-btn-secondary employee-doc-manager-btn-small" onClick={() => deleteEmployee(emp.id)}>
+                  <button 
+                    className="employee-doc-manager-btn employee-doc-manager-btn-secondary employee-doc-manager-btn-small" 
+                    onClick={() => deleteEmployee(emp.id)}
+                    disabled={loading}
+                  >
                     🗑️ Delete
                   </button>
                 </div>
@@ -520,8 +528,8 @@ const EmployeeDocManager = () => {
                 <label>Issue Date</label>
                 <input 
                   type="date" 
-                  name="passportIssue"
-                  value={formData.passportIssue}
+                  name="passportIssueDate"
+                  value={formData.passportIssueDate}
                   onChange={handleInputChange}
                 />
               </div>
@@ -530,8 +538,8 @@ const EmployeeDocManager = () => {
                 <label>Expiry Date *</label>
                 <input 
                   type="date" 
-                  name="passportExpiry"
-                  value={formData.passportExpiry}
+                  name="passportExpiryDate"
+                  value={formData.passportExpiryDate}
                   onChange={handleInputChange}
                   required 
                 />
@@ -555,8 +563,8 @@ const EmployeeDocManager = () => {
                 <label>Issue Date</label>
                 <input 
                   type="date" 
-                  name="iqamaIssue"
-                  value={formData.iqamaIssue}
+                  name="iqamaIssueDate"
+                  value={formData.iqamaIssueDate}
                   onChange={handleInputChange}
                 />
               </div>
@@ -565,8 +573,8 @@ const EmployeeDocManager = () => {
                 <label>Expiry Date *</label>
                 <input 
                   type="date" 
-                  name="iqamaExpiry"
-                  value={formData.iqamaExpiry}
+                  name="iqamaExpiryDate"
+                  value={formData.iqamaExpiryDate}
                   onChange={handleInputChange}
                   required 
                 />
@@ -593,7 +601,7 @@ const EmployeeDocManager = () => {
                 />
                 <div>📁 Click to upload files</div>
                 <div style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '8px' }}>
-                  Supported: PDF, JPG, PNG
+                  Supported: PDF, JPG, PNG (Max 10MB per file)
                 </div>
               </div>
 
@@ -609,11 +617,22 @@ const EmployeeDocManager = () => {
               )}
 
               <div className="employee-doc-manager-modal-actions">
-                <button type="button" className="employee-doc-manager-btn employee-doc-manager-btn-secondary" style={{ flex: 1 }} onClick={closeModal}>
+                <button 
+                  type="button" 
+                  className="employee-doc-manager-btn employee-doc-manager-btn-secondary" 
+                  style={{ flex: 1 }} 
+                  onClick={closeModal}
+                  disabled={loading}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="employee-doc-manager-btn employee-doc-manager-btn-success" style={{ flex: 1 }}>
-                  Save Employee
+                <button 
+                  type="submit" 
+                  className="employee-doc-manager-btn employee-doc-manager-btn-success" 
+                  style={{ flex: 1 }}
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Employee'}
                 </button>
               </div>
             </form>

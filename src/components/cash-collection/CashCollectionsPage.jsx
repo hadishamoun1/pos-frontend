@@ -328,8 +328,8 @@ export default function CashCollectionsPage() {
     employeeId: "",
     page: 1,
     limit: 200,
-    sortBy: "date",
-    sortDir: "DESC",
+    sortBy: "createdAt",
+    sortDir: "ASC",
   });
 
   const [rows, setRows] = useState([]);
