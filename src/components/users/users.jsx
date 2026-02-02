@@ -30,6 +30,7 @@ const PERMISSION_GROUPS = [
       "sqm.view",
       "cuts.view",
       "viewing.view",
+      "employeeFiles.view",
 
       // ✅ NEW: Cash Flow / Cash Collections page access
       "cashFlow.view",
@@ -141,6 +142,7 @@ const PERMISSION_GROUPS = [
       "cashFlow.print",
       "cashFlow.viewAny",
       "users.list",
+      
     ],
   },
   {

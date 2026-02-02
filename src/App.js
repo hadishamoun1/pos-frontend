@@ -29,9 +29,9 @@ import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import MaintenanceModePage from "./components/settings/MaintenanceModePage";
-import MaintenanceGate from "./components/settings/MaintenanceGate"; // ✅ FIX
+import MaintenanceGate from "./components/settings/MaintenanceGate"; 
 import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
-
+import EmployeeDocManager from "./components/Employees/EmployeeDocManager"
 const queryClient = new QueryClient();
 
 function App() {
@@ -71,6 +71,7 @@ function App() {
               <Route path="/viewing" element={<InvoiceDetailsPage />} />
               <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
                 <Route path="/cash-collections" element={<CashCollectionsPage />} />
+                <Route path="/employee-files" element={<EmployeeDocManager />} />
                 
 
 

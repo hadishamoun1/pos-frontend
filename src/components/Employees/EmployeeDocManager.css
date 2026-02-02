@@ -1,0 +1,496 @@
+/* Employee Documentation Manager Styles - All classes prefixed with employee-doc-manager */
+
+.employee-doc-manager-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.employee-doc-manager-header {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.employee-doc-manager-header h1 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.employee-doc-manager-header p {
+  color: #7f8c8d;
+}
+
+.employee-doc-manager-alerts-section {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.employee-doc-manager-alerts-section h2 {
+  color: #856404;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.employee-doc-manager-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.employee-doc-manager-alert-item {
+  background: white;
+  padding: 15px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.employee-doc-manager-alert-item.urgent {
+  border-left: 4px solid #dc3545;
+}
+
+.employee-doc-manager-alert-item.warning {
+  border-left: 4px solid #ffc107;
+}
+
+.employee-doc-manager-controls {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.employee-doc-manager-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.employee-doc-manager-btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.employee-doc-manager-btn-primary:hover {
+  background: #2980b9;
+}
+
+.employee-doc-manager-btn-success {
+  background: #27ae60;
+  color: white;
+}
+
+.employee-doc-manager-btn-success:hover {
+  background: #229954;
+}
+
+.employee-doc-manager-search-box {
+  flex: 1;
+  min-width: 250px;
+}
+
+.employee-doc-manager-search-box input {
+  width: 100%;
+  padding: 12px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.employee-doc-manager-search-box input:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.employee-doc-manager-filter-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.employee-doc-manager-filter-btn {
+  padding: 8px 16px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.employee-doc-manager-filter-btn:hover {
+  border-color: #3498db;
+}
+
+.employee-doc-manager-filter-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.employee-doc-manager-employees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+}
+
+.employee-doc-manager-employee-card {
+  background: white;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.employee-doc-manager-employee-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.employee-doc-manager-employee-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.employee-doc-manager-employee-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.employee-doc-manager-employee-info h3 {
+  color: #2c3e50;
+  margin-bottom: 5px;
+  font-size: 18px;
+}
+
+.employee-doc-manager-employee-info p {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.employee-doc-manager-document-section {
+  margin-bottom: 20px;
+}
+
+.employee-doc-manager-document-section h4 {
+  color: #34495e;
+  font-size: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-doc-manager-document-item {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.employee-doc-manager-document-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.employee-doc-manager-document-row:last-child {
+  margin-bottom: 0;
+}
+
+.employee-doc-manager-document-label {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.employee-doc-manager-document-value {
+  font-size: 13px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.employee-doc-manager-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.employee-doc-manager-status-badge.status-valid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.employee-doc-manager-status-badge.status-expiring {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.employee-doc-manager-status-badge.status-expired {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.employee-doc-manager-files-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.employee-doc-manager-files-section h5 {
+  font-size: 13px;
+  color: #34495e;
+  margin-bottom: 10px;
+}
+
+.employee-doc-manager-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.employee-doc-manager-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.employee-doc-manager-file-name {
+  color: #3498db;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.employee-doc-manager-file-name:hover {
+  text-decoration: underline;
+}
+
+.employee-doc-manager-action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.employee-doc-manager-btn-small {
+  padding: 8px 16px;
+  font-size: 12px;
+  flex: 1;
+}
+
+.employee-doc-manager-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.employee-doc-manager-modal.active {
+  display: flex;
+}
+
+.employee-doc-manager-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.employee-doc-manager-modal-header {
+  margin-bottom: 25px;
+}
+
+.employee-doc-manager-modal-header h2 {
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.employee-doc-manager-form-group {
+  margin-bottom: 20px;
+}
+
+.employee-doc-manager-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #34495e;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.employee-doc-manager-form-group input,
+.employee-doc-manager-form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.employee-doc-manager-form-group input:focus,
+.employee-doc-manager-form-group select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.employee-doc-manager-file-upload-area {
+  border: 2px dashed #e0e0e0;
+  border-radius: 6px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.employee-doc-manager-file-upload-area:hover {
+  border-color: #3498db;
+  background: #f8f9fa;
+}
+
+.employee-doc-manager-uploaded-files {
+  margin-top: 15px;
+}
+
+.employee-doc-manager-uploaded-file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.employee-doc-manager-remove-file {
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.employee-doc-manager-remove-file:hover {
+  color: #a71d2a;
+}
+
+.employee-doc-manager-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.employee-doc-manager-btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.employee-doc-manager-btn-secondary:hover {
+  background: #7f8c8d;
+}
+
+.employee-doc-manager-days-left {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-top: 4px;
+}
+
+.employee-doc-manager-days-left.urgent {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .employee-doc-manager-employees-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .employee-doc-manager-controls {
+    flex-direction: column;
+  }
+
+  .employee-doc-manager-filter-buttons {
+    flex-wrap: wrap;
+  }
+
+  .employee-doc-manager-modal-content {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .employee-doc-manager-employee-card {
+    padding: 20px;
+  }
+
+  .employee-doc-manager-header {
+    padding: 20px;
+  }
+
+  .employee-doc-manager-alerts-section {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-doc-manager-alert-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .employee-doc-manager-employee-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .employee-doc-manager-action-buttons {
+    flex-direction: column;
+  }
+
+  .employee-doc-manager-filter-buttons {
+    gap: 8px;
+  }
+
+  .employee-doc-manager-filter-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+}

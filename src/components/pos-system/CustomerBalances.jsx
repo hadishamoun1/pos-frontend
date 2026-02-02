@@ -6,6 +6,8 @@ export default function CustomerBalances() {
   const today = new Date().toISOString().split("T")[0];
   const [toDate, setToDate] = useState(today);
   const [type, setType] = useState("ALL");
+  const [minBalance, setMinBalance] = useState(""); // NEW: minimum balance filter
+  const [showNumberedCustomers, setShowNumberedCustomers] = useState(false); // NEW: toggle for numbered customers
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -20,6 +22,14 @@ export default function CustomerBalances() {
     try {
       const params = { to: toDate };
       if (type !== "ALL") params.type = type;
+      
+      // Add minBalance to params if provided
+      if (minBalance && minBalance.trim() !== "") {
+        const parsedBalance = parseFloat(minBalance);
+        if (!isNaN(parsedBalance)) {
+          params.minBalance = parsedBalance;
+        }
+      }
 
       const res = await axiosClient.get("/journal-vouchers/reports/customer-balances", {
         params,
@@ -294,6 +304,12 @@ export default function CustomerBalances() {
           <strong>Type</strong>
           <span>${data.type}</span>
         </div>
+        ${data.minBalance !== undefined ? `
+        <div class="print-info-item">
+          <strong>Min Balance Filter</strong>
+          <span>≥ ${fmt(data.minBalance)}</span>
+        </div>
+        ` : ''}
         <div class="print-info-item">
           <strong>Generated On</strong>
           <span>${printDate}</span>
@@ -390,9 +406,22 @@ export default function CustomerBalances() {
     });
   };
 
-  const filteredCustomers = (data?.customers || []).filter((c) =>
-    c.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Check if customer name starts with number pattern (e.g., "2-", "3-", "10-")
+  const isNumberedCustomer = (customerName) => {
+    if (!customerName) return false;
+    // Match pattern: starts with digit(s) followed by dash or space
+    return /^\d+[-\s]/.test(customerName.trim());
+  };
+
+  const filteredCustomers = (data?.customers || [])
+    .filter((c) => c.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((c) => {
+      // Filter out numbered customers if checkbox is not checked
+      if (!showNumberedCustomers && isNumberedCustomer(c.customerName)) {
+        return false;
+      }
+      return true;
+    });
 
   const groupedByCurrency = filteredCustomers.reduce((acc, c) => {
     if (!acc[c.currencyCode]) acc[c.currencyCode] = [];
@@ -426,6 +455,29 @@ export default function CustomerBalances() {
           </select>
         </label>
 
+        <label>
+          Min Balance:
+          <input
+            type="number"
+            step="0.01"
+            placeholder="e.g., 5"
+            value={minBalance}
+            onChange={(e) => setMinBalance(e.target.value)}
+            disabled={loading}
+            title="Filter customers with balance greater than or equal to this value"
+          />
+        </label>
+
+        <label className="customer-balances-checkbox-label">
+          <input
+            type="checkbox"
+            checked={showNumberedCustomers}
+            onChange={(e) => setShowNumberedCustomers(e.target.checked)}
+            disabled={loading}
+          />
+          <span>Show numbered customers (e.g., "2- عمر", "3- احمد")</span>
+        </label>
+
         <button onClick={fetchReport} disabled={loading} className="customer-balances-generate-btn">
           {loading ? "Loading..." : "Generate"}
         </button>
@@ -454,6 +506,12 @@ export default function CustomerBalances() {
               <strong>Type</strong>
               <div>{data.type}</div>
             </div>
+            {data.minBalance !== undefined && (
+              <div>
+                <strong>Min Balance</strong>
+                <div>≥ {fmt(data.minBalance)}</div>
+              </div>
+            )}
             <div>
               <strong>Total Customers</strong>
               <div>{data.summary.totalCustomers}</div>

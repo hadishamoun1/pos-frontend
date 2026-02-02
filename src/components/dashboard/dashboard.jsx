@@ -37,6 +37,7 @@ const sections = [
 
   // ✅ Cash Collections access
   { name: "Cash Collections", image: "/assets/settings.png", perm: "cashFlow.view" },
+  { name: "Employee files", image: "/assets/settings.png", perm: "employeeFiles.view" },
 
   // Admin-only
   { name: "Users", image: "/assets/settings.png", perm: "users.manage" },
