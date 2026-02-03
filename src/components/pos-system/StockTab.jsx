@@ -95,7 +95,8 @@ const StockTab = forwardRef(function StockTab(
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
-  const [originFilter, setOriginFilter] = useState(""); // ✅ NEW: origin filter
+  const [originFilter, setOriginFilter] = useState(""); // ✅ origin filter
+  const [typeFilter, setTypeFilter] = useState(""); // ✅ NEW: type filter
 
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
@@ -368,6 +369,7 @@ const StockTab = forwardRef(function StockTab(
     setNameChip("");
     setDimsChip("");
     setOriginFilter(""); // ✅ Clear origin too
+    setTypeFilter(""); // ✅ Clear type too
     setQuickOrder([]);
     setTimeout(() => searchInputRef.current?.focus?.(), 0);
   }, []);
@@ -659,14 +661,28 @@ const StockTab = forwardRef(function StockTab(
   const inSearchMode = Boolean(nameChip || dimsChip);
   const unfilteredRows = inSearchMode ? rowsFromNested : rowsFromFlat;
   
-  // ✅ Frontend-only origin filter
+  // ✅ Frontend-only origin and type filters
   const rows = useMemo(() => {
-    if (!originFilter) return unfilteredRows;
-    return unfilteredRows.filter(row => {
-      const rowOrigin = String(row.origin || "").trim();
-      return rowOrigin.toLowerCase() === originFilter.toLowerCase();
-    });
-  }, [unfilteredRows, originFilter]);
+    let filtered = unfilteredRows;
+    
+    // Filter by origin
+    if (originFilter) {
+      filtered = filtered.filter(row => {
+        const rowOrigin = String(row.origin || "").trim();
+        return rowOrigin.toLowerCase() === originFilter.toLowerCase();
+      });
+    }
+    
+    // Filter by type
+    if (typeFilter) {
+      filtered = filtered.filter(row => {
+        const rowType = String(row.type || "").toLowerCase();
+        return rowType === typeFilter.toLowerCase();
+      });
+    }
+    
+    return filtered;
+  }, [unfilteredRows, originFilter, typeFilter]);
 
   const selectedTotal = useMemo(() => {
     let total = 0;
@@ -801,6 +817,27 @@ const StockTab = forwardRef(function StockTab(
             <option value="Guardian">Guardian</option>
             <option value="AGC">AGC</option>
             <option value="Cario">Cario</option>
+          </select>
+
+          {/* ✅ Type dropdown (frontend filter only) */}
+          <select 
+            value={typeFilter} 
+            onChange={(e) => setTypeFilter(e.target.value)}
+            style={{ 
+              padding: '4px 8px', 
+              fontSize: '13px', 
+              border: '1px solid #ccc', 
+              borderRadius: '4px',
+              backgroundColor: typeFilter ? '#e8f4f8' : 'white',
+              cursor: 'pointer',
+              marginLeft: '8px'
+            }}
+          >
+            <option value="">All Types</option>
+            <option value="box">Box</option>
+            <option value="sheet">Sheet</option>
+            <option value="sqm">SQM</option>
+            <option value="unit">Unit</option>
           </select>
 
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
