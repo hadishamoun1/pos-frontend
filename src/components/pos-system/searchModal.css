@@ -171,7 +171,7 @@
                sans-serif;
 }
 
-/* Chip “x” */
+/* Chip "x" */
 .search-chip-x {
   appearance: none;
   border: none;
@@ -192,7 +192,7 @@
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
-  table-layout: auto;
+  table-layout: fixed; /* ✅ Changed to fixed for column width control */
 }
 .search-modal-table th,
 .search-modal-table td {
@@ -200,12 +200,26 @@
   padding: 0.7rem 0.4rem;
   border: 1px solid #ddd;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .search-modal-table th {
   background: linear-gradient(to right, #007bff, #0056b3);
   color: white;
   text-transform: uppercase;
 }
+
+/* ✅ Column width controls - adjust these values as needed */
+.search-modal-table .col-select { width: 70px; }
+.search-modal-table .col-item { width: 280px; white-space: normal; } /* Allow wrapping for item names */
+.search-modal-table .col-type { width: 70px; }
+.search-modal-table .col-length { width: 150px; }
+.search-modal-table .col-width { width: 80px; }
+.search-modal-table .col-stock { width: 100px; }
+.search-modal-table .col-origin { width: 120px; }
+.search-modal-table .col-condition { width: 100px; }
+.search-modal-table .col-date { width: 120px; }
 
 /* ✅ SINGLE correct sticky header rule */
 .search-modal-table thead th {
@@ -216,7 +230,7 @@
 
 /* ✅ Center the checkbox column perfectly */
 .search-modal-table th.col-select {
-  width: 56px;
+  width: 70px;
 }
 .search-modal-table td.cell-select {
   display: flex;
@@ -242,10 +256,6 @@
   height: 1.2rem;
   cursor: pointer;
 }
-
-/* Width hint for last column (optional) */
-.search-modal-table th:last-child,
-.search-modal-table td:last-child { width: 10%; }
 
 /* Empty-state row spans the full width cleanly */
 .search-modal-table .empty-row .empty-cell {

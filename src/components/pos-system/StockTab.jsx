@@ -906,16 +906,15 @@ const StockTab = forwardRef(function StockTab(
       <table className="search-modal-table">
         <thead>
           <tr>
-            <th>SELECT</th>
-            <th>ITEM</th>
-            <th>TYPE</th>
-            <th>LENGTH</th>
-            <th>WIDTH</th>
-            <th>SHEETS/BOX</th>
-            <th>ORIGIN</th>
-            <th>CONDITION</th>
-            <th>DATE RECEIVED</th>
-            <th>STOCK</th>
+            <th className="col-select">SELECT</th>
+            <th className="col-item">ITEM</th>
+            <th className="col-type">TYPE</th>
+            <th className="col-length">LENGTH</th>
+            <th className="col-stock-box">STOCK BOX</th>
+            <th className="col-stock-sheet">STOCK SHEET</th>
+            <th className="col-origin">ORIGIN</th>
+            <th className="col-condition">CONDITION</th>
+            <th className="col-date">DATE RECEIVED</th>
           </tr>
         </thead>
 
@@ -923,6 +922,31 @@ const StockTab = forwardRef(function StockTab(
           {rows.map((r) => {
             const checked = selectedMap.has(r.uniqueId);
             const rep = checked ? Number(selectedMap.get(r.uniqueId)?.repeat || 1) : 1;
+            
+            const typeLower = String(r.type || "").toLowerCase();
+            const isBox = typeLower === "box";
+            const isSheet = typeLower === "sheet";
+            
+            // ✅ Format dimensions based on type
+            let dimensionsDisplay = "";
+            if (isBox) {
+              // Box: length×width-sheetsPerBox (e.g., 225×321-012)
+              dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}-${String(r.sheetsPerBox || 0).padStart(3, "0")}`;
+            } else if (isSheet) {
+              // Sheet: length×width (e.g., 225×321)
+              dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
+            } else {
+              // SQM/Unit: just length (or length×width if both exist)
+              if (r.length && r.width) {
+                dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
+              } else {
+                dimensionsDisplay = r.length ?? "";
+              }
+            }
+            
+            // ✅ Stock columns
+            const stockBox = isBox ? (r.balanceOFR ?? "") : "";
+            const stockSheet = isSheet ? (r.balanceOFR ?? "") : "";
 
             return (
               <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""}>
@@ -933,7 +957,7 @@ const StockTab = forwardRef(function StockTab(
                     checked={checked}
                     onChange={() => toggleSelect(r)}
                   />
-                  {checked && String(r.type || "").toLowerCase() === "sqm" && (
+                  {checked && typeLower === "sqm" && (
                     <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.8 }}>
                       x{rep}
                     </span>
@@ -941,26 +965,25 @@ const StockTab = forwardRef(function StockTab(
                 </td>
 
                 <td style={{ direction: "rtl", textAlign: "right" }}>
-                  {String(r.type || "").toLowerCase() === "unit"
+                  {typeLower === "unit"
                     ? `${r.itemName ?? ""}`.trim()
                     : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim()}
                 </td>
 
                 <td>{r.type}</td>
-                <td>{r.length ?? ""}</td>
-                <td>{r.width ?? ""}</td>
-                <td>{r.type === "box" ? r.sheetsPerBox : ""}</td>
+                <td>{dimensionsDisplay}</td>
+                <td>{stockBox}</td>
+                <td>{stockSheet}</td>
                 <td>{r.origin ?? ""}</td>
                 <td>{r.condition ?? ""}</td>
                 <td>{r.dateReceived ?? ""}</td>
-                <td>{r.balanceOFR ?? ""}</td>
               </tr>
             );
           })}
 
           {rows.length === 0 && (
             <tr className="empty-row">
-              <td className="empty-cell" colSpan={10}>
+              <td className="empty-cell" colSpan={9}>
                 No Data
               </td>
             </tr>
