@@ -298,7 +298,7 @@ function groupRowsForPaper(allRows) {
 // ✅ helper: convert method to receivable pmtType
 function mapMethodToPmtType(method) {
   const m = String(method || "").toUpperCase();
-  if (m === "WHISH") return "Whish";
+  if (m === "WHISH") return "Cash";
   if (m === "CHEQUE") return "Cheque";
   if (m === "OTHER") return "Other";
   return "Cash";
