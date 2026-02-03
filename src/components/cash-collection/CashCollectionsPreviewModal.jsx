@@ -8,6 +8,28 @@ const DRAFT_KEY = "__receivables_create_draft__";
 function injectViewFontCss(html, { fontScale = 1.25, fontPx = null } = {}) {
   const css = `
     /* ✅ VIEW ONLY (does not affect print) */
+
+    /* ✅ FORCE RTL in preview so English starts from RIGHT */
+    html, body {
+      direction: rtl !important;
+      unicode-bidi: isolate !important;
+      text-align: right !important;
+    }
+
+    /* ✅ ensure table cells do not auto-switch direction */
+    table, thead, tbody, tr, th, td, div, span {
+      direction: rtl !important;
+      unicode-bidi: isolate !important;
+      text-align: right !important;
+    }
+
+    /* ✅ keep numbers readable in amounts columns (optional but recommended) */
+    .c-usd, .c-ll {
+      direction: ltr !important;
+      unicode-bidi: isolate !important;
+      text-align: center !important;
+    }
+
     body {
       ${
         fontPx
@@ -15,6 +37,7 @@ function injectViewFontCss(html, { fontScale = 1.25, fontPx = null } = {}) {
           : `font-size: calc(12.5px * ${fontScale}) !important;`
       }
     }
+
     table { 
       ${
         fontPx
@@ -22,6 +45,7 @@ function injectViewFontCss(html, { fontScale = 1.25, fontPx = null } = {}) {
           : `font-size: calc(12.5px * ${fontScale}) !important;`
       }
     }
+
     th, td {
       ${
         fontPx
@@ -30,7 +54,7 @@ function injectViewFontCss(html, { fontScale = 1.25, fontPx = null } = {}) {
       }
     }
 
-    /* ✅ NEW: make "Created" rows green in VIEW modal only */
+    /* ✅ make "Created" rows green in VIEW modal only */
     .row-created td {
       background: #d9f8d9 !important;
     }
