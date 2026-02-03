@@ -19,7 +19,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
     amountExchanged: "",
     comments: "",
   });
-  console.log(formData);
+
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   const stripCommas = (s) => (s ? s.replace(/,/g, "") : "");
@@ -29,7 +29,6 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
   useEffect(() => {
     if (!selectedRow) return;
 
-    // ① Log out the raw selectedRow so you can see exactly what arrived
     console.log("🔍 selectedRow payload:", selectedRow);
 
     const {
@@ -40,15 +39,15 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       type = "",
       details = [{}],
     } = selectedRow;
+
     const d0 = details[0] || {};
 
-    // build the new formData object
     const newForm = {
       receiptVoucherId: id,
       customerName: customer.name || "",
       customerAccountId: customer.id || "",
-      date,
-      invoiceId,
+      date: (date || "").slice(0, 10),
+      invoiceId: invoiceId == null ? "" : String(invoiceId),
       type,
       pmtType: d0.pmtType || "",
       currency: d0.currency || "",
@@ -58,14 +57,13 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       comments: d0.comments || "",
     };
 
-    // ② Log out the object you're about to set into state
     console.log("📝 initializing formData:", newForm);
-
     setFormData(newForm);
   }, [selectedRow]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
     setFormData((prev) => {
       let upd = { ...prev, [name]: value };
 
@@ -73,11 +71,13 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
       if (["cashNumber", "exchangeRate", "currency"].includes(name)) {
         const cash = parseFloat(stripCommas(upd.cashNumber)) || 0;
         const rate = parseFloat(stripCommas(upd.exchangeRate)) || 0;
+
         if (upd.currency === "LL" && rate) {
           upd.amountExchanged = formatCommas((cash / rate).toFixed(2));
-        } else if (upd.currency === "USD") {
-          // USD→LL: just echo cash
-          upd.amountExchanged = formatCommas(cash * rate);
+        } else if (upd.currency === "USD" && rate) {
+          upd.amountExchanged = formatCommas((cash * rate).toFixed(2));
+        } else {
+          upd.amountExchanged = "";
         }
       }
 
@@ -101,26 +101,25 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
         comments,
       } = formData;
 
+      const invoiceIdNum = (invoiceId || "").trim()
+        ? Number((invoiceId || "").trim())
+        : null;
+
       const payload = {
         customerId: Number(customerAccountId),
         date,
-        invoiceId: (invoiceId || "").trim() || null,
+        invoiceId: Number.isFinite(invoiceIdNum) ? invoiceIdNum : null,
         cashNumber: Number(stripCommas(cashNumber)),
         currency,
-        exchangeRate: exchangeRate
-          ? Number(stripCommas(exchangeRate))
-          : undefined,
+        exchangeRate: exchangeRate ? Number(stripCommas(exchangeRate)) : undefined,
         amountExchanged: Number(stripCommas(amountExchanged)),
         comments: (comments || "").trim() || null,
         type,
-        pmtType,
+        pmtType, // ✅ now editable
       };
 
-      // ✅ FIX: relative URL only (axiosClient already has baseURL /api)
-      const res = await axiosClient.put(
-        `/recievables/${receiptVoucherId}`,
-        payload
-      );
+      // ✅ relative URL only (axiosClient already has baseURL /api)
+      const res = await axiosClient.put(`/recievables/${receiptVoucherId}`, payload);
 
       onSave(res.data);
       onClose();
@@ -146,6 +145,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
     <div className="edit-modal-overlay">
       <div className="edit-modal-content">
         <h2>Edit Record</h2>
+
         <table className="edit-modal-table">
           <thead>
             <tr>
@@ -161,6 +161,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
               <th>Comments</th>
             </tr>
           </thead>
+
           <tbody>
             <tr>
               <td>
@@ -172,6 +173,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   onClick={() => setIsCustomerModalOpen(true)}
                 />
               </td>
+
               <td>
                 <input
                   type="text"
@@ -180,6 +182,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
                 <select
                   name="type"
@@ -193,18 +196,20 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   <option value="RVR">RVR</option>
                 </select>
               </td>
+
               <td>
+                {/* ✅ NOW EDITABLE: removed disabled */}
                 <select
                   name="pmtType"
                   value={formData.pmtType}
                   onChange={handleInputChange}
-                  disabled
                 >
                   <option value="">Select PMT</option>
                   <option value="Cash">Cash</option>
                   <option value="Check">Check</option>
                 </select>
               </td>
+
               <td>
                 <select
                   name="currency"
@@ -216,6 +221,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   <option value="LL">LL</option>
                 </select>
               </td>
+
               <td>
                 <input
                   type="text"
@@ -224,6 +230,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
                 <input
                   type="text"
@@ -232,6 +239,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
                 <input
                   type="text"
@@ -240,6 +248,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   readOnly
                 />
               </td>
+
               <td>
                 <input
                   type="date"
@@ -248,6 +257,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
                 <input
                   name="comments"
@@ -266,6 +276,7 @@ const EditRecordModal = ({ selectedRow, onClose, onSave }) => {
           >
             Cancel
           </button>
+
           <button
             className="edit-modal-action-button edit-modal-save-button"
             onClick={handleSave}
