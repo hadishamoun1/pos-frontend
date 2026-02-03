@@ -2,38 +2,26 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import ReportModal from "./inventory-report-modal";
 import "./inventory.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (token attached automatically)
+import { axiosClient } from "../api/axiosClient";
 
 const LOW_STOCK_THRESHOLD = 5;
 
 const normalizeDigits = (s) => {
   if (!s) return "";
   const map = {
-    "٠": "0",
-    "١": "1",
-    "٢": "2",
-    "٣": "3",
-    "٤": "4",
-    "٥": "5",
-    "٦": "6",
-    "٧": "7",
-    "٨": "8",
-    "٩": "9",
-    "۰": "0",
-    "۱": "1",
-    "۲": "2",
-    "۳": "3",
-    "۴": "4",
-    "۵": "5",
-    "۶": "6",
-    "۷": "۷",
-    "۸": "8",
-    "۹": "9",
+    "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+    "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+    "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+    "۵": "5", "۶": "6", "۷": "۷", "۸": "8", "۹": "9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
+
 const normalizeArabicAlef = (s) => String(s || "").replace(/أ|إ|آ/g, "ا");
 const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
+
+// ✅ Define origin options (you can fetch these from backend if needed)
+const ORIGIN_OPTIONS = ["", "China", "Italy", "Trakya","Sphinx", "SISECAM","Corpotrad", "Sahand", "GrandStar","S.G","Bisheng Techno","Qingdao","	King Tai","Guardian","AGC","Cario"];
 
 function useCancelableFetch() {
   const abortRef = useRef();
@@ -55,19 +43,20 @@ const prettyDims = (L, W, SPB) => {
     return spb ? `${l}×${w}-${String(spb).padStart(3, "0")}` : `${l}×${w}`;
   return "-";
 };
+
 const fmt2 = (n) => {
   const v = Number(n);
   if (!Number.isFinite(v)) return "";
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 };
 
-// helpers for sqm ↔ qty conversions (box/sheet <-> sqm)
+// helpers for sqm ↔ qty conversions
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 const perSheetSqmOf = (lengthCm, widthCm) => {
-  const L = toNum(lengthCm),
-    W = toNum(widthCm);
+  const L = toNum(lengthCm), W = toNum(widthCm);
   return L > 0 && W > 0 ? (L * W) / 10000 : 0;
 };
+
 const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
   const SPB = Math.max(1, toNum(sheetsPerBox));
   const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
@@ -81,6 +70,7 @@ const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
   }
   return toNum(valueSqm);
 };
+
 const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
   const SPB = Math.max(1, toNum(sheetsPerBox));
   const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
@@ -90,10 +80,8 @@ const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
   return toNum(valueQty);
 };
 
-/** Mode-aware totals */
 const deriveBalances = (row, mode) => {
   const typeLower = String(row?.type || "").toLowerCase();
-
   const nonOfr = row?.ofrTotalsUnits?.balance;
   const onesBal = row?.ones?.balance;
   const nonOfrBal = Number.isFinite(Number(nonOfr))
@@ -166,7 +154,6 @@ const deriveBalances = (row, mode) => {
   };
 };
 
-// chips -> params
 const parseChipsToParams = (chips) => {
   let q = normalizeDigits(chips.join(" ").trim());
   q = q.replace(/[xX×]/g, "*").replace(/\s+/g, " ");
@@ -207,6 +194,7 @@ export default function InventoryBrowser() {
   const [qInput, setQInput] = useState("");
   const [chips, setChips] = useState([]);
   const [type, setType] = useState("");
+  const [origin, setOrigin] = useState(""); // ✅ NEW: origin filter
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [rows, setRows] = useState([]);
@@ -230,12 +218,10 @@ export default function InventoryBrowser() {
   // Toggles
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
-
-  // ✅ As-of date filter (empty = backend uses "today")
   const [asOf, setAsOf] = useState("");
 
-  // description source (maps to your endpoints)
-  const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
+  // description source
+  const [descMode, setDescMode] = useState("real");
   const currentLedgerPath = useMemo(
     () =>
       descMode === "real"
@@ -244,11 +230,11 @@ export default function InventoryBrowser() {
     [descMode]
   );
 
-  // Report state (keep raw rows for SPB index)
+  // Report state
   const [reportOpen, setReportOpen] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportRows, setReportRows] = useState([]);
-  const [reportSpbRows, setReportSpbRows] = useState([]); // unfiltered source (for SPB)
+  const [reportSpbRows, setReportSpbRows] = useState([]);
   const reportAbortRef = useRef();
   const newReportSignal = () => {
     try {
@@ -265,7 +251,7 @@ export default function InventoryBrowser() {
     return inputQ;
   };
 
-  // Optional live re-fetch while typing when NO chips are pinned
+  // ✅ Updated dependency: now includes origin
   useEffect(() => {
     if (chips.length > 0) return;
     const t = setTimeout(() => {
@@ -274,7 +260,7 @@ export default function InventoryBrowser() {
     }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qInput, type, includeZeros, descMode, asOf]);
+  }, [qInput, type, origin, includeZeros, descMode, asOf]);
 
   const addChipFromInput = () => {
     const raw = normalizeDigits(qInput).trim().replace(/\s+/g, " ");
@@ -283,6 +269,7 @@ export default function InventoryBrowser() {
     setQInput("");
     setPage(1);
   };
+
   const removeChip = (idx) => {
     setChips((prev) => {
       const next = prev.slice();
@@ -291,6 +278,7 @@ export default function InventoryBrowser() {
     });
     setPage(1);
   };
+
   const clearChips = () => {
     setChips([]);
     setPage(1);
@@ -299,7 +287,6 @@ export default function InventoryBrowser() {
   const isCanceled = (e) =>
     e?.name === "CanceledError" || e?.code === "ERR_CANCELED";
 
-  // ------- Fetch current page (NOW via axiosClient) -------
   const fetchFromLedger = async () => {
     setLoading(true);
     setBalancesLoading(true);
@@ -311,7 +298,6 @@ export default function InventoryBrowser() {
 
     try {
       const signal = cancel();
-
       const parsed = parseChipsToParams(chips);
       const qFinal = buildQ();
 
@@ -322,7 +308,6 @@ export default function InventoryBrowser() {
         includeZeros: String(includeZeros),
       };
 
-      // ✅ AsOf
       if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) params.asOf = asOf;
 
       // chips parsed fields
@@ -335,6 +320,7 @@ export default function InventoryBrowser() {
 
       if (qFinal) params.q = qFinal;
       if (type) params.type = type;
+      if (origin) params.origin = origin; // ✅ Add origin to params
 
       const res = await axiosClient.get(currentLedgerPath, { params, signal });
       const json = res?.data;
@@ -380,12 +366,10 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ------- Fetch ALL for report (NOW via axiosClient) -------
   const fetchAllForReport = async () => {
     setReportLoading(true);
     try {
       const signal = newReportSignal();
-
       const parsed = parseChipsToParams(chips);
       const qFinal = buildQ();
 
@@ -402,7 +386,7 @@ export default function InventoryBrowser() {
         baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
       if (qFinal) baseParams.q = qFinal;
       if (type) baseParams.type = type;
-      // NOTE: do NOT pass includeZeros — we want raw universe for SPB.
+      if (origin) baseParams.origin = origin; // ✅ Add origin to report params
 
       const BIG_LIMIT = 500;
       let aggAll = [];
@@ -439,8 +423,8 @@ export default function InventoryBrowser() {
             return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
           });
 
-      setReportSpbRows(aggAll); // source for SPB index
-      setReportRows(aggShown); // visible
+      setReportSpbRows(aggAll);
+      setReportRows(aggShown);
       setReportOpen(true);
     } catch (e) {
       if (!isCanceled(e)) {
@@ -454,12 +438,13 @@ export default function InventoryBrowser() {
     }
   };
 
-  // Re-fetch on these changes
+  // ✅ Updated dependency: includes origin
   useEffect(() => {
-    fetchFromLedger(); // eslint-disable-line react-hooks/exhaustive-deps
-  }, [chips, type, page, limit, includeZeros, currentLedgerPath, asOf]);
+    fetchFromLedger();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chips, type, origin, page, limit, includeZeros, currentLedgerPath, asOf]);
 
-  // Drawer helpers
+  // Drawer and other methods remain the same...
   const batchQtyUnits = (batch, header) => {
     if (batch?.balanceOFR !== undefined && batch?.balanceOFR !== null) {
       const n = Number(batch.balanceOFR);
@@ -488,7 +473,7 @@ export default function InventoryBrowser() {
   };
 
   const openBatchesFor = (variantRow) => {
-    if (descMode !== "real") return; // batches only in real mode
+    if (descMode !== "real") return;
 
     setDrawerVariant(variantRow);
     setDrawerOpen(true);
@@ -589,7 +574,7 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ---------- Header UI ----------
+  // ✅ HEADER UI - Added Origin dropdown
   const header = (
     <div className="invb-toolbar">
       <div className="invb-row invb-row--wrap invb-row--gap">
@@ -624,10 +609,34 @@ export default function InventoryBrowser() {
           </div>
         </div>
 
-        <select className="invb-select" value={type} onChange={(e) => { setType(e.target.value); setPage(1); }}>
+        {/* Type dropdown */}
+        <select 
+          className="invb-select" 
+          value={type} 
+          onChange={(e) => { 
+            setType(e.target.value); 
+            setPage(1); 
+          }}
+        >
           {TYPE_OPTIONS.map((t) => (
             <option key={t || "any"} value={t}>
               {t ? t.toUpperCase() : "Any Type"}
+            </option>
+          ))}
+        </select>
+
+        {/* ✅ Origin dropdown */}
+        <select 
+          className="invb-select" 
+          value={origin} 
+          onChange={(e) => { 
+            setOrigin(e.target.value); 
+            setPage(1); 
+          }}
+        >
+          {ORIGIN_OPTIONS.map((o) => (
+            <option key={o || "any-origin"} value={o}>
+              {o || "Any Origin"}
             </option>
           ))}
         </select>
@@ -721,7 +730,6 @@ export default function InventoryBrowser() {
 
   return (
     <div className="invb-container">
-      {/* Title row + mode toggle on the right */}
       <div className="invb-titlebar">
         <h2 className="invb-title">Inventory → Variants</h2>
 
@@ -921,7 +929,7 @@ export default function InventoryBrowser() {
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         rows={reportRows}
-        spbSourceRows={reportSpbRows} // ✅ unfiltered rows feed the SPB index
+        spbSourceRows={reportSpbRows}
         loading={reportLoading}
         mode={descMode}
       />
