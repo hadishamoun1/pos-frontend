@@ -53,11 +53,17 @@ function buildPaperHtml({ groupedRows, filters, printDate, autoPrint }) {
   const totalUsd = groupedRows.reduce((s, g) => s + Number(g.usd || 0), 0);
   const totalLl = groupedRows.reduce((s, g) => s + Number(g.ll || 0), 0);
 
+  // ✅ UPDATED: notes first (bold), then method
   const detailsHtml = (g) => {
     const parts = [];
     parts.push(`<span class="d-customer">${esc(g.customerName || "")}</span>`);
+    
+    // ✅ Notes first (bold)
     if (g.notes) parts.push(`<strong class="d-notes">${esc(g.notes)}</strong>`);
+    
+    // ✅ Method second
     if (g.method) parts.push(`<span class="d-method">${esc(g.method)}</span>`);
+    
     return parts.join(` <span class="sep">—</span> `);
   };
 
