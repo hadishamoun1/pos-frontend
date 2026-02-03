@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import axios from "axios";
-import { axiosClient } from "../api/axiosClient"; // ✅ added
+import { axiosClient } from "../api/axiosClient";
 
 /* ----------------- Light Repeat Modal (no prompt) ----------------- */
 function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
@@ -95,6 +95,7 @@ const StockTab = forwardRef(function StockTab(
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
+  const [originFilter, setOriginFilter] = useState(""); // ✅ NEW: origin filter
 
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
@@ -164,6 +165,12 @@ const StockTab = forwardRef(function StockTab(
       "330",
       "366",
     ],
+    []
+  );
+
+  // ✅ ORIGIN bubbles
+  const ORIGIN_BUBBLES = useMemo(
+    () => ["China", "Italy", "Turkey", "Egypt", "Spain"],
     []
   );
 
@@ -283,9 +290,10 @@ const StockTab = forwardRef(function StockTab(
       try {
         const signal = cancelInFlight();
 
-        // ✅ FIX: relative path (no /api/api) + axiosClient
         const url = `/items/v2/filtered-items`;
         const params = { page: targetPage, limit };
+        
+        // ✅ REMOVED: No longer sending origin to API (frontend filter only)
 
         const res = await axiosClient.get(url, { params, signal });
         const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
@@ -315,7 +323,6 @@ const StockTab = forwardRef(function StockTab(
     try {
       const signal = cancelInFlight();
 
-      // ✅ FIX: relative path (no /api/api) + axiosClient
       const url = `/items/pos/search-modal-instock`;
       const params = { page: 1, limit: 200 };
 
@@ -326,6 +333,8 @@ const StockTab = forwardRef(function StockTab(
         if (looksLikeDims(raw)) params.dims = raw;
         else if (isPlainNumber(raw)) params.length = Number(raw);
       }
+      
+      // ✅ REMOVED: No longer sending origin to API (frontend filter only)
 
       const res = await axiosClient.get(url, { params, signal });
       const nested = Array.isArray(res.data) ? res.data : [];
@@ -358,6 +367,7 @@ const StockTab = forwardRef(function StockTab(
     setInputValue("");
     setNameChip("");
     setDimsChip("");
+    setOriginFilter(""); // ✅ Clear origin too
     setQuickOrder([]);
     setTimeout(() => searchInputRef.current?.focus?.(), 0);
   }, []);
@@ -386,7 +396,7 @@ const StockTab = forwardRef(function StockTab(
     return (ord || [])
       .map((k) => {
         if (k.startsWith("N:")) return k.slice(2);
-        if (k.startsWith("T:")) return `${k.slice(2)}ملم`; // no space
+        if (k.startsWith("T:")) return `${k.slice(2)}ملم`;
         if (k.startsWith("D:")) return k.slice(2);
         return "";
       })
@@ -417,7 +427,7 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // 2) collect plain-number tokens (for "225 321 ..." or "225 ..." + name)
+    // 2) collect plain-number tokens
     const numIdx = [];
     for (let i = 0; i < parts.length; i++) {
       if (isPlainNumber(parts[i])) numIdx.push(i);
@@ -429,7 +439,6 @@ const StockTab = forwardRef(function StockTab(
       const b = parts[numIdx[1]];
       setDimsChip(`${a}*${b}`);
 
-      // remove these two tokens from name
       const restParts = parts.slice();
       restParts.splice(numIdx[1], 1);
       restParts.splice(numIdx[0], 1);
@@ -480,7 +489,7 @@ const StockTab = forwardRef(function StockTab(
     [quickOrder]
   );
 
-  // ✅ Name bubble toggle (keeps click order)
+  // ✅ Name bubble toggle
   const toggleNameBubble = (token) => {
     const t = String(token || "").trim();
     if (!t) return;
@@ -495,7 +504,7 @@ const StockTab = forwardRef(function StockTab(
     });
   };
 
-  // ✅ Thickness bubble toggle (single)
+  // ✅ Thickness bubble toggle
   const toggleThicknessBubble = (th) => {
     const t = String(th || "").trim();
     if (!t) return;
@@ -512,7 +521,7 @@ const StockTab = forwardRef(function StockTab(
     });
   };
 
-  // ✅ Dims bubble toggle (max 2 numbers)
+  // ✅ Dims bubble toggle
   const toggleDimBubble = (num) => {
     const t = String(num || "").trim();
     if (!t) return;
@@ -520,7 +529,6 @@ const StockTab = forwardRef(function StockTab(
     setQuickOrder((prev) => {
       const key = `D:${t}`;
 
-      // if active -> remove it
       if (prev.includes(key)) {
         const next = prev.filter((x) => x !== key);
         setInputValue(orderToText(next));
@@ -528,7 +536,6 @@ const StockTab = forwardRef(function StockTab(
         return next;
       }
 
-      // add it (keep max 2)
       const dims = prev.filter((x) => x.startsWith("D:"));
       let next = prev;
 
@@ -548,7 +555,6 @@ const StockTab = forwardRef(function StockTab(
   const toggleSelect = (row) => {
     if (!row.selectable) return;
 
-    // unselect immediately
     if (selectedMap.has(row.uniqueId)) {
       setSelectedMap((prev) => {
         const next = new Map(prev);
@@ -558,7 +564,6 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // SQM + UNIT -> open modal for repeat
     const t = String(row.type || "").toLowerCase();
     if (t === "sqm" || t === "unit") {
       pendingRowRef.current = row;
@@ -566,7 +571,6 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // normal select
     setSelectedMap((prev) => {
       const next = new Map(prev);
       next.set(row.uniqueId, rowToPayload(row, 1));
@@ -653,7 +657,16 @@ const StockTab = forwardRef(function StockTab(
   }, [nestedItems]);
 
   const inSearchMode = Boolean(nameChip || dimsChip);
-  const rows = inSearchMode ? rowsFromNested : rowsFromFlat;
+  const unfilteredRows = inSearchMode ? rowsFromNested : rowsFromFlat;
+  
+  // ✅ Frontend-only origin filter
+  const rows = useMemo(() => {
+    if (!originFilter) return unfilteredRows;
+    return unfilteredRows.filter(row => {
+      const rowOrigin = String(row.origin || "").trim();
+      return rowOrigin.toLowerCase() === originFilter.toLowerCase();
+    });
+  }, [unfilteredRows, originFilter]);
 
   const selectedTotal = useMemo(() => {
     let total = 0;
@@ -758,6 +771,37 @@ const StockTab = forwardRef(function StockTab(
               </button>
             </span>
           )}
+
+          {/* ✅ Origin dropdown (frontend filter only) */}
+          <select 
+            value={originFilter} 
+            onChange={(e) => setOriginFilter(e.target.value)}
+            style={{ 
+              padding: '4px 8px', 
+              fontSize: '13px', 
+              border: '1px solid #ccc', 
+              borderRadius: '4px',
+              backgroundColor: originFilter ? '#e8f4f8' : 'white',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">All Origins</option>
+            <option value="China">China</option>
+            <option value="Italy">Italy</option>
+            <option value="Trakya">Trakya</option>
+            <option value="Sphinx">Sphinx</option>
+            <option value="SISECAM">SISECAM</option>
+            <option value="Corpotrad">Corpotrad</option>
+            <option value="Sahand">Sahand</option>
+            <option value="GrandStar">GrandStar</option>
+            <option value="S.G">S.G</option>
+            <option value="Bisheng Techno">Bisheng Techno</option>
+            <option value="Qingdao">Qingdao</option>
+            <option value="King Tai">King Tai</option>
+            <option value="Guardian">Guardian</option>
+            <option value="AGC">AGC</option>
+            <option value="Cario">Cario</option>
+          </select>
 
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
             Selected: {selectedTotal}
