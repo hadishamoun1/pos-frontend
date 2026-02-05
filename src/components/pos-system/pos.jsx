@@ -474,6 +474,7 @@ const handleCreateReturnInvoice = async () => {
 
       return {
         __rowKey: item.__rowKey,
+        condition: item.condition || "",
 
         itemVariantId: item.itemVariantId,
         batchId: item.batchId,
@@ -625,6 +626,7 @@ const handleSelectRequest = async (reqOrId) => {
         batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
 
         origin: detail?.origin || "",
+        condition: detail?.condition || "",
 
         // ✅ Keep normal formatting for table display
         item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
@@ -1255,7 +1257,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
           origin: item?.origin || "",
           item: label,
           type,
-
+          condition: item?.batch?.condition || item?.condition || "",
           length: item?.length || "",
           width: item?.width || "",
 

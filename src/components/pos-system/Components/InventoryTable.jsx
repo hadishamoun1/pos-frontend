@@ -259,6 +259,7 @@ const InventoryTable = ({
           {showRTN && <th>RTN</th>}
           {showRTN && <th>RTN Qty</th>}
           <th>Origin</th>
+         
           <th>Item</th>
           <th>Type</th>
           <th>Length</th>
@@ -268,6 +269,7 @@ const InventoryTable = ({
           <th>Price</th>
           <th>SQM</th>
           <th>Total</th>
+           <th>Condition</th>
         </tr>
       </thead>
 
@@ -393,6 +395,7 @@ const rtnQty = sel ? sel.quantity : "";
                 <td>
                   <input type="text" value={row.origin ?? ""} readOnly />
                 </td>
+      
                 <td>
                   <input type="text" value={row.item ?? ""} readOnly />
                 </td>
@@ -517,6 +520,9 @@ const rtnQty = sel ? sel.quantity : "";
                     readOnly
                   />
                 </td>
+                          <td>
+  <input type="text" value={row.condition ?? ""} readOnly />
+</td>
               </tr>
             );
           })}

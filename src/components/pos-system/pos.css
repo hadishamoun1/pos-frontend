@@ -105,7 +105,7 @@ min-width:0;
 /* Adjust Column Widths */
 .pos-page-inventory-table th:nth-child(1),
 .pos-page-inventory-table td:nth-child(1) {
-  width: 40px; /* Origin */
+  width: 50px; /* Origin */
 }
 
 .pos-page-inventory-table th:nth-child(2),
@@ -130,8 +130,12 @@ min-width:0;
 
 .pos-page-inventory-table td:nth-child(9),
 .pos-page-inventory-table td:nth-child(10) {
-  width: 95px;
+  width: 50px;
   
+}
+
+.pos-page-inventory-table td:nth-child(11){
+  width: 50px;
 }
 
 .pos-page-inventory-table td {
