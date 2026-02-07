@@ -1,13 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./acc-modal-selection.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ use axiosClient (baseURL = /api)
+import { axiosClient } from "../api/axiosClient"; // ✅ baseURL = /api
 
 const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   const [data, setData] = useState([]);
-  const [filteredTree, setFilteredTree] = useState([]); // tree data (for non-search mode)
+  const [filteredTree, setFilteredTree] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState(null); // flat rows when searching
+  const [searchResults, setSearchResults] = useState(null);
   const [filtering, setFiltering] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -28,25 +28,35 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
     setLoading(true);
     setError(null);
     try {
-      // ✅ IMPORTANT: relative URL only (axiosClient already has /api)
       const res = await axiosClient.get(`/accounts/v1/acc-arranged`);
       const combinedData = res.data;
 
       setData(combinedData);
       setFilteredTree(combinedData);
 
-      // reset search when opening
       setSearchQuery("");
       setSearchResults(null);
     } catch (e) {
-      setError(e?.response?.data?.message || e.message || "Failed to fetch accounts data");
+      setError(
+        e?.response?.data?.message ||
+          e.message ||
+          "Failed to fetch accounts data"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Build a local flat index (accounts + customers + suppliers)
+  // ✅ Detect entity type from child flags (NO hardcoded parent numbers)
+  const detectKind = (child) => {
+    if (child?.isCustomer) return "customer";
+    if (child?.isSupplier) return "supplier";
+    return "account"; // fallback
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Build a local flat index (accounts + children)
   const flatIndex = useMemo(() => {
     const out = [];
 
@@ -59,27 +69,17 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
         kind: "account",
       });
 
-      if (a.accountNumber === "4111" && Array.isArray(a.children)) {
-        a.children.forEach((c) => {
-          out.push({
-            id: c.id,
-            accountNumber: c.accountNumber,
-            accountName: c.accountName,
-            arabicAccountName: c.arabicAccountName,
-            kind: "customer",
-            parentAccountNumber: a.accountNumber,
-          });
-        });
-      }
+      // ✅ add any children (customers / suppliers / whatever)
+      if (Array.isArray(a.children) && a.children.length) {
+        a.children.forEach((ch) => {
+          const kind = detectKind(ch);
 
-      if (a.accountNumber === "4011" && Array.isArray(a.children)) {
-        a.children.forEach((s) => {
           out.push({
-            id: s.id,
-            accountNumber: s.accountNumber,
-            accountName: s.accountName,
-            arabicAccountName: s.arabicAccountName,
-            kind: "supplier",
+            id: ch.id,
+            accountNumber: ch.accountNumber,
+            accountName: ch.accountName,
+            arabicAccountName: ch.arabicAccountName, // may not exist on child (OK)
+            kind,
             parentAccountNumber: a.accountNumber,
           });
         });
@@ -92,15 +92,10 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   // Pre-normalize for fast filtering
   const indexed = useMemo(() => {
     const normText = (v) =>
-      String(v ?? "")
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, " ");
+      String(v ?? "").toLowerCase().trim().replace(/\s+/g, " ");
 
     const normNum = (v) =>
-      String(v ?? "")
-        .toLowerCase()
-        .replace(/[^0-9a-z]/g, ""); // keeps digits/letters only
+      String(v ?? "").toLowerCase().replace(/[^0-9a-z]/g, "");
 
     return (flatIndex || []).map((r) => {
       const n = String(r.accountNumber ?? "");
@@ -117,7 +112,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   }, [flatIndex]);
 
   // ─────────────────────────────────────────────────────────────
-  // Debounced local search (smooth typing)
+  // Debounced local search
   useEffect(() => {
     if (!isOpen) return;
 
@@ -135,31 +130,23 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
     filterDebounceRef.current = setTimeout(() => {
       const normText = (v) =>
-        String(v ?? "")
-          .toLowerCase()
-          .trim()
-          .replace(/\s+/g, " ");
+        String(v ?? "").toLowerCase().trim().replace(/\s+/g, " ");
 
       const normNum = (v) =>
-        String(v ?? "")
-          .toLowerCase()
-          .replace(/[^0-9a-z]/g, "");
+        String(v ?? "").toLowerCase().replace(/[^0-9a-z]/g, "");
 
       const qText = normText(q);
       const qNum = normNum(q);
 
-      // tokens to allow "cash main" searches
       const tokens = qText.split(" ").filter(Boolean);
 
       const matches = indexed.filter((r) => {
         const hitNum = qNum ? r._num.includes(qNum) : false;
         const hitName = tokens.every((t) => r._name.includes(t));
         const hitAr = tokens.every((t) => r._ar.includes(t));
-
         return hitNum || hitName || hitAr;
       });
 
-      // Rank results: exact number > startsWith number > includes number > name startsWith > name includes
       const rank = (r) => {
         const num = r._num;
         const name = r._name;
@@ -178,14 +165,14 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
         const ra = rank(a);
         const rb = rank(b);
         if (ra !== rb) return ra - rb;
-        return String(a.accountNumber || "").localeCompare(String(b.accountNumber || ""));
+        return String(a.accountNumber || "").localeCompare(
+          String(b.accountNumber || "")
+        );
       });
 
-      // limit to keep rendering fast
-      const LIMITED = 300;
-      setSearchResults(matches.slice(0, LIMITED));
+      setSearchResults(matches.slice(0, 300));
 
-      // keep tree filtered in background (only used when searchResults becomes null)
+      // quick tree filter
       const quickTree = (data || []).filter((a) => {
         const n = String(a.accountNumber || "").toLowerCase();
         const en = String(a.accountName || "").toLowerCase();
@@ -200,7 +187,7 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   }, [searchQuery, indexed, data, isOpen]);
 
   // ─────────────────────────────────────────────────────────────
-  // Tree renderer (unchanged)
+  // Tree renderer
   const renderAccounts = (accounts, parentNumber = null, level = 0) => {
     const children = accounts.filter((a) => a.parentNumber === parentNumber);
     children.sort((a, b) => a.accountNumber.localeCompare(b.accountNumber));
@@ -212,53 +199,57 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
           className="acc-modal-selection-row"
           onClick={() => onSelect({ ...account, entityType: "account" })}
         >
-          <td className="acc-modal-selection-cell" style={{ paddingLeft: `${level * 20}px` }}>
+          <td
+            className="acc-modal-selection-cell"
+            style={{ paddingLeft: `${level * 20}px` }}
+          >
             {account.accountNumber}
           </td>
           <td className="acc-modal-selection-cell">{account.accountName}</td>
-          <td className="acc-modal-selection-cell arabic-text" style={{ textAlign: "right", direction: "rtl" }}>
+          <td
+            className="acc-modal-selection-cell arabic-text"
+            style={{ textAlign: "right", direction: "rtl" }}
+          >
             {account.arabicAccountName || "N/A"}
           </td>
         </tr>
       );
 
-      const childrenRows = renderAccounts(accounts, account.accountNumber, level + 1);
+      const childrenRows = renderAccounts(
+        accounts,
+        account.accountNumber,
+        level + 1
+      );
 
       let additionalRows = [];
-      if (account.accountNumber === "4111" && account.children?.length) {
-        additionalRows = account.children.map((customer) => (
-          <tr
-            key={`customer-${customer.id}`}
-            className="acc-modal-selection-row"
-            onClick={() => onSelect({ ...customer, entityType: "customer" })}
-          >
-            <td className="acc-modal-selection-cell" style={{ paddingLeft: `${(level + 1) * 20}px` }}>
-              {customer.accountNumber}
-            </td>
-            <td className="acc-modal-selection-cell">{customer.accountName}</td>
-            <td className="acc-modal-selection-cell arabic-text" style={{ textAlign: "right", direction: "rtl" }}>
-              {customer.arabicAccountName || "N/A"}
-            </td>
-          </tr>
-        ));
-      }
 
-      if (account.accountNumber === "4011" && account.children?.length) {
-        additionalRows = account.children.map((supplier) => (
-          <tr
-            key={`supplier-${supplier.id}`}
-            className="acc-modal-selection-row"
-            onClick={() => onSelect({ ...supplier, entityType: "supplier" })}
-          >
-            <td className="acc-modal-selection-cell" style={{ paddingLeft: `${(level + 1) * 20}px` }}>
-              {supplier.accountNumber}
-            </td>
-            <td className="acc-modal-selection-cell">{supplier.accountName}</td>
-            <td className="acc-modal-selection-cell arabic-text" style={{ textAlign: "right", direction: "rtl" }}>
-              {supplier.arabicAccountName || "N/A"}
-            </td>
-          </tr>
-        ));
+      // ✅ show children based on flags (customer/supplier)
+      if (account.children?.length) {
+        additionalRows = account.children.map((ch) => {
+          const kind = detectKind(ch);
+
+          return (
+            <tr
+              key={`${kind}-${ch.id}`}
+              className="acc-modal-selection-row"
+              onClick={() => onSelect({ ...ch, entityType: kind })}
+            >
+              <td
+                className="acc-modal-selection-cell"
+                style={{ paddingLeft: `${(level + 1) * 20}px` }}
+              >
+                {ch.accountNumber}
+              </td>
+              <td className="acc-modal-selection-cell">{ch.accountName}</td>
+              <td
+                className="acc-modal-selection-cell arabic-text"
+                style={{ textAlign: "right", direction: "rtl" }}
+              >
+                {ch.arabicAccountName || "N/A"}
+              </td>
+            </tr>
+          );
+        });
       }
 
       return [parentRow, ...childrenRows, ...additionalRows];
@@ -266,8 +257,8 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
   };
 
   // Flat renderer for search results
-  const renderSearchRows = (rows) => {
-    return rows.map((r) => (
+  const renderSearchRows = (rows) =>
+    rows.map((r) => (
       <tr
         key={`${r.kind}-${r.id}`}
         className="acc-modal-selection-row"
@@ -277,20 +268,23 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
         <td className="acc-modal-selection-cell">
           {r.accountName}
           <span style={{ opacity: 0.6, marginLeft: 8, fontSize: 12 }}>
-            {r.kind === "customer" ? " (Customer)" : r.kind === "supplier" ? " (Supplier)" : ""}
+            {r.kind === "customer"
+              ? " (Customer)"
+              : r.kind === "supplier"
+              ? " (Supplier)"
+              : ""}
           </span>
         </td>
-        <td className="acc-modal-selection-cell arabic-text" style={{ textAlign: "right", direction: "rtl" }}>
+        <td
+          className="acc-modal-selection-cell arabic-text"
+          style={{ textAlign: "right", direction: "rtl" }}
+        >
           {r.arabicAccountName || "—"}
         </td>
       </tr>
     ));
-  };
 
-  // Search input handler (only sets state — fast!)
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
   return (
     isOpen && (
@@ -333,7 +327,9 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
                   </thead>
 
                   <tbody>
-                    {searchResults ? renderSearchRows(searchResults) : renderAccounts(filteredTree)}
+                    {searchResults
+                      ? renderSearchRows(searchResults)
+                      : renderAccounts(filteredTree)}
                   </tbody>
                 </table>
               </div>

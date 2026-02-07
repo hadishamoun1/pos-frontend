@@ -520,9 +520,9 @@ const rtnQty = sel ? sel.quantity : "";
                     readOnly
                   />
                 </td>
-                          <td>
-  <input type="text" value={row.condition ?? ""} readOnly />
-</td>
+                 <td>
+                <input type="text" value={row.condition ?? ""} readOnly />
+              </td>
               </tr>
             );
           })}
