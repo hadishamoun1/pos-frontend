@@ -209,6 +209,51 @@
   transform: scale(1.05);
 }
 
+/* Add these styles to your accounts.css file */
+
+/* ✅ Edit Account Button */
+.edit-account-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.edit-account-btn:hover {
+  background-color: #0056b3;
+}
+
+.edit-account-btn:active {
+  background-color: #004085;
+}
+
+/* ✅ Form heading for edit mode */
+.accounts-form h3 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+/* ✅ Actions column in table */
+.accounts-table th:last-child,
+.accounts-table td:last-child {
+  text-align: center;
+  width: 120px;
+}
+
+/* ✅ Customer/Supplier row indicators */
+.customer-account-row {
+  background-color: #e3f2fd !important;
+}
+
+.supplier-account-row {
+  background-color: #fff3e0 !important;
+}
+
 /* Fade In Animation */
 @keyframes fadeIn {
   from {

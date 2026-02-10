@@ -16,6 +16,10 @@ const AccountsPage = () => {
   const [modalContent, setModalContent] = useState(false);
   const [modalType, setModalType] = useState("");
 
+  // ✅ EDIT MODE STATE
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState(null);
+
   // ✅ Helper to find parent name
   const getParentName = (account, allAccounts) => {
     if (!account.parentNumber) return "Main Account";
@@ -27,7 +31,7 @@ const AccountsPage = () => {
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
-        const res = await axiosClient.get("/accounts/v1/combined"); // ✅ token auto
+        const res = await axiosClient.get("/accounts/v1/combined");
         const combinedData = res?.data;
         setData(Array.isArray(combinedData) ? combinedData : []);
       } catch (error) {
@@ -47,20 +51,77 @@ const AccountsPage = () => {
     }));
   };
 
-  // ✅ Create account
+  // ✅ EDIT: Load account into form
+  const handleEditClick = (account) => {
+    setIsEditMode(true);
+    setEditingAccountId(account.id);
+    setFormData({
+      accountNumber: account.accountNumber,
+      accountName: account.accountName || "",
+      arabicAccountName: account.arabicAccountName || "",
+      parentNumber: account.parentNumber || "",
+      accessible: account.accessible ?? true,
+    });
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ✅ CANCEL EDIT: Reset form
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingAccountId(null);
+    setFormData({
+      accountNumber: "",
+      accountName: "",
+      arabicAccountName: "",
+      parentNumber: "",
+      accessible: true,
+    });
+  };
+
+  // ✅ Create OR Update account
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const res = await axiosClient.post("/accounts", formData); // ✅ token auto
-      const newAccount = res?.data;
+      if (isEditMode && editingAccountId) {
+        // UPDATE EXISTING ACCOUNT
+        const res = await axiosClient.put(`/accounts/${editingAccountId}`, formData);
+        const updatedAccount = res?.data;
 
-      // keep consistent structure if backend doesn't include children
-      const safeAccount = { ...newAccount, children: newAccount?.children || [] };
+        // Update in local state
+        setData((prev) =>
+          prev.map((acc) =>
+            acc.id === editingAccountId
+              ? { ...updatedAccount, children: acc.children || [] }
+              : acc
+          )
+        );
 
-      setData((prev) => [...prev, safeAccount]);
-      setModalType("success");
+        setModalType("success-edit");
+        setIsEditMode(false);
+        setEditingAccountId(null);
+      } else {
+        // CREATE NEW ACCOUNT
+        const res = await axiosClient.post("/accounts", formData);
+        const newAccount = res?.data;
+
+        const safeAccount = { ...newAccount, children: newAccount?.children || [] };
+        setData((prev) => [...prev, safeAccount]);
+
+        setModalType("success");
+      }
+
+      // Reset form
+      setFormData({
+        accountNumber: "",
+        accountName: "",
+        arabicAccountName: "",
+        parentNumber: "",
+        accessible: true,
+      });
     } catch (error) {
-      console.error("Error creating account:", error);
+      console.error("Error saving account:", error);
       setModalType("error");
     } finally {
       setModalContent(true);
@@ -74,7 +135,7 @@ const AccountsPage = () => {
     if (!accounts || !accounts.length) {
       return (
         <tr>
-          <td colSpan={5} style={{ textAlign: "center", padding: "8px" }}>
+          <td colSpan={6} style={{ textAlign: "center", padding: "8px" }}>
             No accounts returned from API.
           </td>
         </tr>
@@ -102,11 +163,20 @@ const AccountsPage = () => {
             </td>
             <td>{account.parentNumber || "Main Account"}</td>
             <td>{getParentName(account, accounts)}</td>
+            <td>
+              {/* ✅ EDIT BUTTON */}
+              <button
+                className="edit-account-btn"
+                onClick={() => handleEditClick(account)}
+                title="Edit Account"
+              >
+                ✏️ Edit
+              </button>
+            </td>
           </tr>
 
-          {/* Customers under 4111 */}
-          {account.accountNumber === "4111" &&
-            Array.isArray(account.children) &&
+          {/* Customers under Customer_Index */}
+          {account.children &&
             account.children
               .filter((child) => child.isCustomer)
               .map((customer) => (
@@ -125,16 +195,18 @@ const AccountsPage = () => {
                       direction: "rtl",
                     }}
                   >
-                    {account.arabicAccountName || "N/A"}
+                    {customer.arabicAccountName || "N/A"}
                   </td>
                   <td>{account.accountNumber}</td>
                   <td>{account.accountName || "—"}</td>
+                  <td>
+                    <span style={{ fontSize: "0.9rem", color: "#999" }}>Customer</span>
+                  </td>
                 </tr>
               ))}
 
-          {/* Suppliers under 4011 */}
-          {account.accountNumber === "4011" &&
-            Array.isArray(account.children) &&
+          {/* Suppliers under Supplier_Index */}
+          {account.children &&
             account.children
               .filter((child) => child.isSupplier)
               .map((supplier) => (
@@ -153,10 +225,13 @@ const AccountsPage = () => {
                       direction: "rtl",
                     }}
                   >
-                    {account.arabicAccountName || "N/A"}
+                    {supplier.arabicAccountName || "N/A"}
                   </td>
                   <td>{account.accountNumber}</td>
                   <td>{account.accountName || "—"}</td>
+                  <td>
+                    <span style={{ fontSize: "0.9rem", color: "#999" }}>Supplier</span>
+                  </td>
                 </tr>
               ))}
         </React.Fragment>
@@ -171,8 +246,9 @@ const AccountsPage = () => {
         Loaded accounts: {data.length}
       </p>
 
-      {/* ✅ Create Account Form */}
+      {/* ✅ Create/Edit Account Form */}
       <div className="accounts-form">
+        <h3>{isEditMode ? "Edit Account" : "Create New Account"}</h3>
         <form onSubmit={handleFormSubmit}>
           <label>
             Account Number:
@@ -206,17 +282,26 @@ const AccountsPage = () => {
               name="arabicAccountName"
               value={formData.arabicAccountName}
               onChange={handleInputChange}
+              style={{
+                fontFamily: "'Tajawal', sans-serif",
+                fontSize: "1.2rem",
+                direction: "rtl",
+                textAlign: "right",
+              }}
             />
           </label>
 
           <label>
-            Parent Account:
+            Parent Account: <span style={{ color: "red" }}>*</span>
             <select
               name="parentNumber"
               value={formData.parentNumber || ""}
               onChange={handleInputChange}
+              required
             >
-              <option value="">Select Parent Account</option>
+              <option value="" disabled>
+                Select Parent Account (Required)
+              </option>
               {data
                 .slice()
                 .sort((a, b) =>
@@ -242,7 +327,28 @@ const AccountsPage = () => {
             />
           </div>
 
-          <button type="submit">Create Account</button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button type="submit">
+              {isEditMode ? "Update Account" : "Create Account"}
+            </button>
+
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                style={{
+                  backgroundColor: "#6c757d",
+                  color: "white",
+                  border: "none",
+                  padding: "10px 20px",
+                  cursor: "pointer",
+                  borderRadius: "4px",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -257,6 +363,7 @@ const AccountsPage = () => {
               <th>Arabic Account Name</th>
               <th>Parent Number</th>
               <th>Parent Account Name</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>{renderAccounts(data)}</tbody>
@@ -268,7 +375,7 @@ const AccountsPage = () => {
         <div className="modal">
           <div
             className={`modal-content ${
-              modalType === "success" ? "success-modal" : "error-modal"
+              modalType.includes("success") ? "success-modal" : "error-modal"
             }`}
           >
             {modalType === "success" ? (
@@ -276,9 +383,14 @@ const AccountsPage = () => {
                 <h2 className="modal-success-text">Account Created Successfully</h2>
                 <div className="modal-icon">✔</div>
               </>
+            ) : modalType === "success-edit" ? (
+              <>
+                <h2 className="modal-success-text">Account Updated Successfully</h2>
+                <div className="modal-icon">✔</div>
+              </>
             ) : (
               <>
-                <h2 className="modal-error-text">Failed to Create Account</h2>
+                <h2 className="modal-error-text">Failed to Save Account</h2>
                 <div className="modal-icon">✖</div>
               </>
             )}
