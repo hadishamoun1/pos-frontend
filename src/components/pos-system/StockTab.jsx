@@ -10,9 +10,11 @@ import React, {
 } from "react";
 import axios from "axios";
 import { axiosClient } from "../api/axiosClient";
+import { useTranslation } from "../hooks/useTranslation"; // ✅ ADD THIS
 
 /* ----------------- Light Repeat Modal (no prompt) ----------------- */
 function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
+  const { t } = useTranslation(); // ✅ ADD THIS
   const [val, setVal] = useState(String(defaultValue));
   const inputRef = useRef(null);
 
@@ -43,7 +45,7 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
     >
       <div className="repeat-modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="repeat-modal-header">
-          <div className="repeat-modal-title">SQM repetitions</div>
+          <div className="repeat-modal-title">{t('stockTab.sqmRepetitions')}</div> {/* ✅ CHANGED */}
           <button className="repeat-modal-x" onClick={onCancel} aria-label="Close">
             ×
           </button>
@@ -54,7 +56,7 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
 
           <div className="repeat-modal-field">
             <div className="repeat-modal-field-label">
-              How many times do you want to add it?
+              {t('stockTab.howManyTimes')} {/* ✅ CHANGED */}
             </div>
             <input
               ref={inputRef}
@@ -74,10 +76,10 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
 
         <div className="repeat-modal-footer">
           <button className="repeat-modal-btn ghost" onClick={onCancel}>
-            Cancel
+            {t('stockTab.cancel')} {/* ✅ CHANGED */}
           </button>
           <button className="repeat-modal-btn primary" onClick={submit}>
-            OK
+            {t('stockTab.ok')} {/* ✅ CHANGED */}
           </button>
         </div>
       </div>
@@ -89,14 +91,16 @@ const StockTab = forwardRef(function StockTab(
   { modalOpen, isActive, selectedMap, setSelectedMap },
   ref
 ) {
+  const { t } = useTranslation(); // ✅ ADD THIS LINE
+  
   const [flatRows, setFlatRows] = useState([]);
   const [nestedItems, setNestedItems] = useState([]);
 
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
   const [dimsChip, setDimsChip] = useState("");
-  const [originFilter, setOriginFilter] = useState(""); // ✅ origin filter
-  const [typeFilter, setTypeFilter] = useState(""); // ✅ NEW: type filter
+  const [originFilter, setOriginFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
 
   const [page, setPage] = useState(1);
   const [limit] = useState(100);
@@ -105,11 +109,9 @@ const StockTab = forwardRef(function StockTab(
 
   const abortRef = useRef(null);
 
-  // modal state for SQM repeat
   const [repeatOpen, setRepeatOpen] = useState(false);
   const pendingRowRef = useRef(null);
 
-  // ✅ NAME bubbles
   const QUICK_BUBBLES = useMemo(
     () => [
       "ابيض",
@@ -132,13 +134,11 @@ const StockTab = forwardRef(function StockTab(
     []
   );
 
-  // ✅ THICKNESS bubbles
   const THICKNESS_BUBBLES = useMemo(
     () => ["3", "4", "5", "5.5", "6", "8", "10", "12", "15", "19"],
     []
   );
 
-  // ✅ DIMS bubbles (length/width numbers)
   const DIM_BUBBLES = useMemo(
     () => [
       "160",
@@ -169,17 +169,13 @@ const StockTab = forwardRef(function StockTab(
     []
   );
 
-  // ✅ ORIGIN bubbles
   const ORIGIN_BUBBLES = useMemo(
     () => ["China", "Italy", "Turkey", "Egypt", "Spain"],
     []
   );
 
-  // ✅ ONE ordered list for click-order across ALL bubble rows
-  // items are: "N:ابيض" or "T:6" or "D:225"
   const [quickOrder, setQuickOrder] = useState([]);
 
-  // keep input focused when clicking bubbles
   const searchInputRef = useRef(null);
 
   const cancelInFlight = () => {
@@ -293,8 +289,6 @@ const StockTab = forwardRef(function StockTab(
 
         const url = `/items/v2/filtered-items`;
         const params = { page: targetPage, limit };
-        
-        // ✅ REMOVED: No longer sending origin to API (frontend filter only)
 
         const res = await axiosClient.get(url, { params, signal });
         const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
@@ -334,8 +328,6 @@ const StockTab = forwardRef(function StockTab(
         if (looksLikeDims(raw)) params.dims = raw;
         else if (isPlainNumber(raw)) params.length = Number(raw);
       }
-      
-      // ✅ REMOVED: No longer sending origin to API (frontend filter only)
 
       const res = await axiosClient.get(url, { params, signal });
       const nested = Array.isArray(res.data) ? res.data : [];
@@ -363,18 +355,16 @@ const StockTab = forwardRef(function StockTab(
     normalizeDigits,
   ]);
 
-  // ✅ Clear everything button
   const clearEverything = useCallback(() => {
     setInputValue("");
     setNameChip("");
     setDimsChip("");
-    setOriginFilter(""); // ✅ Clear origin too
-    setTypeFilter(""); // ✅ Clear type too
+    setOriginFilter("");
+    setTypeFilter("");
     setQuickOrder([]);
     setTimeout(() => searchInputRef.current?.focus?.(), 0);
   }, []);
 
-  // reset ONLY filters when modal opens (selection lives in parent)
   useEffect(() => {
     if (!modalOpen) return;
     clearEverything();
@@ -393,7 +383,6 @@ const StockTab = forwardRef(function StockTab(
     return () => abortRef.current?.abort?.();
   }, [modalOpen, isActive, nameChip, dimsChip, fetchDefault, fetchSearch]);
 
-  // ✅ build input from click-order
   const orderToText = useCallback((ord) => {
     return (ord || [])
       .map((k) => {
@@ -407,7 +396,6 @@ const StockTab = forwardRef(function StockTab(
       .trim();
   }, []);
 
-  // ✅ ENTER commit
   const handleEnter = (e) => {
     if (e.key !== "Enter") return;
     const raw0 = inputValue.trim();
@@ -416,10 +404,8 @@ const StockTab = forwardRef(function StockTab(
     const raw = normalizeDigits(raw0).trim();
     const parts = raw.split(/\s+/).filter(Boolean);
 
-    // clear bubbles because we "committed" into chips
     setQuickOrder([]);
 
-    // 1) explicit dims token like 225*321-012
     const dimsToken = parts.find((p) => p.includes("*") && looksLikeDims(p));
     if (dimsToken) {
       setDimsChip(dimsToken);
@@ -429,13 +415,11 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // 2) collect plain-number tokens
     const numIdx = [];
     for (let i = 0; i < parts.length; i++) {
       if (isPlainNumber(parts[i])) numIdx.push(i);
     }
 
-    // two numbers => dimsChip = a*b
     if (numIdx.length >= 2) {
       const a = parts[numIdx[0]];
       const b = parts[numIdx[1]];
@@ -450,7 +434,6 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // one number only
     if (numIdx.length === 1) {
       const n = parts[numIdx[0]];
       setDimsChip(n);
@@ -464,18 +447,15 @@ const StockTab = forwardRef(function StockTab(
       return;
     }
 
-    // otherwise => name
     setNameChip(normalizeArabic(raw));
     setInputValue("");
   };
 
-  // ✅ RIGHT CLICK = ENTER
   const triggerEnterSearch = useCallback(() => {
     if (!String(inputValue || "").trim()) return;
     handleEnter({ key: "Enter" });
   }, [handleEnter, inputValue]);
 
-  // ✅ Active helpers
   const isNameActive = useCallback(
     (token) => quickOrder.includes(`N:${token}`),
     [quickOrder]
@@ -491,7 +471,6 @@ const StockTab = forwardRef(function StockTab(
     [quickOrder]
   );
 
-  // ✅ Name bubble toggle
   const toggleNameBubble = (token) => {
     const t = String(token || "").trim();
     if (!t) return;
@@ -506,7 +485,6 @@ const StockTab = forwardRef(function StockTab(
     });
   };
 
-  // ✅ Thickness bubble toggle
   const toggleThicknessBubble = (th) => {
     const t = String(th || "").trim();
     if (!t) return;
@@ -523,7 +501,6 @@ const StockTab = forwardRef(function StockTab(
     });
   };
 
-  // ✅ Dims bubble toggle
   const toggleDimBubble = (num) => {
     const t = String(num || "").trim();
     if (!t) return;
@@ -661,11 +638,9 @@ const StockTab = forwardRef(function StockTab(
   const inSearchMode = Boolean(nameChip || dimsChip);
   const unfilteredRows = inSearchMode ? rowsFromNested : rowsFromFlat;
   
-  // ✅ Frontend-only origin and type filters
   const rows = useMemo(() => {
     let filtered = unfilteredRows;
     
-    // Filter by origin
     if (originFilter) {
       filtered = filtered.filter(row => {
         const rowOrigin = String(row.origin || "").trim();
@@ -673,7 +648,6 @@ const StockTab = forwardRef(function StockTab(
       });
     }
     
-    // Filter by type
     if (typeFilter) {
       filtered = filtered.filter(row => {
         const rowType = String(row.type || "").toLowerCase();
@@ -729,12 +703,11 @@ const StockTab = forwardRef(function StockTab(
           triggerEnterSearch();
         }}
       >
-        {/* input + clear button */}
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="اكتب ثم Enter — مثال: 5.5ملم ابيض  |  225*321-012  |  225 321"
+            placeholder={t('stockTab.searchPlaceholder')} 
             className="search-modal-items-input"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -750,10 +723,10 @@ const StockTab = forwardRef(function StockTab(
             type="button"
             className="search-clear-btn"
             onClick={clearEverything}
-            title="Clear"
-            aria-label="Clear search"
+            title={t('stockTab.clear')} 
+            aria-label={t('stockTab.clear')} 
           >
-            Clear
+            {t('stockTab.clear')} 
           </button>
         </div>
 
@@ -788,7 +761,6 @@ const StockTab = forwardRef(function StockTab(
             </span>
           )}
 
-          {/* ✅ Origin dropdown (frontend filter only) */}
           <select 
             value={originFilter} 
             onChange={(e) => setOriginFilter(e.target.value)}
@@ -801,7 +773,7 @@ const StockTab = forwardRef(function StockTab(
               cursor: 'pointer'
             }}
           >
-            <option value="">All Origins</option>
+            <option value="">{t('stockTab.allOrigins')}</option> {/* ✅ CHANGED */}
             <option value="China">China</option>
             <option value="Italy">Italy</option>
             <option value="Trakya">Trakya</option>
@@ -819,7 +791,6 @@ const StockTab = forwardRef(function StockTab(
             <option value="Cario">Cario</option>
           </select>
 
-          {/* ✅ Type dropdown (frontend filter only) */}
           <select 
             value={typeFilter} 
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -833,7 +804,7 @@ const StockTab = forwardRef(function StockTab(
               marginLeft: '8px'
             }}
           >
-            <option value="">All Types</option>
+            <option value="">{t('stockTab.allTypes')}</option> {/* ✅ CHANGED */}
             <option value="box">Box</option>
             <option value="sheet">Sheet</option>
             <option value="sqm">SQM</option>
@@ -841,12 +812,11 @@ const StockTab = forwardRef(function StockTab(
           </select>
 
           <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
-            Selected: {selectedTotal}
+            {t('stockTab.selected')}: {selectedTotal} {/* ✅ CHANGED */}
           </span>
         </div>
       </div>
 
-      {/* ✅ Sticky bubbles block (3 lines) */}
       <div
         className="search-quick-bubbles-wrap"
         onContextMenu={(e) => {
@@ -906,15 +876,15 @@ const StockTab = forwardRef(function StockTab(
       <table className="search-modal-table">
         <thead>
           <tr>
-            <th className="col-select">SELECT</th>
-            <th className="col-item">ITEM</th>
-            <th className="col-type">TYPE</th>
-            <th className="col-length">LENGTH</th>
-            <th className="col-stock-box">STOCK BOX</th>
-            <th className="col-stock-sheet">STOCK SHEET</th>
-            <th className="col-origin">ORIGIN</th>
-            <th className="col-condition">CONDITION</th>
-            <th className="col-date">DATE RECEIVED</th>
+            <th className="col-select">{t('stockTab.select')}</th> {/* ✅ CHANGED */}
+            <th className="col-item">{t('stockTab.item')}</th> {/* ✅ CHANGED */}
+            <th className="col-type">{t('stockTab.type')}</th> {/* ✅ CHANGED */}
+            <th className="col-length">{t('stockTab.length')}</th> {/* ✅ CHANGED */}
+            <th className="col-stock-box">{t('stockTab.stockBox')}</th> {/* ✅ CHANGED */}
+            <th className="col-stock-sheet">{t('stockTab.stockSheet')}</th> {/* ✅ CHANGED */}
+            <th className="col-origin">{t('stockTab.origin')}</th> {/* ✅ CHANGED */}
+            <th className="col-condition">{t('stockTab.condition')}</th> {/* ✅ CHANGED */}
+            <th className="col-date">{t('stockTab.dateReceived')}</th> {/* ✅ CHANGED */}
           </tr>
         </thead>
 
@@ -927,16 +897,12 @@ const StockTab = forwardRef(function StockTab(
             const isBox = typeLower === "box";
             const isSheet = typeLower === "sheet";
             
-            // ✅ Format dimensions based on type
             let dimensionsDisplay = "";
             if (isBox) {
-              // Box: length×width-sheetsPerBox (e.g., 225×321-012)
               dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}-${String(r.sheetsPerBox || 0).padStart(3, "0")}`;
             } else if (isSheet) {
-              // Sheet: length×width (e.g., 225×321)
               dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
             } else {
-              // SQM/Unit: just length (or length×width if both exist)
               if (r.length && r.width) {
                 dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
               } else {
@@ -944,7 +910,6 @@ const StockTab = forwardRef(function StockTab(
               }
             }
             
-            // ✅ Stock columns
             const stockBox = isBox ? (r.balanceOFR ?? "") : "";
             const stockSheet = isSheet ? (r.balanceOFR ?? "") : "";
 
@@ -984,7 +949,7 @@ const StockTab = forwardRef(function StockTab(
           {rows.length === 0 && (
             <tr className="empty-row">
               <td className="empty-cell" colSpan={9}>
-                No Data
+                {t('stockTab.noData')} {/* ✅ CHANGED */}
               </td>
             </tr>
           )}
@@ -998,10 +963,10 @@ const StockTab = forwardRef(function StockTab(
             disabled={loading || !hasMore}
             onClick={() => fetchDefaultPage(page + 1)}
           >
-            {loading ? "Loading..." : hasMore ? "Load more" : "No more items"}
+            {loading ? t('stockTab.loading') : hasMore ? t('stockTab.loadMore') : t('stockTab.noMoreItems')} {/* ✅ CHANGED */}
           </button>
           <span style={{ fontSize: 12, opacity: 0.7 }}>
-            Page {page} • Showing {rows.length} rows
+            {t('stockTab.page')} {page} • {t('stockTab.showing')} {rows.length} {t('stockTab.rows')} {/* ✅ CHANGED */}
           </span>
         </div>
       )}

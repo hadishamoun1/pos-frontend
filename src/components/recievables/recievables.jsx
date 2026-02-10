@@ -5,18 +5,19 @@ import NewRecordModal from "./newRecord";
 import EditRecordModal from "./editRecordModal";
 import NotificationModal from "./NotificationModal";
 import { axiosClient } from "../api/axiosClient";
-import { io } from "socket.io-client";
 import RctPaper from "./rctPreview";
 import { createSocket } from "../api/socketClient";
 import StatementModal from "../pos-system/Components/StatementModal";
 import { hasPerm } from "../auth/authz";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyReceivablesModal from "./DailyReceivablesModal";
+import { useTranslation } from "../hooks/useTranslation";
 
 // ✅ MUST MATCH ViewCashflowModal
 const DRAFT_KEY = "__receivables_create_draft__";
 
 const AccountingPage = () => {
+  const { t, language } = useTranslation(); // ✅ use language for stable dependency
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -41,10 +42,10 @@ const AccountingPage = () => {
   const [stmtCustomerName, setStmtCustomerName] = useState("");
   const [stmtDefaultDate, setStmtDefaultDate] = useState(null);
 
-  // ✅ NEW: State for Daily Receivables Modal
+  // ✅ Daily Receivables Modal
   const [isDailyReceivablesOpen, setIsDailyReceivablesOpen] = useState(false);
 
-  // ✅ NEW: incoming draft from CashCollections preview
+  // ✅ incoming draft from CashCollections preview
   const [incomingDraft, setIncomingDraft] = useState(null);
 
   const canCreate = hasPerm("recievables.create");
@@ -62,7 +63,7 @@ const AccountingPage = () => {
     if (selectedRowIndex === null) {
       setNotification({
         type: "error",
-        message: "Please select a row to edit.",
+        message: t("receivables.page.errors.selectRowToEdit"),
       });
       return;
     }
@@ -100,7 +101,7 @@ const AccountingPage = () => {
     if (selectedRowIndex === null) {
       setNotification({
         type: "error",
-        message: "Please select a row to delete.",
+        message: t("receivables.page.errors.selectRowToDelete"),
       });
       return;
     }
@@ -113,12 +114,17 @@ const AccountingPage = () => {
     const id = filteredData[selectedRowIndex].id;
     try {
       await axiosClient.delete(`/recievables/${id}`);
-
-      setNotification({ type: "success", message: "Deleted successfully." });
+      setNotification({
+        type: "success",
+        message: t("receivables.page.messages.deletedSuccessfully"),
+      });
       setSelectedRowIndex(null);
       closeDeleteModal();
     } catch {
-      setNotification({ type: "error", message: "Delete failed." });
+      setNotification({
+        type: "error",
+        message: t("receivables.page.errors.deleteFailed"),
+      });
     }
   };
 
@@ -126,7 +132,7 @@ const AccountingPage = () => {
     if (selectedRowIndex === null) {
       setNotification({
         type: "error",
-        message: "Please select a row to open statement.",
+        message: t("receivables.page.errors.selectRowToOpenStatement"),
       });
       return;
     }
@@ -137,7 +143,7 @@ const AccountingPage = () => {
     if (!cid) {
       setNotification({
         type: "error",
-        message: "Selected row has no customer id.",
+        message: t("receivables.page.errors.selectedRowNoCustomerId"),
       });
       return;
     }
@@ -153,7 +159,7 @@ const AccountingPage = () => {
     if (selectedRowIndex === null) {
       setNotification({
         type: "error",
-        message: "Please select a receipt entry first.",
+        message: t("receivables.page.errors.selectReceiptEntryFirst"),
       });
       return;
     }
@@ -164,7 +170,7 @@ const AccountingPage = () => {
     if (!receiptEntryId) {
       setNotification({
         type: "error",
-        message: "Selected entry has no ID.",
+        message: t("receivables.page.errors.selectedEntryNoId"),
       });
       return;
     }
@@ -173,89 +179,69 @@ const AccountingPage = () => {
       const response = await axiosClient.get(
         `/recievables/${receiptEntryId}/journal-voucher`
       );
+      const respData = response.data;
 
-      const data = response.data;
-
-      if (!data.journalVoucher) {
+      if (!respData.journalVoucher) {
         setNotification({
           type: "info",
-          message: "No journal voucher found for this receipt entry.",
+          message: t("receivables.page.messages.noJournalVoucherFound"),
         });
         return;
       }
 
-      navigate(`/journal-voucher/${data.journalVoucher.id}`);
+      navigate(`/journal-voucher/${respData.journalVoucher.id}`);
     } catch (error) {
       console.error("Error fetching journal voucher:", error);
       setNotification({
         type: "error",
         message:
           error?.response?.data?.message ||
-          "Failed to fetch journal voucher. Please try again.",
+          t("receivables.page.errors.failedFetchJournalVoucher"),
       });
     }
   };
 
-  // ✅ NEW: Open Daily Receivables Modal
-  const openDailyReceivables = () => {
-    setIsDailyReceivablesOpen(true);
-  };
+  // ✅ Open Daily Receivables Modal
+  const openDailyReceivables = () => setIsDailyReceivablesOpen(true);
 
-  // ✅ NEW: detect draft coming from CashCollections preview
+  // ✅ detect draft coming from CashCollections preview
   useEffect(() => {
-    // DEBUG: show what we received
-
     let draft = location.state?.draft || null;
-
 
     if (!draft) {
       try {
         const raw = sessionStorage.getItem(DRAFT_KEY);
-
-        if (raw) {
-          draft = JSON.parse(raw);
-        }
+        if (raw) draft = JSON.parse(raw);
       } catch (err) {
         console.warn("🧾 [Receivables] failed to parse draft:", err);
       }
     }
 
+    if (!draft || !draft?.rows?.length) return;
 
-    // If no draft, nothing to do
-    if (!draft || !draft?.rows?.length) {
-      if (draft && Array.isArray(draft.rows) && draft.rows.length === 0) {
-        console.warn("❌ [Receivables] Draft exists but rows is empty []");
-      }
-      return;
-    }
-
-    // Permission check
     if (!canCreate) {
       setNotification({
         type: "error",
-        message: "No permission: recievables.create",
+        message: t("receivables.page.errors.noPermissionCreate"),
       });
       return;
     }
 
-    // Save to local state so we can pass it to modal
     setIncomingDraft(draft);
-
-    // Open the modal
     setIsNewModalOpen(true);
 
-    // Clear session storage (optional, but helps prevent reuse)
     try {
       sessionStorage.removeItem(DRAFT_KEY);
     } catch {}
 
-    // Clear router state so refresh/back doesn't reopen
     try {
       navigate(location.pathname, { replace: true, state: {} });
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
+  // ✅ FIXED: do NOT depend on `t` (which may change every render)
+  // Use `language` instead (only changes when language changes).
   useEffect(() => {
     let socket;
 
@@ -284,7 +270,7 @@ const AccountingPage = () => {
         setFilteredData(formatted);
       } catch (err) {
         console.error("🚨 fetchData error:", err);
-        setError(err?.message || "Failed to load data");
+        setError(err?.message || t("receivables.page.errors.failedLoadData"));
         setNotification({
           type: "error",
           message: err?.response?.data?.message || err?.message,
@@ -308,8 +294,6 @@ const AccountingPage = () => {
       });
 
       socket.on("recievables", (updated) => {
-        
-
         const fmt = (updated || []).map((v) => ({
           id: v.id,
           date: v.date.slice(0, 10),
@@ -328,28 +312,16 @@ const AccountingPage = () => {
         }));
 
         setData((prevData) => {
- 
-
           const prevIds = new Set(prevData.map((item) => item.id));
           const newIds = new Set();
 
           fmt.forEach((item) => {
-            if (!prevIds.has(item.id)) {
-              newIds.add(item.id);
-          
-            }
+            if (!prevIds.has(item.id)) newIds.add(item.id);
           });
 
           if (newIds.size > 0) {
-            
             setNewlyAddedIds(newIds);
-
-            setTimeout(() => {
-             
-              setNewlyAddedIds(new Set());
-            }, 5000);
-          } else {
-            console.log("❌ No new items detected");
+            setTimeout(() => setNewlyAddedIds(new Set()), 5000);
           }
 
           return fmt;
@@ -362,18 +334,14 @@ const AccountingPage = () => {
     }
 
     return () => {
-      if (socket) {
-        socket.disconnect();
-      }
+      if (socket) socket.disconnect();
     };
-  }, []);
+  }, [language]); // ✅ FIX (was [t])
 
   const formatNumberWithCommas = (n) =>
     n != null ? Number(n).toLocaleString("en-US") : "";
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  const handleSearch = (e) => setSearchTerm(e.target.value);
 
   const searchAbortRef = useRef(null);
   useEffect(() => {
@@ -384,24 +352,22 @@ const AccountingPage = () => {
     }
 
     const norm = (v) => String(v ?? "").toLowerCase();
-    const t = norm(term);
+    const tt = norm(term);
 
     const quick = data.filter(
       (r) =>
-        norm(r.customerName).includes(t) ||
-        norm(r.refInvoice).includes(t) ||
-        norm(r.invoiceNumber).includes(t) ||
-        norm(r.comments).includes(t) ||
-        norm(r.pmtType).includes(t)
+        norm(r.customerName).includes(tt) ||
+        norm(r.refInvoice).includes(tt) ||
+        norm(r.invoiceNumber).includes(tt) ||
+        norm(r.comments).includes(tt) ||
+        norm(r.pmtType).includes(tt)
     );
 
     setFilteredData(quick);
     if (term.length < 2) return;
 
     const timeout = setTimeout(async () => {
-      if (searchAbortRef.current) {
-        searchAbortRef.current.abort();
-      }
+      if (searchAbortRef.current) searchAbortRef.current.abort();
       const controller = new AbortController();
       searchAbortRef.current = controller;
 
@@ -436,14 +402,7 @@ const AccountingPage = () => {
     return () => clearTimeout(timeout);
   }, [searchTerm, data]);
 
-  const handlePreviewReceipt = (record) => {
-    setReceiptPreviewRecord(record);
-  };
-
-  useEffect(() => {
-  }, [newlyAddedIds]);
-
-  // ✅ DEBUG: see exactly what will be passed to the modal
+  const handlePreviewReceipt = (record) => setReceiptPreviewRecord(record);
 
   return (
     <>
@@ -452,7 +411,7 @@ const AccountingPage = () => {
           <div className="top-toolbar">
             <input
               type="text"
-              placeholder="Search by Customer or JV#"
+              placeholder={t("receivables.page.searchPlaceholder")}
               className="search-input"
               value={searchTerm}
               onChange={handleSearch}
@@ -461,19 +420,19 @@ const AccountingPage = () => {
             <div className="button-group">
               {canCreate && (
                 <button className="action-button" onClick={openNewModal}>
-                  New
+                  {t("receivables.page.buttons.new")}
                 </button>
               )}
 
               {canUpdate && (
                 <button className="action-button" onClick={openEditModal}>
-                  Edit
+                  {t("common.edit")}
                 </button>
               )}
 
               {canDelete && (
                 <button className="delete-button" onClick={openDeleteModal}>
-                  Delete
+                  {t("common.delete")}
                 </button>
               )}
 
@@ -482,11 +441,11 @@ const AccountingPage = () => {
                 onClick={openStatement}
                 title={
                   selectedRowIndex === null
-                    ? "Select a row first"
-                    : "Open statement for selected customer"
+                    ? t("receivables.page.titles.selectRowFirst")
+                    : t("receivables.page.titles.openStatementForSelectedCustomer")
                 }
               >
-                Stmt
+                {t("receivables.page.buttons.statementShort")}
               </button>
 
               <button
@@ -494,50 +453,53 @@ const AccountingPage = () => {
                 onClick={handleViewJournalVoucher}
                 title={
                   selectedRowIndex === null
-                    ? "Select a receipt entry first"
-                    : "View journal voucher for selected entry"
+                    ? t("receivables.page.titles.selectReceiptEntryFirst")
+                    : t("receivables.page.titles.viewJournalVoucherForSelectedEntry")
                 }
               >
-                View JV
+                {t("receivables.page.buttons.viewJv")}
               </button>
 
-              {/* ✅ NEW: Daily Receivables Button */}
               <button
                 className="action-button-daily"
                 onClick={openDailyReceivables}
-                title="View daily receivables report"
+                title={t("receivables.page.titles.viewDailyReceivables")}
               >
-                Daily Report
+                {t("receivables.page.buttons.dailyReport")}
               </button>
             </div>
           </div>
 
-          
-
           {loading ? (
-            <p>Loading data...</p>
+            <p>{t("receivables.page.loadingData")}</p>
           ) : error ? (
             <p className="error-text">{error}</p>
           ) : (
             <>
-              {searching && <div className="searching-hint">Searching…</div>}
+              {searching && (
+                <div className="searching-hint">
+                  {t("receivables.page.searching")}
+                </div>
+              )}
+
               <table className="accounting-table">
                 <thead>
                   <tr>
-                    <th>Select</th>
-                    <th>Customer Name</th>
-                    <th>Date</th>
-                    <th>Cash Number</th>
-                    <th>Cur</th>
-                    <th>Ex Rate</th>
-                    <th>Amount Ex</th>
-                    <th>Ref Invoice</th>
-                    <th>JV Number</th>
-                    <th>PMT Type</th>
-                    <th>Comments</th>
-                    <th>RCT</th>
+                    <th>{t("common.select")}</th>
+                    <th>{t("receivables.page.table.customerName")}</th>
+                    <th>{t("receivables.page.table.date")}</th>
+                    <th>{t("receivables.page.table.cashNumber")}</th>
+                    <th>{t("receivables.page.table.currencyShort")}</th>
+                    <th>{t("receivables.page.table.exchangeRateShort")}</th>
+                    <th>{t("receivables.page.table.amountEx")}</th>
+                    <th>{t("receivables.page.table.refInvoice")}</th>
+                    <th>{t("receivables.page.table.jvNumber")}</th>
+                    <th>{t("receivables.page.table.paymentType")}</th>
+                    <th>{t("receivables.page.table.comments")}</th>
+                    <th>{t("receivables.page.table.rct")}</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {filteredData.map((row, idx) => {
                     const hasGlow = newlyAddedIds.has(row.id);
@@ -550,6 +512,7 @@ const AccountingPage = () => {
                             name="selectedRow"
                             checked={selectedRowIndex === idx}
                             onChange={() => setSelectedRowIndex(idx)}
+                            aria-label={t("receivables.page.table.selectRowAria")}
                           />
                         </td>
                         <td>{row.customerName}</td>
@@ -567,7 +530,7 @@ const AccountingPage = () => {
                             className="receipt-preview-button"
                             onClick={() => handlePreviewReceipt(row)}
                           >
-                            Receipt
+                            {t("receivables.page.buttons.receipt")}
                           </button>
                         </td>
                       </tr>
@@ -582,10 +545,7 @@ const AccountingPage = () => {
         {isNewModalOpen && (
           <NewRecordModal
             onClose={closeNewModal}
-            onSave={(created) => {
-              closeNewModal();
-            }}
-            // ✅ PASS DRAFT (we pass 2 prop names to be safe)
+            onSave={() => closeNewModal()}
             prefillDraft={incomingDraft}
             draft={incomingDraft}
           />
@@ -595,20 +555,18 @@ const AccountingPage = () => {
           <EditRecordModal
             selectedRow={selectedRow}
             onClose={closeEditModal}
-            onSave={(updated) => {
-              closeEditModal();
-            }}
+            onSave={() => closeEditModal()}
           />
         )}
 
         {isDeleteModalOpen && (
           <NotificationModal
             type="warning"
-            message="Are you sure you want to delete this entry?"
+            message={t("receivables.page.confirmDeleteMessage")}
             onClose={closeDeleteModal}
             onConfirm={handleDelete}
-            confirmLabel="Yes"
-            cancelLabel="No"
+            confirmLabel={t("common.yes")}
+            cancelLabel={t("common.no")}
           />
         )}
 
@@ -636,7 +594,6 @@ const AccountingPage = () => {
         customerName={stmtCustomerName}
       />
 
-      {/* ✅ NEW: Daily Receivables Modal */}
       <DailyReceivablesModal
         isOpen={isDailyReceivablesOpen}
         onClose={() => setIsDailyReceivablesOpen(false)}

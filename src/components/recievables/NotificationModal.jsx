@@ -1,14 +1,24 @@
+// src/recievables/NotificationModal.jsx
 import React from "react";
 import "./notificationModal.css";
+import { useTranslation } from "../hooks/useTranslation"; // ✅ adjust path if needed
 
 const NotificationModal = ({
   type,
   message,
   onClose,
   onConfirm,
-  confirmLabel = "OK",
-  cancelLabel = null,
+  confirmLabel, // optional
+  cancelLabel,  // optional
 }) => {
+  const { t } = useTranslation();
+
+  const finalConfirmLabel =
+    confirmLabel ?? (cancelLabel ? t("common.yes") : t("common.ok") || "OK");
+
+  const finalCancelLabel =
+    cancelLabel ?? null; // keep same behavior: show cancel only if provided
+
   return (
     <div className="notification-modal-overlay">
       <div
@@ -17,7 +27,7 @@ const NotificationModal = ({
             ? "notification-success-modal"
             : type === "error"
             ? "notification-error-modal"
-            : "notification-warning-modal" // Add warning styling
+            : "notification-warning-modal"
         }`}
       >
         {type === "success" ? (
@@ -36,20 +46,22 @@ const NotificationModal = ({
             <div className="notification-modal-icon">⚠</div>
           </>
         )}
+
         <div className="notification-modal-buttons">
-          {cancelLabel && (
+          {finalCancelLabel && (
             <button
               className="notification-modal-button notification-modal-cancel-button"
               onClick={onClose}
             >
-              {cancelLabel}
+              {finalCancelLabel}
             </button>
           )}
+
           <button
             className="notification-modal-button confirm-button"
             onClick={onConfirm || onClose}
           >
-            {confirmLabel}
+            {finalConfirmLabel}
           </button>
         </div>
       </div>

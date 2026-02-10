@@ -6,6 +6,7 @@ import CustomerSelectionModal from "./CustomerSelectionModal";
 import "./newRecord.css";
 import NotificationModal from "./NotificationModal";
 import { axiosClient } from "../api/axiosClient";
+import { useTranslation } from "../hooks/useTranslation"; // ✅ add
 
 const DRAFT_KEY = "__receivables_create_draft__";
 
@@ -101,7 +102,6 @@ function normalizeDraftItemToRow(item) {
   };
 }
 
-
 function normalizeDraftPayload(anyDraft) {
   if (!anyDraft) return null;
 
@@ -130,6 +130,8 @@ function InvoicePicker({
   onChange,
   placeholder = "— None —",
 }) {
+  const { t } = useTranslation(); // ✅
+
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ left: 10, top: 0, width: 0 });
   const rootRef = useRef(null);
@@ -180,7 +182,7 @@ function InvoicePicker({
   );
 
   const displayText =
-    selected?.invoiceNumber || (loading ? "Loading..." : placeholder);
+    selected?.invoiceNumber || (loading ? t("common.loading") : placeholder);
 
   const computeMenuPos = () => {
     const el = rootRef.current;
@@ -243,7 +245,7 @@ function InvoicePicker({
           if (!open) computeMenuPos();
           setOpen((v) => !v);
         }}
-        title={selected ? `Invoice ${selected.invoiceNumber}` : undefined}
+        title={selected ? t("receivables.invoiceTitleWithNumber", { number: selected.invoiceNumber }) : undefined}
       >
         <span className={`inv-picker__btnText ${selected ? "" : "muted"}`}>
           {displayText}
@@ -268,11 +270,11 @@ function InvoicePicker({
             }}
           >
             <div className="inv-picker__header">
-              <div>Invoice #</div>
-              <div>Date</div>
-              <div>No VAT</div>
-              <div>VAT</div>
-              <div>Total</div>
+              <div>{t("receivables.invoicePicker.invoiceNumber")}</div>
+              <div>{t("receivables.invoicePicker.date")}</div>
+              <div>{t("receivables.invoicePicker.noVat")}</div>
+              <div>{t("receivables.invoicePicker.vat")}</div>
+              <div>{t("receivables.invoicePicker.total")}</div>
             </div>
 
             <button
@@ -283,7 +285,9 @@ function InvoicePicker({
                 setOpen(false);
               }}
             >
-              <div className="inv-picker__cell inv-nbr muted">— None —</div>
+              <div className="inv-picker__cell inv-nbr muted">
+                {t("receivables.invoicePicker.none")}
+              </div>
               <div className="inv-picker__cell muted">—</div>
               <div className="inv-picker__cell inv-num muted">—</div>
               <div className="inv-picker__cell inv-num muted">—</div>
@@ -293,7 +297,9 @@ function InvoicePicker({
             <div className="inv-picker__list">
               {normalized.length === 0 ? (
                 <div className="inv-picker__empty">
-                  {loading ? "Loading invoices..." : "No invoices for this customer."}
+                  {loading
+                    ? t("receivables.invoicePicker.loadingInvoices")
+                    : t("receivables.invoicePicker.noInvoicesForCustomer")}
                 </div>
               ) : (
                 normalized.map((inv) => (
@@ -307,7 +313,7 @@ function InvoicePicker({
                       onChange(inv.id);
                       setOpen(false);
                     }}
-                    title={`Invoice ${inv.invoiceNumber}`}
+                    title={t("receivables.invoiceTitleWithNumber", { number: inv.invoiceNumber })}
                   >
                     <div className="inv-picker__cell inv-nbr">{inv.invoiceNumber}</div>
                     <div className="inv-picker__cell">{inv.date}</div>
@@ -327,6 +333,7 @@ function InvoicePicker({
 
 // ✅ RowContextMenu Component (COMPLETE)
 function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
+  const { t } = useTranslation(); // ✅
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -371,11 +378,11 @@ function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
           }}
           disabled={disabled}
         >
-          Delete
+          {t("common.delete")}
         </button>
 
         <button type="button" className="row-ctx__item" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </div>,
@@ -385,6 +392,7 @@ function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
 
 // ✅ Main NewRecordModal Component (UPDATED)
 const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
+  const { t } = useTranslation(); // ✅
   const location = useLocation();
 
   const [rows, setRows] = useState([]);
@@ -530,7 +538,7 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
         message:
           e?.response?.data?.message ||
           e?.message ||
-          "Failed to load invoices for this customer.",
+          t("receivables.errors.failedLoadInvoices"),
       });
     }
   };
@@ -576,7 +584,6 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
     }
   };
 
-  // ✅ FIX: actually apply the passed draft (prop OR location OR session)
   useEffect(() => {
     let fromSession = null;
     try {
@@ -591,17 +598,8 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
 
     const norm = normalizeDraftPayload(rawDraft);
 
-    console.log("🧾 [NewRecordModal] prefillDraft =", prefillDraft);
-    console.log("🧾 [NewRecordModal] location.state =", rawFromLocation);
-    console.log("🧾 [NewRecordModal] sessionDraft =", fromSession);
-    console.log("🧾 [NewRecordModal] rawDraftUsed =", rawDraft);
-    console.log("🧾 [NewRecordModal] normalizedDraft =", norm);
-
     if (norm?.rows?.length) {
       const normalizedRows = norm.rows.map(normalizeDraftItemToRow);
-
-      console.log("🧾 [NewRecordModal] normalizedRows(APPLY) =", normalizedRows);
-
       setRows(normalizedRows);
 
       try {
@@ -614,7 +612,6 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
           const customerIds = Array.from(
             new Set(normalizedRows.map((r) => String(r.customerId || "").trim()).filter(Boolean))
           );
-
           if (!customerIds.length) return;
 
           setRows((prev) =>
@@ -626,7 +623,6 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
           const pairs = await Promise.all(
             customerIds.map(async (cid) => [cid, await fetchCustomerInvoices(cid)])
           );
-
           const map = new Map(pairs);
 
           setRows((prev) =>
@@ -649,7 +645,6 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
       return;
     }
 
-    // no draft => create default empty row
     if (rows.length === 0) handleAddRow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -659,77 +654,72 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
     setSaving(true);
 
     try {
-      if (!rows.length) throw new Error("Add at least one row.");
+      if (!rows.length) throw new Error(t("receivables.errors.addAtLeastOneRow"));
 
       for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
         const rowNum = i + 1;
 
-        if (!r.customerId) throw new Error(`Row ${rowNum}: Customer is required.`);
-        if (!r.type) throw new Error(`Row ${rowNum}: JV Type is required.`);
-        if (!r.pmtType) throw new Error(`Row ${rowNum}: Payment Type is required.`);
-        if (!r.currency) throw new Error(`Row ${rowNum}: Currency is required.`);
-        if (!r.cashNumber) throw new Error(`Row ${rowNum}: Cash number is required.`);
+        if (!r.customerId) throw new Error(t("receivables.errors.rowCustomerRequired", { row: rowNum }));
+        if (!r.type) throw new Error(t("receivables.errors.rowTypeRequired", { row: rowNum }));
+        if (!r.pmtType) throw new Error(t("receivables.errors.rowPaymentTypeRequired", { row: rowNum }));
+        if (!r.currency) throw new Error(t("receivables.errors.rowCurrencyRequired", { row: rowNum }));
+        if (!r.cashNumber) throw new Error(t("receivables.errors.rowCashNumberRequired", { row: rowNum }));
         if (r.currency === "LL" && !r.exchangeRate)
-          throw new Error(`Row ${rowNum}: Exchange rate is required for LL.`);
-        if (!r.amountExchanged) throw new Error(`Row ${rowNum}: Amount exchanged is required.`);
-        if (!r.date) throw new Error(`Row ${rowNum}: Date is required.`);
+          throw new Error(t("receivables.errors.rowExchangeRateRequiredForLL", { row: rowNum }));
+        if (!r.amountExchanged) throw new Error(t("receivables.errors.rowAmountExchangedRequired", { row: rowNum }));
+        if (!r.date) throw new Error(t("receivables.errors.rowDateRequired", { row: rowNum }));
       }
 
       const created = [];
 
-for (const r of rows) {
-  const cashNumber = Number(String(r.cashNumber || "").replace(/,/g, ""));
-  const exchangeRateRaw = String(r.exchangeRate || "").replace(/,/g, "");
-  const exchangeRate = exchangeRateRaw === "" ? null : Number(exchangeRateRaw);
-  const amountExchanged = Number(String(r.amountExchanged || "").replace(/,/g, ""));
-  const invoiceId = r.invoiceId === "" || r.invoiceId == null ? null : Number(r.invoiceId);
+      for (const r of rows) {
+        const cashNumber = Number(String(r.cashNumber || "").replace(/,/g, ""));
+        const exchangeRateRaw = String(r.exchangeRate || "").replace(/,/g, "");
+        const exchangeRate = exchangeRateRaw === "" ? null : Number(exchangeRateRaw);
+        const amountExchanged = Number(String(r.amountExchanged || "").replace(/,/g, ""));
+        const invoiceId = r.invoiceId === "" || r.invoiceId == null ? null : Number(r.invoiceId);
 
-  const payload = {
-    customerId: Number(r.customerId),
-    date: r.date,
-    invoiceId,
-    cashNumber,
-    currency: r.currency,
-    exchangeRate: exchangeRate ?? null,
-    amountExchanged,
-    comments: r.comments,
-    type: r.type,
-    pmtType: r.pmtType,
-  };
+        const payload = {
+          customerId: Number(r.customerId),
+          date: r.date,
+          invoiceId,
+          cashNumber,
+          currency: r.currency,
+          exchangeRate: exchangeRate ?? null,
+          amountExchanged,
+          comments: r.comments,
+          type: r.type,
+          pmtType: r.pmtType,
+        };
 
-  // ✅ 1) Create receivable
-  const resp = await axiosClient.post(`/recievables`, payload);
-  created.push(resp.data);
+        const resp = await axiosClient.post(`/recievables`, payload);
+        created.push(resp.data);
 
-  // ✅ 2) Mark cash collections as linked + posted (prevents duplicates)
-  const receivableEntryId = resp?.data?.id;
+        const receivableEntryId = resp?.data?.id;
 
-  const ids = Array.isArray(r.sourceCashCollectionIds)
-    ? r.sourceCashCollectionIds
-        .map((x) => Number(x))
-        .filter((x) => Number.isFinite(x) && x > 0)
-    : [];
+        const ids = Array.isArray(r.sourceCashCollectionIds)
+          ? r.sourceCashCollectionIds
+              .map((x) => Number(x))
+              .filter((x) => Number.isFinite(x) && x > 0)
+          : [];
 
-  if (receivableEntryId && ids.length) {
-    try {
-      await axiosClient.post(`/cash-collections/v1/mark-receivable`, {
-        ids,
-        receivableEntryId,
-      });
-    } catch (markErr) {
-      // ✅ Option 3: DO NOT silently continue
-      // Throw so user sees clear error, instead of creating duplicates later
-      throw new Error(
-        markErr?.response?.data?.message ||
-          `Receivable saved but failed to mark CashCollections (ids=${ids.length}).`
-      );
-    }
-  }
-}
+        if (receivableEntryId && ids.length) {
+          try {
+            await axiosClient.post(`/cash-collections/v1/mark-receivable`, {
+              ids,
+              receivableEntryId,
+            });
+          } catch (markErr) {
+            throw new Error(
+              markErr?.response?.data?.message ||
+                t("receivables.errors.failedMarkCashCollections", { count: ids.length })
+            );
+          }
+        }
+      }
 
-
-      setNotification({ type: "success", message: "Saved successfully!" });
+      setNotification({ type: "success", message: t("receivables.messages.savedSuccessfully") });
       setCloseAfterNotification(true);
       onSave(created);
     } catch (e) {
@@ -750,23 +740,23 @@ for (const r of rows) {
     <div className="payments-modal-overlay">
       <div className="payments-modal-content">
         <div className="payments-modal-header">
-          <h2>New Record</h2>
+          <h2>{t("receivables.newRecord.title")}</h2>
           <div className="payments-modal-header-buttons">
             <button
               className="payments-modal-action-button payments-modal-cancel-button"
               onClick={onClose}
               disabled={saving}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
 
             <button
               className="payments-modal-action-button payments-modal-save-button"
               onClick={handleSave}
               disabled={saving || rows.length === 0}
-              title={rows.length === 0 ? "Add at least one row" : undefined}
+              title={rows.length === 0 ? t("receivables.newRecord.addAtLeastOneRowTitle") : undefined}
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </div>
@@ -775,16 +765,16 @@ for (const r of rows) {
           <table className="payments-modal-table">
             <thead>
               <tr>
-                <th>Customer Name</th>
-                <th>Type</th>
-                <th>Pmt Type</th>
-                <th>Currency</th>
-                <th>Cash Number</th>
-                <th>Exchange Rate</th>
-                <th>Amount Ex</th>
-                <th>Date</th>
-                <th>Invoice #</th>
-                <th>Comments</th>
+                <th>{t("receivables.newRecord.headers.customerName")}</th>
+                <th>{t("receivables.newRecord.headers.type")}</th>
+                <th>{t("receivables.newRecord.headers.paymentType")}</th>
+                <th>{t("receivables.newRecord.headers.currency")}</th>
+                <th>{t("receivables.newRecord.headers.cashNumber")}</th>
+                <th>{t("receivables.newRecord.headers.exchangeRate")}</th>
+                <th>{t("receivables.newRecord.headers.amountEx")}</th>
+                <th>{t("receivables.newRecord.headers.date")}</th>
+                <th>{t("receivables.newRecord.headers.invoiceNumber")}</th>
+                <th>{t("receivables.newRecord.headers.comments")}</th>
               </tr>
             </thead>
 
@@ -823,6 +813,7 @@ for (const r of rows) {
                         setCurrentRowIndex(idx);
                         setCustomerModalOpen(true);
                       }}
+                      title={t("receivables.newRecord.pickCustomerTitle")}
                     />
                   </td>
 
@@ -834,9 +825,9 @@ for (const r of rows) {
                       onKeyDown={(e) => handleKeyDown(e, idx, "type")}
                       onChange={(e) => handleInputChange(idx, "type", e.target.value)}
                     >
-                      <option value="G">G</option>
-                      <option value="S">S</option>
-                      <option value="RVR">RVR</option>
+                      <option value="G">{t("receivables.types.G")}</option>
+                      <option value="S">{t("receivables.types.S")}</option>
+                      <option value="RVR">{t("receivables.types.RVR")}</option>
                     </select>
                   </td>
 
@@ -848,9 +839,9 @@ for (const r of rows) {
                       onKeyDown={(e) => handleKeyDown(e, idx, "pmtType")}
                       onChange={(e) => handleInputChange(idx, "pmtType", e.target.value)}
                     >
-                      <option value="">Select</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Check">Check</option>
+                      <option value="">{t("common.select")}</option>
+                      <option value="Cash">{t("receivables.paymentTypes.cash")}</option>
+                      <option value="Check">{t("receivables.paymentTypes.check")}</option>
                     </select>
                   </td>
 
@@ -862,7 +853,7 @@ for (const r of rows) {
                       onKeyDown={(e) => handleKeyDown(e, idx, "currency")}
                       onChange={(e) => handleInputChange(idx, "currency", e.target.value)}
                     >
-                      <option value="">Select</option>
+                      <option value="">{t("common.select")}</option>
                       <option value="USD">USD</option>
                       <option value="LL">LL</option>
                     </select>
@@ -912,7 +903,7 @@ for (const r of rows) {
                       value={row.invoiceId}
                       options={row.invoiceOptions}
                       onChange={(newId) => handleInputChange(idx, "invoiceId", newId)}
-                      placeholder="— None —"
+                      placeholder={t("receivables.invoicePicker.none")}
                     />
                   </td>
 
@@ -934,7 +925,7 @@ for (const r of rows) {
 
         <div className="payments-modal-footer">
           <button className="payments-modal-action-button" onClick={handleAddRow} disabled={saving}>
-            Add Row
+            {t("receivables.newRecord.addRow")}
           </button>
         </div>
       </div>

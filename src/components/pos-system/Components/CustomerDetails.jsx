@@ -1,6 +1,7 @@
 // CustomerDetails.jsx
 import React, { useState } from "react";
 import HistoryModal from "./HistoryModal";
+import { useTranslation } from "../../hooks/useTranslation"; // ✅ adjust path if needed
 
 const CustomerDetails = ({
   currencyRate,
@@ -22,6 +23,8 @@ const CustomerDetails = ({
   currencyCode,
   onCurrencyCodeChange,
 }) => {
+  const { t } = useTranslation(); // ✅
+
   // ✅ Add state for history modal
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
@@ -53,10 +56,9 @@ const CustomerDetails = ({
             value={currencyCode || "USD"}
             onChange={(e) => onCurrencyCodeChange?.(e.target.value)}
             disabled={!isEditable}
-            title={!isEditable ? "Click Edit first" : "Currency"}
+            title={!isEditable ? t("posCustomerDetails.clickEditFirst") : t("posCustomerDetails.currency")}
           >
             <option value="USD">USD</option>
-            
             <option value="LBP">LBP</option>
           </select>
         </div>
@@ -67,21 +69,24 @@ const CustomerDetails = ({
             htmlFor="company-name-checkbox"
             className="pos-page-checkbox-label"
           >
-            Company Name
+            {t("customerDetails.companyName")}
           </label>
         </div>
       </div>
 
       {/* Customer Name Input Row */}
       <div className="pos-page-customer-name-row">
-        <label className="pos-page-customer-name-label">Customer Name</label>
+        <label className="pos-page-customer-name-label">
+          {t("customerDetails.customerName")}
+        </label>
+
         <div className="pos-page-customer-search-container">
           <input
             type="text"
             value={customerInput}
             onChange={handleCustomerInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Search Customer Name"
+            placeholder={t("customerDetails.searchCustomer")}
             className="pos-page-customer-name-input"
           />
 
@@ -152,9 +157,9 @@ const CustomerDetails = ({
             style={{ marginLeft: "auto" }}
             onClick={handleSearchClick}
             disabled={!isEditable}
-            title={!isEditable ? "Click Edit first" : "Search Items"}
+            title={!isEditable ? t("posCustomerDetails.clickEditFirst") : t("customerDetails.searchItems")}
           >
-            Search Items
+            {t("customerDetails.searchItems")}
           </button>
 
           <button
@@ -162,9 +167,9 @@ const CustomerDetails = ({
             style={{ marginLeft: "8px" }}
             onClick={onToggleCutMode}
             disabled={!isEditable}
-            title={!isEditable ? "Click Edit first" : "Cut Mode"}
+            title={!isEditable ? t("posCustomerDetails.clickEditFirst") : t("customerDetails.cut")}
           >
-            {cutMode ? "Cut (ON)" : "Cut"}
+            {cutMode ? t("customerDetails.cutOn") : t("customerDetails.cut")}
           </button>
 
           <button
@@ -172,17 +177,16 @@ const CustomerDetails = ({
             style={{ marginLeft: "8px" }}
             onClick={handleGetPriceClick}
           >
-            Get Price
+            {t("customerDetails.getPrice")}
           </button>
 
-          {/* ✅ NEW: View History Button */}
+          {/* ✅ View History Button */}
           <button
             className="pos-page-toolbar-button pos-page-purple-button"
-          
             onClick={() => setIsHistoryModalOpen(true)}
-            title="View Customer Price History"
+            title={t("posCustomerDetails.viewHistoryTitle")}
           >
-            View History
+            {t("customerDetails.viewHistory")}
           </button>
         </div>
       </div>

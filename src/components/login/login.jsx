@@ -1,9 +1,12 @@
 import React, { useState } from "react";
+import { useLanguage } from "../contexts/LanguageContext"; // ✅ Import language context
 import "./login.css";
 
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
 
 const LoginPage = () => {
+  const { setLanguage } = useLanguage(); // ✅ Get language setter
+  
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,9 +37,16 @@ const LoginPage = () => {
 
       if (!data?.access_token) throw new Error("No token returned from server");
 
+      // Save token
       sessionStorage.setItem("token", data.access_token);
 
-      window.location.href = "/dashboard"; // change if needed
+      // ✅ NEW: Set language from user profile
+      if (data?.user?.language) {
+        setLanguage(data.user.language);
+        console.log('✅ User language loaded:', data.user.language);
+      }
+
+      window.location.href = "/dashboard";
     } catch (e2) {
       setErr(e2?.message || "Login failed");
     } finally {

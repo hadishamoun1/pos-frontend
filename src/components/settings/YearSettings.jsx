@@ -1,9 +1,13 @@
 // src/pages/settings/YearSettings.jsx
 import React, { useEffect, useState } from "react";
 import "./styles/SettingYear.css";
-import { axiosClient } from "../api/axiosClient"; 
+import { axiosClient } from "../api/axiosClient";
+import { useTranslation } from "../hooks/useTranslation";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const YearSettings = () => {
+  const { t } = useTranslation(); // ✅ Translation hook
+  
   const [activeYear, setActiveYear] = useState("");
   const [newYear, setNewYear] = useState("");
   const [yearToActivate, setYearToActivate] = useState("");
@@ -15,18 +19,18 @@ const YearSettings = () => {
   useEffect(() => {
     const fetchActiveYear = async () => {
       try {
-        const res = await axiosClient.get(`/settings/active-year`); // ✅ relative path
-        const year = res.data; // returns a string
+        const res = await axiosClient.get(`/settings/active-year`);
+        const year = res.data;
         setActiveYear(String(year));
         setErrorMsg("");
       } catch (err) {
         console.error("Error fetching active year:", err);
-        setErrorMsg("Failed to load active fiscal year.");
+        setErrorMsg(t('yearSettings.loadError'));
       }
     };
 
     fetchActiveYear();
-  }, []);
+  }, [t]);
 
   // Add new year
   const handleAddYear = async (e) => {
@@ -36,25 +40,23 @@ const YearSettings = () => {
 
     const y = newYear.trim();
     if (!y) {
-      setErrorMsg("Please enter the year you want to add.");
+      setErrorMsg(t('yearSettings.enterYearError'));
       return;
     }
 
     try {
       setLoading(true);
+      const res = await axiosClient.post(`/settings/add-year`, { year: y });
+      const saved = res.data;
 
-      const res = await axiosClient.post(`/settings/add-year`, { year: y }); // ✅ relative path
-      const saved = res.data; // Settings entity
-
-      setStatusMsg(`Year ${saved.year} was added successfully.`);
+      setStatusMsg(t('yearSettings.yearAddedSuccess', { year: saved.year }));
       setNewYear("");
     } catch (err) {
       console.error("Error adding year:", err);
       const msg =
         err?.response?.data?.message ||
         err?.response?.data ||
-        err?.message ||
-        "Error occurred while adding the year.";
+        t('yearSettings.addError');
       setErrorMsg(String(msg));
     } finally {
       setLoading(false);
@@ -69,28 +71,26 @@ const YearSettings = () => {
 
     const y = yearToActivate.trim();
     if (!y) {
-      setErrorMsg("Please enter the year you want to set as active.");
+      setErrorMsg(t('yearSettings.enterActiveYearError'));
       return;
     }
 
     try {
       setLoading(true);
-
       const res = await axiosClient.patch(`/settings/set-active-year`, {
         year: y,
-      }); // ✅ relative path
+      });
 
-      const updated = res.data; // Settings entity
+      const updated = res.data;
       setActiveYear(String(updated.year));
-      setStatusMsg(`Active fiscal year set to ${updated.year}.`);
+      setStatusMsg(t('yearSettings.activeYearSetSuccess', { year: updated.year }));
       setYearToActivate("");
     } catch (err) {
       console.error("Error setting active year:", err);
       const msg =
         err?.response?.data?.message ||
         err?.response?.data ||
-        err?.message ||
-        "Error occurred while setting active year.";
+        t('yearSettings.setActiveError');
       setErrorMsg(String(msg));
     } finally {
       setLoading(false);
@@ -99,24 +99,27 @@ const YearSettings = () => {
 
   return (
     <div className="setting-year-container">
-      <h2 className="setting-year-title">Fiscal Year Settings</h2>
+      <h2 className="setting-year-title">{t('yearSettings.title')}</h2>
+
+      {/* ✅ Language Switcher - NEW */}
+      <LanguageSwitcher />
 
       <div className="setting-year-card">
-        <h3 className="setting-year-card-title">Current Active Year</h3>
+        <h3 className="setting-year-card-title">{t('yearSettings.currentActiveYear')}</h3>
         <p className="setting-year-active-value">
-          {activeYear || "No active fiscal year is set."}
+          {activeYear || t('yearSettings.noActiveYear')}
         </p>
       </div>
 
       <div className="setting-year-card">
-        <h3 className="setting-year-card-title">Add New Year</h3>
+        <h3 className="setting-year-card-title">{t('yearSettings.addNewYear')}</h3>
         <form className="setting-year-form" onSubmit={handleAddYear}>
           <label className="setting-year-label">
-            Year:
+            {t('yearSettings.yearLabel')}
             <input
               type="text"
               className="setting-year-input"
-              placeholder="Example: 2025 or 25"
+              placeholder={t('yearSettings.yearPlaceholder')}
               value={newYear}
               onChange={(e) => setNewYear(e.target.value)}
             />
@@ -126,20 +129,20 @@ const YearSettings = () => {
             className="setting-year-button"
             disabled={loading}
           >
-            {loading ? "Saving..." : "Add Year"}
+            {loading ? t('yearSettings.saving') : t('yearSettings.addYearButton')}
           </button>
         </form>
       </div>
 
       <div className="setting-year-card">
-        <h3 className="setting-year-card-title">Set Active Year</h3>
+        <h3 className="setting-year-card-title">{t('yearSettings.setActiveYear')}</h3>
         <form className="setting-year-form" onSubmit={handleSetActiveYear}>
           <label className="setting-year-label">
-            Year to set as active:
+            {t('yearSettings.yearToActivateLabel')}
             <input
               type="text"
               className="setting-year-input"
-              placeholder="Enter an existing year"
+              placeholder={t('yearSettings.yearToActivatePlaceholder')}
               value={yearToActivate}
               onChange={(e) => setYearToActivate(e.target.value)}
             />
@@ -149,7 +152,7 @@ const YearSettings = () => {
             className="setting-year-button setting-year-button-secondary"
             disabled={loading}
           >
-            {loading ? "Saving..." : "Set as Active"}
+            {loading ? t('yearSettings.saving') : t('yearSettings.setAsActiveButton')}
           </button>
         </form>
       </div>

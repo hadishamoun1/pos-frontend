@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import "./suppliers.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ use api client (NO /api/api)
+import { axiosClient } from "../api/axiosClient";
+import { useTranslation } from "../hooks/useTranslation";
 
 const CreatePreviewSuppliers = () => {
+  const { t } = useTranslation();
+
   const [suppliers, setSuppliers] = useState([]);
   const [currencyCodes, setCurrencyCodes] = useState([]);
   const [formData, setFormData] = useState({
@@ -19,16 +22,14 @@ const CreatePreviewSuppliers = () => {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [modalContent, setModalContent] = useState(false);
-  const [modalType, setModalType] = useState("");
+  const [modalType, setModalType] = useState(""); // success | error
 
-  // Fetch currency codes from the API
+  // Fetch currency codes
   useEffect(() => {
     const fetchCurrencyCodes = async () => {
       try {
-        const response = await axiosClient.get(
-          `/currency/v1/dropdown/currencycodes`
-        );
-        setCurrencyCodes(response.data);
+        const response = await axiosClient.get("/currency/v1/dropdown/currencycodes");
+        setCurrencyCodes(response.data || []);
       } catch (error) {
         console.error("Error fetching currency codes:", error);
       }
@@ -42,23 +43,20 @@ const CreatePreviewSuppliers = () => {
 
     setLoading(true);
     try {
-      console.log(`Fetching suppliers for page ${currentPage}`);
-
-      const response = await axiosClient.get(`/suppliers/v1/paginated`, {
+      const response = await axiosClient.get("/suppliers/v1/paginated", {
         params: { page: currentPage, limit: 50 },
       });
 
+      const list = Array.isArray(response?.data?.suppliers) ? response.data.suppliers : [];
+
       setSuppliers((prevSuppliers) => {
-        const newSuppliers = response.data.suppliers.filter(
-          (newSupplier) =>
-            !prevSuppliers.some(
-              (existingSupplier) => existingSupplier.id === newSupplier.id
-            )
+        const newSuppliers = list.filter(
+          (newSupplier) => !prevSuppliers.some((p) => p.id === newSupplier.id)
         );
         return [...prevSuppliers, ...newSuppliers];
       });
 
-      setHasMore(response.data.suppliers.length > 0);
+      setHasMore(list.length > 0);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
     } finally {
@@ -66,7 +64,13 @@ const CreatePreviewSuppliers = () => {
     }
   };
 
-  // Controlled page increment
+  // Initial fetch
+  useEffect(() => {
+    fetchSuppliers(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load more
   const nextPage = () => {
     setPage((prevPage) => {
       const newPage = prevPage + 1;
@@ -75,15 +79,9 @@ const CreatePreviewSuppliers = () => {
     });
   };
 
-  // Initial fetch for the first page of suppliers
-  useEffect(() => {
-    fetchSuppliers(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleAddSupplier = async () => {
@@ -99,7 +97,7 @@ const CreatePreviewSuppliers = () => {
         location: formData.location,
       };
 
-      const response = await axiosClient.post(`/suppliers`, newSupplier);
+      const response = await axiosClient.post("/suppliers", newSupplier);
 
       setSuppliers((prevSuppliers) => [...prevSuppliers, response.data]);
       setFormData({
@@ -113,13 +111,10 @@ const CreatePreviewSuppliers = () => {
         location: "",
       });
 
-      // Show success modal
       setModalType("success");
       setModalContent(true);
     } catch (error) {
       console.error("Error adding supplier:", error);
-
-      // Show error modal
       setModalType("error");
       setModalContent(true);
     }
@@ -129,7 +124,7 @@ const CreatePreviewSuppliers = () => {
 
   return (
     <div className="suppliers-container">
-      <h2 className="suppliers-heading">Create and Preview Suppliers</h2>
+      <h2 className="suppliers-heading">{t("suppliersPage.title")}</h2>
 
       {/* Input Form */}
       <div className="suppliers-form">
@@ -137,7 +132,7 @@ const CreatePreviewSuppliers = () => {
           <tbody>
             <tr>
               <td>
-                <label>Supplier Name</label>
+                <label>{t("suppliersPage.form.supplierName")}</label>
                 <input
                   type="text"
                   name="supplierName"
@@ -145,8 +140,9 @@ const CreatePreviewSuppliers = () => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
-                <label>Phone Number</label>
+                <label>{t("suppliersPage.form.phoneNumber")}</label>
                 <input
                   type="text"
                   name="phoneNumber"
@@ -154,8 +150,9 @@ const CreatePreviewSuppliers = () => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
-                <label>Financial Account</label>
+                <label>{t("suppliersPage.form.financialAccount")}</label>
                 <input
                   type="text"
                   name="financialAccount"
@@ -163,41 +160,40 @@ const CreatePreviewSuppliers = () => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
-                <label>Invoice Type</label>
+                <label>{t("suppliersPage.form.invoiceType")}</label>
                 <select
                   name="invoiceType"
                   value={formData.invoiceType}
                   onChange={handleInputChange}
                 >
-                  <option value="">Select Type</option>
+                  <option value="">{t("suppliersPage.form.selectType")}</option>
                   <option value="S">S</option>
                   <option value="G">G</option>
                 </select>
               </td>
             </tr>
+
             <tr>
               <td>
-                <label>VAT</label>
-                <select
-                  name="vat"
-                  value={formData.vat}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select VAT</option>
+                <label>{t("suppliersPage.form.vat")}</label>
+                <select name="vat" value={formData.vat} onChange={handleInputChange}>
+                  <option value="">{t("suppliersPage.form.selectVat")}</option>
                   <option value="5">5%</option>
                   <option value="10">10%</option>
                   <option value="15">15%</option>
                 </select>
               </td>
+
               <td>
-                <label>Currency</label>
+                <label>{t("suppliersPage.form.currency")}</label>
                 <select
                   name="currency"
                   value={formData.currency}
                   onChange={handleInputChange}
                 >
-                  <option value="">Select Currency</option>
+                  <option value="">{t("suppliersPage.form.selectCurrency")}</option>
                   {currencyCodes.map((currency) => (
                     <option key={currency.id} value={currency.id}>
                       {currency.currencyCode}
@@ -205,8 +201,9 @@ const CreatePreviewSuppliers = () => {
                   ))}
                 </select>
               </td>
+
               <td>
-                <label>Address</label>
+                <label>{t("suppliersPage.form.address")}</label>
                 <input
                   type="text"
                   name="address"
@@ -214,8 +211,9 @@ const CreatePreviewSuppliers = () => {
                   onChange={handleInputChange}
                 />
               </td>
+
               <td>
-                <label>Location</label>
+                <label>{t("suppliersPage.form.location")}</label>
                 <input
                   type="text"
                   name="location"
@@ -224,13 +222,11 @@ const CreatePreviewSuppliers = () => {
                 />
               </td>
             </tr>
+
             <tr>
               <td colSpan="4">
-                <button
-                  className="add-supplier-btn"
-                  onClick={handleAddSupplier}
-                >
-                  Add Supplier
+                <button className="add-supplier-btn" onClick={handleAddSupplier}>
+                  {t("suppliersPage.buttons.addSupplier")}
                 </button>
               </td>
             </tr>
@@ -240,21 +236,23 @@ const CreatePreviewSuppliers = () => {
 
       {/* Preview Table */}
       <div className="suppliers-preview">
-        <h3 className="suppliers-preview-heading">Supplier Preview</h3>
+        <h3 className="suppliers-preview-heading">{t("suppliersPage.previewTitle")}</h3>
+
         <table className="suppliers-table">
           <thead>
             <tr>
-              <th>Supplier Account Number</th>
-              <th>Supplier Name</th>
-              <th>Phone Number</th>
-              <th>Financial Account</th>
-              <th>Invoice Type</th>
-              <th>VAT</th>
-              <th>Currency</th>
-              <th>Address</th>
-              <th>Location</th>
+              <th>{t("suppliersPage.table.supplierAccountNumber")}</th>
+              <th>{t("suppliersPage.table.supplierName")}</th>
+              <th>{t("suppliersPage.table.phoneNumber")}</th>
+              <th>{t("suppliersPage.table.financialAccount")}</th>
+              <th>{t("suppliersPage.table.invoiceType")}</th>
+              <th>{t("suppliersPage.table.vat")}</th>
+              <th>{t("suppliersPage.table.currency")}</th>
+              <th>{t("suppliersPage.table.address")}</th>
+              <th>{t("suppliersPage.table.location")}</th>
             </tr>
           </thead>
+
           <tbody>
             {suppliers.map((supplier, index) => (
               <tr key={supplier.id || index}>
@@ -263,7 +261,7 @@ const CreatePreviewSuppliers = () => {
                 <td>{supplier.phoneNumber}</td>
                 <td>{supplier.financialNumber}</td>
                 <td>{supplier.invoiceType}</td>
-                <td>{supplier.vat}%</td>
+                <td>{supplier.vat ? `${supplier.vat}%` : ""}</td>
                 <td>{supplier.currencyCode}</td>
                 <td>{supplier.address}</td>
                 <td>{supplier.location}</td>
@@ -271,13 +269,15 @@ const CreatePreviewSuppliers = () => {
             ))}
           </tbody>
         </table>
+
         {hasMore && !loading && (
           <button className="load-more-suppliers-btn" onClick={nextPage}>
-            Load More
+            {t("suppliersPage.buttons.loadMore")}
           </button>
         )}
-        {loading && <p>Loading...</p>}
-        {!hasMore && <p>No more suppliers to load</p>}
+
+        {loading && <p>{t("common.loading")}</p>}
+        {!hasMore && <p>{t("suppliersPage.messages.noMoreSuppliers")}</p>}
       </div>
 
       {/* Modal */}
@@ -291,18 +291,21 @@ const CreatePreviewSuppliers = () => {
             {modalType === "success" ? (
               <>
                 <h2 className="modal-success-text">
-                  Supplier Added Successfully
+                  {t("suppliersPage.messages.supplierAdded")}
                 </h2>
                 <div className="modal-icon">✔</div>
               </>
             ) : (
               <>
-                <h2 className="modal-error-text">Failed to Add Supplier</h2>
+                <h2 className="modal-error-text">
+                  {t("suppliersPage.messages.failedAddSupplier")}
+                </h2>
                 <div className="modal-icon">✖</div>
               </>
             )}
+
             <button className="modal-button" onClick={closeModal}>
-              OK
+              {t("common.ok")}
             </button>
           </div>
         </div>

@@ -1,4 +1,6 @@
+// src/components/pos-system/Components/InventoryTable.jsx
 import React, { useState, useCallback, useRef } from "react";
+import { useTranslation } from "../../hooks/useTranslation"; // ✅ ADD THIS
 
 const InventoryTable = ({
   tableData,
@@ -9,7 +11,7 @@ const InventoryTable = ({
   isEditable,
   onReorder,
   allowReorder = true,
-  emptyHint = "No items selected. Click “Search” to add item batches.",
+  emptyHint = "No items selected. Click 'Search' to add item batches.",
   cutMode = false,
   currencyCode = "USD",
 
@@ -19,6 +21,8 @@ const InventoryTable = ({
   onToggleReturnRow = () => {},
   onReturnQtyChange = () => {},
 }) => {
+  const { t } = useTranslation(); // ✅ ADD THIS
+  
   const [dragIndex, setDragIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
@@ -248,7 +252,7 @@ const InventoryTable = ({
 
   // ✅ show RTN columns only in returnMode
   const showRTN = Boolean(returnMode);
-  const columns = showRTN ? 12 : 10;
+  const columns = showRTN ? 13 : 11;
 
   const isEmpty = !Array.isArray(tableData) || tableData.length === 0;
 
@@ -256,20 +260,19 @@ const InventoryTable = ({
     <table className="pos-page-inventory-table">
       <thead>
         <tr>
-          {showRTN && <th>RTN</th>}
-          {showRTN && <th>RTN Qty</th>}
-          <th>Origin</th>
-         
-          <th>Item</th>
-          <th>Type</th>
-          <th>Length</th>
-          <th>Width</th>
-          <th>Box</th>
-          <th>Sheet</th>
-          <th>Price</th>
-          <th>SQM</th>
-          <th>Total</th>
-           <th>Condition</th>
+          {showRTN && <th>{t('inventoryTable.rtn')}</th>}
+          {showRTN && <th>{t('inventoryTable.rtnQty')}</th>}
+          <th>{t('inventoryTable.origin')}</th>
+          <th>{t('inventoryTable.item')}</th>
+          <th>{t('inventoryTable.type')}</th>
+          <th>{t('inventoryTable.length')}</th>
+          <th>{t('inventoryTable.width')}</th>
+          <th>{t('inventoryTable.box')}</th>
+          <th>{t('inventoryTable.sheet')}</th>
+          <th>{t('inventoryTable.price')}</th>
+          <th>{t('inventoryTable.sqm')}</th>
+          <th>{t('inventoryTable.total')}</th>
+          <th>{t('inventoryTable.condition')}</th>
         </tr>
       </thead>
 
@@ -277,7 +280,7 @@ const InventoryTable = ({
         <tbody>
           <tr className="pos-empty-row">
             <td colSpan={columns} style={{ textAlign: "center", padding: "16px", opacity: 0.7 }}>
-              {emptyHint}
+              {t('inventoryTable.noItems')}
             </td>
           </tr>
         </tbody>
@@ -326,17 +329,15 @@ const InventoryTable = ({
 
             // ✅ Return selection info
             const invoiceItemId = row.invoiceItemId ?? row.id ?? null;
-         const sel = showRTN && invoiceItemId != null ? returnSelection[invoiceItemId] : null;
-const checked = !!sel;
-const rtnQty = sel ? sel.quantity : "";
-
+            const sel = showRTN && invoiceItemId != null ? returnSelection[invoiceItemId] : null;
+            const checked = !!sel;
+            const rtnQty = sel ? sel.quantity : "";
 
             const baseQty = (() => {
               const t = String(row?.type ?? row?.itemType ?? "").toLowerCase();
               if (t === "box") return Number(row.box) || 0;
               return Number(row.sheet) || Number(row.quantity) || 0;
             })();
-
 
             return (
               <tr
@@ -359,43 +360,42 @@ const rtnQty = sel ? sel.quantity : "";
                   .trim()}
               >
                 {/* ✅ RTN Columns (ONLY when returnMode) */}
-               {showRTN && (
-  <td className="rtn-td" style={{ textAlign: "center" }}>
-    <input
-      className="rtn-checkbox"
-      type="checkbox"
-      checked={checked}
-      disabled={!invoiceItemId}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      onChange={(e) => onToggleReturnRow(invoiceItemId, e.target.checked, row)}
-    />
-  </td>
-)}
+                {showRTN && (
+                  <td className="rtn-td" style={{ textAlign: "center" }}>
+                    <input
+                      className="rtn-checkbox"
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!invoiceItemId}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => onToggleReturnRow(invoiceItemId, e.target.checked, row)}
+                    />
+                  </td>
+                )}
 
-{showRTN && (
-  <td className="rtnqty-td">
-    <input
-      className="rtn-qty-input"
-      type="number"
-      value={rtnQty}
-      disabled={!checked}
-      min="0"
-      step="1"
-      placeholder={String(baseQty || "")}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      onChange={(e) => onReturnQtyChange(invoiceItemId, e.target.value)}
-      onWheelCapture={handleWheelNoStep}
-    />
-  </td>
-)}
-
+                {showRTN && (
+                  <td className="rtnqty-td">
+                    <input
+                      className="rtn-qty-input"
+                      type="number"
+                      value={rtnQty}
+                      disabled={!checked}
+                      min="0"
+                      step="1"
+                      placeholder={String(baseQty || "")}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => onReturnQtyChange(invoiceItemId, e.target.value)}
+                      onWheelCapture={handleWheelNoStep}
+                    />
+                  </td>
+                )}
 
                 <td>
                   <input type="text" value={row.origin ?? ""} readOnly />
                 </td>
-      
+
                 <td>
                   <input type="text" value={row.item ?? ""} readOnly />
                 </td>
@@ -415,7 +415,7 @@ const rtnQty = sel ? sel.quantity : "";
                       value={row.length ?? ""}
                       onChange={(e) => handleInputChange(index, "length", e.target.value)}
                       disabled={!canEditLength}
-                      placeholder={canEditLength ? "Length" : ""}
+                      placeholder={canEditLength ? t('inventoryTable.lengthPlaceholder') : ""}
                       onKeyDown={(e) => handleGridKeyDown(e, index, "length")}
                       onWheelCapture={handleWheelNoStep}
                     />
@@ -434,7 +434,7 @@ const rtnQty = sel ? sel.quantity : "";
                       value={row.width ?? ""}
                       onChange={(e) => handleInputChange(index, "width", e.target.value)}
                       disabled={!canEditWidth}
-                      placeholder={canEditWidth ? "Width" : ""}
+                      placeholder={canEditWidth ? t('inventoryTable.widthPlaceholder') : ""}
                       onKeyDown={(e) => handleGridKeyDown(e, index, "width")}
                       onWheelCapture={handleWheelNoStep}
                     />
@@ -449,7 +449,7 @@ const rtnQty = sel ? sel.quantity : "";
                     value={row.box ?? ""}
                     onChange={(e) => handleInputChange(index, "box", e.target.value)}
                     disabled={!canEditBox}
-                    placeholder={canEditBox ? "Enter boxes…" : ""}
+                    placeholder={canEditBox ? t('inventoryTable.enterBoxes') : ""}
                     onKeyDown={(e) => handleGridKeyDown(e, index, "box")}
                     onWheelCapture={handleWheelNoStep}
                   />
@@ -470,10 +470,10 @@ const rtnQty = sel ? sel.quantity : "";
                       placeholder={
                         canEditSheet
                           ? type === "box"
-                            ? "Sheets/box…"
+                            ? t('inventoryTable.sheetsPerBox')
                             : type === "unit"
-                            ? "Enter qty…"
-                            : "Enter sheets…"
+                            ? t('inventoryTable.enterQty')
+                            : t('inventoryTable.enterSheets')
                           : ""
                       }
                       onKeyDown={(e) => handleGridKeyDown(e, index, "sheet")}
@@ -520,9 +520,9 @@ const rtnQty = sel ? sel.quantity : "";
                     readOnly
                   />
                 </td>
-                 <td>
-                <input type="text" value={row.condition ?? ""} readOnly />
-              </td>
+                <td>
+                  <input type="text" value={row.condition ?? ""} readOnly />
+                </td>
               </tr>
             );
           })}

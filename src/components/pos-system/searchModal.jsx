@@ -4,9 +4,12 @@ import "./searchModal.css";
 import StockTab from "./StockTab";
 import AllTab from "./AllTab";
 import SqmPiecesTab from "./SqmPiecesTab";
-import { hasPerm } from "../auth/authz"; 
+import { hasPerm } from "../auth/authz";
+import { useTranslation } from "../hooks/useTranslation"; // ✅ NEW
 
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
+  const { t } = useTranslation(); // ✅ NEW
+
   // ✅ permissions: control all 3 tabs
   const canStock = hasPerm("pos.search.stockTab");
   const canAll = hasPerm("pos.search.allTab");
@@ -80,17 +83,15 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       <div className="search-modal-overlay" onClick={onClose}>
         <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="search-modal-header">
-            <h2 className="search-modal-title">Search</h2>
+            <h2 className="search-modal-title">{t("searchModal.title")}</h2>
             <div className="search-modal-buttons">
               <button className="search-modal-close-button" onClick={onClose}>
-                Close
+                {t("common.close")}
               </button>
             </div>
           </div>
 
-          <div style={{ padding: 16 }}>
-            ERROR!. Please Contact the Administrator.
-          </div>
+          <div style={{ padding: 16 }}>{t("searchModal.noPermissionsError")}</div>
         </div>
       </div>
     );
@@ -124,25 +125,25 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     <div className="search-modal-overlay" onClick={onClose}>
       <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="search-modal-header">
-          <h2 className="search-modal-title">Search</h2>
+          <h2 className="search-modal-title">{t("searchModal.title")}</h2>
           <div className="search-modal-buttons">
             <button className="search-modal-close-button" onClick={onClose}>
-              Close
+              {t("common.close")}
             </button>
             <button
               className="search-modal-ok-button"
               onClick={handleOk}
               disabled={selectedCount === 0}
             >
-              OK ({selectedCount})
+              {t("searchModal.okWithCount", { count: selectedCount })}
             </button>
           </div>
         </div>
 
-        <div className="search-tabs" role="tablist" aria-label="Search Results Tabs">
-          {canStock && <TabButton id="stock" label="Stock Items" />}
-          {canAll && <TabButton id="all" label="All" />}
-          {canSqm && <TabButton id="sqm" label="SQM Pieces" />}
+        <div className="search-tabs" role="tablist" aria-label={t("searchModal.tabsAriaLabel")}>
+          {canStock && <TabButton id="stock" label={t("searchModal.tabs.stock")} />}
+          {canAll && <TabButton id="all" label={t("searchModal.tabs.all")} />}
+          {canSqm && <TabButton id="sqm" label={t("searchModal.tabs.sqm")} />}
         </div>
 
         {/* Panels */}

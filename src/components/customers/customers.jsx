@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./customers.css";
 import { axiosClient } from "../api/axiosClient";
+import { useTranslation } from "../hooks/useTranslation";
 
 const PAGE_SIZE = 50;
 
@@ -54,6 +55,8 @@ function buildPayload(formData) {
 }
 
 export default function CreatePreviewCustomers() {
+  const { t } = useTranslation();
+
   const [customers, setCustomers] = useState([]);
   const [currencyCodes, setCurrencyCodes] = useState([]);
   const [formData, setFormData] = useState({ ...emptyForm });
@@ -108,7 +111,7 @@ export default function CreatePreviewCustomers() {
       setHasMore(list.length > 0);
     } catch (e) {
       console.error("Error fetching customers:", e);
-      openModal("error", "Failed to load customers");
+      openModal("error", t("customersPage.messages.failedLoadCustomers"));
     } finally {
       setLoading(false);
     }
@@ -170,20 +173,20 @@ export default function CreatePreviewCustomers() {
       const payload = buildPayload(formData);
 
       if (!payload.customerName) {
-        openModal("error", "Customer Name is required.");
+        openModal("error", t("customersPage.messages.customerNameRequired"));
         return;
       }
 
       if (!isEditing) {
         if (!payload.currencyId) {
-          openModal("error", "Currency is required.");
+          openModal("error", t("customersPage.messages.currencyRequired"));
           return;
         }
 
         const res = await axiosClient.post("/customers", payload);
         setCustomers((prev) => [res.data, ...prev]);
         setFormData({ ...emptyForm });
-        openModal("success", "Customer Added Successfully");
+        openModal("success", t("customersPage.messages.customerAdded"));
       } else {
         const res = await axiosClient.patch(`/customers/${editingId}`, payload);
 
@@ -193,11 +196,16 @@ export default function CreatePreviewCustomers() {
 
         setEditingId(null);
         setFormData({ ...emptyForm });
-        openModal("success", "Customer Updated Successfully");
+        openModal("success", t("customersPage.messages.customerUpdated"));
       }
     } catch (e) {
       console.error("Error saving customer:", e);
-      openModal("error", isEditing ? "Failed to Update Customer" : "Failed to Add Customer");
+      openModal(
+        "error",
+        isEditing
+          ? t("customersPage.messages.failedUpdateCustomer")
+          : t("customersPage.messages.failedAddCustomer")
+      );
     }
   };
 
@@ -208,19 +216,23 @@ export default function CreatePreviewCustomers() {
   return (
     <div className="customer-preview-container">
       <div className="customer-preview-header">
-        <h2 className="customer-preview-heading">Create and Preview Customers</h2>
+        <h2 className="customer-preview-heading">
+          {t("customersPage.title")}
+        </h2>
       </div>
 
       <div className="customer-preview-card customer-preview-form">
         <div className="customer-preview-card-title">
-          {isEditing ? `Edit Customer #${editingId}` : "Create Customer"}
+          {isEditing
+            ? t("customersPage.editTitleWithId", { id: editingId })
+            : t("customersPage.createTitle")}
         </div>
 
         <table className="customer-preview-form-table">
           <tbody>
             <tr>
               <td>
-                <label>Customer Name</label>
+                <label>{t("customersPage.form.customerName")}</label>
                 <input
                   type="text"
                   name="customerName"
@@ -229,7 +241,7 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Phone Number</label>
+                <label>{t("customersPage.form.phoneNumber")}</label>
                 <input
                   type="text"
                   name="phoneNumber"
@@ -238,7 +250,7 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Financial Account</label>
+                <label>{t("customersPage.form.financialAccount")}</label>
                 <input
                   type="text"
                   name="financialAccount"
@@ -247,23 +259,23 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Invoice Type</label>
+                <label>{t("customersPage.form.invoiceType")}</label>
                 <select
                   name="invoiceType"
                   value={formData.invoiceType}
                   onChange={handleInputChange}
                 >
-                  <option value="">Select Type</option>
+                  <option value="">{t("customersPage.form.selectType")}</option>
                   <option value="S">S</option>
                   <option value="G">G</option>
-                  <option value="Both">Both</option>
+                  <option value="Both">{t("customersPage.form.both")}</option>
                 </select>
               </td>
             </tr>
 
             <tr>
               <td>
-                <label>First Name</label>
+                <label>{t("customersPage.form.firstName")}</label>
                 <input
                   type="text"
                   name="firstName"
@@ -272,7 +284,7 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Middle Name</label>
+                <label>{t("customersPage.form.middleName")}</label>
                 <input
                   type="text"
                   name="middleName"
@@ -281,7 +293,7 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Last Name</label>
+                <label>{t("customersPage.form.lastName")}</label>
                 <input
                   type="text"
                   name="lastName"
@@ -290,35 +302,36 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Payment Terms</label>
+                <label>{t("customersPage.form.paymentTerms")}</label>
                 <input
                   type="text"
                   name="paymentTerms"
                   value={formData.paymentTerms}
                   onChange={handleInputChange}
-                  placeholder="e.g. Net 30"
+                  placeholder={t("customersPage.form.paymentTermsPlaceholder")}
                 />
               </td>
             </tr>
 
             <tr>
               <td>
-                <label>VAT</label>
+                <label>{t("customersPage.form.vat")}</label>
                 <select name="vat" value={formData.vat} onChange={handleInputChange}>
-                  <option value="">Select VAT</option>
+                  <option value="">{t("customersPage.form.selectVat")}</option>
                   <option value="0">0%</option>
                   <option value="6">6%</option>
                   <option value="11">11%</option>
                 </select>
               </td>
+
               <td>
-                <label>Currency</label>
+                <label>{t("customersPage.form.currency")}</label>
                 <select
                   name="currency"
                   value={formData.currency}
                   onChange={handleInputChange}
                 >
-                  <option value="">Select Currency</option>
+                  <option value="">{t("customersPage.form.selectCurrency")}</option>
                   {currencyCodes.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.currencyCode}
@@ -326,31 +339,33 @@ export default function CreatePreviewCustomers() {
                   ))}
                 </select>
               </td>
+
               <td>
-                <label>Area</label>
+                <label>{t("customersPage.form.area")}</label>
                 <input
                   type="text"
                   name="area"
                   value={formData.area}
                   onChange={handleInputChange}
-                  placeholder="e.g. Beirut"
+                  placeholder={t("customersPage.form.areaPlaceholder")}
                 />
               </td>
+
               <td>
-                <label>Company Type</label>
+                <label>{t("customersPage.form.companyType")}</label>
                 <input
                   type="text"
                   name="companyType"
                   value={formData.companyType}
                   onChange={handleInputChange}
-                  placeholder="e.g. Contractor / Retail"
+                  placeholder={t("customersPage.form.companyTypePlaceholder")}
                 />
               </td>
             </tr>
 
             <tr>
               <td>
-                <label>Address</label>
+                <label>{t("customersPage.form.address")}</label>
                 <input
                   type="text"
                   name="address"
@@ -359,7 +374,7 @@ export default function CreatePreviewCustomers() {
                 />
               </td>
               <td>
-                <label>Location</label>
+                <label>{t("customersPage.form.location")}</label>
                 <input
                   type="text"
                   name="location"
@@ -374,12 +389,17 @@ export default function CreatePreviewCustomers() {
               <td colSpan="4">
                 <div className="customer-preview-form-actions">
                   <button className="customer-preview-add-btn" onClick={saveCustomer}>
-                    {isEditing ? "Update Customer" : "Add Customer"}
+                    {isEditing
+                      ? t("customersPage.buttons.updateCustomer")
+                      : t("customersPage.buttons.addCustomer")}
                   </button>
 
                   {isEditing && (
-                    <button className="customer-preview-cancel-edit-btn" onClick={cancelEdit}>
-                      Cancel Edit
+                    <button
+                      className="customer-preview-cancel-edit-btn"
+                      onClick={cancelEdit}
+                    >
+                      {t("customersPage.buttons.cancelEdit")}
                     </button>
                   )}
                 </div>
@@ -390,28 +410,30 @@ export default function CreatePreviewCustomers() {
       </div>
 
       <div className="customer-preview-card">
-        <div className="customer-preview-card-title">Customer Preview</div>
+        <div className="customer-preview-card-title">
+          {t("customersPage.previewTitle")}
+        </div>
 
         <div className="customer-preview-table-scroll">
           <table className="customer-preview-table">
             <thead>
               <tr>
-                <th>Actions</th>
-                <th>Customer Account #</th>
-                <th>Customer Name</th>
-                <th>First</th>
-                <th>Middle</th>
-                <th>Last</th>
-                <th>Payment Terms</th>
-                <th>Area</th>
-                <th>Company Type</th>
-                <th>Phone</th>
-                <th>Financial #</th>
-                <th>Invoice Type</th>
-                <th>VAT</th>
-                <th>Currency</th>
-                <th>Address</th>
-                <th>Location</th>
+                <th>{t("customersPage.table.actions")}</th>
+                <th>{t("customersPage.table.customerAccount")}</th>
+                <th>{t("customersPage.table.customerName")}</th>
+                <th>{t("customersPage.table.first")}</th>
+                <th>{t("customersPage.table.middle")}</th>
+                <th>{t("customersPage.table.last")}</th>
+                <th>{t("customersPage.table.paymentTerms")}</th>
+                <th>{t("customersPage.table.area")}</th>
+                <th>{t("customersPage.table.companyType")}</th>
+                <th>{t("customersPage.table.phone")}</th>
+                <th>{t("customersPage.table.financial")}</th>
+                <th>{t("customersPage.table.invoiceType")}</th>
+                <th>{t("customersPage.table.vat")}</th>
+                <th>{t("customersPage.table.currency")}</th>
+                <th>{t("customersPage.table.address")}</th>
+                <th>{t("customersPage.table.location")}</th>
               </tr>
             </thead>
 
@@ -421,7 +443,7 @@ export default function CreatePreviewCustomers() {
                   key={c.id}
                   className={rowClass(c.id)}
                   onDoubleClick={() => startEditCustomer(c)}
-                  title="Double click to edit"
+                  title={t("customersPage.table.doubleClickToEdit")}
                 >
                   <td>
                     <button
@@ -432,7 +454,7 @@ export default function CreatePreviewCustomers() {
                         startEditCustomer(c);
                       }}
                     >
-                      Edit
+                      {t("customersPage.buttons.edit")}
                     </button>
                   </td>
 
@@ -457,7 +479,7 @@ export default function CreatePreviewCustomers() {
               {customers.length === 0 && (
                 <tr>
                   <td colSpan="16" className="customer-preview-empty-row">
-                    No customers loaded yet
+                    {t("customersPage.table.noCustomersLoaded")}
                   </td>
                 </tr>
               )}
@@ -467,18 +489,24 @@ export default function CreatePreviewCustomers() {
 
         {hasMore && !loading && (
           <button className="customer-preview-load-more-btn" onClick={nextPage}>
-            Load More
+            {t("customersPage.buttons.loadMore")}
           </button>
         )}
-        {loading && <p className="customer-preview-hint">Loading...</p>}
-        {!hasMore && <p className="customer-preview-hint">No more customers to load</p>}
+        {loading && <p className="customer-preview-hint">{t("common.loading")}</p>}
+        {!hasMore && (
+          <p className="customer-preview-hint">
+            {t("customersPage.messages.noMoreCustomers")}
+          </p>
+        )}
       </div>
 
       {modalOpen && (
         <div className="customer-preview-modal-overlay">
           <div
             className={`customer-preview-modal-content ${
-              modalType === "success" ? "customer-preview-success-modal" : "customer-preview-error-modal"
+              modalType === "success"
+                ? "customer-preview-success-modal"
+                : "customer-preview-error-modal"
             }`}
           >
             <h2
@@ -496,7 +524,7 @@ export default function CreatePreviewCustomers() {
             </div>
 
             <button className="customer-preview-modal-button" onClick={closeModal}>
-              OK
+              {t("common.ok")}
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { hasPerm } from "../../auth/authz"; // ✅ adjust path if needed
+import { useTranslation } from "../../hooks/useTranslation"; // ✅ add
 
 const Toolbar = ({
   handleNewTransaction,
@@ -17,23 +18,22 @@ const Toolbar = ({
   handleSaveInvoice,
   isEditable,
   setShowPreview, // invoice preview
-    returnMode = false,
+  returnMode = false,
   returnSelectedCount = 0,
   onStartReturnSelection = () => {},
   onCancelReturnSelection = () => {},
   onConfirmReturnSelected = () => {},
-
   handleOpenStatement = () => {},
   canOpenStatement = true,
   setShowDeliveryNotePreview = () => {},
-
   // ✅ Return
   handleCreateReturnInvoice = () => {},
   canCreateReturnInvoice = true,
-
   // ✅ request preview
   setShowRequestPreview = () => {},
 }) => {
+  const { t } = useTranslation(); // ✅
+
   // ✅ permissions
   const canRvr = hasPerm("pos.rvr");
   const canReturn = hasPerm("pos.return");
@@ -44,7 +44,7 @@ const Toolbar = ({
         className="pos-page-toolbar-button pos-page-blue-button"
         onClick={handleNewTransaction}
       >
-        New
+        {t("posToolbar.new")}
       </button>
 
       {selectedInvoiceId !== null ? (
@@ -54,11 +54,11 @@ const Toolbar = ({
             onClick={handleEditInvoice}
             disabled={loading}
           >
-            {loading ? "Processing..." : "Edit Invoice"}
+            {loading ? t("common.processing") : t("posToolbar.editInvoice")}
           </button>
 
           {/* ✅ Return button (permission controlled) */}
-     {canReturn && (
+          {canReturn && (
             <>
               {!returnMode ? (
                 <button
@@ -67,13 +67,13 @@ const Toolbar = ({
                   disabled={loading || isEditable || !canCreateReturnInvoice}
                   title={
                     !canCreateReturnInvoice
-                      ? "Return is not available for this invoice"
+                      ? t("posToolbar.returnNotAvailable")
                       : isEditable
-                      ? "Finish editing before returning"
-                      : "Select items to return"
+                      ? t("posToolbar.finishEditingBeforeReturning")
+                      : t("posToolbar.selectItemsToReturn")
                   }
                 >
-                  {loading ? "Processing..." : "Return"}
+                  {loading ? t("common.processing") : t("posToolbar.return")}
                 </button>
               ) : (
                 <>
@@ -81,18 +81,22 @@ const Toolbar = ({
                     className="pos-page-toolbar-button pos-page-purple-button"
                     onClick={onConfirmReturnSelected}
                     disabled={loading}
-                    title="Create return invoice from selected rows"
+                    title={t("posToolbar.createReturnFromSelectedTitle")}
                   >
-                    {loading ? "Processing..." : `Return Selected (${returnSelectedCount || 0})`}
+                    {loading
+                      ? t("common.processing")
+                      : t("posToolbar.returnSelectedWithCount", {
+                          count: returnSelectedCount || 0,
+                        })}
                   </button>
 
                   <button
                     className="pos-page-toolbar-button pos-page-blue-button"
                     onClick={onCancelReturnSelection}
                     disabled={loading}
-                    title="Cancel return selection"
+                    title={t("posToolbar.cancelReturnSelectionTitle")}
                   >
-                    Cancel Return
+                    {t("posToolbar.cancelReturn")}
                   </button>
                 </>
               )}
@@ -110,10 +114,10 @@ const Toolbar = ({
               disabled={loading}
             >
               {loading
-                ? "Processing..."
+                ? t("common.processing")
                 : selectedRequestId
-                ? "Edit Request"
-                : "Request"}
+                ? t("posToolbar.editRequest")
+                : t("posToolbar.request")}
             </button>
           )}
 
@@ -123,7 +127,7 @@ const Toolbar = ({
               onClick={() => handleCreateInvoice("S")}
               disabled={loading || (selectedRequestId !== null && isEditable)}
             >
-              {loading ? "Processing..." : "Issue"}
+              {loading ? t("common.processing") : t("posToolbar.issue")}
             </button>
           )}
 
@@ -133,7 +137,7 @@ const Toolbar = ({
               onClick={() => handleCreateInvoice("G")}
               disabled={loading || (selectedRequestId !== null && isEditable)}
             >
-              {loading ? "Processing..." : "Offer"}
+              {loading ? t("common.processing") : t("posToolbar.offer")}
             </button>
           )}
 
@@ -143,9 +147,9 @@ const Toolbar = ({
               className="pos-page-toolbar-button pos-page-purple-button"
               onClick={() => handleCreateInvoice("RVR")}
               disabled={loading || (selectedRequestId !== null && isEditable)}
-              title="RVR"
+              title={t("posToolbar.rvrTitle")}
             >
-              {loading ? "Processing..." : "RVR"}
+              {loading ? t("common.processing") : t("posToolbar.rvr")}
             </button>
           )}
         </>
@@ -157,7 +161,7 @@ const Toolbar = ({
           onClick={handleSaveRequest}
           disabled={loading}
         >
-          {loading ? "Saving..." : "Save Request"}
+          {loading ? t("common.saving") : t("posToolbar.saveRequest")}
         </button>
       )}
 
@@ -167,7 +171,7 @@ const Toolbar = ({
           onClick={handleSaveInvoice}
           disabled={loading}
         >
-          {loading ? "Saving..." : "Save Invoice"}
+          {loading ? t("common.saving") : t("posToolbar.saveInvoice")}
         </button>
       )}
 
@@ -177,7 +181,7 @@ const Toolbar = ({
             className="pos-page-toolbar-button pos-page-blue-button"
             onClick={() => setShowPreview(true)}
           >
-            View Invoice
+            {t("posToolbar.viewInvoice")}
           </button>
         )}
 
@@ -186,7 +190,7 @@ const Toolbar = ({
             className="pos-page-toolbar-button pos-page-blue-button"
             onClick={() => setShowRequestPreview(true)}
           >
-            View Req
+            {t("posToolbar.viewRequest")}
           </button>
         )}
 
@@ -196,23 +200,23 @@ const Toolbar = ({
           disabled={loading || (selectedRequestId === null && selectedInvoiceId === null)}
           title={
             selectedRequestId !== null
-              ? "Delivery Note for Request"
+              ? t("posToolbar.deliveryNoteForRequest")
               : selectedInvoiceId !== null
-              ? "Delivery Note for Invoice"
-              : "Select a request or invoice first"
+              ? t("posToolbar.deliveryNoteForInvoice")
+              : t("posToolbar.selectRequestOrInvoiceFirst")
           }
         >
-          Del Note
+          {t("posToolbar.deliveryNoteShort")}
         </button>
 
         <button
           className="pos-page-toolbar-button pos-page-orange-button"
           onClick={handleOpenStatement}
           disabled={loading || !canOpenStatement}
-          title="Statement"
-          aria-label="Open Statement"
+          title={t("posToolbar.statementTitle")}
+          aria-label={t("posToolbar.openStatementAria")}
         >
-          Stmt
+          {t("posToolbar.statementShort")}
         </button>
 
         <input

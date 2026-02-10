@@ -31,59 +31,64 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MaintenanceModePage from "./components/settings/MaintenanceModePage";
 import MaintenanceGate from "./components/settings/MaintenanceGate"; 
 import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
-import EmployeeDocManager from "./components/Employees/EmployeeDocManager"
+import EmployeeDocManager from "./components/Employees/EmployeeDocManager";
+
+// ✅ NEW: Import LanguageProvider
+import { LanguageProvider } from "./components/contexts/LanguageContext";
+
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BlinkingItemsProvider>
-        <Router>
-          {/* ✅ Global gate */}
-          <MaintenanceGate />
+      {/* ✅ NEW: Wrap everything with LanguageProvider */}
+      <LanguageProvider>
+        <BlinkingItemsProvider>
+          <Router>
+            {/* ✅ Global gate */}
+            <MaintenanceGate />
 
-          <Routes>
-            {/* ✅ Public */}
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/login" element={<LoginPage />} /> {/* ✅ alias */}
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/maintenance" element={<MaintenanceModePage />} />
+            <Routes>
+              {/* ✅ Public */}
+              <Route path="/" element={<LoginPage />} />
+              <Route path="/login" element={<LoginPage />} /> {/* ✅ alias */}
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/maintenance" element={<MaintenanceModePage />} />
 
-            {/* ✅ Protected */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/pos-system" element={<POSSystemPage />} />
-              <Route path="/recivables" element={<AccountingPage />} />
-              <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
-              <Route path="/inventory" element={<InventoryPage />} />
-              <Route path="/suppliers" element={<SuppliersPage />} />
-              <Route path="/items" element={<ItemCreationPage />} />
-              <Route path="/cost-estimator" element={<PricingPage />} />
-              <Route path="/customers" element={<CreatePreviewCustomers />} />
-              <Route path="/accounts" element={<AccountsPage />} />
-              <Route path="/payments" element={<PaymentVoucherTable />} />
-              <Route path="/transactions" element={<JournalVoucherPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/sqm" element={<SqmPiecesPage />} />
-              <Route path="/inventory-activity" element={<InventoryActivityPage />} />
-              <Route path="/cuts-control" element={<CutsQueuePage />} />
-              <Route path="/viewing" element={<InvoiceDetailsPage />} />
-              <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
+              {/* ✅ Protected */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/pos-system" element={<POSSystemPage />} />
+                <Route path="/recivables" element={<AccountingPage />} />
+                <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
+                <Route path="/inventory" element={<InventoryPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/items" element={<ItemCreationPage />} />
+                <Route path="/cost-estimator" element={<PricingPage />} />
+                <Route path="/customers" element={<CreatePreviewCustomers />} />
+                <Route path="/accounts" element={<AccountsPage />} />
+                <Route path="/payments" element={<PaymentVoucherTable />} />
+                <Route path="/transactions" element={<JournalVoucherPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/sqm" element={<SqmPiecesPage />} />
+                <Route path="/inventory-activity" element={<InventoryActivityPage />} />
+                <Route path="/cuts-control" element={<CutsQueuePage />} />
+                <Route path="/viewing" element={<InvoiceDetailsPage />} />
+                <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
                 <Route path="/cash-collections" element={<CashCollectionsPage />} />
                 <Route path="/employee-files" element={<EmployeeDocManager />} />
-                
 
-
-
-              {/* ✅ Admin-only */}
-              <Route element={<AdminRoute />}>
-                <Route path="/users" element={<UsersPage />} />
+                {/* ✅ Admin-only */}
+                <Route element={<AdminRoute />}>
+                  <Route path="/users" element={<UsersPage />} />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </Router>
-      </BlinkingItemsProvider>
+            </Routes>
+          </Router>
+        </BlinkingItemsProvider>
+      </LanguageProvider>
+      {/* ✅ END: LanguageProvider wrapper */}
     </QueryClientProvider>
   );
 }
