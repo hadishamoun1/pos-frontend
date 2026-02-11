@@ -1,0 +1,638 @@
+/* src/components/reports/Profitability-report.css */
+
+.profitability-report {
+  padding: 20px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.profitability-report__title {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* ===== Filters ===== */
+.profitability-report__filters {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profitability-report__filter-row {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 15px;
+}
+
+.profitability-report__filter-label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 500;
+  color: #555;
+}
+
+.profitability-report__filter-input,
+.profitability-report__filter-select {
+  margin-top: 5px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.profitability-report__filter-input:focus,
+.profitability-report__filter-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.profitability-report__btn-apply,
+.profitability-report__btn-export {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.profitability-report__btn-apply {
+  background: #007bff;
+  color: white;
+}
+
+.profitability-report__btn-apply:hover {
+  background: #0056b3;
+}
+
+.profitability-report__btn-export {
+  background: #28a745;
+  color: white;
+}
+
+.profitability-report__btn-export:hover {
+  background: #218838;
+}
+
+/* ===== View Mode Toggle ===== */
+.profitability-report__view-toggle {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.profitability-report__view-btn {
+  padding: 10px 20px;
+  border: 2px solid #007bff;
+  background: white;
+  color: #007bff;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profitability-report__view-btn:hover {
+  background: #e7f1ff;
+}
+
+.profitability-report__view-btn--active {
+  background: #007bff;
+  color: white;
+}
+
+/* ===== Summary Cards ===== */
+.profitability-report__summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.profitability-report__summary-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid;
+}
+
+.profitability-report__summary-card--revenue {
+  border-left-color: #007bff;
+}
+
+.profitability-report__summary-card--cost {
+  border-left-color: #ffc107;
+}
+
+.profitability-report__summary-card--profit {
+  border-left-color: #28a745;
+}
+
+.profitability-report__summary-card--margin {
+  border-left-color: #17a2b8;
+}
+
+.profitability-report__summary-title {
+  margin: 0 0 10px 0;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.profitability-report__summary-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+}
+
+.profitability-report__summary-value--positive {
+  color: #28a745;
+}
+
+.profitability-report__summary-value--negative {
+  color: #dc3545;
+}
+
+/* ===== Detailed Table ===== */
+.profitability-report__table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.profitability-report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.profitability-report__table thead {
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.profitability-report__table th {
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+}
+
+.profitability-report__table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+
+.profitability-report__table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.profitability-report__description-cell {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Return rows (RTN) */
+.profitability-report__table-row--return {
+  background: #fff3cd;
+}
+
+.profitability-report__table-row--return:hover {
+  background: #ffe69c;
+}
+
+/* Type badges */
+.profitability-report__type-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.profitability-report__type-badge--S {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.profitability-report__type-badge--G {
+  background: #d4edda;
+  color: #155724;
+}
+
+.profitability-report__type-badge--RVR {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.profitability-report__type-badge--RTN {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Amount columns */
+.profitability-report__amount {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.profitability-report__amount--positive {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.profitability-report__amount--negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* Totals row */
+.profitability-report__totals-row {
+  background: #f8f9fa;
+  font-weight: 700;
+  border-top: 3px solid #dee2e6;
+}
+
+.profitability-report__totals-row td {
+  padding: 15px 8px;
+  font-size: 15px;
+}
+
+/* ===== Customer Grouping ===== */
+.profitability-report__customer-grouping {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.profitability-report__customer-group {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.profitability-report__customer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profitability-report__customer-header:hover {
+  background: linear-gradient(135deg, #3a4558 0%, #1d2738 100%);
+}
+
+.profitability-report__customer-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.profitability-report__expand-icon {
+  font-size: 18px;
+  transition: transform 0.2s;
+}
+
+.profitability-report__customer-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.profitability-report__item-count {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.profitability-report__customer-totals {
+  display: flex;
+  gap: 30px;
+}
+
+.profitability-report__total-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.profitability-report__total-item span {
+  font-size: 12px;
+  opacity: 0.9;
+  text-transform: uppercase;
+}
+
+.profitability-report__total-item strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.profitability-report__total-item--positive {
+  color: #a0d9a0;
+}
+
+.profitability-report__total-item--negative {
+  color: #f5a4a4;
+}
+
+/* Items table inside customer group */
+.profitability-report__customer-items {
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+.profitability-report__items-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.profitability-report__items-table thead {
+  background: #e9ecef;
+}
+
+.profitability-report__items-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.profitability-report__items-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #495057;
+}
+
+.profitability-report__items-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.profitability-report__items-table .profitability-report__amount {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.profitability-report__items-table .profitability-report__amount--positive {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.profitability-report__items-table .profitability-report__amount--negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* ===== Item Grouping (NEW) ===== */
+.profitability-report__item-grouping {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.profitability-report__item-group {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.profitability-report__item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #2c5282 0%, #2a4365 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profitability-report__item-header:hover {
+  background: linear-gradient(135deg, #1c4272 0%, #1a3355 100%);
+}
+
+.profitability-report__item-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  flex: 1;
+}
+
+.profitability-report__item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profitability-report__item-name {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.profitability-report__item-meta {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+.profitability-report__item-description {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profitability-report__item-thickness,
+.profitability-report__item-dimensions,
+.profitability-report__item-origin {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.profitability-report__item-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.profitability-report__item-totals {
+  display: flex;
+  gap: 30px;
+}
+
+.profitability-report__item-customers {
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+.profitability-report__customers-title {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.profitability-report__customers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.profitability-report__customers-table thead {
+  background: #e9ecef;
+}
+
+.profitability-report__customers-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.profitability-report__customers-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #495057;
+}
+
+.profitability-report__customers-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.profitability-report__customers-table .profitability-report__amount {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.profitability-report__customers-table .profitability-report__amount--positive {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.profitability-report__customers-table .profitability-report__amount--negative {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* ===== Footer ===== */
+.profitability-report__footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* ===== Loading & No Data ===== */
+.profitability-report__loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.profitability-report__no-data {
+  text-align: center;
+  padding: 60px;
+  font-size: 18px;
+  color: #999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .profitability-report__filter-row {
+    flex-direction: column;
+  }
+
+  .profitability-report__filter-label,
+  .profitability-report__filter-input,
+  .profitability-report__filter-select {
+    width: 100%;
+  }
+
+  .profitability-report__summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .profitability-report__table {
+    font-size: 12px;
+  }
+
+  .profitability-report__table th,
+  .profitability-report__table td {
+    padding: 8px 4px;
+  }
+
+  .profitability-report__summary-value {
+    font-size: 24px;
+  }
+
+  .profitability-report__customer-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .profitability-report__customer-totals {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .profitability-report__total-item {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+}

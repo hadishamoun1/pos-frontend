@@ -165,6 +165,26 @@
   background: #eef2ff;
 }
 
+
+/* Add this to your Reports.css file */
+
+.reports-no-access {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 40px;
+  text-align: center;
+}
+
+.reports-no-access p {
+  font-size: 18px;
+  color: #666;
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  padding: 20px 40px;
+  border-radius: 8px;
+}
 /* Responsive */
 @media (max-width: 640px) {
   .reports-title {

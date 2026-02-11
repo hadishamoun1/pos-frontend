@@ -31,9 +31,19 @@ const PERMISSION_GROUPS = [
       "cuts.view",
       "viewing.view",
       "employeeFiles.view",
-
-      // ✅ NEW: Cash Flow / Cash Collections page access
       "cashFlow.view",
+    ],
+  },
+  {
+    title: "Reports Permissions",
+    description: "Controls access to specific reports within the Reports page.",
+    perms: [
+      "reports.view",
+      "reports.trialBalance",
+      "reports.accountStatement",
+      "reports.costAnalysis",
+      "reports.customerBalances",
+      "reports.profitability", // ✅ NEW: Profitability report permission
     ],
   },
   {
@@ -104,7 +114,6 @@ const PERMISSION_GROUPS = [
       "transfers.delete",
       "cuts.view",
       "inventory.view",
-
       "settings.accountRoles",
       "settings.general",
       "settings.invoice",
@@ -122,27 +131,21 @@ const PERMISSION_GROUPS = [
       "settings.inventoryAudit",
       "settings.logoutUsers",
       "settings.invoiceAudit",
-
       "pos.search.stockTab",
       "pos.search.allTab",
       "pos.search.sqmTab",
       "pos.rvr",
       "pos.return",
-
       "recievables.create",
       "recievables.update",
       "recievables.delete",
-
       "customers.update",
       "sqm.update",
-
-      // ✅ NEW: Cash Flow actions (optional but recommended)
       "cashFlow.create",
       "cashFlow.delete",
       "cashFlow.print",
       "cashFlow.viewAny",
       "users.list",
-      
     ],
   },
   {
