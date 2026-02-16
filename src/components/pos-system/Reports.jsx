@@ -49,7 +49,7 @@ const TABS = [
   { 
     key: "profitability", 
     label: "Profitability / الربحية",
-    perm: "reports.profitability" // ✅ Only users with this permission can see it
+    perm: "reports.profitability" 
   },
   { 
     key: "aging", 

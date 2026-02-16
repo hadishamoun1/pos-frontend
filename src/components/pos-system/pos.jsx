@@ -220,6 +220,7 @@ const handleCreateReturnInvoiceSelected = async () => {
 
       const payload = {
         date: returnDate,
+        currencyCode: customerPreview.currencyCode,
         items: lines.map((l) => ({
           invoiceItemId: Number(l.invoiceItemId),
           itemBatchId: Number(l.itemBatchId), // ✅ REQUIRED
@@ -1111,7 +1112,8 @@ const deliveryDocForPreview = useMemo(() => {
       date,
       invoiceType,
       documentNumber: "DOC-0001",
-      currencyId: 1,
+      
+      currencyCode: customerPreview.currencyCode ,
       totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
       totalVAT: Number(totalVAT.toFixed(2)),
       grandTotal: Number(grandTotal.toFixed(2)),
@@ -1457,6 +1459,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
       totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
       totalVAT: Number(totalVAT.toFixed(2)),
       grandTotal: Number(grandTotal.toFixed(2)),
+      currencyCode: customerPreview.currencyCode,
       items: formattedItems,
     };
 

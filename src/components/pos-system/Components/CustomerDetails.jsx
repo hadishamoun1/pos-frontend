@@ -59,7 +59,7 @@ const CustomerDetails = ({
             title={!isEditable ? t("posCustomerDetails.clickEditFirst") : t("posCustomerDetails.currency")}
           >
             <option value="USD">USD</option>
-            <option value="LBP">LBP</option>
+            <option value="LL">LL</option>
           </select>
         </div>
 
