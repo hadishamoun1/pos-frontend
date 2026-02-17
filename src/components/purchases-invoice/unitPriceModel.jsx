@@ -117,7 +117,7 @@ export default function UnitPriceModal({
       .catch(console.error);
   }, [isVisible]);
 
-  // ───────────────────────── 4619 accounts (from Charge Account list) ─────────────────────────
+  // ───────────────────────── 4619 + 2233 accounts ─────────────────────────
   const flattenAccounts = useCallback((list, out = []) => {
     (list || []).forEach((a) => {
       out.push(a);
@@ -130,6 +130,14 @@ export default function UnitPriceModal({
     const flat = flattenAccounts(accounts || []);
     return flat.filter((a) =>
       String(a.accountNumber || "").startsWith("4619")
+    );
+  }, [accounts, flattenAccounts]);
+
+  // ✅ NEW: 2233 accounts for Supplier of Tax
+  const taxAccounts2233 = useMemo(() => {
+    const flat = flattenAccounts(accounts || []);
+    return flat.filter((a) =>
+      String(a.accountNumber || "").startsWith("2233")
     );
   }, [accounts, flattenAccounts]);
 
@@ -244,7 +252,7 @@ export default function UnitPriceModal({
 
     setRows((prev) =>
       (prev || []).map((r) => {
-        // account selected for tax
+        // account selected for tax (covers both 4619 and 2233)
         if (r.taxAccountId) {
           const acc = accById.get(Number(r.taxAccountId));
           return {
@@ -327,8 +335,9 @@ export default function UnitPriceModal({
   };
 
   // Supplier of Tax dropdown change:
-  // - If supplier selected -> set taxSupplierId, clear taxAccountId
-  // - If 4619 account selected -> set taxAccountId, clear taxSupplierId
+  // - If supplier selected  -> set taxSupplierId, clear taxAccountId
+  // - If account selected   -> set taxAccountId,  clear taxSupplierId
+  //   (works for both 4619 and 2233 accounts — both use the "acc:" prefix)
   // IMPORTANT: does NOT touch charge accountId
   const handleSupplierOfTaxChange = (i, rawVal) => {
     setRows((prev) => {
@@ -360,14 +369,16 @@ export default function UnitPriceModal({
 
         copy[i].supplierOfTax = sup?.supplierName || "";
         copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
+
       } else if (kind === "acc") {
-        const acc = taxAccounts4619.find((a) => a.id === id);
+        // ✅ Handles both 4619 and 2233 accounts — search both lists
+        const acc =
+          taxAccounts4619.find((a) => a.id === id) ??
+          taxAccounts2233.find((a) => a.id === id);
 
         copy[i].supplierOfTaxType = "account";
         copy[i].taxAccountId = Number.isFinite(id) ? id : null;
         copy[i].taxSupplierId = null;
-
-        // if selecting an account, legacy supplierId should be cleared
         copy[i].supplierId = null;
 
         copy[i].supplierOfTax = acc
@@ -594,7 +605,7 @@ export default function UnitPriceModal({
                     />
                   </td>
 
-                  {/* ✅ Supplier of Tax: Suppliers + 4619 Accounts */}
+                  {/* ✅ Supplier of Tax: Suppliers + 4619 Accounts + 2233 Accounts */}
                   <td>
                     <select
                       disabled={!isEditable}
@@ -627,10 +638,19 @@ export default function UnitPriceModal({
                           </option>
                         ))}
                       </optgroup>
+
+                      {/* ✅ NEW: 2233 Accounts */}
+                      <optgroup label="2233 Accounts">
+                        {taxAccounts2233.map((a) => (
+                          <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
+                            {a.accountNumber} – {a.accountName}
+                          </option>
+                        ))}
+                      </optgroup>
                     </select>
                   </td>
 
-                  {/* Acc Nb: shows supplier account number OR 4619 account number */}
+                  {/* Acc Nb: shows supplier account number OR account number (4619 or 2233) */}
                   <td>
                     <input
                       readOnly
