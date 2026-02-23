@@ -44,6 +44,14 @@ export default function UnitPriceModal({
     }
   };
 
+  // ✅ Normalize account number for prefix matching
+  // handles spaces, dashes, dots, Arabic digits, etc.
+  const normalizeAccNo = (v) =>
+    String(v ?? "")
+      .trim()
+      .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+      .replace(/[^\d]/g, "");
+
   // Close delete menu
   const closeDeleteMenu = () =>
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
@@ -90,7 +98,7 @@ export default function UnitPriceModal({
         accNbOfSupplier: "",
         shipping: false,
 
-        // ✅ NEW persisted fields (match backend)
+        // ✅ persisted fields (match backend)
         taxAccountId: null,
         taxSupplierId: null,
 
@@ -117,7 +125,7 @@ export default function UnitPriceModal({
       .catch(console.error);
   }, [isVisible]);
 
-  // ───────────────────────── 4619 + 2233 accounts ─────────────────────────
+  // ───────────────────────── 4619 + 2233 + 181 accounts ─────────────────────────
   const flattenAccounts = useCallback((list, out = []) => {
     (list || []).forEach((a) => {
       out.push(a);
@@ -128,17 +136,18 @@ export default function UnitPriceModal({
 
   const taxAccounts4619 = useMemo(() => {
     const flat = flattenAccounts(accounts || []);
-    return flat.filter((a) =>
-      String(a.accountNumber || "").startsWith("4619")
-    );
+    return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("4619"));
   }, [accounts, flattenAccounts]);
 
-  // ✅ NEW: 2233 accounts for Supplier of Tax
   const taxAccounts2233 = useMemo(() => {
     const flat = flattenAccounts(accounts || []);
-    return flat.filter((a) =>
-      String(a.accountNumber || "").startsWith("2233")
-    );
+    return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("2233"));
+  }, [accounts, flattenAccounts]);
+
+  // ✅ includes 181, 1811, 1812, etc. even if formatted
+  const taxAccounts181 = useMemo(() => {
+    const flat = flattenAccounts(accounts || []);
+    return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("181"));
   }, [accounts, flattenAccounts]);
 
   // Prefer already-typed rows from parent; only fetch rows if none exist
@@ -148,22 +157,12 @@ export default function UnitPriceModal({
 
     const loadExisting = async () => {
       try {
-        const { data } = await axiosClient.get(
-          `/purchase-invoices/${invoiceId}`
-        );
+        const { data } = await axiosClient.get(`/purchase-invoices/${invoiceId}`);
 
         const mapped = (data.unitPriceRows || []).map((r) => {
-          // ✅ backend persisted fields
-          const taxAccountId =
-            r.taxAccountId ?? (r.taxAccount?.id ?? null);
-
-          const taxSupplierId =
-            r.taxSupplierId ?? (r.taxSupplier?.id ?? null);
-
-          const supplierOfTaxType =
-            taxAccountId != null
-              ? "account"
-              : "supplier";
+          const taxAccountId = r.taxAccountId ?? (r.taxAccount?.id ?? null);
+          const taxSupplierId = r.taxSupplierId ?? (r.taxSupplier?.id ?? null);
+          const supplierOfTaxType = taxAccountId != null ? "account" : "supplier";
 
           return {
             id: r.id,
@@ -187,7 +186,7 @@ export default function UnitPriceModal({
             accNbOfSupplier: "",
             shipping: !!r.shipping,
 
-            // ✅ persisted selection
+            // persisted selection
             taxAccountId,
             taxSupplierId,
 
@@ -224,7 +223,7 @@ export default function UnitPriceModal({
           accNbOfSupplier: "",
           shipping: !!row.shipping,
 
-          // ✅ persisted selection
+          // persisted selection
           taxAccountId: null,
           taxSupplierId: null,
 
@@ -252,15 +251,13 @@ export default function UnitPriceModal({
 
     setRows((prev) =>
       (prev || []).map((r) => {
-        // account selected for tax (covers both 4619 and 2233)
+        // account selected for tax (covers 4619 / 2233 / 181)
         if (r.taxAccountId) {
           const acc = accById.get(Number(r.taxAccountId));
           return {
             ...r,
             supplierOfTaxType: "account",
-            supplierOfTax: acc
-              ? `${acc.accountNumber} – ${acc.accountName}`
-              : "",
+            supplierOfTax: acc ? `${acc.accountNumber} – ${acc.accountName}` : "",
             accNbOfSupplier: acc?.accountNumber || "",
           };
         }
@@ -337,7 +334,7 @@ export default function UnitPriceModal({
   // Supplier of Tax dropdown change:
   // - If supplier selected  -> set taxSupplierId, clear taxAccountId
   // - If account selected   -> set taxAccountId,  clear taxSupplierId
-  //   (works for both 4619 and 2233 accounts — both use the "acc:" prefix)
+  //   (works for 4619 / 2233 / 181 accounts — all use "acc:" prefix)
   // IMPORTANT: does NOT touch charge accountId
   const handleSupplierOfTaxChange = (i, rawVal) => {
     setRows((prev) => {
@@ -358,7 +355,7 @@ export default function UnitPriceModal({
       const id = Number(idStr);
 
       if (kind === "sup") {
-        const sup = suppliers.find((s) => s.id === id);
+        const sup = suppliers.find((s) => Number(s.id) === Number(id));
 
         copy[i].supplierOfTaxType = "supplier";
         copy[i].taxSupplierId = Number.isFinite(id) ? id : null;
@@ -369,12 +366,12 @@ export default function UnitPriceModal({
 
         copy[i].supplierOfTax = sup?.supplierName || "";
         copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
-
       } else if (kind === "acc") {
-        // ✅ Handles both 4619 and 2233 accounts — search both lists
+        // ✅ Handles 4619 + 2233 + 181 accounts — search all lists
         const acc =
-          taxAccounts4619.find((a) => a.id === id) ??
-          taxAccounts2233.find((a) => a.id === id);
+          taxAccounts4619.find((a) => Number(a.id) === Number(id)) ??
+          taxAccounts2233.find((a) => Number(a.id) === Number(id)) ??
+          taxAccounts181.find((a) => Number(a.id) === Number(id));
 
         copy[i].supplierOfTaxType = "account";
         copy[i].taxAccountId = Number.isFinite(id) ? id : null;
@@ -605,7 +602,7 @@ export default function UnitPriceModal({
                     />
                   </td>
 
-                  {/* ✅ Supplier of Tax: Suppliers + 4619 Accounts + 2233 Accounts */}
+                  {/* ✅ Supplier of Tax: Suppliers + 4619 Accounts + 2233 Accounts + 181 Accounts */}
                   <td>
                     <select
                       disabled={!isEditable}
@@ -639,9 +636,16 @@ export default function UnitPriceModal({
                         ))}
                       </optgroup>
 
-                      {/* ✅ NEW: 2233 Accounts */}
                       <optgroup label="2233 Accounts">
                         {taxAccounts2233.map((a) => (
+                          <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
+                            {a.accountNumber} – {a.accountName}
+                          </option>
+                        ))}
+                      </optgroup>
+
+                      <optgroup label="181 Accounts">
+                        {taxAccounts181.map((a) => (
                           <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
                             {a.accountNumber} – {a.accountName}
                           </option>
@@ -650,7 +654,7 @@ export default function UnitPriceModal({
                     </select>
                   </td>
 
-                  {/* Acc Nb: shows supplier account number OR account number (4619 or 2233) */}
+                  {/* Acc Nb: shows supplier account number OR account number (4619 / 2233 / 181) */}
                   <td>
                     <input
                       readOnly
