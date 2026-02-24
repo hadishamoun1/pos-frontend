@@ -1128,13 +1128,15 @@ const deliveryDocForPreview = useMemo(() => {
     const totalWithoutVAT = items.reduce((acc, item) => acc + item.totalAmount, 0);
     const totalVAT = items.reduce((acc, item) => acc + item.vat, 0);
     const grandTotal = totalWithoutVAT + totalVAT;
+      const invoiceDateToUse =
+    selectedRequestId !== null ? toYMDLocal(new Date()) : date;
 
     const payload = {
       customerId: selectedCustomerId,
       date,
       invoiceType,
       documentNumber: "DOC-0001",
-      
+      date: invoiceDateToUse,
       currencyCode: customerPreview.currencyCode ,
       totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
       totalVAT: Number(totalVAT.toFixed(2)),
