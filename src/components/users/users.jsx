@@ -43,7 +43,7 @@ const PERMISSION_GROUPS = [
       "reports.accountStatement",
       "reports.costAnalysis",
       "reports.customerBalances",
-      "reports.profitability", // ✅ NEW: Profitability report permission
+      "reports.profitability",
     ],
   },
   {
@@ -131,6 +131,7 @@ const PERMISSION_GROUPS = [
       "settings.inventoryAudit",
       "settings.logoutUsers",
       "settings.invoiceAudit",
+      "settings.company", // ✅ NEW
       "pos.search.stockTab",
       "pos.search.allTab",
       "pos.search.sqmTab",
@@ -155,7 +156,6 @@ const PERMISSION_GROUPS = [
   },
 ];
 
-// (Optional) quick helpers
 function uniqueSorted(arr) {
   return Array.from(new Set(arr)).sort((a, b) => a.localeCompare(b));
 }

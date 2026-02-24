@@ -15,6 +15,7 @@ import InvoiceModal from "./invoicePreviewModal";
 import StatementModal from "./Components/StatementModal";
 import RequestPreviewModal from "./RequestPreviewModal";
 import DeliveryNoteModal from "./DeliveryNoteModal";
+import RevoInvoiceModal from "./revoInvoicePreviewModal";
 
 // ✅ API client (baseURL should be "/api")
 import { axiosClient } from "../api/axiosClient";
@@ -50,6 +51,8 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
   const [cutMode, setCutMode] = useState(false);
   const [showDeliveryNotePreview, setShowDeliveryNotePreview] = useState(false);
     const [returnMode, setReturnMode] = useState(false);
+    const [activeCompany, setActiveCompany] = useState(null);
+
 
   // invoiceItemId -> qty
   const [returnSelection, setReturnSelection] = useState({});
@@ -174,6 +177,25 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
     return next;
   });
 };
+
+
+useEffect(() => {
+  axiosClient.get("/company")
+    .then((res) => {
+      const companies = Array.isArray(res.data) ? res.data : [];
+      setActiveCompany(companies.find((c) => c.isActive) || null);
+    })
+    .catch(() => setActiveCompany(null));
+}, []);
+
+const isShamounActive = useMemo(() => {
+  if (!activeCompany) return false;
+  return String(activeCompany.companyName || "").trim().toLowerCase() === "shamoun";
+}, [activeCompany]);
+
+const isRevoActive = useMemo(() => {
+  return String(activeCompany?.companyName || "").trim().toLowerCase() === "revo";
+}, [activeCompany]);
 
 const changeReturnQty = (invoiceItemId, value) => {
   if (!invoiceItemId) return;
@@ -1597,23 +1619,53 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
             }
           />
 
-          {showPreview && (
-            <InvoiceModal
-              isOpen={showPreview}
-              onClose={() => setShowPreview(false)}
-              invoiceData={{
-                ...customerPreview,
-                ...(invoiceData || {}),
-                date: invoiceData?.date ?? date,
-                vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
-                currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
-                currencyCode:
-                  invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
-                invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
-              }}
-              cssHref="/invoicePreview.css"
-            />
-          )}
+{showPreview && isShamounActive && (
+  <InvoiceModal
+    isOpen={showPreview}
+    onClose={() => setShowPreview(false)}
+    invoiceData={{
+      ...customerPreview,
+      ...(invoiceData || {}),
+      date: invoiceData?.date ?? date,
+      vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
+      currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
+      currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
+      invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
+    }}
+    cssHref="/invoicePreview.css"
+  />
+)}
+
+{showPreview && isRevoActive && (
+  <RevoInvoiceModal
+    isOpen={showPreview}
+    onClose={() => setShowPreview(false)}
+    invoiceData={{
+      ...customerPreview,
+      ...(invoiceData || {}),
+      date: invoiceData?.date ?? date,
+      vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
+      currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
+      currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
+      invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
+    }}
+  />
+)}
+
+{showPreview && !isShamounActive && !isRevoActive && (
+  <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
+    <div style={{ background:"#fff", borderRadius:12, padding:32, maxWidth:400, textAlign:"center" }}>
+      <p style={{ fontSize:16, marginBottom:16 }}>
+        {activeCompany
+          ? `Invoice preview is not configured for "${activeCompany.companyName}".`
+          : "No active company set. Go to Settings → Company."}
+      </p>
+      <button onClick={() => setShowPreview(false)} style={{ padding:"8px 20px", background:"#2563eb", color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>
+        Close
+      </button>
+    </div>
+  </div>
+)}
           <RequestPreviewModal
   open={showRequestPreview}
   onClose={() => setShowRequestPreview(false)}

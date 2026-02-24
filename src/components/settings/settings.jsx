@@ -15,8 +15,9 @@ import StockTotalsAudit from "./StockTotalsAudit";
 import LogoutAllUsersPage from "./LogoutAllUsersPage";
 import InventoryAuditPage from "./Inventory-Audit";
 import InvoiceAuditPage from "./InvoiceAuditPage";
-import AccountingRoleSettings from "./AccountingRoleSettings"; // ✅ NEW
-import { hasPerm } from "../auth/authz"; // ✅ adjust path if different
+import AccountingRoleSettings from "./AccountingRoleSettings";
+import CompanySettings from "./CompanySettings"; // ✅ NEW
+import { hasPerm } from "../auth/authz";
 import "./settings.css";
 
 const SettingsPage = () => {
@@ -33,28 +34,25 @@ const SettingsPage = () => {
       { key: "descriptions-editor", label: "Edit Descriptions", perm: "settings.editDescriptions", component: <DescriptionEditor /> },
       { key: "year-settings", label: "Fiscal Year", perm: "settings.fiscalYear", component: <YearSettings /> },
       { key: "currency-settings", label: "Currency", perm: "settings.currency", component: <CurrencySettings /> },
-
-      // ✅ NEW TAB
       { key: "account-roles", label: "Account Roles", perm: "settings.accountRoles", component: <AccountingRoleSettings /> },
-
       { key: "invoice-display-name-settings", label: "Invoice display", perm: "settings.invoiceDisplay", component: <InvoiceDisplayNamesPanel /> },
       { key: "stock-totals-audit", label: "Stock Totals / Audit", perm: "settings.stockTotalsAudit", component: <StockTotalsAudit /> },
       { key: "inventory-audit", label: "Inventory Audit", perm: "settings.inventoryAudit", component: <InventoryAuditPage /> },
       { key: "invoice-audit", label: "Invoice Audit", perm: "settings.invoiceAudit", component: <InvoiceAuditPage /> },
-
       { key: "logout-users", label: "Users Logout", perm: "settings.logoutUsers", component: <LogoutAllUsersPage /> },
+
+      // ✅ NEW TAB
+      { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
     ],
     []
   );
 
-  // ✅ only show tabs user has permission for
   const allowedTabs = useMemo(() => {
     return TABS.filter((t) => hasPerm(t.perm));
   }, [TABS]);
 
   const [activeTab, setActiveTab] = useState("general");
 
-  // ✅ if user does not have access to current tab, jump to first allowed tab
   useEffect(() => {
     if (!allowedTabs.length) return;
     const ok = allowedTabs.some((t) => t.key === activeTab);
@@ -63,7 +61,6 @@ const SettingsPage = () => {
 
   const active = allowedTabs.find((t) => t.key === activeTab) || allowedTabs[0] || null;
 
-  // ✅ If user has no settings permissions at all
   if (!allowedTabs.length) {
     return (
       <div className="settings-container">
