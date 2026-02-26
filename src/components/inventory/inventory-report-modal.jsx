@@ -60,68 +60,73 @@ const prettyDimsWithSPB = (L, W, spb) => {
 const deriveBalances = (row, mode) => {
   const typeLower = typeOf(row?.type);
 
-  const pickFirstFinite = (...vals) => {
-    for (const v of vals) {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
+  const unitsBal = Number.isFinite(Number(row?.ofrTotalsUnits?.balance))
+    ? Number(row.ofrTotalsUnits.balance)
+    : Number.isFinite(Number(row?.ones?.balance))
+    ? Number(row.ones.balance)
+    : undefined;
+
+  const sqmBal = Number.isFinite(Number(row?.ofrTotalsSqm?.balanceOFR))
+    ? Number(row.ofrTotalsSqm.balanceOFR)
+    : undefined;
+
+  let qty, sqm;
+
+  if (mode === "name") {
+    if (Number.isFinite(unitsBal)) {
+      qty = unitsBal;
+      sqm = qtyToSqm({
+        itemType: row.type,
+        lengthCm: row.length,
+        widthCm: row.width,
+        sheetsPerBox: row.sheetsPerBox,
+        valueQty: qty,
+      });
+    } else if (Number.isFinite(sqmBal)) {
+      sqm = sqmBal;
+      qty =
+        typeLower === "sqm"
+          ? sqmBal
+          : sqmToQty({
+              itemType: row.type,
+              lengthCm: row.length,
+              widthCm: row.width,
+              sheetsPerBox: row.sheetsPerBox,
+              valueSqm: sqmBal,
+            });
     }
-    return undefined;
-  };
-
-  // ✅ Qty: prefer inventory_transaction SUM(qtyofr)
-  const qty = pickFirstFinite(
-    row?.ones?.balanceOFR,
-    row?.ofrTotalsUnits?.balanceOFR,
-    row?.ofrTotalsUnits?.balance,
-    row?.ones?.balance,
-    row?.balanceQty,
-    row?.qtyBalance,
-    row?.balance
-  );
-
-  // ✅ SQM: prefer inventory_transaction SUM(sqmofr)
-  const sqm = pickFirstFinite(
-    row?.ofrTotalsSqm?.balanceOFR,
-    row?.ofrTotalsSqm?.balanceOFRSqm,
-    row?.balanceSqm,
-    row?.sqmBalance
-  );
-
-  let outQty = qty;
-  let outSqm = sqm;
-
-  if (typeLower === "sqm") {
-    if (!Number.isFinite(outQty) && Number.isFinite(outSqm)) outQty = outSqm;
-    if (!Number.isFinite(outSqm) && Number.isFinite(outQty)) outSqm = outQty;
-    return { qty: outQty, sqm: outSqm };
-  }
-
-  if (!Number.isFinite(outSqm) && Number.isFinite(outQty)) {
-    outSqm = qtyToSqm({
-      itemType: row.type,
-      lengthCm: row.length,
-      widthCm: row.width,
-      sheetsPerBox: row.sheetsPerBox,
-      valueQty: outQty,
-    });
-  } else if (!Number.isFinite(outQty) && Number.isFinite(outSqm)) {
-    outQty =
-      typeLower === "sqm"
-        ? outSqm
-        : sqmToQty({
-            itemType: row.type,
-            lengthCm: row.length,
-            widthCm: row.width,
-            sheetsPerBox: row.sheetsPerBox,
-            valueSqm: outSqm,
-          });
+  } else {
+    if (Number.isFinite(sqmBal)) {
+      sqm = sqmBal;
+      qty =
+        typeLower === "sqm"
+          ? sqmBal
+          : sqmToQty({
+              itemType: row.type,
+              lengthCm: row.length,
+              widthCm: row.width,
+              sheetsPerBox: row.sheetsPerBox,
+              valueSqm: sqmBal,
+            });
+    } else if (Number.isFinite(unitsBal)) {
+      qty = unitsBal;
+      sqm = qtyToSqm({
+        itemType: row.type,
+        lengthCm: row.length,
+        widthCm: row.width,
+        sheetsPerBox: row.sheetsPerBox,
+        valueQty: qty,
+      });
+      if (typeLower === "sqm") sqm = qty;
+    }
   }
 
   return {
-    qty: Number.isFinite(outQty) ? Number(outQty) : undefined,
-    sqm: Number.isFinite(outSqm) ? Number(outSqm) : undefined,
+    qty: Number.isFinite(qty) ? Number(qty) : undefined,
+    sqm: Number.isFinite(sqm) ? Number(sqm) : undefined,
   };
 };
+
 /* -------- Grouping & detailed rows (with SPB) -------- */
 function useGroupedByDescription(
   rows,
@@ -136,7 +141,7 @@ function useGroupedByDescription(
   // normalized itemName key so grouping treats different names separately
   const normItemNameKey = (s) => String(s || "").trim().toLowerCase();
 
-return useMemo(() => {
+  return React.useMemo(() => {
     const groupsById = new Map();
     const exactSpbIndex = new Map(); // descId|itemNameKey|thkKey|LxW|origin -> Set(SPB)
     const descThkSpbStats = new Map(); // descId|itemNameKey|thkKey -> Map(spb -> count)
