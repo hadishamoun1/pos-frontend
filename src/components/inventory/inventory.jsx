@@ -12,7 +12,7 @@ const normalizeDigits = (s) => {
     "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
     "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
     "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-    "۵": "5", "۶": "6", "۷": "۷", "۸": "8", "۹": "9",
+    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
@@ -20,8 +20,7 @@ const normalizeDigits = (s) => {
 const normalizeArabicAlef = (s) => String(s || "").replace(/أ|إ|آ/g, "ا");
 const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
 
-// ✅ Define origin options (you can fetch these from backend if needed)
-const ORIGIN_OPTIONS = ["", "China", "Italy", "Trakya","Sphinx", "SISECAM","Corpotrad", "Sahand", "GrandStar","S.G","Bisheng Techno","Qingdao","	King Tai","Guardian","AGC","Cario"];
+const ORIGIN_OPTIONS = ["", "China", "Italy", "Trakya","Sphinx", "SISECAM","Corpotrad", "Sahand", "GrandStar","S.G","Bisheng Techno","Qingdao","King Tai","Guardian","AGC","Cario"];
 
 function useCancelableFetch() {
   const abortRef = useRef();
@@ -50,7 +49,6 @@ const fmt2 = (n) => {
   return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
 };
 
-// helpers for sqm ↔ qty conversions
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 const perSheetSqmOf = (lengthCm, widthCm) => {
   const L = toNum(lengthCm), W = toNum(widthCm);
@@ -194,7 +192,7 @@ export default function InventoryBrowser() {
   const [qInput, setQInput] = useState("");
   const [chips, setChips] = useState([]);
   const [type, setType] = useState("");
-  const [origin, setOrigin] = useState(""); // ✅ NEW: origin filter
+  const [origin, setOrigin] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [rows, setRows] = useState([]);
@@ -251,7 +249,6 @@ export default function InventoryBrowser() {
     return inputQ;
   };
 
-  // ✅ Updated dependency: now includes origin
   useEffect(() => {
     if (chips.length > 0) return;
     const t = setTimeout(() => {
@@ -310,7 +307,6 @@ export default function InventoryBrowser() {
 
       if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) params.asOf = asOf;
 
-      // chips parsed fields
       if (parsed.itemName) params.itemName = parsed.itemName;
       if (parsed.thickness != null) params.thickness = String(parsed.thickness);
       if (parsed.length != null) params.length = String(parsed.length);
@@ -320,7 +316,7 @@ export default function InventoryBrowser() {
 
       if (qFinal) params.q = qFinal;
       if (type) params.type = type;
-      if (origin) params.origin = origin; // ✅ Add origin to params
+      if (origin) params.origin = origin;
 
       const res = await axiosClient.get(currentLedgerPath, { params, signal });
       const json = res?.data;
@@ -357,7 +353,7 @@ export default function InventoryBrowser() {
           ? reportedTotal
           : (page - 1) * limit + data.length
       );
-      setHasMore(Boolean(json?.hasMore ?? data.length === limit));
+      setHasMore(Boolean(json?.hasMore));
     } catch (e) {
       if (!isCanceled(e)) console.error("Fetch ledger failed:", e);
     } finally {
@@ -366,6 +362,7 @@ export default function InventoryBrowser() {
     }
   };
 
+  // ✅ FIXED fetchAllForReport — uses totalRows to know when to stop
   const fetchAllForReport = async () => {
     setReportLoading(true);
     try {
@@ -373,9 +370,7 @@ export default function InventoryBrowser() {
       const parsed = parseChipsToParams(chips);
       const qFinal = buildQ();
 
-      const baseParams = {
-        _: Date.now(),
-      };
+      const baseParams = {};
 
       if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) baseParams.asOf = asOf;
       if (parsed.itemName) baseParams.itemName = parsed.itemName;
@@ -386,14 +381,14 @@ export default function InventoryBrowser() {
         baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
       if (qFinal) baseParams.q = qFinal;
       if (type) baseParams.type = type;
-      if (origin) baseParams.origin = origin; // ✅ Add origin to report params
+      if (origin) baseParams.origin = origin;
 
       const BIG_LIMIT = 500;
       let aggAll = [];
       let pg = 1;
-      let hasMoreAll = true;
+      let knownTotal = null; // ✅ will be set from first response
 
-      while (hasMoreAll) {
+      while (true) {
         const params = {
           ...baseParams,
           page: pg,
@@ -409,10 +404,25 @@ export default function InventoryBrowser() {
           : Array.isArray(json)
           ? json
           : [];
+
         aggAll = aggAll.concat(data);
 
-        const inferredHasMore = json?.hasMore ?? data.length === BIG_LIMIT;
-        hasMoreAll = Boolean(inferredHasMore);
+        // ✅ grab the real total from the first response
+        if (knownTotal === null) {
+          const t = Number(json?.totalRows ?? json?.total ?? 0);
+          knownTotal = Number.isFinite(t) && t > 0 ? t : null;
+        }
+
+        // ✅ stop conditions:
+        // 1) we have at least as many items as the backend says exist
+        // 2) OR the backend explicitly says no more
+        // 3) OR the page returned fewer items than the limit (last page)
+        const backendSaysNoMore = json?.hasMore === false;
+        const gotEverything = knownTotal !== null && aggAll.length >= knownTotal;
+        const shortPage = data.length < BIG_LIMIT;
+
+        if (gotEverything || backendSaysNoMore || shortPage) break;
+
         pg += 1;
       }
 
@@ -438,13 +448,11 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ✅ Updated dependency: includes origin
   useEffect(() => {
     fetchFromLedger();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chips, type, origin, page, limit, includeZeros, currentLedgerPath, asOf]);
 
-  // Drawer and other methods remain the same...
   const batchQtyUnits = (batch, header) => {
     if (batch?.balanceOFR !== undefined && batch?.balanceOFR !== null) {
       const n = Number(batch.balanceOFR);
@@ -574,7 +582,6 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ✅ HEADER UI - Added Origin dropdown
   const header = (
     <div className="invb-toolbar">
       <div className="invb-row invb-row--wrap invb-row--gap">
@@ -609,13 +616,12 @@ export default function InventoryBrowser() {
           </div>
         </div>
 
-        {/* Type dropdown */}
-        <select 
-          className="invb-select" 
-          value={type} 
-          onChange={(e) => { 
-            setType(e.target.value); 
-            setPage(1); 
+        <select
+          className="invb-select"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setPage(1);
           }}
         >
           {TYPE_OPTIONS.map((t) => (
@@ -625,13 +631,12 @@ export default function InventoryBrowser() {
           ))}
         </select>
 
-        {/* ✅ Origin dropdown */}
-        <select 
-          className="invb-select" 
-          value={origin} 
-          onChange={(e) => { 
-            setOrigin(e.target.value); 
-            setPage(1); 
+        <select
+          className="invb-select"
+          value={origin}
+          onChange={(e) => {
+            setOrigin(e.target.value);
+            setPage(1);
           }}
         >
           {ORIGIN_OPTIONS.map((o) => (
@@ -641,7 +646,6 @@ export default function InventoryBrowser() {
           ))}
         </select>
 
-        {/* As-of date */}
         <div className="invb-date">
           <span className="u-muted">As of</span>
           <input
@@ -685,8 +689,12 @@ export default function InventoryBrowser() {
         <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
           ⬇ Export CSV (page)
         </button>
-        <button className="invb-btn" onClick={fetchAllForReport}>
-          📝 Report
+        <button
+          className="invb-btn"
+          onClick={fetchAllForReport}
+          disabled={reportLoading}
+        >
+          {reportLoading ? "⏳ Loading report…" : "📝 Report"}
         </button>
       </div>
 
