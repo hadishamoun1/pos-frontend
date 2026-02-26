@@ -12,7 +12,7 @@ const normalizeDigits = (s) => {
     "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
     "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
     "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
-    "۵": "5", "۶": "6", "۷": "۷", "۸": "8", "۹": "9",
+    "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
   };
   return String(s).replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
 };
@@ -21,7 +21,24 @@ const normalizeArabicAlef = (s) => String(s || "").replace(/أ|إ|آ/g, "ا");
 const TYPE_OPTIONS = ["", "box", "sheet", "sqm", "unit"];
 
 // ✅ Define origin options (you can fetch these from backend if needed)
-const ORIGIN_OPTIONS = ["", "China", "Italy", "Trakya","Sphinx", "SISECAM","Corpotrad", "Sahand", "GrandStar","S.G","Bisheng Techno","Qingdao","	King Tai","Guardian","AGC","Cario"];
+const ORIGIN_OPTIONS = [
+  "",
+  "China",
+  "Italy",
+  "Trakya",
+  "Sphinx",
+  "SISECAM",
+  "Corpotrad",
+  "Sahand",
+  "GrandStar",
+  "S.G",
+  "Bisheng Techno",
+  "Qingdao",
+  "King Tai",
+  "Guardian",
+  "AGC",
+  "Cario",
+];
 
 function useCancelableFetch() {
   const abortRef = useRef();
@@ -53,7 +70,8 @@ const fmt2 = (n) => {
 // helpers for sqm ↔ qty conversions
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 const perSheetSqmOf = (lengthCm, widthCm) => {
-  const L = toNum(lengthCm), W = toNum(widthCm);
+  const L = toNum(lengthCm),
+    W = toNum(widthCm);
   return L > 0 && W > 0 ? (L * W) / 10000 : 0;
 };
 
@@ -80,74 +98,86 @@ const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
   return toNum(valueQty);
 };
 
+/**
+ * ✅ FIXED:
+ * - When asOf is used, backend should return balances from inventory_transaction:
+ *   - qty balance: SUM(quantityofr)  (units)
+ *   - sqm balance: SUM(sqmofr)       (sqm)
+ *
+ * This frontend now reads BALANCES in a robust way:
+ * - Qty prefers: ones.balanceOFR -> ones.balance -> ofrTotalsUnits.balance -> fallback conversions
+ * - SQM prefers: ofrTotalsSqm.balanceOFR -> ofrTotalsSqm.balanceOFRSqm -> conversions
+ *
+ * Also supports legacy payloads.
+ */
 const deriveBalances = (row, mode) => {
   const typeLower = String(row?.type || "").toLowerCase();
-  const nonOfr = row?.ofrTotalsUnits?.balance;
-  const onesBal = row?.ones?.balance;
-  const nonOfrBal = Number.isFinite(Number(nonOfr))
-    ? Number(nonOfr)
-    : Number.isFinite(Number(onesBal))
-    ? Number(onesBal)
-    : undefined;
 
-  const ofrSqm = row?.ofrTotalsSqm?.balanceOFR;
-  const ofrSqmBal = Number.isFinite(Number(ofrSqm)) ? Number(ofrSqm) : undefined;
+  // ---- Qty candidates ----
+  // ✅ New preferred (you can add this in backend): ones.balanceOFR (units, quantityofr sum)
+  const qtyOfr1 = row?.ones?.balanceOFR;
 
-  let qty, sqm;
+  // Existing: ones.balance (often nonOFR or sometimes used as qty)
+  const qty1 = row?.ones?.balance;
 
-  if (mode === "name") {
-    if (Number.isFinite(nonOfrBal)) {
-      qty = nonOfrBal;
-      sqm = qtyToSqm({
-        itemType: row.type,
-        lengthCm: row.length,
-        widthCm: row.width,
-        sheetsPerBox: row.sheetsPerBox,
-        valueQty: qty,
-      });
-      if (typeLower === "sqm") {
-        qty = qty ?? ofrSqmBal;
-        sqm = ofrSqmBal ?? qty;
-      }
-    } else if (Number.isFinite(ofrSqmBal)) {
-      sqm = ofrSqmBal;
-      qty =
-        typeLower === "sqm"
-          ? ofrSqmBal
-          : sqmToQty({
-              itemType: row.type,
-              lengthCm: row.length,
-              widthCm: row.width,
-              sheetsPerBox: row.sheetsPerBox,
-              valueSqm: ofrSqmBal,
-            });
+  // Some payloads: ofrTotalsUnits.balance
+  const qty2 = row?.ofrTotalsUnits?.balance;
+
+  // Some payloads: direct fields
+  const qty3 = row?.balanceQty ?? row?.qtyBalance ?? row?.balance;
+
+  // ---- SQM candidates ----
+  // Existing: ofrTotalsSqm.balanceOFR (often used for sqm)
+  const sqm1 = row?.ofrTotalsSqm?.balanceOFR;
+
+  // Optional new: ofrTotalsSqm.balanceOFRSqm
+  const sqm2 = row?.ofrTotalsSqm?.balanceOFRSqm;
+
+  // Some payloads: direct sqm
+  const sqm3 = row?.balanceSqm ?? row?.sqmBalance;
+
+  const pickFirstFinite = (...vals) => {
+    for (const v of vals) {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
     }
-  } else {
-    if (Number.isFinite(ofrSqmBal)) {
-      sqm = ofrSqmBal;
-      qty =
-        typeLower === "sqm"
-          ? ofrSqmBal
-          : sqmToQty({
-              itemType: row.type,
-              lengthCm: row.length,
-              widthCm: row.width,
-              sheetsPerBox: row.sheetsPerBox,
-              valueSqm: ofrSqmBal,
-            });
-    } else if (Number.isFinite(nonOfrBal)) {
-      qty = nonOfrBal;
-      sqm = qtyToSqm({
-        itemType: row.type,
-        lengthCm: row.length,
-        widthCm: row.width,
-        sheetsPerBox: row.sheetsPerBox,
-        valueQty: qty,
-      });
-      if (typeLower === "sqm") sqm = qty;
-    }
+    return undefined;
+  };
+
+  // Prefer qtyofr if present (this is what you want from inventory_transaction)
+  let qty = pickFirstFinite(qtyOfr1, qty1, qty2, qty3);
+  let sqm = pickFirstFinite(sqm1, sqm2, sqm3);
+
+  // If item type is 'sqm', qty and sqm are effectively same in display logic
+  if (typeLower === "sqm") {
+    if (!Number.isFinite(qty) && Number.isFinite(sqm)) qty = sqm;
+    if (!Number.isFinite(sqm) && Number.isFinite(qty)) sqm = qty;
+    return { qty, sqm };
   }
 
+  // If one missing, derive using geometry
+  if (!Number.isFinite(sqm) && Number.isFinite(qty)) {
+    sqm = qtyToSqm({
+      itemType: row.type,
+      lengthCm: row.length,
+      widthCm: row.width,
+      sheetsPerBox: row.sheetsPerBox,
+      valueQty: qty,
+    });
+  } else if (!Number.isFinite(qty) && Number.isFinite(sqm)) {
+    qty =
+      typeLower === "sqm"
+        ? sqm
+        : sqmToQty({
+            itemType: row.type,
+            lengthCm: row.length,
+            widthCm: row.width,
+            sheetsPerBox: row.sheetsPerBox,
+            valueSqm: sqm,
+          });
+  }
+
+  // Keep old mode behavior: in "name" mode they previously preferred qty first; now we just return both.
   return {
     qty: Number.isFinite(qty) ? Number(qty) : undefined,
     sqm: Number.isFinite(sqm) ? Number(sqm) : undefined,
@@ -194,7 +224,7 @@ export default function InventoryBrowser() {
   const [qInput, setQInput] = useState("");
   const [chips, setChips] = useState([]);
   const [type, setType] = useState("");
-  const [origin, setOrigin] = useState(""); // ✅ NEW: origin filter
+  const [origin, setOrigin] = useState("");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [rows, setRows] = useState([]);
@@ -251,7 +281,6 @@ export default function InventoryBrowser() {
     return inputQ;
   };
 
-  // ✅ Updated dependency: now includes origin
   useEffect(() => {
     if (chips.length > 0) return;
     const t = setTimeout(() => {
@@ -310,7 +339,6 @@ export default function InventoryBrowser() {
 
       if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) params.asOf = asOf;
 
-      // chips parsed fields
       if (parsed.itemName) params.itemName = parsed.itemName;
       if (parsed.thickness != null) params.thickness = String(parsed.thickness);
       if (parsed.length != null) params.length = String(parsed.length);
@@ -320,7 +348,7 @@ export default function InventoryBrowser() {
 
       if (qFinal) params.q = qFinal;
       if (type) params.type = type;
-      if (origin) params.origin = origin; // ✅ Add origin to params
+      if (origin) params.origin = origin;
 
       const res = await axiosClient.get(currentLedgerPath, { params, signal });
       const json = res?.data;
@@ -335,7 +363,10 @@ export default function InventoryBrowser() {
         ? data
         : data.filter((r) => {
             const { qty, sqm } = deriveBalances(r, descMode);
-            return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
+            return (
+              (Number.isFinite(qty) && qty > 0) ||
+              (Number.isFinite(sqm) && sqm > 0)
+            );
           });
 
       setRows(filtered);
@@ -373,20 +404,19 @@ export default function InventoryBrowser() {
       const parsed = parseChipsToParams(chips);
       const qFinal = buildQ();
 
-      const baseParams = {
-        _: Date.now(),
-      };
+      const baseParams = { _: Date.now() };
 
       if (asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf)) baseParams.asOf = asOf;
       if (parsed.itemName) baseParams.itemName = parsed.itemName;
-      if (parsed.thickness != null) baseParams.thickness = String(parsed.thickness);
+      if (parsed.thickness != null)
+        baseParams.thickness = String(parsed.thickness);
       if (parsed.length != null) baseParams.length = String(parsed.length);
       if (parsed.width != null) baseParams.width = String(parsed.width);
       if (parsed.sheetsPerBox != null)
         baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
       if (qFinal) baseParams.q = qFinal;
       if (type) baseParams.type = type;
-      if (origin) baseParams.origin = origin; // ✅ Add origin to report params
+      if (origin) baseParams.origin = origin;
 
       const BIG_LIMIT = 500;
       let aggAll = [];
@@ -420,7 +450,10 @@ export default function InventoryBrowser() {
         ? aggAll
         : aggAll.filter((r) => {
             const { qty, sqm } = deriveBalances(r, descMode);
-            return (Number.isFinite(qty) && qty > 0) || (Number.isFinite(sqm) && sqm > 0);
+            return (
+              (Number.isFinite(qty) && qty > 0) ||
+              (Number.isFinite(sqm) && sqm > 0)
+            );
           });
 
       setReportSpbRows(aggAll);
@@ -438,7 +471,6 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ✅ Updated dependency: includes origin
   useEffect(() => {
     fetchFromLedger();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,23 +478,36 @@ export default function InventoryBrowser() {
 
   // Drawer and other methods remain the same...
   const batchQtyUnits = (batch, header) => {
-    if (batch?.balanceOFR !== undefined && batch?.balanceOFR !== null) {
-      const n = Number(batch.balanceOFR);
-      if (Number.isFinite(n)) return n;
+    // ✅ prefer qty if backend provides it
+    const directQty =
+      batch?.balanceQty ??
+      batch?.qty ??
+      batch?.balanceOFR; // legacy / some payloads
+    const dn = Number(directQty);
+    if (Number.isFinite(dn)) return dn;
+
+    // else try sqm
+    const sqmDirect =
+      batch?.balanceSqm ??
+      batch?.balanceOFRSqm ??
+      batch?.balanceOFRSqm;
+    const sqmN = Number(sqmDirect);
+    if (Number.isFinite(sqmN)) {
+      return sqmToQty({
+        itemType: header?.type,
+        lengthCm: header?.length,
+        widthCm: header?.width,
+        sheetsPerBox: header?.sheetsPerBox,
+        valueSqm: sqmN,
+      });
     }
-    if (batch?.balanceOFRSqm !== undefined && batch?.balanceOFRSqm !== null) {
-      const sqmN = Number(batch.balanceOFRSqm);
-      if (Number.isFinite(sqmN)) {
-        return sqmToQty({
-          itemType: header?.type,
-          lengthCm: header?.length,
-          widthCm: header?.width,
-          sheetsPerBox: header?.sheetsPerBox,
-          valueSqm: sqmN,
-        });
-      }
-    }
-    const sqm = Number(batch?.startOFR ?? 0) + Number(batch?.inOFR ?? 0) - Number(batch?.outOFR ?? 0);
+
+    // fallback from old fields
+    const sqm =
+      Number(batch?.startOFR ?? 0) +
+      Number(batch?.inOFR ?? 0) -
+      Number(batch?.outOFR ?? 0);
+
     return sqmToQty({
       itemType: header?.type,
       lengthCm: header?.length,
@@ -484,13 +529,17 @@ export default function InventoryBrowser() {
 
     const { qty: totQty, sqm: totSqm } = deriveBalances(variantRow, descMode);
 
-    const rawBatches = Array.isArray(variantRow?.batches) ? variantRow.batches : [];
+    const rawBatches = Array.isArray(variantRow?.batches)
+      ? variantRow.batches
+      : [];
     const enriched = rawBatches.map((b) => {
       const q = batchQtyUnits(b, variantRow);
       return { ...b, __qty: Number(q?.toFixed?.(2) ?? 0) };
     });
 
-    const filtered = (includeZeros ? enriched : enriched.filter((b) => b.__qty > 0))
+    const filtered = (includeZeros
+      ? enriched
+      : enriched.filter((b) => b.__qty > 0))
       .slice()
       .sort((a, b) => {
         const ad = a.dateReceived || "";
@@ -501,8 +550,12 @@ export default function InventoryBrowser() {
         return String(a.condition || "").localeCompare(String(b.condition || ""));
       });
 
-    setDrawerVariantTotalQty(Number.isFinite(totQty) ? Number(totQty.toFixed(2)) : 0);
-    setDrawerVariantTotalSqm(Number.isFinite(totSqm) ? Number(totSqm.toFixed(2)) : 0);
+    setDrawerVariantTotalQty(
+      Number.isFinite(totQty) ? Number(totQty.toFixed(2)) : 0
+    );
+    setDrawerVariantTotalSqm(
+      Number.isFinite(totSqm) ? Number(totSqm.toFixed(2)) : 0
+    );
     setBatches(filtered);
     setBatchesLoading(false);
   };
@@ -516,13 +569,22 @@ export default function InventoryBrowser() {
   };
 
   const exportCsv = () => {
-    const headers = ["Item (Thk)", "Dimensions", "Type", "Sheets/Box", "Origin", "Balance (Qty)", "Balance (sqm)"];
+    const headers = [
+      "Item (Thk)",
+      "Dimensions",
+      "Type",
+      "Sheets/Box",
+      "Origin",
+      "Balance (Qty)",
+      "Balance (sqm)",
+    ];
     const lines = [headers.join(",")];
 
     rows.forEach((r) => {
       const itemWithThk = `${fmt2(r.thickness)}ملم ${r.itemName ?? ""}`.trim();
       const typeLower = String(r.type).toLowerCase();
-      const spbForDims = typeLower === "sheet" || typeLower === "sqm" ? 0 : r.sheetsPerBox;
+      const spbForDims =
+        typeLower === "sheet" || typeLower === "sqm" ? 0 : r.sheetsPerBox;
       const dims = prettyDims(r.length, r.width, spbForDims);
       const { qty, sqm } = deriveBalances(r, descMode);
 
@@ -530,7 +592,9 @@ export default function InventoryBrowser() {
         itemWithThk.replace(/"/g, '""'),
         dims,
         String(r.type || "").toUpperCase(),
-        typeLower === "sheet" || typeLower === "sqm" ? "" : Number(r.sheetsPerBox) || "",
+        typeLower === "sheet" || typeLower === "sqm"
+          ? ""
+          : Number(r.sheetsPerBox) || "",
         r.origin || "",
         Number.isFinite(Number(qty)) ? Number(qty.toFixed(2)) : "",
         Number.isFinite(Number(sqm)) ? Number(sqm.toFixed(2)) : "",
@@ -539,7 +603,8 @@ export default function InventoryBrowser() {
       lines.push(
         row
           .map((cell) =>
-            typeof cell === "string" && (cell.includes(",") || cell.includes('"') || cell.includes("\n"))
+            typeof cell === "string" &&
+            (cell.includes(",") || cell.includes('"') || cell.includes("\n"))
               ? `"${cell}"`
               : String(cell)
           )
@@ -547,7 +612,9 @@ export default function InventoryBrowser() {
       );
     });
 
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -574,7 +641,6 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ✅ HEADER UI - Added Origin dropdown
   const header = (
     <div className="invb-toolbar">
       <div className="invb-row invb-row--wrap invb-row--gap">
@@ -583,7 +649,12 @@ export default function InventoryBrowser() {
             {chips.map((c, idx) => (
               <span key={`${c}-${idx}`} className="chip">
                 {c}
-                <button type="button" className="chip-x" aria-label="Remove" onClick={() => removeChip(idx)}>
+                <button
+                  type="button"
+                  className="chip-x"
+                  aria-label="Remove"
+                  onClick={() => removeChip(idx)}
+                >
                   ×
                 </button>
               </span>
@@ -602,7 +673,10 @@ export default function InventoryBrowser() {
               Add
             </button>
             {chips.length > 0 && (
-              <button className="invb-btn invb-btn--ghost" onClick={clearChips}>
+              <button
+                className="invb-btn invb-btn--ghost"
+                onClick={clearChips}
+              >
                 Clear
               </button>
             )}
@@ -610,12 +684,12 @@ export default function InventoryBrowser() {
         </div>
 
         {/* Type dropdown */}
-        <select 
-          className="invb-select" 
-          value={type} 
-          onChange={(e) => { 
-            setType(e.target.value); 
-            setPage(1); 
+        <select
+          className="invb-select"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value);
+            setPage(1);
           }}
         >
           {TYPE_OPTIONS.map((t) => (
@@ -625,13 +699,13 @@ export default function InventoryBrowser() {
           ))}
         </select>
 
-        {/* ✅ Origin dropdown */}
-        <select 
-          className="invb-select" 
-          value={origin} 
-          onChange={(e) => { 
-            setOrigin(e.target.value); 
-            setPage(1); 
+        {/* Origin dropdown */}
+        <select
+          className="invb-select"
+          value={origin}
+          onChange={(e) => {
+            setOrigin(e.target.value);
+            setPage(1);
           }}
         >
           {ORIGIN_OPTIONS.map((o) => (
@@ -678,11 +752,19 @@ export default function InventoryBrowser() {
         </label>
 
         <label className="invb-chk">
-          <input type="checkbox" checked={showBoth} onChange={(e) => setShowBoth(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={showBoth}
+            onChange={(e) => setShowBoth(e.target.checked)}
+          />
           Show SQM column
         </label>
 
-        <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
+        <button
+          className="invb-btn"
+          onClick={exportCsv}
+          style={{ marginInlineStart: "auto" }}
+        >
           ⬇ Export CSV (page)
         </button>
         <button className="invb-btn" onClick={fetchAllForReport}>
@@ -694,16 +776,24 @@ export default function InventoryBrowser() {
         <span className="invb-hint">
           {loading
             ? "Loading…"
-            : `Page ${page} • ${hasMore ? `${page * limit}+ variants` : `${totalRows} variants`}${
-                balancesLoading ? " • computing totals…" : ""
-              }`}
+            : `Page ${page} • ${
+                hasMore ? `${page * limit}+ variants` : `${totalRows} variants`
+              }${balancesLoading ? " • computing totals…" : ""}`}
         </span>
 
         <div className="invb-pager">
-          <button className="invb-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={loading || page <= 1}>
+          <button
+            className="invb-btn"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={loading || page <= 1}
+          >
             ◀ Prev
           </button>
-          <button className="invb-btn" onClick={() => setPage((p) => p + 1)} disabled={loading || !hasMore}>
+          <button
+            className="invb-btn"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={loading || !hasMore}
+          >
             Next ▶
           </button>
           <select
@@ -735,7 +825,9 @@ export default function InventoryBrowser() {
 
         <div className="invb-mode-toggle">
           <span
-            className={"invb-mode-label" + (descMode === "real" ? " active" : "")}
+            className={
+              "invb-mode-label" + (descMode === "real" ? " active" : "")
+            }
             onClick={() => {
               setDescMode("real");
               setPage(1);
@@ -755,7 +847,9 @@ export default function InventoryBrowser() {
             <span className="invb-mode-toggle-slider" />
           </label>
           <span
-            className={"invb-mode-label" + (descMode === "name" ? " active" : "")}
+            className={
+              "invb-mode-label" + (descMode === "name" ? " active" : "")
+            }
             onClick={() => {
               setDescMode("name");
               setPage(1);
@@ -785,13 +879,19 @@ export default function InventoryBrowser() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>
+                <td
+                  colSpan={colCount}
+                  style={{ textAlign: "center", opacity: 0.7 }}
+                >
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={colCount} style={{ textAlign: "center", opacity: 0.7 }}>
+                <td
+                  colSpan={colCount}
+                  style={{ textAlign: "center", opacity: 0.7 }}
+                >
                   No variants found.
                 </td>
               </tr>
@@ -803,18 +903,36 @@ export default function InventoryBrowser() {
                 const lowStock = hasQty && Number(qty) < LOW_STOCK_THRESHOLD;
 
                 const typeLower = String(r.type || "").toLowerCase();
-                const spbForDims = typeLower === "sheet" || typeLower === "sqm" ? 0 : r.sheetsPerBox;
-                const spbCell = typeLower === "sheet" || typeLower === "sqm" ? "" : Number(r.sheetsPerBox) || "";
+                const spbForDims =
+                  typeLower === "sheet" || typeLower === "sqm"
+                    ? 0
+                    : r.sheetsPerBox;
+                const spbCell =
+                  typeLower === "sheet" || typeLower === "sqm"
+                    ? ""
+                    : Number(r.sheetsPerBox) || "";
 
-                const canViewBatches = descMode === "real" && Array.isArray(r?.batches);
+                const canViewBatches =
+                  descMode === "real" && Array.isArray(r?.batches);
 
                 return (
                   <tr key={vid} className={lowStock ? "invb-row--low" : ""}>
-                    <td style={{ direction: "rtl", textAlign: "right", maxWidth: 360 }} className="truncate">
+                    <td
+                      style={{
+                        direction: "rtl",
+                        textAlign: "right",
+                        maxWidth: 360,
+                      }}
+                      className="truncate"
+                    >
                       {`${fmt2(r.thickness)}ملم ${r.itemName}`}
                     </td>
-                    <td className="ta-center">{prettyDims(r.length, r.width, spbForDims)}</td>
-                    <td className="ta-center">{String(r.type || "").toUpperCase()}</td>
+                    <td className="ta-center">
+                      {prettyDims(r.length, r.width, spbForDims)}
+                    </td>
+                    <td className="ta-center">
+                      {String(r.type || "").toUpperCase()}
+                    </td>
                     <td className="ta-center">{spbCell}</td>
                     <td className="truncate">{r.origin || ""}</td>
                     <td className="ta-right">
@@ -823,22 +941,39 @@ export default function InventoryBrowser() {
                       ) : qty === undefined ? (
                         "—"
                       ) : (
-                        <span className={`qty-pill ${Number(qty) < LOW_STOCK_THRESHOLD ? "low" : ""}`}>
-                          {fmt2(qty)} <span className="u-muted">{unitLabelFor(r.type)}</span>
+                        <span
+                          className={`qty-pill ${
+                            Number(qty) < LOW_STOCK_THRESHOLD ? "low" : ""
+                          }`}
+                        >
+                          {fmt2(qty)}{" "}
+                          <span className="u-muted">
+                            {unitLabelFor(r.type)}
+                          </span>
                         </span>
                       )}
                     </td>
                     {showBoth && (
                       <td className="ta-right u-muted">
-                        {balancesLoading && sqm === undefined ? "…" : sqm === undefined ? "—" : fmt2(sqm)}
+                        {balancesLoading && sqm === undefined
+                          ? "…"
+                          : sqm === undefined
+                          ? "—"
+                          : fmt2(sqm)}
                       </td>
                     )}
                     <td>
                       <button
-                        className={`invb-btn small ${canViewBatches ? "" : "invb-btn--ghost"}`}
+                        className={`invb-btn small ${
+                          canViewBatches ? "" : "invb-btn--ghost"
+                        }`}
                         onClick={() => canViewBatches && openBatchesFor(r)}
                         disabled={!canViewBatches}
-                        title={canViewBatches ? "View batches" : "Batches are available only in Real Description mode"}
+                        title={
+                          canViewBatches
+                            ? "View batches"
+                            : "Batches are available only in Real Description mode"
+                        }
                       >
                         View
                       </button>
@@ -859,7 +994,8 @@ export default function InventoryBrowser() {
               <div>
                 <div className="invb-drawer-title">Batches</div>
                 <div className="invb-drawer-sub">
-                  {drawerVariant?.itemName} — {fmt2(drawerVariant?.thickness)} ملم —{" "}
+                  {drawerVariant?.itemName} — {fmt2(drawerVariant?.thickness)} ملم
+                  —{" "}
                   {prettyDims(
                     drawerVariant?.length,
                     drawerVariant?.width,
@@ -910,7 +1046,11 @@ export default function InventoryBrowser() {
                         <td>{b.condition || ""}</td>
                         <td>{b.dateReceived || ""}</td>
                         <td className="ta-right">
-                          <span className={`qty-pill ${Number(b.__qty) < LOW_STOCK_THRESHOLD ? "low" : ""}`}>
+                          <span
+                            className={`qty-pill ${
+                              Number(b.__qty) < LOW_STOCK_THRESHOLD ? "low" : ""
+                            }`}
+                          >
                             {fmt2(b.__qty)}
                           </span>
                         </td>
@@ -924,15 +1064,18 @@ export default function InventoryBrowser() {
         </div>
       )}
 
-      {/* Report */}
-      <ReportModal
-        open={reportOpen}
-        onClose={() => setReportOpen(false)}
-        rows={reportRows}
-        spbSourceRows={reportSpbRows}
-        loading={reportLoading}
-        mode={descMode}
-      />
+      {/* Report Modal */}
+      {reportOpen && (
+        <ReportModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          loading={reportLoading}
+          rows={reportRows}
+          spbRows={reportSpbRows}
+          showBoth={showBoth}
+          deriveBalances={(row) => deriveBalances(row, descMode)}
+        />
+      )}
     </div>
   );
 }
