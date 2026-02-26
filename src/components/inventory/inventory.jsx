@@ -78,72 +78,59 @@ const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
   return toNum(valueQty);
 };
 
-const deriveBalances = (row, mode) => {
+// ✅ FIXED deriveBalances:
+// ones.balance = SUM(quantityofr) from backend → PRIMARY for Balance (Qty)
+// ofrTotalsSqm.balanceOFR = SUM(sqmofr) from backend → PRIMARY for Balance (SQM)
+const deriveBalances = (row, _mode) => {
   const typeLower = String(row?.type || "").toLowerCase();
-  const nonOfr = row?.ofrTotalsUnits?.balance;
-  const onesBal = row?.ones?.balance;
-  const nonOfrBal = Number.isFinite(Number(nonOfr))
-    ? Number(nonOfr)
-    : Number.isFinite(Number(onesBal))
-    ? Number(onesBal)
-    : undefined;
 
-  const ofrSqm = row?.ofrTotalsSqm?.balanceOFR;
-  const ofrSqmBal = Number.isFinite(Number(ofrSqm)) ? Number(ofrSqm) : undefined;
+  // ✅ quantityofr balance — backend sends this as ones.balance
+  const qtyBal =
+    Number.isFinite(Number(row?.ones?.balance))
+      ? Number(row.ones.balance)
+      : Number.isFinite(Number(row?.ofrTotalsUnits?.balance))
+      ? Number(row.ofrTotalsUnits.balance)
+      : undefined;
+
+  // ✅ sqmofr balance — backend sends this as ofrTotalsSqm.balanceOFR
+  const sqmBal =
+    Number.isFinite(Number(row?.ofrTotalsSqm?.balanceOFR))
+      ? Number(row.ofrTotalsSqm.balanceOFR)
+      : undefined;
 
   let qty, sqm;
 
-  if (mode === "name") {
-    if (Number.isFinite(nonOfrBal)) {
-      qty = nonOfrBal;
-      sqm = qtyToSqm({
-        itemType: row.type,
-        lengthCm: row.length,
-        widthCm: row.width,
-        sheetsPerBox: row.sheetsPerBox,
-        valueQty: qty,
-      });
-      if (typeLower === "sqm") {
-        qty = qty ?? ofrSqmBal;
-        sqm = ofrSqmBal ?? qty;
-      }
-    } else if (Number.isFinite(ofrSqmBal)) {
-      sqm = ofrSqmBal;
-      qty =
-        typeLower === "sqm"
-          ? ofrSqmBal
-          : sqmToQty({
-              itemType: row.type,
-              lengthCm: row.length,
-              widthCm: row.width,
-              sheetsPerBox: row.sheetsPerBox,
-              valueSqm: ofrSqmBal,
-            });
+  if (Number.isFinite(qtyBal)) {
+    // ✅ quantityofr is PRIMARY → show directly as Balance (Qty)
+    qty = qtyBal;
+    if (typeLower === "sqm") {
+      // sqm-type: qty and sqm are the same unit
+      sqm = Number.isFinite(sqmBal) ? sqmBal : qty;
+    } else {
+      // use sqmofr directly for Balance (SQM), fallback to computing from qty
+      sqm = Number.isFinite(sqmBal)
+        ? sqmBal
+        : qtyToSqm({
+            itemType: row.type,
+            lengthCm: row.length,
+            widthCm: row.width,
+            sheetsPerBox: row.sheetsPerBox,
+            valueQty: qty,
+          });
     }
-  } else {
-    if (Number.isFinite(ofrSqmBal)) {
-      sqm = ofrSqmBal;
-      qty =
-        typeLower === "sqm"
-          ? ofrSqmBal
-          : sqmToQty({
-              itemType: row.type,
-              lengthCm: row.length,
-              widthCm: row.width,
-              sheetsPerBox: row.sheetsPerBox,
-              valueSqm: ofrSqmBal,
-            });
-    } else if (Number.isFinite(nonOfrBal)) {
-      qty = nonOfrBal;
-      sqm = qtyToSqm({
-        itemType: row.type,
-        lengthCm: row.length,
-        widthCm: row.width,
-        sheetsPerBox: row.sheetsPerBox,
-        valueQty: qty,
-      });
-      if (typeLower === "sqm") sqm = qty;
-    }
+  } else if (Number.isFinite(sqmBal)) {
+    // ✅ fallback only: no quantityofr, derive qty from sqmofr
+    sqm = sqmBal;
+    qty =
+      typeLower === "sqm"
+        ? sqmBal
+        : sqmToQty({
+            itemType: row.type,
+            lengthCm: row.length,
+            widthCm: row.width,
+            sheetsPerBox: row.sheetsPerBox,
+            valueSqm: sqmBal,
+          });
   }
 
   return {
@@ -362,7 +349,6 @@ export default function InventoryBrowser() {
     }
   };
 
-  // ✅ FIXED fetchAllForReport — uses totalRows to know when to stop
   const fetchAllForReport = async () => {
     setReportLoading(true);
     try {
@@ -377,8 +363,7 @@ export default function InventoryBrowser() {
       if (parsed.thickness != null) baseParams.thickness = String(parsed.thickness);
       if (parsed.length != null) baseParams.length = String(parsed.length);
       if (parsed.width != null) baseParams.width = String(parsed.width);
-      if (parsed.sheetsPerBox != null)
-        baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
+      if (parsed.sheetsPerBox != null) baseParams.sheetsPerBox = String(parsed.sheetsPerBox);
       if (qFinal) baseParams.q = qFinal;
       if (type) baseParams.type = type;
       if (origin) baseParams.origin = origin;
@@ -386,7 +371,6 @@ export default function InventoryBrowser() {
       const BIG_LIMIT = 500;
       let aggAll = [];
       let pg = 1;
-      let knownTotal = null; // ✅ will be set from first response
 
       while (true) {
         const params = {
@@ -407,21 +391,8 @@ export default function InventoryBrowser() {
 
         aggAll = aggAll.concat(data);
 
-        // ✅ grab the real total from the first response
-        if (knownTotal === null) {
-          const t = Number(json?.totalRows ?? json?.total ?? 0);
-          knownTotal = Number.isFinite(t) && t > 0 ? t : null;
-        }
-
-        // ✅ stop conditions:
-        // 1) we have at least as many items as the backend says exist
-        // 2) OR the backend explicitly says no more
-        // 3) OR the page returned fewer items than the limit (last page)
-        const backendSaysNoMore = json?.hasMore === false;
-        const gotEverything = knownTotal !== null && aggAll.length >= knownTotal;
-        const shortPage = data.length < BIG_LIMIT;
-
-        if (gotEverything || backendSaysNoMore || shortPage) break;
+        const hasMorePages = json?.hasMore === true;
+        if (!hasMorePages) break;
 
         pg += 1;
       }
@@ -453,11 +424,13 @@ export default function InventoryBrowser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chips, type, origin, page, limit, includeZeros, currentLedgerPath, asOf]);
 
+  // ✅ batch qty comes directly from balanceOFR which backend now sets = quantityofr
   const batchQtyUnits = (batch, header) => {
     if (batch?.balanceOFR !== undefined && batch?.balanceOFR !== null) {
       const n = Number(batch.balanceOFR);
       if (Number.isFinite(n)) return n;
     }
+    // fallback: compute from sqmofr
     if (batch?.balanceOFRSqm !== undefined && batch?.balanceOFRSqm !== null) {
       const sqmN = Number(batch.balanceOFRSqm);
       if (Number.isFinite(sqmN)) {
