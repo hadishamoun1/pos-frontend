@@ -1097,6 +1097,42 @@ const JournalVoucherPage = () => {
     setActiveRowIndex(null);
   };
 
+  const handleClearEntries = () => {
+  if (!isEditing) return;
+  setEntries([
+    {
+      rid: makeRid(),
+      detailId: null,
+      originalAccountId: null,
+      originalCustomerId: null,
+      originalSupplierId: null,
+      accountId: null,
+      customerId: null,
+      supplierId: null,
+      accountNumber: "",
+      accountName: "",
+      currency: "USD",
+      debit: "",
+      debitOFR: "",
+      credit: "",
+      creditOFR: "",
+      exchangeRate: "89500",
+      exchangeRateEURtoUSD: "",
+      debitUSD: "",
+      debitUSDOFR: "",
+      creditUSD: "",
+      creditUSDOFR: "",
+      debitEx: "",
+      debitExOFR: "",
+      creditEx: "",
+      creditExOFR: "",
+      description: "",
+      documentNbr: "",
+    },
+  ]);
+  setActiveRowIndex(null);
+};
+
   const handleStartEdit = () => {
     if (!isSaved || !editingId) {
       setNotification({ visible: true, type: "warning", message: "Open or save a journal voucher first, then click Edit.", onConfirm: null });
@@ -1397,6 +1433,9 @@ const JournalVoucherPage = () => {
 
             <div className="header-actions">
               <button className="new-btn" onClick={handleReset}>New</button>
+{isEditing && (
+  <button className="new-btn" onClick={handleClearEntries}>Clear</button>
+)}
               <button className="export-journal-voucher-btn" onClick={handleExportToExcel} disabled={!isSaved} title={!isSaved ? "Open or save a voucher first" : "Export to Excel"}>📊 Export</button>
               <button className="edit-journal-voucher" onClick={handleStartEdit} disabled={editDisabled} title={!isSaved ? "Open or save a voucher first" : ""}>Edit</button>
               {isEditing && (<button className="edit-journal-voucher" onClick={handleCancelEdit}>Cancel Edit</button>)}
