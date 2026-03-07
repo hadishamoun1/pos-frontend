@@ -590,6 +590,310 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+
+/* ===== Invoice Grouping (By Invoice view) ===== */
+.profitability-report__invoice-grouping {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.profitability-report__invoice-group {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.profitability-report__invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #276749 0%, #1a4731 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profitability-report__invoice-header:hover {
+  background: linear-gradient(135deg, #1a4731 0%, #0f2e1f 100%);
+}
+
+/* RTN invoices get a red tint */
+.profitability-report__invoice-header--return {
+  background: linear-gradient(135deg, #822727 0%, #5a1a1a 100%);
+}
+
+.profitability-report__invoice-header--return:hover {
+  background: linear-gradient(135deg, #5a1a1a 0%, #3b1010 100%);
+}
+
+/* Left side: identity */
+.profitability-report__invoice-identity {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profitability-report__invoice-id-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.profitability-report__invoice-number {
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profitability-report__invoice-meta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.profitability-report__invoice-date {
+  font-size: 14px;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.profitability-report__invoice-customer {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.profitability-report__invoice-item-count {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Right side: totals — reuses same pattern as customer/item headers */
+.profitability-report__invoice-totals {
+  display: flex;
+  gap: 30px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Expanded items table container */
+.profitability-report__invoice-items {
+  padding: 20px;
+  background: #f8f9fa;
+  overflow-x: auto;
+}
+
+/* ===== Unit Type Badges ===== */
+/* Add these to your existing Profitability-report.css */
+
+.profitability-report__unit-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* SQM — blue */
+.profitability-report__unit-badge--sqm {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Box — amber */
+.profitability-report__unit-badge--box {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Sheet — purple */
+.profitability-report__unit-badge--sheet {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+/* Unit — teal */
+.profitability-report__unit-badge--unit {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* ===== Item name row (name + unit badge side by side in by-item header) ===== */
+.profitability-report__item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ===== Invoice Grouping (By Invoice view) ===== */
+.profitability-report__invoice-grouping {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.profitability-report__invoice-group {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.profitability-report__invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #276749 0%, #1a4731 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profitability-report__invoice-header:hover {
+  background: linear-gradient(135deg, #1a4731 0%, #0f2e1f 100%);
+}
+
+.profitability-report__invoice-header--return {
+  background: linear-gradient(135deg, #822727 0%, #5a1a1a 100%);
+}
+
+.profitability-report__invoice-header--return:hover {
+  background: linear-gradient(135deg, #5a1a1a 0%, #3b1010 100%);
+}
+
+.profitability-report__invoice-identity {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+  min-width: 0;
+}
+
+.profitability-report__invoice-id-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.profitability-report__invoice-number {
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profitability-report__invoice-meta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.profitability-report__invoice-date {
+  font-size: 14px;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.profitability-report__invoice-customer {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.profitability-report__invoice-item-count {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.profitability-report__invoice-totals {
+  display: flex;
+  gap: 30px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.profitability-report__invoice-items {
+  padding: 20px;
+  background: #f8f9fa;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .profitability-report__invoice-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .profitability-report__invoice-totals {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .profitability-report__invoice-identity {
+    flex-wrap: wrap;
+  }
+
+  .profitability-report__invoice-customer {
+    max-width: 100%;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profitability-report__invoice-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .profitability-report__invoice-totals {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .profitability-report__invoice-identity {
+    flex-wrap: wrap;
+  }
+
+  .profitability-report__invoice-customer {
+    max-width: 100%;
+  }
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .profitability-report__filter-row {
