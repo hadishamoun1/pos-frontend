@@ -27,6 +27,8 @@ export default function RecomputeCostsPanel() {
 
   const readerRef  = useRef(null); // ReadableStreamDefaultReader
   const timerRef   = useRef(null);
+  const pollRef    = useRef(null); // fallback polling interval
+  const jobIdRef   = useRef(null); // stored so polling can use it
 
   // Cleanup on unmount
   useEffect(() => () => stopAll(), []);
@@ -35,6 +37,53 @@ export default function RecomputeCostsPanel() {
     try { readerRef.current?.cancel(); } catch (_) {}
     readerRef.current = null;
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (pollRef.current)  { clearInterval(pollRef.current);  pollRef.current  = null; }
+  };
+
+  // Called when SSE drops — polls status endpoint until done/error
+  const startPolling = (jobId) => {
+    if (pollRef.current) return; // already polling
+    setJobState((prev) => ({
+      ...prev,
+      message: (prev?.message || '') + ' (reconnecting...)',
+    }));
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await axiosClient.get(`/recompute/status/${jobId}`);
+        const data = res.data;
+
+        if (data.status === 'done') {
+          stopAll();
+          setJobState({
+            status: 'done',
+            phase: 'done',
+            current: 1,
+            total: 1,
+            message: 'Complete!',
+            result: data.result,
+          });
+        } else if (data.status === 'error') {
+          stopAll();
+          setJobState({
+            status: 'error',
+            phase: data.progress?.phase || 'snapshots',
+            current: 0,
+            total: 0,
+            message: data.error || 'Unknown error',
+          });
+        } else if (data.progress) {
+          // still running — update phase display from last known progress
+          setJobState((prev) => ({
+            ...prev,
+            ...data.progress,
+            status: 'running',
+          }));
+        }
+      } catch (_) {
+        // network still down — keep polling silently
+      }
+    }, 3000);
   };
 
   const runRecompute = async () => {
@@ -46,6 +95,7 @@ export default function RecomputeCostsPanel() {
       // 1. POST to start job → get jobId back immediately
       const res = await axiosClient.post('/recompute/recompute-costs', { fromDate });
       const { jobId } = res.data;
+      jobIdRef.current = jobId;
 
       // 2. Start elapsed timer
       timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
@@ -94,16 +144,14 @@ export default function RecomputeCostsPanel() {
           }
         }
         stopAll();
+        // Stream ended without a 'done' event — backend may still be running
+        if (jobIdRef.current) startPolling(jobIdRef.current);
       };
 
       read().catch((err) => {
         if (err?.name === 'AbortError') return; // user cancelled
-        setJobState((prev) => ({
-          ...prev,
-          status: 'error',
-          message: err?.message || 'Stream connection lost',
-        }));
-        stopAll();
+        // ⚠️ SSE stream dropped but backend may still be running — fall back to polling
+        if (jobIdRef.current) startPolling(jobIdRef.current);
       });
 
     } catch (err) {
@@ -129,20 +177,24 @@ export default function RecomputeCostsPanel() {
 
   const currentPhaseIdx = jobState ? PHASES.findIndex((p) => p.key === jobState.phase) : -1;
 
-  const replayPct =
-    jobState?.phase === 'replaying' && jobState.total > 0
+  const subPct = (phase) =>
+    jobState?.phase === phase && jobState.total > 0
       ? Math.round((jobState.current / jobState.total) * 100)
-      : isDone ? 100 : 0;
+      : 0;
 
-  // Overall progress across all phases (each phase = 1 unit, replaying uses sub-progress)
-  const totalPhases     = PHASES.length - 1; // exclude 'done' marker
+  const replayPct   = isDone ? 100 : subPct('replaying');
+  const snapshotPct = isDone ? 100 : subPct('snapshots');
+
+  // Overall progress — replaying and snapshots use sub-progress
+  const totalPhases     = PHASES.length - 1;
+  const phaseSubPct = jobState?.phase === 'replaying' ? replayPct / 100
+                    : jobState?.phase === 'snapshots'  ? snapshotPct / 100
+                    : 0;
   const overallProgress = isDone
     ? 100
     : currentPhaseIdx < 0
     ? 0
-    : Math.round(
-        ((currentPhaseIdx + (jobState?.phase === 'replaying' ? replayPct / 100 : 0)) / totalPhases) * 100,
-      );
+    : Math.round(((currentPhaseIdx + phaseSubPct) / totalPhases) * 100);
 
   // ─── Styles ────────────────────────────────────────────────────────────────
   const s = {
@@ -373,7 +425,20 @@ export default function RecomputeCostsPanel() {
                         <span>{replayPct}%</span>
                       </div>
                       <div style={s.subBar}>
-                        <div style={s.subFill} />
+                        <div style={{ ...s.subFill, width: `${replayPct}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-progress bar for snapshots phase */}
+                  {isCurrent && phase.key === 'snapshots' && jobState.total > 0 && (
+                    <div style={s.subBarWrap}>
+                      <div style={s.subBarMeta}>
+                        <span>{jobState.current} / {jobState.total} invoices</span>
+                        <span>{snapshotPct}%</span>
+                      </div>
+                      <div style={s.subBar}>
+                        <div style={{ ...s.subFill, width: `${snapshotPct}%` }} />
                       </div>
                     </div>
                   )}
