@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import axiosClient from '../api/axiosClient';
+import { axiosClient } from '../api/axiosClient';
 
 // ─── Phase definitions (must match backend emitProgress phase strings) ────────
 const PHASES = [
