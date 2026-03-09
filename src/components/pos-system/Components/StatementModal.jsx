@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import "./StatementModal.css";
 import StatementReportModal from "./StatementReportModal";
-import { axiosClient } from "../../api/axiosClient"; // ✅ use your api client
+import { axiosClient } from "../../api/axiosClient";
 
 // ✅ Custom DateInput Component with DD/MM/YYYY format
-function DateInput({ value, min, onChange, disabled, label }) {
+// companies & companyKey are NOT here — they live in StatementModal below
+function DateInput({ value, min, onChange, disabled }) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [displayValue, setDisplayValue] = useState("");
   const inputRef = useRef(null);
@@ -19,7 +20,6 @@ function DateInput({ value, min, onChange, disabled, label }) {
 
   useEffect(() => {
     if (!showCalendar) return;
-
     const handleClickOutside = (e) => {
       if (
         calendarRef.current &&
@@ -30,7 +30,6 @@ function DateInput({ value, min, onChange, disabled, label }) {
         setShowCalendar(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showCalendar]);
@@ -38,26 +37,16 @@ function DateInput({ value, min, onChange, disabled, label }) {
   const handleInputChange = (e) => {
     const input = e.target.value;
     setDisplayValue(input);
-
-    // Try to parse DD/MM/YYYY
     const match = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (match) {
       const [, day, month, year] = match;
-      const isoDate = `${year}-${month}-${day}`;
-      onChange(isoDate);
+      onChange(`${year}-${month}-${day}`);
     }
   };
 
   const handleCalendarDateClick = (isoDate) => {
     onChange(isoDate);
     setShowCalendar(false);
-  };
-
-  const changeMonth = (delta) => {
-    const current = value ? new Date(`${value}T00:00:00`) : new Date();
-    const newDate = new Date(current.getFullYear(), current.getMonth() + delta, 1);
-    const newYMD = toYMDLocal(newDate);
-    onChange(newYMD);
   };
 
   const toYMDLocal = (d) => {
@@ -67,33 +56,31 @@ function DateInput({ value, min, onChange, disabled, label }) {
     return `${y}-${m}-${day}`;
   };
 
+  const changeMonth = (delta) => {
+    const current = value ? new Date(`${value}T00:00:00`) : new Date();
+    const newDate = new Date(current.getFullYear(), current.getMonth() + delta, 1);
+    onChange(toYMDLocal(newDate));
+  };
+
   const generateCalendar = () => {
     const current = value ? new Date(`${value}T00:00:00`) : new Date();
     const year = current.getFullYear();
     const month = current.getMonth();
-
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startDay = firstDay.getDay();
     const daysInMonth = lastDay.getDate();
-
     const days = [];
-    for (let i = 0; i < startDay; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
-
+    for (let i = 0; i < startDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
     return { year, month, days };
   };
 
   const { year, month, days } = generateCalendar();
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "July", "August", "September", "October", "November", "December",
   ];
-
   const minDate = min ? new Date(`${min}T00:00:00`) : null;
 
   return (
@@ -125,80 +112,34 @@ function DateInput({ value, min, onChange, disabled, label }) {
             marginTop: "4px",
           }}
         >
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            justifyContent: "space-between",
-            marginBottom: "8px",
-            gap: "8px"
-          }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", gap: "8px" }}>
             <button
               type="button"
               onClick={() => changeMonth(-1)}
-              style={{
-                background: "transparent",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                padding: "4px 8px",
-                cursor: "pointer",
-                fontSize: "16px",
-                lineHeight: "1",
-              }}
+              style={{ background: "transparent", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "16px", lineHeight: "1" }}
               title="Previous month"
-            >
-              ←
-            </button>
+            >←</button>
             <div style={{ fontWeight: "bold", textAlign: "center", flex: 1 }}>
               {monthNames[month]} {year}
             </div>
             <button
               type="button"
               onClick={() => changeMonth(1)}
-              style={{
-                background: "transparent",
-                border: "1px solid #ddd",
-                borderRadius: "4px",
-                padding: "4px 8px",
-                cursor: "pointer",
-                fontSize: "16px",
-                lineHeight: "1",
-              }}
+              style={{ background: "transparent", border: "1px solid #ddd", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "16px", lineHeight: "1" }}
               title="Next month"
-            >
-              →
-            </button>
+            >→</button>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 32px)",
-              gap: "2px",
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 32px)", gap: "2px" }}>
             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-              <div
-                key={d}
-                style={{
-                  textAlign: "center",
-                  fontSize: "11px",
-                  fontWeight: "bold",
-                  padding: "4px 0",
-                }}
-              >
+              <div key={d} style={{ textAlign: "center", fontSize: "11px", fontWeight: "bold", padding: "4px 0" }}>
                 {d}
               </div>
             ))}
             {days.map((day, idx) => {
-              if (!day) {
-                return <div key={`empty-${idx}`} />;
-              }
-
-              const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-                day
-              ).padStart(2, "0")}`;
+              if (!day) return <div key={`empty-${idx}`} />;
+              const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const isDisabled = minDate && new Date(`${isoDate}T00:00:00`) < minDate;
               const isSelected = isoDate === value;
-
               return (
                 <button
                   key={day}
@@ -226,6 +167,9 @@ function DateInput({ value, min, onChange, disabled, label }) {
   );
 }
 
+// ─────────────────────────────────────────────
+//  StatementModal
+// ─────────────────────────────────────────────
 const StatementModal = ({
   isOpen,
   onClose,
@@ -234,13 +178,24 @@ const StatementModal = ({
   customerName,
 }) => {
   const [type, setType] = useState("ALL");
-
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
 
-  // ✅ Minimum date restriction
+  // ✅ Fetch active company directly from the API — no prop needed
+  const [companyKey, setCompanyKey] = useState("shamoun");
+  useEffect(() => {
+    axiosClient.get("/company")
+      .then(({ data }) => {
+        const active = Array.isArray(data) ? data.find((c) => c.isActive) : null;
+        setCompanyKey(
+          active?.companyName?.toLowerCase().includes("revo") ? "revo" : "shamoun"
+        );
+      })
+      .catch(() => setCompanyKey("shamoun"));
+  }, []);
+
   const MIN_DATE = "2026-01-02";
 
   const toYMDLocal = (d) => {
@@ -248,21 +203,6 @@ const StatementModal = ({
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
-  };
-
-  // ✅ Convert YYYY-MM-DD to DD/MM/YYYY for display
-  const formatDateDisplay = (ymdString) => {
-    if (!ymdString) return "";
-    const [year, month, day] = ymdString.split("-");
-    return `${day}/${month}/${year}`;
-  };
-
-  // ✅ Convert DD/MM/YYYY to YYYY-MM-DD for internal use
-  const parseDateInput = (displayString) => {
-    if (!displayString) return "";
-    const [day, month, year] = displayString.split("/");
-    if (!day || !month || !year) return "";
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   };
 
   const addMonthsSafe = (date, deltaMonths) => {
@@ -275,16 +215,12 @@ const StatementModal = ({
     return d;
   };
 
-  // ✅ Calculate initial dates with MIN_DATE check
   const getInitialDates = () => {
     const base = defaultDate ? new Date(`${defaultDate}T00:00:00`) : new Date();
     const fromDate = addMonthsSafe(base, -1);
     const fromYMD = toYMDLocal(fromDate);
     const toYMD = toYMDLocal(base);
-    
-    // Ensure from date is not before MIN_DATE
     const adjustedFrom = fromYMD < MIN_DATE ? MIN_DATE : fromYMD;
-    
     return { from: adjustedFrom, to: toYMD };
   };
 
@@ -300,28 +236,20 @@ const StatementModal = ({
       setData(null);
       setErr("");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, defaultDate]);
 
   const fmt = (v) => {
     if (v === null || v === undefined || v === "") return "0.00";
     const n = typeof v === "string" ? Number(v.replace(/,/g, "")) : Number(v);
     if (!isFinite(n)) return "0.00";
-    return n.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Loading overlay (uses CSS classes)
   function LoadingScreen({ show, text = "Generating…" }) {
     if (!show) return null;
     return (
-      <div
-        className="stmt-loading-overlay"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-      >
+      <div className="stmt-loading-overlay" role="status" aria-live="polite" aria-busy="true">
         <div className="stmt-loading-card">
           <div className="stmt-spinner" aria-hidden="true" />
           <div className="stmt-loading-text">{text}</div>
@@ -332,31 +260,19 @@ const StatementModal = ({
 
   const fetchStatement = async () => {
     if (!customerId) return;
-    
-    // ✅ Validate dates before fetching
-    if (from < MIN_DATE) {
-      setErr(`From date cannot be before ${MIN_DATE}`);
-      return;
-    }
-    if (to < MIN_DATE) {
-      setErr(`To date cannot be before ${MIN_DATE}`);
-      return;
-    }
-    
+    if (from < MIN_DATE) { setErr(`From date cannot be before ${MIN_DATE}`); return; }
+    if (to < MIN_DATE) { setErr(`To date cannot be before ${MIN_DATE}`); return; }
+
     setLoading(true);
     setErr("");
     setData(null);
-
     try {
       const params = { from, to };
       if (type !== "ALL") params.type = type;
-
-      // ✅ FIX: relative URL ONLY (axiosClient already points to /api)
       const res = await axiosClient.get(
         `/journal-vouchers/statements/customers/${customerId}`,
         { params }
       );
-
       setData(res.data);
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
@@ -365,26 +281,11 @@ const StatementModal = ({
     }
   };
 
-  // ✅ Handle date change with validation
-  const handleFromChange = (newFrom) => {
-    if (newFrom < MIN_DATE) {
-      setFrom(MIN_DATE);
-    } else {
-      setFrom(newFrom);
-    }
-  };
-
-  const handleToChange = (newTo) => {
-    if (newTo < MIN_DATE) {
-      setTo(MIN_DATE);
-    } else {
-      setTo(newTo);
-    }
-  };
+  const handleFromChange = (newFrom) => setFrom(newFrom < MIN_DATE ? MIN_DATE : newFrom);
+  const handleToChange   = (newTo)   => setTo(newTo   < MIN_DATE ? MIN_DATE : newTo);
 
   if (!isOpen) return null;
 
-  // Prefer the name passed from parent; fallback to API data if needed
   const reportCustomerName =
     customerName ||
     data?.customerName ||
@@ -398,24 +299,14 @@ const StatementModal = ({
       <div className="pos-modal" onClick={(e) => e.stopPropagation()}>
         <div className="pos-modal-header">
           <h2>كشف حساب</h2>
-          <button
-            className="pos-modal-close"
-            onClick={onClose}
-            disabled={loading}
-          >
-            ✕
-          </button>
+          <button className="pos-modal-close" onClick={onClose} disabled={loading}>✕</button>
         </div>
 
         <div className="pos-modal-controls">
           <div className="controls-left">
             <label>
               Type
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                disabled={loading}
-              >
+              <select value={type} onChange={(e) => setType(e.target.value)} disabled={loading}>
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="ALL">All</option>
@@ -424,22 +315,12 @@ const StatementModal = ({
 
             <label>
               From
-              <DateInput
-                value={from}
-                min={MIN_DATE}
-                onChange={handleFromChange}
-                disabled={loading}
-              />
+              <DateInput value={from} min={MIN_DATE} onChange={handleFromChange} disabled={loading} />
             </label>
 
             <label>
               To
-              <DateInput
-                value={to}
-                min={MIN_DATE}
-                onChange={handleToChange}
-                disabled={loading}
-              />
+              <DateInput value={to} min={MIN_DATE} onChange={handleToChange} disabled={loading} />
             </label>
 
             <button
@@ -467,22 +348,10 @@ const StatementModal = ({
         {data && (
           <div className="pos-modal-body">
             <div className="stmt-summary">
-              <div>
-                <strong>رصيد سابق:</strong>{" "}
-                {fmt(data.openingBalance?.toFixed?.(2) ?? 0)}
-              </div>
-              <div>
-                <strong>مجموع الفواتير:</strong>{" "}
-                {fmt(data.totals?.totalDebit?.toFixed?.(2) ?? 0)}
-              </div>
-              <div>
-                <strong>مجموع الدفعات:</strong>{" "}
-                {fmt(data.totals?.totalCredit?.toFixed?.(2) ?? 0)}
-              </div>
-              <div>
-                <strong>رصيد:</strong>{" "}
-                {fmt(data.closingBalance?.toFixed?.(2) ?? 0)}
-              </div>
+              <div><strong>رصيد سابق:</strong> {fmt(data.openingBalance?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>مجموع الفواتير:</strong> {fmt(data.totals?.totalDebit?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>مجموع الدفعات:</strong> {fmt(data.totals?.totalCredit?.toFixed?.(2) ?? 0)}</div>
+              <div><strong>رصيد:</strong> {fmt(data.closingBalance?.toFixed?.(2) ?? 0)}</div>
             </div>
 
             <div className="stmt-table-wrap">
@@ -514,6 +383,7 @@ const StatementModal = ({
           </div>
         )}
 
+        {/* ✅ companyKey is now properly defined in this scope */}
         <StatementReportModal
           open={showReportModal}
           onClose={() => setShowReportModal(false)}
@@ -522,6 +392,7 @@ const StatementModal = ({
           to={to}
           type={type}
           customerName={reportCustomerName}
+          company={companyKey}
         />
 
         <LoadingScreen
