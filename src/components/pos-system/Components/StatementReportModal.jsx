@@ -63,14 +63,19 @@ const StatementReportModal = ({
   // Revo: always show its logo header
   // Shamoun: show header only when customerInvoiceType is "S" or "BOTH" — never for "G"
   let showHeader = false;
-  if (isRevo) {
-    showHeader = true;
+if (isRevo) {
+  showHeader = true;
+} else {
+  if (uiType === "G") {
+    // User explicitly chose G — never show header, no need to check invoice type
+    showHeader = false;
   } else {
+    // Type is ALL or S — check the customer's invoice type from API
     if (customerInvoiceType === "S") showHeader = true;
     else if (customerInvoiceType === "BOTH") showHeader = true;
     else if (customerInvoiceType === "G") showHeader = false;
   }
-
+}
   const closingBalance = Number(
     data?.closingBalance ?? (items.length ? items[items.length - 1]?.balanceAfter : openingBalance) ?? 0
   );
