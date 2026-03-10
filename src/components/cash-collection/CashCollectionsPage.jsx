@@ -479,7 +479,7 @@ export default function CashCollectionsPage() {
     return { rows: out };
   }
 
-  function buildDraftFromFilteredRows(allRows) {
+function buildDraftFromFilteredRows(allRows) {
     const list = Array.isArray(allRows) ? allRows : [];
     if (!list.length) return null;
 
@@ -488,7 +488,7 @@ export default function CashCollectionsPage() {
       return { rows: [], __info: "ALL_ALREADY_CONVERTED" };
     }
 
-    const byCustomer = new Map();
+    const out = [];
 
     for (const r of pending) {
       const cid = String(r.customerId ?? "");
@@ -499,63 +499,25 @@ export default function CashCollectionsPage() {
       const amt = Number(r?.amount || 0);
       const method = String(r?.method || "CASH");
 
-      if (!byCustomer.has(cid)) {
-        byCustomer.set(cid, {
-          customerId: cid,
-          customerName,
-          usd: 0,
-          ll: 0,
-          usdIds: [],
-          llIds: [],
-          method,
-        });
-      }
+      const currency =
+        code === "LL" || code === "LBP" || code.includes("LBP") || code.includes("LL")
+          ? "LL"
+          : "USD";
 
-      const g = byCustomer.get(cid);
-
-      if (code.includes("USD") || code === "$") {
-        g.usd += Number.isFinite(amt) ? amt : 0;
-        g.usdIds.push(r.id);
-      } else if (code === "LL" || code === "LBP" || code.includes("LBP") || code.includes("LL")) {
-        g.ll += Number.isFinite(amt) ? amt : 0;
-        g.llIds.push(r.id);
-      } else {
-        g.usd += Number.isFinite(amt) ? amt : 0;
-        g.usdIds.push(r.id);
-      }
-    }
-
-    const out = [];
-    for (const g of byCustomer.values()) {
-      const common = {
-        customerId: String(g.customerId),
-        customerName: g.customerName,
+      out.push({
+        customerId: cid,
+        customerName,
         date: todayYmd(),
         type: "S",
-        pmtType: mapMethodToPmtType(filters.method || g.method || "CASH"),
+        pmtType: mapMethodToPmtType(filters.method || method),
         invoiceId: "",
-        comments: "",
+        comments: r?.notes || "",
         exchangeRate: "89,500",
-      };
-
-      if (g.usd > 0) {
-        out.push({
-          ...common,
-          currency: "USD",
-          cashNumber: String(g.usd),
-          amountExchanged: "",
-          sourceCashCollectionIds: g.usdIds,
-        });
-      }
-      if (g.ll > 0) {
-        out.push({
-          ...common,
-          currency: "LL",
-          cashNumber: String(g.ll),
-          amountExchanged: "",
-          sourceCashCollectionIds: g.llIds,
-        });
-      }
+        currency,
+        cashNumber: String(Number.isFinite(amt) ? amt : 0),
+        amountExchanged: "",
+        sourceCashCollectionIds: [r.id],
+      });
     }
 
     return { rows: out };
