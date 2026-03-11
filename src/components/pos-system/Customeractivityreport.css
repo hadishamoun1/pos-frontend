@@ -1,0 +1,376 @@
+/* CustomerActivityReport.css */
+
+.car-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #1a1a2e;
+}
+
+/* ── Header ── */
+.car-page-header {
+  margin-bottom: 20px;
+  border-bottom: 2px solid #1a1a2e;
+  padding-bottom: 12px;
+}
+
+.car-page-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.car-page-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1a1a2e;
+}
+
+.car-page-subtitle {
+  font-size: 14px;
+  color: #888;
+  font-weight: 400;
+}
+
+/* ── Controls ── */
+.car-controls {
+  background: #f7f7fb;
+  border: 1px solid #e2e2ec;
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.car-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.car-controls-row--actions {
+  align-items: center;
+  border-top: 1px solid #e2e2ec;
+  padding-top: 12px;
+}
+
+.car-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.car-field input,
+.car-field select {
+  padding: 7px 10px;
+  border: 1px solid #d0d0df;
+  border-radius: 5px;
+  font-size: 13px;
+  color: #1a1a2e;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 130px;
+}
+
+.car-field input:focus,
+.car-field select:focus {
+  border-color: #4a4aaa;
+}
+
+.car-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+}
+
+/* ── Buttons ── */
+.car-btn {
+  padding: 8px 20px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.car-btn--primary {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.car-btn--primary:hover:not(:disabled) {
+  background: #2d2d50;
+}
+
+.car-btn--ghost {
+  background: transparent;
+  color: #1a1a2e;
+  border: 1.5px solid #1a1a2e;
+}
+
+.car-btn--ghost:hover:not(:disabled) {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.car-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.car-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: car-spin 0.7s linear infinite;
+}
+
+@keyframes car-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error ── */
+.car-error {
+  background: #fff1f1;
+  border: 1px solid #f5c2c2;
+  color: #b91c1c;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* ── Summary Cards ── */
+.car-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.car-summary-card {
+  background: #fff;
+  border: 1px solid #e2e2ec;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 3px solid #1a1a2e;
+}
+
+.car-summary-card--invoices { border-top-color: #4a6cf7; }
+.car-summary-card--paid     { border-top-color: #16a34a; }
+.car-summary-card--balance  { border-top-color: #d97706; }
+
+.car-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+}
+
+.car-summary-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a2e;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Search Bar ── */
+.car-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.car-search-input {
+  flex: 1;
+  max-width: 320px;
+  padding: 8px 12px;
+  border: 1px solid #d0d0df;
+  border-radius: 5px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.car-search-input:focus {
+  border-color: #4a4aaa;
+}
+
+.car-search-count {
+  font-size: 12px;
+  color: #888;
+}
+
+/* ── Empty State ── */
+.car-empty {
+  text-align: center;
+  padding: 48px 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* ── Currency Groups ── */
+.car-currency-group {
+  margin-bottom: 24px;
+  border: 1px solid #e2e2ec;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.car-currency-header {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.car-currency-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.car-currency-totals {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: #ccd;
+}
+
+.car-currency-totals strong {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Table ── */
+.car-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.car-table thead tr {
+  background: #2d2d44;
+}
+
+.car-table th {
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #ccd;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.car-th-num {
+  text-align: right !important;
+}
+
+.car-table tbody tr {
+  border-bottom: 1px solid #f0f0f6;
+  transition: background 0.1s;
+}
+
+.car-table tbody tr:hover {
+  background: #f4f4fb;
+}
+
+.car-table tbody tr:nth-child(even) {
+  background: #fafafd;
+}
+
+.car-table tbody tr:nth-child(even):hover {
+  background: #f0f0f9;
+}
+
+.car-row-neg {
+  background: #fff8f8 !important;
+}
+
+.car-row-neg:hover {
+  background: #fff0f0 !important;
+}
+
+.car-table td {
+  padding: 8px 12px;
+  color: #222;
+}
+
+.car-td-acc {
+  color: #777;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.car-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12.5px;
+}
+
+.car-neg {
+  color: #b91c1c !important;
+  font-weight: 700;
+}
+
+.car-pos {
+  color: #15803d;
+}
+
+/* ── Tfoot ── */
+.car-tfoot-row td {
+  padding: 10px 12px;
+  background: #eeeef6;
+  border-top: 2px solid #1a1a2e;
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .car-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .car-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .car-field input,
+  .car-field select {
+    width: 100%;
+    min-width: unset;
+  }
+}

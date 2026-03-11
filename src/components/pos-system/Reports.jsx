@@ -5,9 +5,8 @@ import TrialBalance from "./TrialBalance";
 import AccountStatement from "./AccountStatement";
 import CostAnalysis from "./CostAnalysis";
 import CustomerBalances from "./CustomerBalances";
-
-// ✅ Import Profitability (adjust path if yours is different)
 import ProfitabilityReport from "./Profitability-report";
+import CustomerActivityReport from "./Customeractivityreport"; // ✅ NEW
 
 // ✅ Permission check helper
 function hasPerm(perm) {
@@ -25,45 +24,55 @@ function hasPerm(perm) {
 }
 
 const TABS = [
-  { 
-    key: "trial-balance", 
+  {
+    key: "trial-balance",
     label: "Trial Balance / ميزان المراجعة",
-    perm: "reports.trialBalance"
+    perm: "reports.trialBalance",
   },
-  { 
-    key: "account-statement", 
+  {
+    key: "account-statement",
     label: "Account Statement / كشف حساب",
-    perm: "reports.accountStatement"
+    perm: "reports.accountStatement",
   },
-  { 
-    key: "cost-analysis", 
+  {
+    key: "cost-analysis",
     label: "Cost Analysis / تحليل الكلفة",
-    perm: "reports.costAnalysis"
+    perm: "reports.costAnalysis",
   },
-  { 
-    key: "customer-balances", 
+  {
+    key: "customer-balances",
     label: "Customer Balances / أرصدة الزبائن",
-    perm: "reports.customerBalances"
+    perm: "reports.customerBalances",
   },
-  // ✅ NEW TAB with permission
-  { 
-    key: "profitability", 
+  {
+    key: "profitability",
     label: "Profitability / الربحية",
-    perm: "reports.profitability" 
+    perm: "reports.profitability",
   },
-  { 
-    key: "aging", 
-    label: "A/R Aging (soon)", 
-    disabled: true 
+  // ✅ NEW TAB
+  {
+    key: "customer-activity",
+    label: "Customer Activity / نشاط الزبائن",
+    perm: "reports.customerBalances", // reuse same perm or create reports.customerActivity
+  },
+  {
+    key: "aging",
+    label: "A/R Aging (soon)",
+    disabled: true,
   },
 ];
 
 export default function ReportsPage() {
-  // ✅ Filter tabs based on permissions
-  const visibleTabs = TABS.filter(t => !t.perm || hasPerm(t.perm));
-  
-  // ✅ Set first visible tab as default
+  const visibleTabs = TABS.filter((t) => !t.perm || hasPerm(t.perm));
   const [active, setActive] = useState(visibleTabs[0]?.key || "trial-balance");
+
+  const noAccess =
+    (active === "trial-balance"       && !hasPerm("reports.trialBalance"))      ||
+    (active === "account-statement"   && !hasPerm("reports.accountStatement"))  ||
+    (active === "cost-analysis"       && !hasPerm("reports.costAnalysis"))       ||
+    (active === "customer-balances"   && !hasPerm("reports.customerBalances"))  ||
+    (active === "profitability"       && !hasPerm("reports.profitability"))      ||
+    (active === "customer-activity"   && !hasPerm("reports.customerBalances"));
 
   return (
     <div className="reports-page">
@@ -81,20 +90,16 @@ export default function ReportsPage() {
       </div>
 
       <div className="reports-panel">
-        {active === "trial-balance" && hasPerm("reports.trialBalance") && <TrialBalance />}
+        {active === "trial-balance"     && hasPerm("reports.trialBalance")     && <TrialBalance />}
         {active === "account-statement" && hasPerm("reports.accountStatement") && <AccountStatement />}
-        {active === "cost-analysis" && hasPerm("reports.costAnalysis") && <CostAnalysis />}
+        {active === "cost-analysis"     && hasPerm("reports.costAnalysis")     && <CostAnalysis />}
         {active === "customer-balances" && hasPerm("reports.customerBalances") && <CustomerBalances />}
+        {active === "profitability"     && hasPerm("reports.profitability")    && <ProfitabilityReport />}
 
-        {/* ✅ NEW: Only render if user has permission */}
-        {active === "profitability" && hasPerm("reports.profitability") && <ProfitabilityReport />}
+        {/* ✅ NEW */}
+        {active === "customer-activity" && hasPerm("reports.customerBalances") && <CustomerActivityReport />}
 
-        {/* No access message */}
-        {((active === "trial-balance" && !hasPerm("reports.trialBalance")) ||
-          (active === "account-statement" && !hasPerm("reports.accountStatement")) ||
-          (active === "cost-analysis" && !hasPerm("reports.costAnalysis")) ||
-          (active === "customer-balances" && !hasPerm("reports.customerBalances")) ||
-          (active === "profitability" && !hasPerm("reports.profitability"))) && (
+        {noAccess && (
           <div className="reports-no-access">
             <p>🔒 You don't have permission to view this report.</p>
           </div>
