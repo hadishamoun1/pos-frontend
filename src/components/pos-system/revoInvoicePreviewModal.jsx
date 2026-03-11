@@ -416,8 +416,10 @@ function buildRevoInvoiceHtml(
         <p class="small-subtitle">ســـوريـــا – حــلب – الــرامـوســة</p>
         <div class="invoice-arabic-contact">
           <div class="invoice-arabic-line"><span class="invoice-arabic-label">تلفون</span><span class="invoice-arabic-colon">:</span><span style="direction:ltr;">+963 995118111</span></div>
+          <div class="invoice-arabic-line"><span class="invoice-arabic-label">الاستفسار</span><span class="invoice-arabic-colon">:</span><span class="invoice-arabic-value" style="direction:ltr;">+963 995434366</span></div>
           <div class="invoice-arabic-line"><span class="invoice-arabic-label">البريد الالكتروني</span><span class="invoice-arabic-colon">:</span><span class="invoice-arabic-value">revo.glass.co@gmail.com</span></div>
-        </div>
+
+          </div>
       </div>
 
       <!-- ✅ LEFT: Revo logo instead of text -->

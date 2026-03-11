@@ -48,7 +48,7 @@ const iframeStyles = `
   .usd-value { font-weight: bold; font-size: 14pt; }
   .special-container { border: 0.5px solid rgb(97, 97, 97); padding: 2mm; text-align: flex-start; font-weight: normal; height: 150px; }
   /* ✅ Revo header inside iframe */
-  .revo-header-box { display: flex; justify-content: space-between; padding: 5px; border: 1px solid #000; margin-bottom: 4mm; height: 120px; align-items: center; box-sizing: border-box; }
+  .revo-header-box { display: flex; justify-content: space-between; padding: 5px; border: 1px solid #000; margin-bottom: 4mm; height: 130px; align-items: center; box-sizing: border-box; }
   .revo-header-logo { display: flex; align-items: center; justify-content: center; height: 100%; padding: 8px; }
   .revo-header-logo img { max-height: 100px; max-width: 180px; object-fit: contain; display: block; }
   .revo-header-text { text-align: right; direction: rtl; font-size: 13px; line-height: 1.4; font-family: Arial, sans-serif; }
@@ -80,6 +80,11 @@ function buildReceiptInnerHTML(record, isRevo, logoDataUrl) {
           <span class="revo-contact-label">تلفون</span>
           <span class="revo-contact-colon">:</span>
           <span class="revo-contact-value">+963 995118111</span>
+        </div>
+          <div class="revo-contact-line">
+          <span class="revo-contact-label">الاستفسار</span>
+          <span class="revo-contact-colon">:</span>
+          <span class="revo-contact-value">+963 995434366</span>
         </div>
         <div class="revo-contact-line">
           <span class="revo-contact-label">البريد الالكتروني</span>
