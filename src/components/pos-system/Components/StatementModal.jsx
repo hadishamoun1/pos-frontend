@@ -248,18 +248,10 @@ function InvoiceItemsRow({ docNbr, colSpan, onLoaded, isRevo }) {
                         ? `${L}×${W}${spb ? `-${spb}` : ""}`
                         : L || W || "—";
                       const displayName = it.invoiceDisplayName || it.itemName || `Item ${idx + 1}`;
-                      const thickness = it.thickness != null && Number(it.thickness) > 0
-                        ? `${Number(it.thickness)}ملم`
-                        : null;
                       return (
                         <tr key={it.invoiceItemId ?? idx} className="stmt-inv-item-row">
                           <td className="stmt-inv-td-idx">{idx + 1}</td>
-                          <td className="stmt-inv-td-name">
-                            {thickness && (
-                              <span className="stmt-inv-td-thickness">{thickness} </span>
-                            )}
-                            {displayName}
-                          </td>
+                          <td className="stmt-inv-td-name">{displayName}</td>
                           <td className="stmt-inv-td-num">{fmtQty(it.quantity)}</td>
                           <td className="stmt-inv-td-num stmt-inv-td-dim">{dimStr}</td>
                           <td className="stmt-inv-td-num">{fmt(it.sqm)}</td>
@@ -501,7 +493,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
             </label>
             <label>From <DateInput value={from} min={MIN_DATE} onChange={handleFromChange} disabled={loading} /></label>
             <label>To <DateInput value={to} min={MIN_DATE} onChange={handleToChange} disabled={loading} /></label>
-            <button className="pos-page-toolbar-buttonn pos-page-blue-buttonn"
+            <button className="pos-page-toolbar-button pos-page-blue-button"
               onClick={fetchStatement} disabled={loading || !customerId}>
               {loading ? "Loading..." : "Generate"}
             </button>

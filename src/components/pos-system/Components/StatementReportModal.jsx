@@ -466,15 +466,11 @@ const StatementReportModal = ({
                                             ? `${L}×${W}${spb ? `-${spb}` : ""}`
                                             : L || W || "—";
                                           const name = it.invoiceDisplayName || it.itemName || `Item ${idx + 1}`;
-                                          const thickness = it.thickness != null && Number(it.thickness) > 0
-                                            ? `${Number(it.thickness)}ملم`
-                                            : null;
                                           const rowBg = idx % 2 === 0 ? "#fff" : "#f5f9ff";
                                           return (
                                             <tr key={it.invoiceItemId ?? idx} style={{ background: rowBg }}>
                                               <td style={{ padding: "3px 8px", textAlign: "center", color: "#9ca3af", borderBottom: "1px solid #e8f0fc" }}>{idx + 1}</td>
                                               <td style={{ padding: "3px 8px", textAlign: "right", direction: "rtl", borderBottom: "1px solid #e8f0fc", maxWidth: 180 }}>
-                                                {thickness && <span style={{ color: "#374151", fontWeight: 600, fontSize: 11 }}>{thickness} </span>}
                                                 {name}
                                               </td>
                                               <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", borderBottom: "1px solid #e8f0fc" }}>{it.quantity ?? "—"}</td>
