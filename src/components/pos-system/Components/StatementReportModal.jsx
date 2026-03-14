@@ -273,6 +273,12 @@ const StatementReportModal = ({
                           <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
                           <span style={{ direction: "ltr" }}>+963 995118111</span>
                         </div>
+                           
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <span style={{ width: "80px", textAlign: "right" }}>للاستفسار</span>
+                          <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
+                          <span style={{ direction: "ltr" }}>+963 995434366</span>
+                        </div>
                         <div style={{ display: "flex", alignItems: "center" }}>
                           <span style={{ width: "80px", textAlign: "right" }}>البريد الالكتروني</span>
                           <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
