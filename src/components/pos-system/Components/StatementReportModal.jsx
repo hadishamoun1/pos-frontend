@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, Fragment } from "react";
 import "./StatementReportModal.css";
 // ✅ FIX: correct path — go up 3 levels from /pos-system/Components/ to /components/
 import revoLogoSrc from "../../revo-logo/revo.png";
@@ -28,6 +28,7 @@ const StatementReportModal = ({
   type = "ALL",
   customerName,
   company = "shamoun", // ✅ "revo" | "shamoun"
+  expandedInvoices = {}, // ✅ { [docNbr]: invoiceData } from StatementModal
 }) => {
   const printRef = useRef(null);
   const [zoom, setZoom] = useState(1);
@@ -60,22 +61,17 @@ const StatementReportModal = ({
 
   const isRevo = String(company ?? "").toLowerCase() === "revo";
 
-  // Revo: always show its logo header
-  // Shamoun: show header only when customerInvoiceType is "S" or "BOTH" — never for "G"
+  // Revo: always show header
+  // Shamoun:
+  //   - uiType "G"            → never show
+  //   - uiType "S" or "ALL"   → show only if customerInvoiceType is "S" or "BOTH"
   let showHeader = false;
-if (isRevo) {
-  showHeader = true;
-} else {
-  if (uiType === "G") {
-    // User explicitly chose G — never show header, no need to check invoice type
-    showHeader = false;
-  } else {
-    // Type is ALL or S — check the customer's invoice type from API
-    if (customerInvoiceType === "S") showHeader = true;
-    else if (customerInvoiceType === "BOTH") showHeader = true;
-    else if (customerInvoiceType === "G") showHeader = false;
+  if (isRevo) {
+    showHeader = true;
+  } else if (uiType !== "G") {
+    showHeader = customerInvoiceType === "S" || customerInvoiceType === "BOTH";
   }
-}
+
   const closingBalance = Number(
     data?.closingBalance ?? (items.length ? items[items.length - 1]?.balanceAfter : openingBalance) ?? 0
   );
@@ -277,11 +273,6 @@ if (isRevo) {
                           <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
                           <span style={{ direction: "ltr" }}>+963 995118111</span>
                         </div>
-                              <div style={{ display: "flex", alignItems: "center" }}>
-                          <span style={{ width: "80px", textAlign: "right" }}>الاستفسار</span>
-                          <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
-                          <span style={{ direction: "ltr" }}>+963 995434366</span>
-                        </div>
                         <div style={{ display: "flex", alignItems: "center" }}>
                           <span style={{ width: "80px", textAlign: "right" }}>البريد الالكتروني</span>
                           <span style={{ width: "10px", textAlign: "center", display: "inline-block" }}>:</span>
@@ -396,17 +387,135 @@ if (isRevo) {
                         <td>{fmt(openingBalance)}</td>
                       </tr>
 
-                      {/* Transaction rows */}
-                      {items.map((r, i) => (
-                        <tr key={i}>
-                          <td>{toDMY(r.date)}</td>
-                          <td>{r.docNbr}</td>
-                          <td>{r.description}</td>
-                          <td>{fmtMaybe(r.debit)}</td>
-                          <td>{fmtMaybe(r.credit)}</td>
-                          <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
-                        </tr>
-                      ))}
+                      {/* Transaction rows + optional invoice items expansion */}
+                      {items.map((r, i) => {
+                        const invData = r.docNbr ? expandedInvoices[r.docNbr.trim()] : null;
+                        const invItems = invData?.items || [];
+
+                        const fmtDim = (v) => {
+                          if (v === null || v === undefined) return null;
+                          const n = Number(v);
+                          return isFinite(n) && n > 0
+                            ? n.toLocaleString("en-US", { maximumFractionDigits: 2 })
+                            : null;
+                        };
+
+                        return (
+                          <React.Fragment key={i}>
+                            {/* ── Statement row ── */}
+                            <tr style={invData ? { backgroundColor: "#f0f6ff", fontWeight: 600 } : {}}>
+                              <td>{toDMY(r.date)}</td>
+                              <td>{r.docNbr}</td>
+                              <td>{r.description}</td>
+                              <td>{fmtMaybe(r.debit)}</td>
+                              <td>{fmtMaybe(r.credit)}</td>
+                              <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
+                            </tr>
+
+                            {/* ── Invoice items sub-table (only for expanded invoices) ── */}
+                            {invData && invItems.length > 0 && (
+                              <tr style={{ pageBreakInside: "avoid" }}>
+                                <td colSpan={6} style={{ padding: "0 0 6px 0", border: "none", backgroundColor: "#f8fbff" }}>
+                                  <div style={{
+                                    margin: "0 4px 4px 16px",
+                                    border: "1px solid #b8d0f0",
+                                    borderRadius: 4,
+                                    overflow: "hidden",
+                                    fontSize: 11,
+                                  }}>
+                                    {/* Sub-header */}
+                                    <div style={{
+                                      background: "#dbeafe",
+                                      padding: "4px 10px",
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      borderBottom: "1px solid #b8d0f0",
+                                    }}>
+                                      <span style={{ fontWeight: 700, fontSize: 11, color: "#1e40af" }}>
+                                        {invData.invoiceNumber} — {invData.invoiceType}
+                                      </span>
+                                      <span style={{ color: "#374151", fontSize: 11 }}>
+                                        {invItems.length} item{invItems.length !== 1 ? "s" : ""} &nbsp;|&nbsp;
+                                        Total: <strong>{fmt(invData.grandTotal)} {invData.currencyCode || ""}</strong>
+                                      </span>
+                                    </div>
+
+                                    {/* Items table — VAT column only for Shamoun */}
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                                      <thead>
+                                        <tr style={{ background: "#eff6ff" }}>
+                                          <th style={{ padding: "4px 8px", textAlign: "center", borderBottom: "1px solid #c8d8f0", width: 24, color: "#374151" }}>#</th>
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", direction: "rtl", color: "#374151" }}>Item Name</th>
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>Qty</th>
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>Dimensions</th>
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>SQM</th>
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>Unit Price</th>
+                                          {!isRevo && <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>VAT %</th>}
+                                          <th style={{ padding: "4px 8px", textAlign: "right", borderBottom: "1px solid #c8d8f0", color: "#374151" }}>Total</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {invItems.map((it, idx) => {
+                                          const L = fmtDim(it.length);
+                                          const W = fmtDim(it.width);
+                                          const spb = it.sheetsPerBox != null && Number(it.sheetsPerBox) > 0
+                                            ? String(Math.round(Number(it.sheetsPerBox))).padStart(3, "0")
+                                            : null;
+                                          const dimStr = L && W
+                                            ? `${L}×${W}${spb ? `-${spb}` : ""}`
+                                            : L || W || "—";
+                                          const name = it.invoiceDisplayName || it.itemName || `Item ${idx + 1}`;
+                                          const thickness = it.thickness != null && Number(it.thickness) > 0
+                                            ? `${Number(it.thickness)}ملم`
+                                            : null;
+                                          const rowBg = idx % 2 === 0 ? "#fff" : "#f5f9ff";
+                                          return (
+                                            <tr key={it.invoiceItemId ?? idx} style={{ background: rowBg }}>
+                                              <td style={{ padding: "3px 8px", textAlign: "center", color: "#9ca3af", borderBottom: "1px solid #e8f0fc" }}>{idx + 1}</td>
+                                              <td style={{ padding: "3px 8px", textAlign: "right", direction: "rtl", borderBottom: "1px solid #e8f0fc", maxWidth: 180 }}>
+                                                {thickness && <span style={{ color: "#374151", fontWeight: 600, fontSize: 11 }}>{thickness} </span>}
+                                                {name}
+                                              </td>
+                                              <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", borderBottom: "1px solid #e8f0fc" }}>{it.quantity ?? "—"}</td>
+                                              <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", color: "#6b7280", borderBottom: "1px solid #e8f0fc" }}>{dimStr}</td>
+                                              <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", borderBottom: "1px solid #e8f0fc" }}>{fmt(it.sqm)}</td>
+                                              <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", borderBottom: "1px solid #e8f0fc" }}>{fmt(it.unitPrice)}</td>
+                                              {!isRevo && (
+                                                <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", color: "#6b7280", borderBottom: "1px solid #e8f0fc" }}>
+                                                  {invData.vatPercentage != null && Number(invData.vatPercentage) > 0
+                                                    ? `${Number(invData.vatPercentage)}%`
+                                                    : "—"}
+                                                </td>
+                                              )}
+                                              <td style={{ padding: "3px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, borderBottom: "1px solid #e8f0fc" }}>{fmt(it.totalAmount)}</td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                      {/* Totals footer */}
+                                      <tfoot>
+                                        <tr style={{ background: "#dbeafe", borderTop: "1px solid #93c5fd" }}>
+                                          <td colSpan={isRevo ? 4 : 5} style={{ padding: "4px 8px", fontWeight: 700, color: "#374151" }}>Totals</td>
+                                          <td style={{ padding: "4px 8px" }} />
+                                          {!isRevo && (
+                                            <td style={{ padding: "4px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: "#374151" }}>
+                                              {invData.vatPercentage != null && Number(invData.vatPercentage) > 0
+                                                ? `${Number(invData.vatPercentage)}%`
+                                                : "—"}
+                                            </td>
+                                          )}
+                                          <td style={{ padding: "4px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: "#1e40af", fontSize: 12 }}>{fmt(invData.grandTotal)}</td>
+                                        </tr>
+                                      </tfoot>
+                                    </table>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </tbody>
 
                     <tfoot>
