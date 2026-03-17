@@ -849,6 +849,139 @@
   overflow-x: auto;
 }
 
+/* ── BY MONTH ─────────────────────────────────────────────────────────── */
+.profitability-report__month-grouping {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profitability-report__month-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.profitability-report__month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profitability-report__month-header:hover {
+  background: #f1f5f9;
+}
+
+.profitability-report__month-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profitability-report__month-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.profitability-report__month-count {
+  font-size: 12px;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.profitability-report__month-totals {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.profitability-report__month-invoices {
+  padding: 0 4px 4px;
+  overflow-x: auto;
+}
+
+/* Grand Total */
+.profitability-report__grand-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: #0f172a;
+  color: #fff;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.profitability-report__grand-total-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #fff;
+}
+
+.profitability-report__grand-total .profitability-report__month-count {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.profitability-report__grand-total .profitability-report__total-item {
+  color: #fff;
+}
+
+.profitability-report__grand-total .profitability-report__total-item span {
+  color: #94a3b8;
+}
+
+/* VAT badges in monthly view */
+.profitability-report__vat-stripped {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.profitability-report__vat-normal {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+/* Invoice count summary card */
+.profitability-report__summary-card--invoices {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-left: 4px solid #64748b;
+}
+
+.profitability-report__btn-print {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.profitability-report__btn-print:hover {
+  background: #e0e7ff;
+}
+
+
 @media (max-width: 768px) {
   .profitability-report__invoice-header {
     flex-direction: column;

@@ -47,6 +47,18 @@ export default function CompanySettings() {
     }
   };
 
+  const handleToggleVat = async (id, currentValue) => {
+    setError("");
+    try {
+      await axiosClient.patch(`/company/${id}/vat-inclusive`, {
+        vatInclusive: !currentValue,
+      });
+      await fetchCompanies();
+    } catch {
+      setError("Failed to update VAT setting.");
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this company?")) return;
     setError("");
@@ -100,9 +112,19 @@ export default function CompanySettings() {
                 <span className="company-settings__badge">✓ Active</span>
               )}
               <span className="company-settings__name">{c.companyName}</span>
+              <span className={`company-settings__vat-badge ${c.vatInclusive ? "company-settings__vat-badge--on" : "company-settings__vat-badge--off"}`}>
+                {c.vatInclusive ? "VAT Inclusive" : "No VAT"}
+              </span>
             </div>
 
             <div className="company-settings__item-actions">
+              <button
+                className={`company-settings__btn ${c.vatInclusive ? "company-settings__btn--vat-on" : "company-settings__btn--vat-off"}`}
+                onClick={() => handleToggleVat(c.id, c.vatInclusive)}
+              >
+                {c.vatInclusive ? "🟢 VAT On" : "⚪ VAT Off"}
+              </button>
+
               {!c.isActive && (
                 <button
                   className="company-settings__btn company-settings__btn--activate"
@@ -195,6 +217,36 @@ export default function CompanySettings() {
         }
         .company-settings__btn--delete:hover {
           background: #fee2e2;
+        }
+        .company-settings__vat-badge {
+          font-size: 11px;
+          font-weight: 700;
+          padding: 2px 8px;
+          border-radius: 20px;
+        }
+        .company-settings__vat-badge--on {
+          background: #dbeafe;
+          color: #1d4ed8;
+        }
+        .company-settings__vat-badge--off {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+        .company-settings__btn--vat-on {
+          background: #dbeafe;
+          color: #1d4ed8;
+          border-color: #bfdbfe;
+        }
+        .company-settings__btn--vat-on:hover {
+          background: #bfdbfe;
+        }
+        .company-settings__btn--vat-off {
+          background: #f3f4f6;
+          color: #6b7280;
+          border-color: #e5e7eb;
+        }
+        .company-settings__btn--vat-off:hover {
+          background: #e5e7eb;
         }
         .company-settings__list {
           display: flex;
