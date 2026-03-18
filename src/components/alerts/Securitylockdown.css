@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+
+
+.lockdown-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, #c81e1e18 0%, transparent 70%),
+    #0f0f0f;
+  font-family: 'Inter', sans-serif;
+  color: #f5f5f5;
+}
+
+.lockdown-card {
+  width: 100%;
+  max-width: 440px;
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-top: 2px solid #c81e1e;
+  border-radius: 12px;
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  animation: lockdown-appear 0.35s ease both;
+  box-shadow: 0 0 60px #c81e1e10, 0 24px 48px #00000060;
+}
+
+@keyframes lockdown-appear {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lockdown-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1.5px solid #c81e1e;
+  background: #c81e1e12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c81e1e;
+  margin-bottom: 4px;
+  animation: lockdown-ring-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes lockdown-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #c81e1e30; }
+  50%       { box-shadow: 0 0 0 10px #c81e1e00; }
+}
+
+.lockdown-icon-svg {
+  display: block;
+}
+
+.lockdown-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f5f5f5;
+}
+
+.lockdown-desc {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.7;
+  max-width: 340px;
+}
+
+.lockdown-divider {
+  width: 100%;
+  height: 1px;
+  background: #2a2a2a;
+}
+
+.lockdown-info-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.lockdown-info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.lockdown-info-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.lockdown-info-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: #f5f5f5;
+}
+
+.lockdown-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c81e1e;
+  background: #c81e1e14;
+  border: 1px solid #c81e1e30;
+  border-radius: 20px;
+  padding: 4px 10px;
+  letter-spacing: 0.04em;
+}
+
+.lockdown-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c81e1e;
+  flex-shrink: 0;
+  animation: lockdown-ring-pulse 2s ease-in-out infinite;
+}
+
+.lockdown-contact {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.lockdown-contact-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c81e1e;
+}
+
+.lockdown-contact-phone {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f5f5f5;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.lockdown-contact-phone:hover {
+  color: #ffffff;
+}
+
+.lockdown-contact-email {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #888;
+}
+
+@media (max-width: 480px) {
+  .lockdown-card  { padding: 32px 24px; }
+  .lockdown-title { font-size: 20px; }
+}

@@ -29,11 +29,11 @@ import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 import MaintenanceModePage from "./components/settings/MaintenanceModePage";
-import MaintenanceGate from "./components/settings/MaintenanceGate"; 
+import MaintenanceGate from "./components/settings/MaintenanceGate";
+import SecurityGate from "./components/alerts/Securitygate"
 import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
 import EmployeeDocManager from "./components/Employees/EmployeeDocManager";
 
-// ✅ NEW: Import LanguageProvider
 import { LanguageProvider } from "./components/contexts/LanguageContext";
 
 const queryClient = new QueryClient();
@@ -41,17 +41,17 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      {/* ✅ NEW: Wrap everything with LanguageProvider */}
       <LanguageProvider>
         <BlinkingItemsProvider>
           <Router>
-            {/* ✅ Global gate */}
+            {/* ✅ Global gates */}
             <MaintenanceGate />
+            <SecurityGate /> 
 
             <Routes>
               {/* ✅ Public */}
               <Route path="/" element={<LoginPage />} />
-              <Route path="/login" element={<LoginPage />} /> {/* ✅ alias */}
+              <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/maintenance" element={<MaintenanceModePage />} />
 
@@ -88,7 +88,6 @@ function App() {
           </Router>
         </BlinkingItemsProvider>
       </LanguageProvider>
-      {/* ✅ END: LanguageProvider wrapper */}
     </QueryClientProvider>
   );
 }
