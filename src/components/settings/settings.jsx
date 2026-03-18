@@ -44,7 +44,7 @@ const SettingsPage = () => {
       { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
 
       // ✅ NEW TAB
-      { key: "security-lockdown", label: "Security Lockdown", perm: "settings.company", component: <SecurityLockdownSettings /> },
+      { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
     ],
     []
   );
