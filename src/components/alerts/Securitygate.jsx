@@ -1,12 +1,23 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { hasPerm } from "../auth/authz";
 import SecurityLockdown from "./Securitylockdown";
 
-const POLL_INTERVAL = 5000; // check every 5 seconds
+const POLL_INTERVAL = 5000;
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
+
+// Pages where Ctrl+L bypass is allowed (unauthenticated pages only)
+const LOGIN_PATHS = ["/", "/login"];
 
 const SecurityGate = () => {
   const [locked, setLocked] = useState(false);
+  const [bypassed, setBypassed] = useState(false);
+  const location = useLocation();
 
+  const isAdmin = hasPerm("users.manage");
+  const isLoginPage = LOGIN_PATHS.includes(location.pathname);
+
+  // Poll the backend every 5 seconds
   useEffect(() => {
     const check = async () => {
       try {
@@ -15,16 +26,41 @@ const SecurityGate = () => {
         const data = await res.json();
         setLocked(data.isActive === true);
       } catch (e) {
-        // silent — don't block the app if API is unreachable
+        // silent
       }
     };
 
-    check(); // run immediately on mount
+    check();
     const interval = setInterval(check, POLL_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
-  if (!locked) return null;
+  // Ctrl+L only works on login page — not for already logged-in users
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === "l") {
+        e.preventDefault();
+        if (isLoginPage) {
+          setBypassed(true);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLoginPage]);
+
+  // Reset bypass whenever the page changes or lockdown is lifted
+  useEffect(() => {
+    setBypassed(false);
+  }, [location.pathname, locked]);
+
+  // Decision:
+  // - Not locked → show nothing
+  // - Admin (has users.manage) → show nothing, they can go to settings and turn it off
+  // - On login page + Ctrl+L pressed → show nothing, let them log in
+  // - Everyone else → show lockdown screen
+  if (!locked || isAdmin || (isLoginPage && bypassed)) return null;
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 99999 }}>

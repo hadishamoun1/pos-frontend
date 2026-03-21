@@ -9,9 +9,9 @@ const SecurityLockdownSettings = () => {
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
-  // Fetch current status on mount
+  // ✅ FIX: renamed from "fetch" to "loadStatus" — "fetch" was shadowing window.fetch
   useEffect(() => {
-    const fetch = async () => {
+    const loadStatus = async () => {
       try {
         const res = await fetch(`${API_URL}/security-alert`);
         const data = await res.json();
@@ -22,7 +22,7 @@ const SecurityLockdownSettings = () => {
         setLoading(false);
       }
     };
-    fetch();
+    loadStatus();
   }, []);
 
   const save = async (value) => {
