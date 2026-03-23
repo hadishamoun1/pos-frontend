@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { hasPerm } from "../auth/authz";
+import { axiosClient } from "../api/axiosClient";
 import SecurityLockdown from "./Securitylockdown";
 
 const POLL_INTERVAL = 5000;
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 // Pages where Ctrl+L bypass is allowed (unauthenticated pages only)
 const LOGIN_PATHS = ["/", "/login"];
@@ -21,9 +21,8 @@ const SecurityGate = () => {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch(`${API_URL}/security-alert`);
-        if (!res.ok) return;
-        const data = await res.json();
+        const res = await axiosClient.get("/security-alert");
+        const data = res.data;
         setLocked(data.isActive === true);
       } catch (e) {
         // silent
@@ -38,7 +37,7 @@ const SecurityGate = () => {
   // Ctrl+L only works on login page — not for already logged-in users
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === "l") {
+      if (e.ctrlKey && e.key.toLowerCase() === "l") {
         e.preventDefault();
         if (isLoginPage) {
           setBypassed(true);
