@@ -6,7 +6,6 @@ import SecurityLockdown from "./Securitylockdown";
 
 const POLL_INTERVAL = 5000;
 
-// Pages where Ctrl+L bypass is allowed (unauthenticated pages only)
 const LOGIN_PATHS = ["/", "/login"];
 
 const SecurityGate = () => {
@@ -34,7 +33,7 @@ const SecurityGate = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Ctrl+L only works on login page — not for already logged-in users
+  // Ctrl+L only works on login page
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === "l") {
@@ -54,13 +53,16 @@ const SecurityGate = () => {
     setBypassed(false);
   }, [location.pathname, locked]);
 
-  // Decision:
-  // - Not locked → show nothing
-  // - Admin (has users.manage) → show nothing, they can go to settings and turn it off
-  // - On login page + Ctrl+L pressed → show nothing, let them log in
-  // - Everyone else → show lockdown screen
-  if (!locked || isAdmin || (isLoginPage && bypassed)) return null;
+  // Not locked → show nothing
+  if (!locked) return null;
 
+  // Admin → show nothing, they can go to settings and turn it off
+  if (isAdmin) return null;
+
+  // On login page + Ctrl+L pressed → show nothing, let them log in
+  if (isLoginPage && bypassed) return null;
+
+  // Everyone else → show lockdown screen
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 99999 }}>
       <SecurityLockdown />

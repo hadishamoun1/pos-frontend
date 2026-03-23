@@ -21,7 +21,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
   useEffect(() => {
     if (row) {
       const detail = row.details?.[0] || {};
-      const derivedCurrency = row.paymentType?.includes("USD") ? "USD" : "LL"; // Derive currency from paymentType
+      const derivedCurrency = row.paymentType?.includes("USD") ? "USD" : "LL";
       setRowData({
         supplier: row.supplierName || "",
         amount: detail.amount || "",
@@ -40,38 +40,49 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     }
   }, [row]);
 
+  const recalculate = (data, changedField) => {
+    const amount = parseFloat(data.amount || "0");
+    const exchangeRate = parseFloat(data.exchangeRate || "1");
+    const amountExchanged = parseFloat(data.amountExchanged || "0");
+
+    if (data.currency === "USD") {
+      // USD: amountExchanged = amount * exchangeRate
+      if (changedField === "amount" || changedField === "exchangeRate") {
+        data.amountExchanged = (amount * exchangeRate).toFixed(2);
+      } else if (changedField === "amountExchanged" && amount > 0) {
+        data.exchangeRate = (amountExchanged / amount).toFixed(2);
+      }
+    } else {
+      // LL: amountExchanged = amount / exchangeRate
+      if (changedField === "amount" || changedField === "exchangeRate") {
+        if (exchangeRate > 0) {
+          data.amountExchanged = (amount / exchangeRate).toFixed(2);
+        }
+      } else if (changedField === "amountExchanged" && amountExchanged > 0) {
+        data.exchangeRate = (amount / amountExchanged).toFixed(2);
+      }
+    }
+
+    return data;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
     setRowData((prev) => {
-      const updatedData = {
+      let updated = {
         ...prev,
         [name]:
-          name === "amount" ||
-          name === "exchangeRate" ||
-          name === "amountExchanged"
+          name === "amount" || name === "exchangeRate" || name === "amountExchanged"
             ? value.replace(/,/g, "")
             : value,
       };
 
-      // Update currency based on paymentType
       if (name === "paymentType") {
-        updatedData.currency = value.includes("USD") ? "USD" : "LL";
+        updated.currency = value.includes("USD") ? "USD" : "LL";
       }
 
-      if (updatedData.currency === "USD") {
-        updatedData.exchangeRate = "1";
-        updatedData.amountExchanged = updatedData.amount || "0";
-      } else if (name === "amount" || name === "exchangeRate") {
-        const amount = parseFloat(updatedData.amount || "0");
-        const exchangeRate = parseFloat(updatedData.exchangeRate || "1");
-
-        if (updatedData.currency === "LL" && exchangeRate > 0) {
-          updatedData.amountExchanged = (amount / exchangeRate).toFixed(2);
-        }
-      }
-
-      return updatedData;
+      return recalculate(updated, name);
     });
   };
 
@@ -86,7 +97,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
       supplierId: row.supplierId,
       supplierName: rowData.supplier,
       date: rowData.date,
-      invoiceId: rowData.invoiceId || row.paymentNumber,
+      invoiceId: row.invoiceId || "",
       paymentNumber: rowData.paymentNumber,
       paymentType: rowData.paymentType,
       type: rowData.type,
@@ -94,13 +105,13 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         {
           amount: parseFloat(rowData.amount),
           currency: rowData.currency,
-          exchangeRate: rowData.exchangeRate,
+          exchangeRate: parseFloat(rowData.exchangeRate),
+          amountExchanged: parseFloat(rowData.amountExchanged),
           checkNumber: rowData.checkNumber,
           checkDate: rowData.date,
           checkDueDate: rowData.dueDate,
           bankName: rowData.bankName,
           description: rowData.comments,
-          amountExchanged: rowData.amountExchanged,
         },
       ],
     };
@@ -114,12 +125,8 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         <div className="edit-payment-modal-header">
           <h1>Edit Payment Voucher</h1>
           <div className="edit-payment-modal-actions">
-            <button onClick={handleSave} className="edit-payment-modal-save">
-              Save
-            </button>
-            <button onClick={onClose} className="edit-payment-modal-cancel">
-              Cancel
-            </button>
+            <button onClick={handleSave} className="edit-payment-modal-save">Save</button>
+            <button onClick={onClose} className="edit-payment-modal-cancel">Cancel</button>
           </div>
         </div>
 
@@ -166,12 +173,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                 </select>
               </td>
               <td>
-                <input
-                  type="text"
-                  name="currency"
-                  value={rowData.currency}
-                  disabled
-                />
+                <input type="text" name="currency" value={rowData.currency} disabled />
               </td>
               <td>
                 <input
@@ -209,7 +211,6 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={formatNumber(rowData.exchangeRate)}
                   onChange={handleInputChange}
                   placeholder="Enter Exchange Rate"
-                  disabled={rowData.currency === "USD"}
                 />
               </td>
               <td>
@@ -219,7 +220,6 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={formatNumber(rowData.amountExchanged)}
                   onChange={handleInputChange}
                   placeholder="Enter Amount Exchanged"
-                  disabled={rowData.currency === "USD"}
                 />
               </td>
               <td>
@@ -229,7 +229,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={rowData.checkNumber}
                   onChange={handleInputChange}
                   placeholder="Enter Check Number"
-                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
+                  disabled={rowData.paymentType?.includes("Cash")}
                 />
               </td>
               <td>
@@ -239,7 +239,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   value={rowData.bankName}
                   onChange={handleInputChange}
                   placeholder="Enter Bank Name"
-                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
+                  disabled={rowData.paymentType?.includes("Cash")}
                 />
               </td>
               <td>
@@ -248,7 +248,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
                   name="dueDate"
                   value={rowData.dueDate}
                   onChange={handleInputChange}
-                  disabled={rowData.paymentType?.includes("Cash")}   // ✅ fixed
+                  disabled={rowData.paymentType?.includes("Cash")}
                 />
               </td>
               <td>

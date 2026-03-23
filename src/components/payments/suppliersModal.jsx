@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./suppliersModal.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added
+import { axiosClient } from "../api/axiosClient";
 
 const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -8,7 +8,6 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
-    // Fetch suppliers from API
     const fetchSuppliers = async () => {
       try {
         const res = await axiosClient.get(`${baseUrl}/suppliers/v1/filtered`);
@@ -21,7 +20,6 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
     fetchSuppliers();
   }, []);
 
-  // Filter suppliers based on search query
   const filteredSuppliers = suppliers.filter((supplier) =>
     supplier.supplierName.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -55,7 +53,7 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
             {filteredSuppliers.map((supplier) => (
               <tr
                 key={supplier.id}
-                onClick={() => onSelectSupplier(supplier.supplierName)}
+                onClick={() => onSelectSupplier({ id: supplier.id, supplierName: supplier.supplierName })}
               >
                 <td>{supplier.supplierName}</td>
               </tr>
