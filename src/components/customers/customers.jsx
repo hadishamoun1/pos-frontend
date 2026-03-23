@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./customers.css";
 import { axiosClient } from "../api/axiosClient";
 import { useTranslation } from "../hooks/useTranslation";
@@ -14,7 +14,6 @@ const emptyForm = {
   currency: "",
   address: "",
   location: "",
-
   firstName: "",
   middleName: "",
   lastName: "",
@@ -31,25 +30,20 @@ function toStr(v) {
 function buildPayload(formData) {
   const payload = {
     customerName: formData.customerName?.trim(),
-
     firstName: formData.firstName?.trim() || undefined,
     middleName: formData.middleName?.trim() || undefined,
     lastName: formData.lastName?.trim() || undefined,
     paymentTerms: formData.paymentTerms?.trim() || undefined,
     area: formData.area?.trim() || undefined,
     companyType: formData.companyType?.trim() || undefined,
-
     phoneNumber: formData.phoneNumber?.trim() || undefined,
     financialNumber: formData.financialAccount?.trim() || undefined,
     invoiceType: formData.invoiceType || undefined,
     vat: formData.vat !== "" ? formData.vat : undefined,
-
     currencyId: formData.currency !== "" ? Number(formData.currency) : undefined,
-
     address: formData.address?.trim() || undefined,
     location: formData.location?.trim() || undefined,
   };
-
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
   return payload;
 }
@@ -66,12 +60,18 @@ export default function CreatePreviewCustomers() {
   const [hasMore, setHasMore] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState(""); // success | error
+  const [modalType, setModalType] = useState("");
   const [modalMessage, setModalMessage] = useState("");
 
-  // ✅ edit state
   const [editingId, setEditingId] = useState(null);
   const isEditing = editingId !== null;
+
+  // ── Search state ──────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const searchDebounceRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -89,25 +89,20 @@ export default function CreatePreviewCustomers() {
     setModalMessage(msg);
     setModalOpen(true);
   };
-
   const closeModal = () => setModalOpen(false);
 
   const fetchCustomers = async (currentPage) => {
     if (loading || !hasMore) return;
     setLoading(true);
-
     try {
       const res = await axiosClient.get(
         `/customers/v1/paginated?page=${currentPage}&limit=${PAGE_SIZE}`
       );
-
       const list = Array.isArray(res?.data?.customers) ? res.data.customers : [];
-
       setCustomers((prev) => {
         const newOnes = list.filter((n) => !prev.some((p) => p.id === n.id));
         return [...prev, ...newOnes];
       });
-
       setHasMore(list.length > 0);
     } catch (e) {
       console.error("Error fetching customers:", e);
@@ -130,6 +125,45 @@ export default function CreatePreviewCustomers() {
     });
   };
 
+  // ── Search handler with debounce ──────────────────────────────────────────
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    if (!value.trim()) {
+      setSearchResults([]);
+      setIsSearchActive(false);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      setIsSearchActive(true);
+      try {
+        const res = await axiosClient.get(
+          `/customers/v1/search?query=${encodeURIComponent(value.trim())}`
+        );
+        setSearchResults(Array.isArray(res.data) ? res.data : []);
+      } catch (e) {
+        console.error("Search error:", e);
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setIsSearchActive(false);
+  };
+
+  // ── The displayed rows: search results or full list ───────────────────────
+  const displayedCustomers = isSearchActive ? searchResults : customers;
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -137,7 +171,6 @@ export default function CreatePreviewCustomers() {
 
   const startEditCustomer = (customer) => {
     if (!customer?.id) return;
-
     setEditingId(customer.id);
     setFormData({
       customerName: toStr(customer.customerName),
@@ -145,13 +178,9 @@ export default function CreatePreviewCustomers() {
       financialAccount: toStr(customer.financialNumber),
       invoiceType: toStr(customer.invoiceType),
       vat: customer.vat === null || customer.vat === undefined ? "" : toStr(customer.vat),
-
-      // currency may come as currencyId or nested currency.id
       currency: toStr(customer.currencyId ?? customer.currency?.id ?? ""),
-
       address: toStr(customer.address),
       location: toStr(customer.location),
-
       firstName: toStr(customer.firstName),
       middleName: toStr(customer.middleName),
       lastName: toStr(customer.lastName),
@@ -159,7 +188,6 @@ export default function CreatePreviewCustomers() {
       area: toStr(customer.area),
       companyType: toStr(customer.companyType),
     });
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -182,18 +210,15 @@ export default function CreatePreviewCustomers() {
           openModal("error", t("customersPage.messages.currencyRequired"));
           return;
         }
-
         const res = await axiosClient.post("/customers", payload);
         setCustomers((prev) => [res.data, ...prev]);
         setFormData({ ...emptyForm });
         openModal("success", t("customersPage.messages.customerAdded"));
       } else {
         const res = await axiosClient.patch(`/customers/${editingId}`, payload);
-
         setCustomers((prev) =>
           prev.map((c) => (c.id === editingId ? { ...c, ...res.data } : c))
         );
-
         setEditingId(null);
         setFormData({ ...emptyForm });
         openModal("success", t("customersPage.messages.customerUpdated"));
@@ -216,11 +241,10 @@ export default function CreatePreviewCustomers() {
   return (
     <div className="customer-preview-container">
       <div className="customer-preview-header">
-        <h2 className="customer-preview-heading">
-          {t("customersPage.title")}
-        </h2>
+        <h2 className="customer-preview-heading">{t("customersPage.title")}</h2>
       </div>
 
+      {/* ── Create / Edit Form ─────────────────────────────────────────────── */}
       <div className="customer-preview-card customer-preview-form">
         <div className="customer-preview-card-title">
           {isEditing
@@ -233,38 +257,19 @@ export default function CreatePreviewCustomers() {
             <tr>
               <td>
                 <label>{t("customersPage.form.customerName")}</label>
-                <input
-                  type="text"
-                  name="customerName"
-                  value={formData.customerName}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.phoneNumber")}</label>
-                <input
-                  type="text"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.financialAccount")}</label>
-                <input
-                  type="text"
-                  name="financialAccount"
-                  value={formData.financialAccount}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="financialAccount" value={formData.financialAccount} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.invoiceType")}</label>
-                <select
-                  name="invoiceType"
-                  value={formData.invoiceType}
-                  onChange={handleInputChange}
-                >
+                <select name="invoiceType" value={formData.invoiceType} onChange={handleInputChange}>
                   <option value="">{t("customersPage.form.selectType")}</option>
                   <option value="S">S</option>
                   <option value="G">G</option>
@@ -276,40 +281,19 @@ export default function CreatePreviewCustomers() {
             <tr>
               <td>
                 <label>{t("customersPage.form.firstName")}</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.middleName")}</label>
-                <input
-                  type="text"
-                  name="middleName"
-                  value={formData.middleName}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="middleName" value={formData.middleName} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.lastName")}</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.paymentTerms")}</label>
-                <input
-                  type="text"
-                  name="paymentTerms"
-                  value={formData.paymentTerms}
-                  onChange={handleInputChange}
-                  placeholder={t("customersPage.form.paymentTermsPlaceholder")}
-                />
+                <input type="text" name="paymentTerms" value={formData.paymentTerms} onChange={handleInputChange} placeholder={t("customersPage.form.paymentTermsPlaceholder")} />
               </td>
             </tr>
 
@@ -323,64 +307,33 @@ export default function CreatePreviewCustomers() {
                   <option value="11">11%</option>
                 </select>
               </td>
-
               <td>
                 <label>{t("customersPage.form.currency")}</label>
-                <select
-                  name="currency"
-                  value={formData.currency}
-                  onChange={handleInputChange}
-                >
+                <select name="currency" value={formData.currency} onChange={handleInputChange}>
                   <option value="">{t("customersPage.form.selectCurrency")}</option>
                   {currencyCodes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.currencyCode}
-                    </option>
+                    <option key={c.id} value={c.id}>{c.currencyCode}</option>
                   ))}
                 </select>
               </td>
-
               <td>
                 <label>{t("customersPage.form.area")}</label>
-                <input
-                  type="text"
-                  name="area"
-                  value={formData.area}
-                  onChange={handleInputChange}
-                  placeholder={t("customersPage.form.areaPlaceholder")}
-                />
+                <input type="text" name="area" value={formData.area} onChange={handleInputChange} placeholder={t("customersPage.form.areaPlaceholder")} />
               </td>
-
               <td>
                 <label>{t("customersPage.form.companyType")}</label>
-                <input
-                  type="text"
-                  name="companyType"
-                  value={formData.companyType}
-                  onChange={handleInputChange}
-                  placeholder={t("customersPage.form.companyTypePlaceholder")}
-                />
+                <input type="text" name="companyType" value={formData.companyType} onChange={handleInputChange} placeholder={t("customersPage.form.companyTypePlaceholder")} />
               </td>
             </tr>
 
             <tr>
               <td>
                 <label>{t("customersPage.form.address")}</label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="address" value={formData.address} onChange={handleInputChange} />
               </td>
               <td>
                 <label>{t("customersPage.form.location")}</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                />
+                <input type="text" name="location" value={formData.location} onChange={handleInputChange} />
               </td>
               <td colSpan="2" />
             </tr>
@@ -393,12 +346,8 @@ export default function CreatePreviewCustomers() {
                       ? t("customersPage.buttons.updateCustomer")
                       : t("customersPage.buttons.addCustomer")}
                   </button>
-
                   {isEditing && (
-                    <button
-                      className="customer-preview-cancel-edit-btn"
-                      onClick={cancelEdit}
-                    >
+                    <button className="customer-preview-cancel-edit-btn" onClick={cancelEdit}>
                       {t("customersPage.buttons.cancelEdit")}
                     </button>
                   )}
@@ -409,9 +358,46 @@ export default function CreatePreviewCustomers() {
         </table>
       </div>
 
+      {/* ── Customer Preview ───────────────────────────────────────────────── */}
       <div className="customer-preview-card">
+
+        {/* Search bar — sits above the preview title */}
+        <div className="customer-preview-search-bar">
+          <div className="customer-preview-search-input-wrap">
+            <svg className="customer-preview-search-icon" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="#9ca3af" strokeWidth="1.6"/>
+              <path d="M13 13l3.5 3.5" stroke="#9ca3af" strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              className="customer-preview-search-input"
+              placeholder="Search by customer name or first name..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+            />
+            {searchQuery && (
+              <button className="customer-preview-search-clear" onClick={clearSearch} title="Clear search">
+                ×
+              </button>
+            )}
+          </div>
+
+          {isSearchActive && (
+            <span className="customer-preview-search-status">
+              {searchLoading
+                ? "Searching..."
+                : `${searchResults.length} result${searchResults.length !== 1 ? "s" : ""} found`}
+            </span>
+          )}
+        </div>
+
         <div className="customer-preview-card-title">
           {t("customersPage.previewTitle")}
+          {isSearchActive && !searchLoading && (
+            <span className="customer-preview-search-badge">
+              Filtered · {searchResults.length}
+            </span>
+          )}
         </div>
 
         <div className="customer-preview-table-scroll">
@@ -436,9 +422,8 @@ export default function CreatePreviewCustomers() {
                 <th>{t("customersPage.table.location")}</th>
               </tr>
             </thead>
-
             <tbody>
-              {customers.map((c) => (
+              {displayedCustomers.map((c) => (
                 <tr
                   key={c.id}
                   className={rowClass(c.id)}
@@ -449,15 +434,11 @@ export default function CreatePreviewCustomers() {
                     <button
                       className="customer-preview-btn-mini"
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEditCustomer(c);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); startEditCustomer(c); }}
                     >
                       {t("customersPage.buttons.edit")}
                     </button>
                   </td>
-
                   <td className="customer-preview-mono">{c.customerAccountNumber}</td>
                   <td>{c.customerName}</td>
                   <td>{c.firstName}</td>
@@ -476,10 +457,12 @@ export default function CreatePreviewCustomers() {
                 </tr>
               ))}
 
-              {customers.length === 0 && (
+              {displayedCustomers.length === 0 && (
                 <tr>
                   <td colSpan="16" className="customer-preview-empty-row">
-                    {t("customersPage.table.noCustomersLoaded")}
+                    {isSearchActive
+                      ? "No customers match your search."
+                      : t("customersPage.table.noCustomersLoaded")}
                   </td>
                 </tr>
               )}
@@ -487,42 +470,31 @@ export default function CreatePreviewCustomers() {
           </table>
         </div>
 
-        {hasMore && !loading && (
+        {/* Load more only shown when not in search mode */}
+        {!isSearchActive && hasMore && !loading && (
           <button className="customer-preview-load-more-btn" onClick={nextPage}>
             {t("customersPage.buttons.loadMore")}
           </button>
         )}
-        {loading && <p className="customer-preview-hint">{t("common.loading")}</p>}
-        {!hasMore && (
-          <p className="customer-preview-hint">
-            {t("customersPage.messages.noMoreCustomers")}
-          </p>
+        {!isSearchActive && loading && (
+          <p className="customer-preview-hint">{t("common.loading")}</p>
+        )}
+        {!isSearchActive && !hasMore && (
+          <p className="customer-preview-hint">{t("customersPage.messages.noMoreCustomers")}</p>
         )}
       </div>
 
       {modalOpen && (
         <div className="customer-preview-modal-overlay">
-          <div
-            className={`customer-preview-modal-content ${
-              modalType === "success"
-                ? "customer-preview-success-modal"
-                : "customer-preview-error-modal"
-            }`}
-          >
-            <h2
-              className={
-                modalType === "success"
-                  ? "customer-preview-modal-success-text"
-                  : "customer-preview-modal-error-text"
-              }
-            >
+          <div className={`customer-preview-modal-content ${
+            modalType === "success" ? "customer-preview-success-modal" : "customer-preview-error-modal"
+          }`}>
+            <h2 className={
+              modalType === "success" ? "customer-preview-modal-success-text" : "customer-preview-modal-error-text"
+            }>
               {modalMessage}
             </h2>
-
-            <div className="customer-preview-modal-icon">
-              {modalType === "success" ? "✔" : "✖"}
-            </div>
-
+            <div className="customer-preview-modal-icon">{modalType === "success" ? "✔" : "✖"}</div>
             <button className="customer-preview-modal-button" onClick={closeModal}>
               {t("common.ok")}
             </button>
