@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
+import { axiosClient } from "../api/axiosClient";
 import "./Securitylockdownsettings.css";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3000";
 
 const SecurityLockdownSettings = () => {
   const [enabled, setEnabled] = useState(false);
@@ -9,13 +8,11 @@ const SecurityLockdownSettings = () => {
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
-  // ✅ FIX: renamed from "fetch" to "loadStatus" — "fetch" was shadowing window.fetch
   useEffect(() => {
     const loadStatus = async () => {
       try {
-        const res = await fetch(`${API_URL}/security-alert`);
-        const data = await res.json();
-        setEnabled(data.isActive === true);
+        const res = await axiosClient.get("/security-alert");
+        setEnabled(res.data.isActive === true);
       } catch (e) {
         console.error("Failed to fetch security alert status:", e);
       } finally {
@@ -30,12 +27,8 @@ const SecurityLockdownSettings = () => {
     setConfirm(false);
     try {
       const endpoint = value ? "enable" : "disable";
-      const res = await fetch(`${API_URL}/security-alert/${endpoint}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      setEnabled(data.isActive === true);
+      const res = await axiosClient.patch(`/security-alert/${endpoint}`);
+      setEnabled(res.data.isActive === true);
     } catch (e) {
       console.error("Failed to update security alert:", e);
     } finally {
@@ -48,7 +41,6 @@ const SecurityLockdownSettings = () => {
   return (
     <div className="sls-page">
 
-      {/* Confirm modal */}
       {confirm && (
         <div className="sls-overlay">
           <div className="sls-modal">
@@ -70,7 +62,6 @@ const SecurityLockdownSettings = () => {
         </div>
       )}
 
-      {/* Page header */}
       <div className="sls-header">
         <h2 className="sls-title">Security Lockdown</h2>
         <p className="sls-subtitle">
@@ -79,7 +70,6 @@ const SecurityLockdownSettings = () => {
         </p>
       </div>
 
-      {/* Status card */}
       <div className={`sls-status-card ${enabled ? "sls-status-card-active" : "sls-status-card-inactive"}`}>
         <div className="sls-status-left">
           <span className="sls-status-dot" />
@@ -89,14 +79,13 @@ const SecurityLockdownSettings = () => {
             </span>
             <span className="sls-status-desc">
               {enabled
-                ? "All users are currently blocked. The security alert screen is shown."
+                ? "All non-admin users are currently blocked."
                 : "No lockdown is in effect. All users can access the system."}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Toggle row */}
       <div className="sls-toggle-row">
         <div className="sls-toggle-text">
           <span className="sls-toggle-label">Enable Security Lockdown</span>
@@ -113,13 +102,12 @@ const SecurityLockdownSettings = () => {
         </button>
       </div>
 
-      {/* Info box */}
       <div className="sls-info-box">
         <span className="sls-info-icon">ℹ</span>
         <p className="sls-info-text">
           All connected users are checked every 5 seconds. When lockdown is enabled,
-          they will see the security alert screen within 5 seconds and cannot navigate
-          anywhere. To unlock, simply toggle this off.
+          non-admin users will see the security alert screen within 5 seconds and
+          cannot navigate anywhere. Admins remain unaffected and can disable it here.
         </p>
       </div>
 
