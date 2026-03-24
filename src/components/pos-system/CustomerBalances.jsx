@@ -6,8 +6,8 @@ export default function CustomerBalances() {
   const today = new Date().toISOString().split("T")[0];
   const [toDate, setToDate] = useState(today);
   const [type, setType] = useState("ALL");
-  const [minBalance, setMinBalance] = useState(""); // NEW: minimum balance filter
-  const [showNumberedCustomers, setShowNumberedCustomers] = useState(false); // NEW: toggle for numbered customers
+  const [minBalance, setMinBalance] = useState("");
+  const [showNumberedCustomers, setShowNumberedCustomers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -23,7 +23,6 @@ export default function CustomerBalances() {
       const params = { to: toDate };
       if (type !== "ALL") params.type = type;
       
-      // Add minBalance to params if provided
       if (minBalance && minBalance.trim() !== "") {
         const parsedBalance = parseFloat(minBalance);
         if (!isNaN(parsedBalance)) {
@@ -47,7 +46,6 @@ export default function CustomerBalances() {
     const printableRoot = printRef.current;
     if (!printableRoot) return;
 
-    // Get current date for print
     const printDate = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -100,7 +98,6 @@ export default function CustomerBalances() {
         max-width: 100%;
       }
       
-      /* Header */
       .print-header {
         text-align: center;
         margin-bottom: 25px;
@@ -124,7 +121,6 @@ export default function CustomerBalances() {
         margin: 5px 0;
       }
       
-      /* Report Info */
       .print-info {
         display: flex;
         justify-content: space-between;
@@ -156,7 +152,6 @@ export default function CustomerBalances() {
         color: #000;
       }
       
-      /* Summary Cards */
       .print-summary {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
@@ -187,7 +182,6 @@ export default function CustomerBalances() {
         color: #000;
       }
       
-      /* Currency Section */
       .print-currency-group {
         page-break-inside: avoid;
         margin-bottom: 30px;
@@ -205,7 +199,6 @@ export default function CustomerBalances() {
         font-weight: 700;
       }
       
-      /* Table */
       .print-table {
         width: 100%;
         border-collapse: collapse;
@@ -265,7 +258,6 @@ export default function CustomerBalances() {
         border: 1px solid #adb5bd;
       }
       
-      /* Footer */
       .print-footer {
         position: fixed;
         bottom: 0;
@@ -278,7 +270,6 @@ export default function CustomerBalances() {
         border-top: 1px solid #ddd;
       }
       
-      /* Page numbers */
       @media print {
         .print-footer::after {
           content: "Page " counter(page);
@@ -288,13 +279,11 @@ export default function CustomerBalances() {
   </head>
   <body>
     <div class="print-container">
-      <!-- Header -->
       <div class="print-header">
         <h1>Customer Balances Report</h1>
         <div class="subtitle">أرصدة الزبائن</div>
       </div>
       
-      <!-- Report Info -->
       <div class="print-info">
         <div class="print-info-item">
           <strong>Report Date</strong>
@@ -316,7 +305,6 @@ export default function CustomerBalances() {
         </div>
       </div>
       
-      <!-- Summary -->
       <div class="print-summary">
         <div class="print-summary-card">
           <strong>Total Customers</strong>
@@ -406,17 +394,16 @@ export default function CustomerBalances() {
     });
   };
 
-  // Check if customer name starts with number pattern (e.g., "2-", "3-", "10-")
+  // Check if customer name starts with number pattern (e.g., "2- عمر", "3- احمد")
+  // OR ends with number pattern (e.g., "مصنع نزيه - 1", "NAJM ART - 1")
   const isNumberedCustomer = (customerName) => {
     if (!customerName) return false;
-    // Match pattern: starts with digit(s) followed by dash or space
-    return /^\d+[-\s]/.test(customerName.trim());
+    return /^\d+[-\s]/.test(customerName.trim()) || /\s-\s\d+$/.test(customerName.trim());
   };
 
   const filteredCustomers = (data?.customers || [])
     .filter((c) => c.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter((c) => {
-      // Filter out numbered customers if checkbox is not checked
       if (!showNumberedCustomers && isNumberedCustomer(c.customerName)) {
         return false;
       }
@@ -475,7 +462,7 @@ export default function CustomerBalances() {
             onChange={(e) => setShowNumberedCustomers(e.target.checked)}
             disabled={loading}
           />
-          <span>Show numbered customers (e.g., "2- عمر", "3- احمد")</span>
+          <span>Show numbered customers (e.g., "2- عمر", "NAJM ART - 1")</span>
         </label>
 
         <button onClick={fetchReport} disabled={loading} className="customer-balances-generate-btn">
