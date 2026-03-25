@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
-import NotificationModal from "./recievables/NotificationModal";
+import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
-import { axiosClient } from "./api/axiosClient";
+import { axiosClient } from "../api/axiosClient";
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([

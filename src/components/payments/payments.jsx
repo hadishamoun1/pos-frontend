@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import "./payments.css";
 import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
-import NotificationModal from "./recievables/NotificationModal";
-import { axiosClient } from "./api/axiosClient";
+import NotificationModal from "../recievables/NotificationModal";
+import { axiosClient } from "../api/axiosClient";
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
