@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import SupplierModal from "./suppliersModal";
-import NotificationModal from "../recievables/NotificationModal";
+import NotificationModal from "./recievables/NotificationModal";
 import "./newPaymentModal.css";
-import { axiosClient } from "../api/axiosClient";
-
-const baseUrl = process.env.REACT_APP_API_BASE_URL;
+import { axiosClient } from "./api/axiosClient";
 
 const PaymentsModal = ({ onClose }) => {
   const [rows, setRows] = useState([
@@ -35,10 +33,13 @@ const PaymentsModal = ({ onClose }) => {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState(null);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
-  const [notificationData, setNotificationData] = useState({ type: "", message: "" });
+  const [notificationData, setNotificationData] = useState({
+    type: "",
+    message: "",
+  });
 
   const formatNumber = (value) => {
-    if (!value) return "";
+    if (!value && value !== 0) return "";
     return new Intl.NumberFormat().format(value);
   };
 
@@ -48,14 +49,12 @@ const PaymentsModal = ({ onClose }) => {
     const amountExchanged = parseFloat(row.amountExchanged || "0");
 
     if (row.currency === "USD") {
-      // USD: amountExchanged = amount * exchangeRate
       if (changedField === "amount" || changedField === "exchangeRate") {
         row.amountExchanged = (amount * exchangeRate).toFixed(2);
       } else if (changedField === "amountExchanged" && amount > 0) {
         row.exchangeRate = (amountExchanged / amount).toFixed(2);
       }
     } else {
-      // LL: amountExchanged = amount / exchangeRate
       if (changedField === "amount" || changedField === "exchangeRate") {
         if (exchangeRate > 0) {
           row.amountExchanged = (amount / exchangeRate).toFixed(2);
@@ -70,6 +69,7 @@ const PaymentsModal = ({ onClose }) => {
 
   const handleInputChange = (index, e) => {
     const { name, value } = e.target;
+
     const newRows = [...rows];
     const row = { ...newRows[index] };
 
@@ -78,7 +78,9 @@ const PaymentsModal = ({ onClose }) => {
     }
 
     row[name] =
-      name === "amount" || name === "exchangeRate" || name === "amountExchanged"
+      name === "amount" ||
+      name === "exchangeRate" ||
+      name === "amountExchanged"
         ? value.replace(/,/g, "")
         : value;
 
@@ -122,7 +124,12 @@ const PaymentsModal = ({ onClose }) => {
 
   const handleContextMenu = (e, index) => {
     e.preventDefault();
-    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, rowIndex: index });
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      rowIndex: index,
+    });
   };
 
   const handleCloseContextMenu = () => {
@@ -146,10 +153,10 @@ const PaymentsModal = ({ onClose }) => {
         doneBy: "",
         details: [
           {
-            amount: parseFloat(row.amount),
+            amount: parseFloat(row.amount || 0),
             currency: row.currency,
-            exchangeRate: parseFloat(row.exchangeRate),
-            amountExchanged: parseFloat(row.amountExchanged),
+            exchangeRate: parseFloat(row.exchangeRate || 0),
+            amountExchanged: parseFloat(row.amountExchanged || 0),
             checkDueDate: row.dueDate,
             checkNumber: row.checkNumber,
             checkDate: row.date,
@@ -159,13 +166,30 @@ const PaymentsModal = ({ onClose }) => {
         ],
       }));
 
-      await axiosClient.post(`${baseUrl}/payment-vouchers/v1/bulk`, payload);
-      setRows([{
-        supplier: "", supplierId: "", amount: "", currency: "",
-        date: "", type: "S", exchangeRate: "89500", amountExchanged: "",
-        checkNumber: "", bankName: "", dueDate: "", comments: "", paymentType: "",
-      }]);
-      setNotificationData({ type: "success", message: "Payment voucher created successfully!" });
+      await axiosClient.post("/payment-vouchers/v1/bulk", payload);
+
+      setRows([
+        {
+          supplier: "",
+          supplierId: "",
+          amount: "",
+          currency: "",
+          date: "",
+          type: "S",
+          exchangeRate: "89500",
+          amountExchanged: "",
+          checkNumber: "",
+          bankName: "",
+          dueDate: "",
+          comments: "",
+          paymentType: "",
+        },
+      ]);
+
+      setNotificationData({
+        type: "success",
+        message: "Payment voucher created successfully!",
+      });
       setIsNotificationVisible(true);
       setTimeout(() => onClose(), 1500);
     } catch (error) {
@@ -174,19 +198,36 @@ const PaymentsModal = ({ onClose }) => {
         error?.response?.data ||
         error?.message ||
         "Failed to create payment voucher";
-      setNotificationData({ type: "error", message: String(msg) });
+
+      setNotificationData({
+        type: "error",
+        message: String(msg),
+      });
       setIsNotificationVisible(true);
     }
   };
 
   return (
     <div className="payment-voucher-modal-overlay" onClick={handleCloseContextMenu}>
-      <div className="payment-voucher-modal-container">
+      <div
+        className="payment-voucher-modal-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="payment-voucher-modal-header">
           <h1>New Payment Voucher</h1>
           <div className="payment-voucher-modal-actions">
-            <button onClick={handleSubmit} className="payment-voucher-modal-save">Save</button>
-            <button onClick={onClose} className="payment-voucher-modal-cancel">Cancel</button>
+            <button
+              onClick={handleSubmit}
+              className="payment-voucher-modal-save"
+            >
+              Save
+            </button>
+            <button
+              onClick={onClose}
+              className="payment-voucher-modal-cancel"
+            >
+              Cancel
+            </button>
           </div>
         </div>
 
@@ -207,6 +248,7 @@ const PaymentsModal = ({ onClose }) => {
               <th className="payment-voucher-modal-comments">Comment</th>
             </tr>
           </thead>
+
           <tbody>
             {rows.map((row, index) => (
               <tr key={index} onContextMenu={(e) => handleContextMenu(e, index)}>
@@ -219,6 +261,7 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Select Supplier"
                   />
                 </td>
+
                 <td>
                   <select
                     name="paymentType"
@@ -232,9 +275,11 @@ const PaymentsModal = ({ onClose }) => {
                     <option value="Check LL">Check LL</option>
                   </select>
                 </td>
+
                 <td>
                   <input type="text" name="currency" value={row.currency} readOnly />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -244,6 +289,7 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Amount"
                   />
                 </td>
+
                 <td>
                   <input
                     type="date"
@@ -252,6 +298,7 @@ const PaymentsModal = ({ onClose }) => {
                     onChange={(e) => handleInputChange(index, e)}
                   />
                 </td>
+
                 <td>
                   <select
                     name="type"
@@ -263,6 +310,7 @@ const PaymentsModal = ({ onClose }) => {
                     <option value="G">G</option>
                   </select>
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -272,6 +320,7 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Exchange Rate"
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -281,6 +330,7 @@ const PaymentsModal = ({ onClose }) => {
                     placeholder="Enter Amount Exchanged"
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -291,6 +341,7 @@ const PaymentsModal = ({ onClose }) => {
                     disabled={row.paymentType?.includes("Cash")}
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -301,6 +352,7 @@ const PaymentsModal = ({ onClose }) => {
                     disabled={row.paymentType?.includes("Cash")}
                   />
                 </td>
+
                 <td>
                   <input
                     type="date"
@@ -310,6 +362,7 @@ const PaymentsModal = ({ onClose }) => {
                     disabled={row.paymentType?.includes("Cash")}
                   />
                 </td>
+
                 <td>
                   <input
                     type="text"
@@ -324,12 +377,25 @@ const PaymentsModal = ({ onClose }) => {
           </tbody>
         </table>
 
-        <button onClick={addRow} className="payment-voucher-modal-add-row">Add Row</button>
+        <div className="payment-voucher-modal-footer">
+          <button onClick={addRow} className="payment-voucher-modal-add-row">
+            Add Row
+          </button>
+        </div>
 
         {contextMenu.visible && (
-          <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+          <div
+            className="payment-voucher-modal-context-menu"
+            style={{
+              position: "fixed",
+              top: contextMenu.y,
+              left: contextMenu.x,
+              zIndex: 1000,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button onClick={handleDeleteRow}>Delete Row</button>
-            <button onClick={handleCloseContextMenu}>Cancel</button>
+            <button onClick={handleCloseContextMenu}>Close</button>
           </div>
         )}
 

@@ -5,12 +5,11 @@ import { axiosClient } from "../api/axiosClient";
 const SupplierModal = ({ onClose, onSelectSupplier }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [suppliers, setSuppliers] = useState([]);
-  const baseUrl = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const res = await axiosClient.get(`${baseUrl}/suppliers/v1/filtered`);
+        const res = await axiosClient.get("/suppliers/v1/filtered");
         setSuppliers(res.data || []);
       } catch (error) {
         console.error("Error fetching suppliers:", error);
@@ -21,7 +20,9 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
   }, []);
 
   const filteredSuppliers = suppliers.filter((supplier) =>
-    supplier.supplierName.toLowerCase().includes(searchQuery.toLowerCase())
+    (supplier.supplierName || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -36,6 +37,7 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
             close
           </button>
         </div>
+
         <input
           type="text"
           className="supplier-modal-search"
@@ -43,6 +45,7 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+
         <table className="supplier-modal-table">
           <thead>
             <tr>
@@ -53,7 +56,12 @@ const SupplierModal = ({ onClose, onSelectSupplier }) => {
             {filteredSuppliers.map((supplier) => (
               <tr
                 key={supplier.id}
-                onClick={() => onSelectSupplier({ id: supplier.id, supplierName: supplier.supplierName })}
+                onClick={() =>
+                  onSelectSupplier({
+                    id: supplier.id,
+                    supplierName: supplier.supplierName,
+                  })
+                }
               >
                 <td>{supplier.supplierName}</td>
               </tr>
