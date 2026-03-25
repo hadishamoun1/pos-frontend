@@ -1,102 +1,130 @@
 /* editPaymentModal.css */
 
-
-
 .edit-payment-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 14, 26, 0.52);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 18px;
   z-index: 1000;
-  animation: overlayIn 0.15s ease;
+  animation: overlayIn 0.18s ease;
 }
 
 .edit-payment-modal-container {
-  background: #ffffff;
-  border-radius: 8px;
-  width: 97vw;
-  max-width: 1760px;
-  max-height: 90vh;
+  width: min(1800px, 98vw);
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
-  border: 1px solid #dde1e7;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08);
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  animation: modalIn 0.16s ease;
   overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.22),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  animation: modalIn 0.2s ease;
 }
 
 .edit-payment-modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid #edf0f4;
-  background: #fafbfd;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #eef2f7;
+  background: linear-gradient(180deg, #fbfcfe 0%, #f6f8fb 100%);
   flex-shrink: 0;
 }
 
 .edit-payment-modal-header h1 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1c2333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.edit-payment-modal-header h1::before {
-  content: '';
-  display: inline-block;
-  width: 3px;
-  height: 16px;
-  background: #ea8c00;
-  border-radius: 2px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
 }
 
 .edit-payment-modal-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 
 .edit-payment-modal-save,
 .edit-payment-modal-cancel {
-  height: 38px;
-  padding: 0 22px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  border-radius: 5px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
   border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
 }
 
 .edit-payment-modal-save {
-  background: #16a34a;
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
   color: #fff;
-  border-color: #16a34a;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.2);
 }
-.edit-payment-modal-save:hover { background: #15803d; }
+
+.edit-payment-modal-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.28);
+}
 
 .edit-payment-modal-cancel {
   background: #fff;
   color: #374151;
   border-color: #d1d5db;
 }
-.edit-payment-modal-cancel:hover { background: #f9fafb; border-color: #9ca3af; }
 
-.edit-payment-modal-container > .edit-payment-modal-table {
-  overflow-x: auto;
-  overflow-y: auto;
+.edit-payment-modal-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.edit-payment-modal-table-wrapper {
   flex: 1;
+  overflow: auto;
+  background: #fff;
+}
+
+.edit-payment-modal-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.edit-payment-modal-table-wrapper::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 999px;
+}
+
+.edit-payment-modal-table-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.edit-payment-modal-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .edit-payment-modal-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1880px;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   font-size: 14px;
 }
@@ -104,125 +132,290 @@
 .edit-payment-modal-table thead {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 5;
 }
 
 .edit-payment-modal-table th {
-  background: #1c2333;
-  color: #e2e8f0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 12px 12px;
+  padding: 13px 12px;
   text-align: left;
-  border-right: 1px solid rgba(255,255,255,0.07);
+ background: linear-gradient(to right, #2563eb, #1d4ed8);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
   white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
 }
-.edit-payment-modal-table th:last-child { border-right: none; }
 
 .edit-payment-modal-table td {
-  padding: 10px 8px;
-  border-bottom: 1px solid #edf0f4;
-  border-right: 1px solid #edf0f4;
+  padding: 10px;
   vertical-align: middle;
-  background: #fff;
+  border-right: 1px solid #edf1f5;
+  border-bottom: 1px solid #edf1f5;
+  background: #ffffff;
 }
-.edit-payment-modal-table td:last-child { border-right: none; }
-.edit-payment-modal-table tbody tr:hover td { background: #f0f5ff; }
+
+.edit-payment-modal-table th:last-child,
+.edit-payment-modal-table td:last-child {
+  border-right: none;
+}
+
+.edit-payment-modal-table tbody tr:nth-child(even) td {
+  background: #fbfcfe;
+}
+
+.edit-payment-modal-table tbody tr:hover td {
+  background: #f4f8ff;
+}
 
 .edit-payment-modal-table input[type="text"],
 .edit-payment-modal-table input[type="number"],
 .edit-payment-modal-table input[type="date"],
 .edit-payment-modal-table select {
   width: 100%;
-  height: 38px;
-  padding: 0 10px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d5dbe3;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
   font-size: 14px;
   font-family: inherit;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: #fff;
-  color: #1c2333;
   outline: none;
-  transition: border-color 0.12s, box-shadow 0.12s;
+  box-sizing: border-box;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.edit-payment-modal-table input::placeholder {
+  color: #9ca3af;
 }
 
 .edit-payment-modal-table input:focus,
 .edit-payment-modal-table select:focus {
-  border-color: #1555e0;
-  box-shadow: 0 0 0 3px rgba(21, 85, 224, 0.13);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  background: #ffffff;
 }
 
 .edit-payment-modal-table input:disabled,
 .edit-payment-modal-table select:disabled {
   background: #f3f4f6;
   color: #9ca3af;
-  cursor: not-allowed;
   border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.edit-payment-modal-table input[readonly] {
+  background: #f8fafc;
+  color: #374151;
+  border-color: #dbe2ea;
 }
 
 .edit-payment-modal-table input[name="paymentNumber"] {
-  background: #f0f5ff;
-  color: #1555e0;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.2px;
-  border-color: #c7d9f9;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  border-color: #bfdbfe;
   cursor: default;
 }
 
-.edit-payment-modal-supplier          { width: 200px; }
-.edit-payment-modal-payment-type      { width: 120px; }
-.edit-payment-modal-currency          { width: 80px; }
-.edit-payment-modal-amount            { width: 135px; }
-.edit-payment-modal-date              { width: 145px; }
-.edit-payment-modal-type              { width: 90px; }
-.edit-payment-modal-exchange-rate     { width: 120px; }
-.edit-payment-modal-amount-exchanged  { width: 135px; }
-.edit-payment-modal-check-number      { width: 115px; }
-.edit-payment-modal-bank-name         { width: 125px; }
-.edit-payment-modal-due-date          { width: 145px; }
-.edit-payment-modal-payment-number    { width: 130px; }
-.edit-payment-modal-comments          { width: 180px; }
-
-.context-menu {
-  position: fixed;
-  background: #fff;
-  border: 1px solid #dde1e7;
-  border-radius: 5px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  z-index: 9999;
-  padding: 4px;
-  min-width: 155px;
-  animation: ctxIn 0.1s ease;
+.edit-payment-modal-table th.edit-payment-modal-supplier,
+.edit-payment-modal-table td.edit-payment-modal-supplier {
+  width: 200px;
 }
 
+.edit-payment-modal-table th.edit-payment-modal-payment-type,
+.edit-payment-modal-table td.edit-payment-modal-payment-type {
+  width: 130px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-currency,
+.edit-payment-modal-table td.edit-payment-modal-currency {
+  width: 90px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-amount,
+.edit-payment-modal-table td.edit-payment-modal-amount {
+  width: 140px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-date,
+.edit-payment-modal-table td.edit-payment-modal-date {
+  width: 145px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-type,
+.edit-payment-modal-table td.edit-payment-modal-type {
+  width: 90px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-exchange-rate,
+.edit-payment-modal-table td.edit-payment-modal-exchange-rate {
+  width: 130px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-amount-exchanged,
+.edit-payment-modal-table td.edit-payment-modal-amount-exchanged {
+  width: 150px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-check-number,
+.edit-payment-modal-table td.edit-payment-modal-check-number {
+  width: 130px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-bank-name,
+.edit-payment-modal-table td.edit-payment-modal-bank-name {
+  width: 150px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-due-date,
+.edit-payment-modal-table td.edit-payment-modal-due-date {
+  width: 145px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-payment-number,
+.edit-payment-modal-table td.edit-payment-modal-payment-number {
+  width: 140px;
+}
+
+.edit-payment-modal-table th.edit-payment-modal-comments,
+.edit-payment-modal-table td.edit-payment-modal-comments {
+  width: 220px;
+}
+
+.edit-payment-modal-context-menu,
+.context-menu {
+  position: fixed;
+  min-width: 170px;
+  padding: 6px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow:
+    0 18px 30px rgba(15, 23, 42, 0.16),
+    0 6px 10px rgba(15, 23, 42, 0.06);
+  z-index: 9999;
+  animation: ctxIn 0.12s ease;
+}
+
+.edit-payment-modal-context-menu button,
 .context-menu button {
   display: block;
   width: 100%;
-  padding: 9px 13px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #111827;
   font-size: 14px;
   font-family: inherit;
   text-align: left;
-  background: none;
-  border: none;
-  color: #1c2333;
   cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.08s;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.context-menu button:hover { background: #fef2f2; color: #b91c1c; }
+
+.edit-payment-modal-context-menu button:hover,
+.context-menu button:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
 
 @keyframes overlayIn {
   from { opacity: 0; }
-  to   { opacity: 1; }
+  to { opacity: 1; }
 }
+
 @keyframes modalIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.995); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
+
 @keyframes ctxIn {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+  .edit-payment-modal-container {
+    width: 99vw;
+    max-height: 95vh;
+    border-radius: 12px;
+  }
+
+  .edit-payment-modal-header {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .edit-payment-modal-header h1 {
+    font-size: 16px;
+  }
+
+  .edit-payment-modal-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .edit-payment-modal-overlay {
+    padding: 8px;
+  }
+
+  .edit-payment-modal-container {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .edit-payment-modal-header {
+    padding: 12px;
+  }
+
+  .edit-payment-modal-save,
+  .edit-payment-modal-cancel {
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .edit-payment-modal-table {
+    font-size: 13px;
+  }
+
+  .edit-payment-modal-table th {
+    font-size: 11px;
+    padding: 10px 8px;
+  }
+
+  .edit-payment-modal-table td {
+    padding: 8px;
+  }
+
+  .edit-payment-modal-table input[type="text"],
+  .edit-payment-modal-table input[type="number"],
+  .edit-payment-modal-table input[type="date"],
+  .edit-payment-modal-table select {
+    height: 38px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
 }

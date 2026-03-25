@@ -1,55 +1,44 @@
 /* payments.css */
 
-
 .payment-voucher-container {
+  width: 100%;
+  min-height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  height: 98vh;
-  padding: 16px 20px 12px;
-  background: #f4f6f9;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  gap: 12px;
-  overflow: hidden;
+  gap: 14px;
+  background: #f8fafc;
 }
 
 .payment-voucher-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #ffffff;
-  border: 1px solid #dde1e7;
-  border-radius: 6px;
-  padding: 12px 18px;
-  flex-shrink: 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.payment-voucher-header-content {
+.payment-voucher-title-section {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .payment-voucher-title {
-  font-size: 20px;
+  margin: 0;
+  font-size: 24px;
   font-weight: 700;
-  color: #1c2333;
-  letter-spacing: -0.2px;
-}
-
-.payment-voucher-header-content::after {
-  content: '';
-  display: inline-block;
-  width: 1px;
-  height: 22px;
-  background: #dde1e7;
-  margin: 0 4px;
+  color: #1e293b;
+  letter-spacing: 0.3px;
 }
 
 .payment-voucher-action-buttons {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .payment-voucher-filter-btn,
@@ -57,68 +46,93 @@
 .payment-voucher-new-btn,
 .payment-voucher-edit-btn,
 .payment-voucher-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  height: 38px;
-  padding: 0 18px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  border-radius: 5px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
   border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-  white-space: nowrap;
-  line-height: 1;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.12s ease,
+    box-shadow 0.16s ease;
 }
 
+.payment-voucher-filter-btn,
 .payment-voucher-new-btn {
   background: #1555e0;
   color: #fff;
   border-color: #1555e0;
 }
-.payment-voucher-new-btn:hover { background: #1246c2; }
 
-.payment-voucher-filter-btn {
-  background: #1555e0;
-  color: #fff;
-  border-color: #1555e0;
+.payment-voucher-filter-btn:hover,
+.payment-voucher-new-btn:hover {
+  background: #1248be;
+  border-color: #1248be;
+  transform: translateY(-1px);
 }
-.payment-voucher-filter-btn:hover { background: #1246c2; }
 
+.payment-voucher-clear-btn,
 .payment-voucher-edit-btn {
-  background: #fff;
-  color: #374151;
-  border-color: #d1d5db;
+  background: #ffffff;
+  color: #334155;
+  border-color: #cbd5e1;
 }
-.payment-voucher-edit-btn:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
 
-.payment-voucher-clear-btn {
-  background: #fff;
-  color: #374151;
-  border-color: #d1d5db;
+.payment-voucher-clear-btn:hover,
+.payment-voucher-edit-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
 }
-.payment-voucher-clear-btn:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
 
 .payment-voucher-delete-btn {
   background: #fff;
   color: #c0392b;
   border-color: #f5c6c2;
 }
-.payment-voucher-delete-btn:hover { background: #fef2f2; border-color: #c0392b; }
+
+.payment-voucher-delete-btn:hover {
+  background: #fef2f2;
+  border-color: #c0392b;
+  transform: translateY(-1px);
+}
+
+.error-message {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 14px;
+}
+
+.loading-message {
+  margin: 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+}
 
 .payment-voucher-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 14px;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
   background: #fff;
   border: 1px solid #dde1e7;
   border-radius: 6px;
   overflow: hidden;
-  flex: 1;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .payment-voucher-table thead {
@@ -128,20 +142,23 @@
 }
 
 .payment-voucher-table th {
-  background: #1c2333;
-  color: #e2e8f0;
+  background: linear-gradient(to right, #2563eb, #1d4ed8);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   padding: 12px 12px;
-  text-align: left;
-  border-right: 1px solid rgba(255,255,255,0.07);
+  text-align: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.payment-voucher-table th:last-child { border-right: none; }
+
+.payment-voucher-table th:last-child {
+  border-right: none;
+}
 
 .payment-voucher-table td {
   padding: 11px 12px;
@@ -156,67 +173,143 @@
   font-size: 14px;
 }
 
-.payment-voucher-table td:last-child { border-right: none; }
-.payment-voucher-table tr:last-child td { border-bottom: none; }
-.payment-voucher-table tbody tr:nth-child(even) td { background: #fafbfd; }
-.payment-voucher-table tbody tr:hover td { background: #eef3ff; }
+.payment-voucher-table td:last-child {
+  border-right: none;
+}
 
+.payment-voucher-table tr:last-child td {
+  border-bottom: none;
+}
+
+.payment-voucher-table tbody tr:nth-child(even) td {
+  background: #fafbfd;
+}
+
+.payment-voucher-table tbody tr:hover td {
+  background: #eef3ff;
+}
+
+/* checkbox column */
 .payment-voucher-select {
-  width: 44px;
+  width: 56px;
   text-align: center !important;
   padding: 0 !important;
 }
 
 .payment-voucher-select input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   cursor: pointer;
   accent-color: #1555e0;
   display: block;
   margin: 0 auto;
 }
 
-.payment-voucher-supplier         { width: 160px; }
-.payment-voucher-amount           { width: 110px; text-align: right !important; font-variant-numeric: tabular-nums; }
-.payment-voucher-payment-type     { width: 105px; }
-.payment-voucher-date             { width: 100px; }
-.payment-voucher-type             { width: 55px; text-align: center !important; }
-.payment-voucher-exchange-rate    { width: 90px; text-align: right !important; font-variant-numeric: tabular-nums; }
-.payment-voucher-amount-exchanged { width: 110px; text-align: right !important; font-variant-numeric: tabular-nums; }
-.payment-voucher-check-number     { width: 88px; }
-.payment-voucher-bank-name        { width: 110px; }
-.payment-voucher-due-date         { width: 96px; }
-.payment-voucher-payment-number   { width: 100px; font-weight: 600; color: #1555e0; }
-.payment-voucher-comments         { width: 140px; color: #6b7280; }
-.payment-voucher-currency         { width: 76px; text-align: center !important; }
-.payment-voucher-date-created     { width: 115px; color: #6b7280; }
-.payment-voucher-date-modified    { width: 115px; color: #6b7280; }
-.payment-voucher-done-by          { width: 95px; color: #6b7280; }
+/* column widths */
+.payment-voucher-supplier {
+  width: 160px;
+}
+
+.payment-voucher-amount {
+  width: 110px;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-voucher-payment-type {
+  width: 105px;
+}
+
+.payment-voucher-date {
+  width: 100px;
+}
+
+.payment-voucher-type {
+  width: 55px;
+  text-align: center !important;
+}
+
+.payment-voucher-exchange-rate {
+  width: 90px;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-voucher-amount-exchanged {
+  width: 110px;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-voucher-check-number {
+  width: 88px;
+}
+
+.payment-voucher-bank-name {
+  width: 110px;
+}
+
+.payment-voucher-due-date {
+  width: 96px;
+}
+
+.payment-voucher-payment-number {
+  width: 100px;
+  font-weight: 600;
+  color: #1555e0;
+}
+
+.payment-voucher-comments {
+  width: 140px;
+  color: #6b7280;
+}
+
+.payment-voucher-currency {
+  width: 76px;
+  text-align: center !important;
+}
+
+.payment-voucher-date-created {
+  width: 115px;
+  color: #6b7280;
+}
+
+.payment-voucher-date-modified {
+  width: 115px;
+  color: #6b7280;
+}
+
+.payment-voucher-done-by {
+  width: 95px;
+  color: #6b7280;
+}
 
 .payment-voucher-table td.payment-voucher-currency {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: #047857;
   letter-spacing: 0.3px;
 }
 
 .payment-voucher-table td.payment-voucher-type {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: #6d28d9;
 }
 
-.load-more-container {
+.load-more-container,
+.payment-voucher-load-more {
   display: flex;
   justify-content: center;
   flex-shrink: 0;
   padding-top: 4px;
 }
 
-.load-more-btn {
+.load-more-btn,
+.payment-voucher-load-more button {
   height: 38px;
   padding: 0 28px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   font-family: inherit;
   background: #fff;
@@ -224,56 +317,112 @@
   border: 1px solid #1555e0;
   border-radius: 5px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.12s, transform 0.12s;
 }
-.load-more-btn:hover { background: #eff4ff; }
 
-.context-menu {
+.load-more-btn:hover,
+.payment-voucher-load-more button:hover {
+  background: #eff4ff;
+  transform: translateY(-1px);
+}
+
+.context-menu,
+.payment-voucher-context-menu {
   position: fixed;
   background: #fff;
   border: 1px solid #dde1e7;
-  border-radius: 5px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   z-index: 9999;
-  padding: 4px;
-  min-width: 165px;
-  animation: ctxIn 0.1s ease;
+  padding: 6px;
+  min-width: 180px;
 }
 
-.context-menu button {
-  display: block;
+.context-menu button,
+.payment-voucher-context-menu button {
   width: 100%;
-  padding: 9px 13px;
-  font-size: 14px;
-  font-family: inherit;
+  display: block;
+  padding: 10px 12px;
   text-align: left;
-  background: none;
+  background: transparent;
   border: none;
-  color: #1c2333;
+  border-radius: 6px;
   cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.08s;
-}
-.context-menu button:hover { background: #eff4ff; color: #1555e0; }
-
-.error-message {
-  padding: 10px 16px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 4px;
-  color: #b91c1c;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.loading-message {
-  text-align: center;
-  padding: 60px 20px;
-  color: #9ca3af;
   font-size: 15px;
+  font-family: inherit;
+  color: #1f2937;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
-@keyframes ctxIn {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: translateY(0); }
+.context-menu button:hover,
+.payment-voucher-context-menu button:hover {
+  background: #eff4ff;
+  color: #1555e0;
+}
+
+@media (max-width: 1100px) {
+  .payment-voucher-container {
+    padding: 14px;
+  }
+
+  .payment-voucher-title {
+    font-size: 20px;
+  }
+
+  .payment-voucher-filter-btn,
+  .payment-voucher-clear-btn,
+  .payment-voucher-new-btn,
+  .payment-voucher-edit-btn,
+  .payment-voucher-delete-btn {
+    height: 38px;
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  .payment-voucher-table th,
+  .payment-voucher-table td {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-voucher-container {
+    padding: 10px;
+  }
+
+  .payment-voucher-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .payment-voucher-title-section,
+  .payment-voucher-action-buttons {
+    width: 100%;
+  }
+
+  .payment-voucher-action-buttons {
+    justify-content: flex-start;
+  }
+
+  .payment-voucher-table {
+    font-size: 15px;
+  }
+
+  .payment-voucher-table th {
+    font-size: 15px;
+    padding: 10px 8px;
+  }
+
+  .payment-voucher-table td {
+    padding: 9px 8px;
+  }
+
+  .payment-voucher-select {
+    width: 60px;
+  }
+
+  .payment-voucher-select input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+  }
 }

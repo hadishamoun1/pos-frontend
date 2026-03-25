@@ -147,6 +147,10 @@ const PERMISSION_GROUPS = [
       "cashFlow.print",
       "cashFlow.viewAny",
       "users.list",
+      "payments.view",
+    "payments.create",
+    "payments.update",
+    "payments.delete",
     ],
   },
   {

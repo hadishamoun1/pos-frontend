@@ -4,6 +4,7 @@ import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
 import NotificationModal from "../recievables/NotificationModal";
 import { axiosClient } from "../api/axiosClient";
+import { hasPerm } from "../auth/authz";
 
 const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +29,10 @@ const PaymentsPage = () => {
   });
 
   const [filters, setFilters] = useState({});
+
+  const canCreate = hasPerm("payments.create");
+  const canUpdate = hasPerm("payments.update");
+  const canDelete = hasPerm("payments.delete");
 
   const fetchPaymentVouchers = async () => {
     try {
@@ -112,6 +117,8 @@ const PaymentsPage = () => {
   };
 
   const handleEditClick = () => {
+    if (!canUpdate) return;
+
     if (selectedRows.length !== 1) {
       setNotification({
         type: "error",
@@ -165,6 +172,8 @@ const PaymentsPage = () => {
   };
 
   const handleDeleteConfirmation = () => {
+    if (!canDelete) return;
+
     if (selectedRows.length === 0) {
       setNotification({
         type: "error",
@@ -288,24 +297,32 @@ const PaymentsPage = () => {
         </div>
 
         <div className="payment-voucher-action-buttons">
-          <button
-            className="payment-voucher-new-btn"
-            onClick={() => setIsModalOpen(true)}
-          >
-            New
-          </button>
-          <button
-            className="payment-voucher-edit-btn"
-            onClick={handleEditClick}
-          >
-            Edit
-          </button>
-          <button
-            className="payment-voucher-delete-btn"
-            onClick={handleDeleteConfirmation}
-          >
-            Delete
-          </button>
+          {canCreate && (
+            <button
+              className="payment-voucher-new-btn"
+              onClick={() => setIsModalOpen(true)}
+            >
+              New
+            </button>
+          )}
+
+          {canUpdate && (
+            <button
+              className="payment-voucher-edit-btn"
+              onClick={handleEditClick}
+            >
+              Edit
+            </button>
+          )}
+
+          {canDelete && (
+            <button
+              className="payment-voucher-delete-btn"
+              onClick={handleDeleteConfirmation}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -335,9 +352,10 @@ const PaymentsPage = () => {
           <tbody>
             {filteredData.map((row) => {
               const detail = row.details?.[0] || {};
+
               return (
                 <tr key={row.id}>
-                  <td>
+                  <td className="payment-voucher-select">
                     <input
                       type="checkbox"
                       checked={selectedRows.includes(row.id)}
@@ -346,6 +364,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-supplier"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "supplierName", row.supplierName)
                     }
@@ -354,6 +373,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-amount"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "amount", detail.amount)
                     }
@@ -362,6 +382,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-payment-type"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "paymentType", row.paymentType)
                     }
@@ -370,18 +391,21 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-date"
                     onContextMenu={(e) => handleContextMenu(e, "date", row.date)}
                   >
                     {row.date}
                   </td>
 
                   <td
+                    className="payment-voucher-type"
                     onContextMenu={(e) => handleContextMenu(e, "type", row.type)}
                   >
                     {row.type}
                   </td>
 
                   <td
+                    className="payment-voucher-exchange-rate"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "exchangeRate", detail.exchangeRate)
                     }
@@ -390,6 +414,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-amount-exchanged"
                     onContextMenu={(e) =>
                       handleContextMenu(
                         e,
@@ -402,6 +427,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-check-number"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "checkNumber", detail.checkNumber)
                     }
@@ -410,6 +436,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-bank-name"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "bankName", detail.bankName)
                     }
@@ -418,6 +445,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-due-date"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "checkDueDate", detail.checkDueDate)
                     }
@@ -426,6 +454,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-payment-number"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "paymentNumber", row.paymentNumber)
                     }
@@ -434,6 +463,7 @@ const PaymentsPage = () => {
                   </td>
 
                   <td
+                    className="payment-voucher-comments"
                     onContextMenu={(e) =>
                       handleContextMenu(e, "description", detail.description)
                     }
@@ -470,7 +500,7 @@ const PaymentsPage = () => {
         </div>
       )}
 
-      {isModalOpen && (
+      {isModalOpen && canCreate && (
         <PaymentsModal
           onClose={() => {
             setIsModalOpen(false);
@@ -479,7 +509,7 @@ const PaymentsPage = () => {
         />
       )}
 
-      {isEditModalOpen && rowToEdit && (
+      {isEditModalOpen && rowToEdit && canUpdate && (
         <EditPaymentModal
           row={rowToEdit}
           onClose={() => setIsEditModalOpen(false)}
