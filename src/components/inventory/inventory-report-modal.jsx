@@ -55,14 +55,9 @@ const prettyDimsWithSPB = (L, W, spb) => {
   return `${base}-${Number.isFinite(s) && s > 0 ? pad3(s) : "000"}`;
 };
 
-// ✅ FIXED deriveBalances:
-// ones.balance = SUM(quantityofr) → PRIMARY for Balance (Qty)
-// ofrTotalsSqm.balanceOFR = SUM(sqmofr) → PRIMARY for Balance (SQM)
-// mode param kept for API compatibility but no longer changes behavior
 const deriveBalances = (row, _mode) => {
   const typeLower = typeOf(row?.type);
 
-  // ✅ quantityofr balance — backend sends as ones.balance
   const qtyBal =
     Number.isFinite(Number(row?.ones?.balance))
       ? Number(row.ones.balance)
@@ -70,7 +65,6 @@ const deriveBalances = (row, _mode) => {
       ? Number(row.ofrTotalsUnits.balance)
       : undefined;
 
-  // ✅ sqmofr balance — backend sends as ofrTotalsSqm.balanceOFR
   const sqmBal =
     Number.isFinite(Number(row?.ofrTotalsSqm?.balanceOFR))
       ? Number(row.ofrTotalsSqm.balanceOFR)
@@ -79,7 +73,6 @@ const deriveBalances = (row, _mode) => {
   let qty, sqm;
 
   if (Number.isFinite(qtyBal)) {
-    // ✅ quantityofr is PRIMARY → show directly as Balance (Qty)
     qty = qtyBal;
     if (typeLower === "sqm") {
       sqm = Number.isFinite(sqmBal) ? sqmBal : qty;
@@ -95,7 +88,6 @@ const deriveBalances = (row, _mode) => {
           });
     }
   } else if (Number.isFinite(sqmBal)) {
-    // ✅ fallback only: no quantityofr, derive qty from sqmofr
     sqm = sqmBal;
     qty =
       typeLower === "sqm"
@@ -151,7 +143,6 @@ function useGroupedByDescription(
       return groupsById.get(descId);
     };
 
-    // 0) Build SPB indices from the widest set
     const idxSource =
       rowsForSpbIndex && rowsForSpbIndex.length ? rowsForSpbIndex : rows;
 
@@ -181,7 +172,6 @@ function useGroupedByDescription(
       m.set(spb, (m.get(spb) || 0) + 1);
     });
 
-    // 1) Aggregate visible rows
     (rows || []).forEach((r) => {
       const desc = r.description || null;
       const descId = desc?.id ?? "null";
@@ -208,7 +198,6 @@ function useGroupedByDescription(
         g.headerCombos.push(headerLabel);
       }
 
-      // ✅ deriveBalances now uses quantityofr as primary
       const { qty, sqm } = deriveBalances(r, mode);
       const t = typeOf(r.type);
 
@@ -232,15 +221,12 @@ function useGroupedByDescription(
           sheetSqm: 0,
           boxQtyPerSpb: new Map(),
           boxSqmPerSpb: new Map(),
-
           avgCostPerSpb: new Map(),
           lastCostPerSpb: new Map(),
           fallbackAvgCost: null,
           fallbackLastCost: null,
-
           sheetAvgCost: null,
           sheetLastCost: null,
-
           averageCostCVM: null,
           averageCostC: null,
           lastCostC: null,
@@ -267,21 +253,17 @@ function useGroupedByDescription(
 
       if (t === "box") {
         const spb = Math.max(0, Math.floor(Number(r.sheetsPerBox) || 0));
-
         b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
         b.boxSqmPerSpb.set(spb, (b.boxSqmPerSpb.get(spb) || 0) + s);
-
         const avg = Number(r.averageCost);
         if (Number.isFinite(avg) && spb > 0) b.avgCostPerSpb.set(spb, avg);
         else if (Number.isFinite(avg)) b.fallbackAvgCost = avg;
-
         const last = Number(r.lastCost);
         if (Number.isFinite(last) && spb > 0) b.lastCostPerSpb.set(spb, last);
         else if (Number.isFinite(last)) b.fallbackLastCost = last;
       } else if (t === "sheet") {
         b.sheetQty += q;
         b.sheetSqm += s;
-
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -294,7 +276,6 @@ function useGroupedByDescription(
         }
       } else if (t === "sqm") {
         b.sheetSqm += s;
-
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -318,7 +299,6 @@ function useGroupedByDescription(
       return bestSpb;
     };
 
-    // 2) Build output rows
     const allGroups = Array.from(groupsById.values()).map((g) => {
       const rowsOut = [];
 
@@ -346,7 +326,6 @@ function useGroupedByDescription(
         if (spbs.length > 0) {
           let attachSpb = spbs[0];
           let maxBoxes = -1;
-
           spbs.forEach((spb) => {
             const qb = Number(b.boxQtyPerSpb.get(spb) || 0);
             if (qb > maxBoxes) { maxBoxes = qb; attachSpb = spb; }
@@ -369,14 +348,11 @@ function useGroupedByDescription(
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
-
               qtyBox,
               qtySheet: attachSheets ? Number(b.sheetQty || 0) : 0,
               sqmTotal: Number(sqmBox + (attachSheets ? b.sheetSqm || 0 : 0)),
-
               averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(spb) ?? b.fallbackLastCost ?? null,
-
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -391,14 +367,11 @@ function useGroupedByDescription(
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
-
               qtyBox: 0,
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
-
               averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
-
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -413,14 +386,11 @@ function useGroupedByDescription(
               itemNumber: b.itemNumber || "",
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
-
               qtyBox: 0,
               qtySheet: Number(b.sheetQty || 0),
               sqmTotal: Number(b.sheetSqm || 0),
-
               averageCost: b.fallbackAvgCost ?? null,
               lastCost: b.fallbackLastCost ?? null,
-
               averageCostCVM: b.averageCostCVM,
               averageCostC: b.averageCostC,
               lastCostC: b.lastCostC,
@@ -439,7 +409,6 @@ function useGroupedByDescription(
       });
 
       g.rows = rowsOut;
-
       const [first] = g.headerCombos;
       g.headerTitle = first || "";
       delete g.headerSet;
@@ -467,7 +436,7 @@ function useGroupedByDescription(
   }, [rows, mode, rowsForSpbIndex, debug]);
 }
 
-/* --------- Optional view transform: Transfer-to-SQM (name mode only) --------- */
+/* --------- Optional view transform: Transfer-to-SQM --------- */
 function useTransferredGroups(groups, transferToSqm, mode) {
   return useMemo(() => {
     if (!transferToSqm || mode !== "name") return groups || [];
@@ -487,7 +456,6 @@ function useTransferredGroups(groups, transferToSqm, mode) {
         qtyBox: 0,
         qtySheet: 0,
         sqmTotal: totalSqm,
-
         averageCost: firstRow.averageCost ?? null,
         lastCost: firstRow.lastCost ?? null,
         averageCostCVM: firstRow.averageCostCVM ?? null,
@@ -502,6 +470,7 @@ function useTransferredGroups(groups, transferToSqm, mode) {
 }
 
 /* --------- Print HTML --------- */
+// Column order: Origin | Name+Thk | Dimension | Qty(Box) | Qty(Sheet) | SQM | Avg Cost | Last Cost | Total Amount
 function buildPrintHTML({
   groups,
   title = "Inventory Report",
@@ -530,116 +499,122 @@ function buildPrintHTML({
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
     );
 
-  const costColsReal =
-    mode === "real" ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0) : 0;
-
-  const costColsName =
-    mode === "name"
-      ? (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
-        (showLastCostC ? 1 : 0) + (showLastCostCVM ? 1 : 0)
-      : 0;
-
   const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+  // cost columns in "name" mode (used only in transfer mode)
+  const costColsName = mode === "name"
+    ? (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
+      (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0)
+    : 0;
+
   const costForAmount = (r) => {
     if (mode === "real") return num(r.averageCost);
     if (mode === "name") {
       if (showAvgCostCVM) return num(r.averageCostCVM);
-      if (showAvgCostC) return num(r.averageCostC);
+      if (showAvgCostC)   return num(r.averageCostC);
       return num(r.averageCostCVM) || num(r.averageCostC) || 0;
     }
     return num(r.averageCost) || num(r.averageCostCVM) || num(r.averageCostC) || 0;
   };
   const sqmAmountOfRow = (r) => num(r.sqmTotal) * costForAmount(r);
 
-  const showAmountCol = !!showSqmAmount;
+  const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
-  const amountColCount = showAmountCol ? 1 : 0;
+
+  // ── NEW fixed column order (non-transfer) ──────────────────────────────
+  // Origin | Name+Thk | Dimension | Qty(Box) | Qty(Sheet) | SQM | AvgCost | LastCost | Amount
+  // Total fixed cols before amount: 7 (origin, name, dim, box, sheet, sqm, + cost cols)
+  // cost cols = (showAvgCost?1:0) + (showLastCost?1:0) for real; similar for name
+  const costColsReal = mode === "real"
+    ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0)
+    : 0;
+  const costCols = mode === "real" ? costColsReal : costColsName;
+
+  // colspan for "Group Total:" label in non-transfer: origin+name+dim+box+sheet = 5 fixed + costCols
+  // then 3 value cols: box, sheet, sqm → label spans 3 + costCols, values in last 3
+  // Actually: origin(1) + name(1) + dim(1) = 3 label cols, then costCols, then box(1)+sheet(1)+sqm(1)
+  // So label colspan = 3 + costCols, values = box, sheet, sqm individually
+  const labelColspan = 3 + costCols;
 
   const groupBlocks = (groups || [])
     .map((g) => {
+      let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
+      for (const r of g.rows || []) {
+        totBox    += Number(r.qtyBox   || 0);
+        totSheet  += Number(r.qtySheet || 0);
+        totSqm    += Number(r.sqmTotal || 0);
+        totAmount += sqmAmountOfRow(r);
+      }
+
       const header = `<div class="g-head">
-         <div class="g-title" style="direction:rtl;text-align:right">${escape(g.headerTitle || "")}</div>
-         <div class="g-right"><span class="itmno">Item No.: <strong>${escape(g.itemNumber || "")}</strong></span></div>
-       </div>`;
+        <div class="g-title" style="direction:rtl;text-align:right">${escape(g.headerTitle || "")}</div>
+        <div class="g-right"><span class="itmno">Item No.: <strong>${escape(g.itemNumber || "")}</strong></span></div>
+      </div>`;
+
+      const thead = transferMode
+        ? `<thead><tr>
+             <th>Origin</th>
+             <th class="tc col-ar">Name+Thk (AR)</th>
+             ${mode === "name" && showAvgCostCVM ? `<th class="tr">Avg Cost CVM</th>` : ""}
+             ${mode === "name" && showAvgCostC   ? `<th class="tr">Avg Cost C</th>`   : ""}
+             ${mode === "name" && showLastCostC  ? `<th class="tr">Last Cost C</th>`  : ""}
+             ${mode === "name" && showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: ""}
+             <th class="tr">SQM (Total)</th>
+             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
+           </tr></thead>`
+        : `<thead><tr>
+             <th>Origin</th>
+             <th class="tc col-ar">Name+Thk (AR)</th>
+             <th class="tc">Dimension</th>
+             <th class="tr">Qty (Box)</th>
+             <th class="tr">Qty (Sheet)</th>
+             <th class="tr">SQM (Total)</th>
+             ${mode === "real" && showAvgCost    ? `<th class="tr">Avg Cost</th>`     : ""}
+             ${mode === "real" && showLastCost   ? `<th class="tr">Last Cost</th>`    : ""}
+             ${mode === "name" && showAvgCostCVM ? `<th class="tr">Avg Cost CVM</th>` : ""}
+             ${mode === "name" && showAvgCostC   ? `<th class="tr">Avg Cost C</th>`   : ""}
+             ${mode === "name" && showLastCostC  ? `<th class="tr">Last Cost C</th>`  : ""}
+             ${mode === "name" && showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: ""}
+             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
+           </tr></thead>`;
 
       const rowsHtml = (g.rows || [])
         .map((r) => {
           if (transferMode) {
-            const costNameCells = mode === "name" ? `
-              ${showAvgCostCVM ? `<td class="tr">${r.averageCostCVM != null ? fmt2(r.averageCostCVM) : ""}</td>` : ""}
-              ${showAvgCostC   ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
-              ${showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
-              ${showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
-            ` : "";
             return `<tr>
-              <td class="tc">${escape(r.itemNumber || "")}</td>
+              <td>${escape(r.origin || "")}</td>
               <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
-              ${costNameCells}
+              ${mode === "name" && showAvgCostCVM ? `<td class="tr">${r.averageCostCVM != null ? fmt2(r.averageCostCVM) : ""}</td>` : ""}
+              ${mode === "name" && showAvgCostC   ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
+              ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
+              ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
               <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
               ${showAmountCol ? `<td class="tr">${r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
             </tr>`;
           }
 
-          const dimOriginCells = `<td class="tc">${escape(r.dim)}</td>
-                                   <td class="origin">${escape(r.origin || "")}</td>`;
-
           return `<tr>
-            <td class="tc">${escape(r.itemNumber || "")}</td>
+            <td>${escape(r.origin || "")}</td>
             <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
-            ${dimOriginCells}
-            ${mode === "real" && showAvgCost   ? `<td class="tr">${r.averageCost != null ? fmt2(r.averageCost) : ""}</td>` : ""}
-            ${mode === "real" && showLastCost  ? `<td class="tr">${r.lastCost    != null ? fmt2(r.lastCost)    : ""}</td>` : ""}
-            ${mode === "name" && showAvgCostCVM? `<td class="tr">${r.averageCostCVM != null ? fmt2(r.averageCostCVM) : ""}</td>` : ""}
-            ${mode === "name" && showAvgCostC  ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
-            ${mode === "name" && showLastCostC ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
-            ${mode === "name" && showLastCostCVM?`<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
+            <td class="tc">${escape(r.dim)}</td>
             <td class="tr">${r.qtyBox   ? fmt2(r.qtyBox)   : ""}</td>
             <td class="tr">${r.qtySheet ? fmt2(r.qtySheet) : ""}</td>
             <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
+            ${mode === "real" && showAvgCost    ? `<td class="tr">${r.averageCost != null ? fmt2(r.averageCost) : ""}</td>` : ""}
+            ${mode === "real" && showLastCost   ? `<td class="tr">${r.lastCost    != null ? fmt2(r.lastCost)    : ""}</td>` : ""}
+            ${mode === "name" && showAvgCostCVM ? `<td class="tr">${r.averageCostCVM != null ? fmt2(r.averageCostCVM) : ""}</td>` : ""}
+            ${mode === "name" && showAvgCostC   ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
+            ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
+            ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
             ${showAmountCol ? `<td class="tr">${r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
           </tr>`;
         })
         .join("");
 
-      let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
-      for (const r of g.rows || []) {
-        totBox   += Number(r.qtyBox   || 0);
-        totSheet += Number(r.qtySheet || 0);
-        totSqm   += Number(r.sqmTotal || 0);
-        totAmount += sqmAmountOfRow(r);
-      }
+      const totalColsForEmpty = transferMode
+        ? 2 + (mode === "name" ? costColsName : 0) + 1 + (showAmountCol ? 1 : 0)
+        : 3 + costCols + 3 + (showAmountCol ? 1 : 0);
 
-      const thead = transferMode
-        ? `<thead><tr>
-             <th class="tc">Item No.</th>
-             <th class="tc col-ar">Name+Thk (AR)</th>
-             ${mode === "name" ? [
-               showAvgCostCVM ? `<th class="tr">Avg Cost CVM</th>` : "",
-               showAvgCostC   ? `<th class="tr">Avg Cost C</th>`   : "",
-               showLastCostC  ? `<th class="tr">Last Cost C</th>`  : "",
-               showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: "",
-             ].join("") : ""}
-             <th class="tr">SQM (Total)</th>
-             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
-           </tr></thead>`
-        : `<thead><tr>
-             <th class="tc">Item No.</th>
-             <th class="tc col-ar">Name+Thk (AR)</th>
-             <th class="tc">Dimension</th>
-             <th>Origin</th>
-             ${mode === "real" && showAvgCost   ? `<th class="tr">Avg Cost</th>`     : ""}
-             ${mode === "real" && showLastCost  ? `<th class="tr">Last Cost</th>`    : ""}
-             ${mode === "name" && showAvgCostCVM? `<th class="tr">Avg Cost CVM</th>` : ""}
-             ${mode === "name" && showAvgCostC  ? `<th class="tr">Avg Cost C</th>`   : ""}
-             ${mode === "name" && showLastCostC ? `<th class="tr">Last Cost C</th>`  : ""}
-             ${mode === "name" && showLastCostCVM?`<th class="tr">Last Cost CVM</th>`: ""}
-             <th class="tr">Qty (Box)</th>
-             <th class="tr">Qty (Sheet)</th>
-             <th class="tr">SQM (Total)</th>
-             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
-           </tr></thead>`;
-
-      const costCols = mode === "real" ? costColsReal : costColsName;
       const totalRow = transferMode
         ? `<tr>
              <td colspan="${2 + (mode === "name" ? costColsName : 0)}" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
@@ -647,16 +622,18 @@ function buildPrintHTML({
              ${showAmountCol ? `<td class="tr" style="font-weight:700;background:#fafafa">${showAmountTotals ? fmt2(totAmount) : ""}</td>` : ""}
            </tr>`
         : `<tr>
-             <td colspan="${4 + costCols}" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
+             <td colspan="3" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totBox   ? fmt2(totBox)   : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSheet ? fmt2(totSheet) : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSqm   ? fmt2(totSqm)   : ""}</td>
+             ${(mode === "real" && showAvgCost)    ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "real" && showLastCost)   ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "name" && showAvgCostCVM) ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "name" && showAvgCostC)   ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "name" && showLastCostC)  ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "name" && showLastCostCVM)? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
              ${showAmountCol ? `<td class="tr" style="font-weight:700;background:#fafafa">${showAmountTotals ? fmt2(totAmount) : ""}</td>` : ""}
            </tr>`;
-
-      const totalColsForEmpty = transferMode
-        ? 3 + (mode === "name" ? costColsName : 0) + amountColCount
-        : 7 + costCols + amountColCount;
 
       return `
         <section class="group">
@@ -748,12 +725,12 @@ export default function ReportModal({
 
   const [transferToSqm, setTransferToSqm] = useState(false);
 
-  const [showAvgCost,    setShowAvgCost]    = useState(false);
-  const [showLastCost,   setShowLastCost]   = useState(false);
-  const [showAvgCostCVM, setShowAvgCostCVM] = useState(false);
-  const [showAvgCostC,   setShowAvgCostC]   = useState(false);
-  const [showLastCostC,  setShowLastCostC]  = useState(false);
-  const [showLastCostCVM,setShowLastCostCVM]= useState(false);
+  const [showAvgCost,     setShowAvgCost]     = useState(false);
+  const [showLastCost,    setShowLastCost]    = useState(false);
+  const [showAvgCostCVM,  setShowAvgCostCVM]  = useState(false);
+  const [showAvgCostC,    setShowAvgCostC]    = useState(false);
+  const [showLastCostC,   setShowLastCostC]   = useState(false);
+  const [showLastCostCVM, setShowLastCostCVM] = useState(false);
   const [showSqmAmount,       setShowSqmAmount]       = useState(false);
   const [showSqmAmountTotals, setShowSqmAmountTotals] = useState(false);
 
@@ -803,6 +780,7 @@ export default function ReportModal({
       (g.rows || []).forEach((r) => { amt += sqmAmountOfRow(r); });
     });
     return amt;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayGroups, showAmountTotals, mode, showAvgCostCVM, showAvgCostC]);
 
   useEffect(() => {
@@ -848,18 +826,25 @@ export default function ReportModal({
     if (doc.readyState === "complete") doPrint(); else iframe.onload = doPrint;
   };
 
+  // ── cost column count for the preview table ─────────────────────────────
+  // only relevant in non-transfer mode
   const costColCount = !transferMode
     ? mode === "real"
       ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0)
       : mode === "name"
       ? (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
-        (showLastCostC ? 1 : 0) + (showLastCostCVM ? 1 : 0)
+        (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0)
       : 0
     : 0;
+
+  // colspan for "Group Total:" cell:
+  // non-transfer: origin(1) + name(1) + dim(1) + costCols = 3 + costColCount
+  const groupTotalLabelColspan = 3 + costColCount;
 
   return (
     <div className="invb-report-overlay" onClick={onClose}>
       <aside className="invb-report-modal" onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
         <div className="invb-report-head">
           <div>
@@ -953,6 +938,7 @@ export default function ReportModal({
             </div>
           </div>
 
+          {/* ── Preview table ── */}
           <div className="invb-report-preview">
             <div className="invb-tablewrap">
               {loading && (
@@ -965,23 +951,25 @@ export default function ReportModal({
               {!loading && (displayGroups || []).map((g) => {
                 let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
                 for (const r of g.rows) {
-                  totBox   += Number(r.qtyBox   || 0);
-                  totSheet += Number(r.qtySheet || 0);
-                  totSqm   += Number(r.sqmTotal || 0);
+                  totBox    += Number(r.qtyBox   || 0);
+                  totSheet  += Number(r.qtySheet || 0);
+                  totSqm    += Number(r.sqmTotal || 0);
                   totAmount += sqmAmountOfRow(r);
                 }
 
+                // name-mode cost cols count (transfer mode header)
                 const nameCostCols =
                   (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
                   (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0);
 
-                const nonCostBeforeQty = transferMode ? 2 : 4;
-
                 return (
                   <div className="report-group" key={`desc-${g.descId}`}>
                     <div className="report-group-head">
-                      <div className="report-group-title" title={`Description ID: ${g.descId}`}
-                        style={{ direction: "rtl", textAlign: "right" }}>
+                      <div
+                        className="report-group-title"
+                        title={`Description ID: ${g.descId}`}
+                        style={{ direction: "rtl", textAlign: "right" }}
+                      >
                         {g.headerTitle || ""}{" "}
                         <span className="u-muted" style={{ fontWeight: 600 }}>— #{g.itemNumber || ""}</span>
                       </div>
@@ -1004,9 +992,10 @@ export default function ReportModal({
 
                     <table className="invb-table invb-table--compact invb-table--striped">
                       <thead>
+                        {/* ── NEW column order ── */}
                         {transferMode ? (
                           <tr>
-                            <th className="ta-center">Item No.</th>
+                            <th>Origin</th>
                             <th className="ta-center col-ar">Name+Thk (AR)</th>
                             {mode === "name" && showAvgCostCVM && <th className="ta-right">Avg Cost CVM</th>}
                             {mode === "name" && showAvgCostC   && <th className="ta-right">Avg Cost C</th>}
@@ -1017,19 +1006,18 @@ export default function ReportModal({
                           </tr>
                         ) : (
                           <tr>
-                            <th className="ta-center">Item No.</th>
+                            <th>Origin</th>
                             <th className="ta-center col-ar">Name+Thk (AR)</th>
                             <th className="ta-center">Dimension</th>
-                            <th>Origin</th>
+                            <th className="ta-right">Qty (Box)</th>
+                            <th className="ta-right">Qty (Sheet)</th>
+                            <th className="ta-right">SQM (Total)</th>
                             {mode === "real" && showAvgCost    && <th className="ta-right">Avg Cost</th>}
                             {mode === "real" && showLastCost   && <th className="ta-right">Last Cost</th>}
                             {mode === "name" && showAvgCostCVM && <th className="ta-right">Avg Cost CVM</th>}
                             {mode === "name" && showAvgCostC   && <th className="ta-right">Avg Cost C</th>}
                             {mode === "name" && showLastCostC  && <th className="ta-right">Last Cost C</th>}
                             {mode === "name" && showLastCostCVM&& <th className="ta-right">Last Cost CVM</th>}
-                            <th className="ta-right">Qty (Box)</th>
-                            <th className="ta-right">Qty (Sheet)</th>
-                            <th className="ta-right">SQM (Total)</th>
                             {showAmountCol && <th className="ta-right">Total Amount</th>}
                           </tr>
                         )}
@@ -1039,7 +1027,7 @@ export default function ReportModal({
                         {g.rows.map((row) =>
                           transferMode ? (
                             <tr key={row.idKey}>
-                              <td className="ta-center">{row.itemNumber || ""}</td>
+                              <td>{row.origin || ""}</td>
                               <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
                               {mode === "name" && showAvgCostCVM && <td className="ta-right u-muted">{row.averageCostCVM != null ? fmt2(row.averageCostCVM) : ""}</td>}
                               {mode === "name" && showAvgCostC   && <td className="ta-right u-muted">{row.averageCostC   != null ? fmt2(row.averageCostC)   : ""}</td>}
@@ -1050,24 +1038,25 @@ export default function ReportModal({
                             </tr>
                           ) : (
                             <tr key={row.idKey}>
-                              <td className="ta-center">{row.itemNumber || ""}</td>
+                              {/* Column order: Origin | Name+Thk | Dim | Box | Sheet | SQM | Avg Cost | Last Cost | Amount */}
+                              <td className="truncate">{row.origin || ""}</td>
                               <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
                               <td className="ta-center">{row.dim}</td>
-                              <td className="truncate">{row.origin || ""}</td>
+                              <td className="ta-right">{row.qtyBox   ? fmt2(row.qtyBox)   : ""}</td>
+                              <td className="ta-right">{row.qtySheet ? fmt2(row.qtySheet) : ""}</td>
+                              <td className="ta-right u-muted">{row.sqmTotal ? fmt2(row.sqmTotal) : ""}</td>
                               {mode === "real" && showAvgCost    && <td className="ta-right u-muted">{row.averageCost != null ? fmt2(row.averageCost) : ""}</td>}
                               {mode === "real" && showLastCost   && <td className="ta-right u-muted">{row.lastCost    != null ? fmt2(row.lastCost)    : ""}</td>}
                               {mode === "name" && showAvgCostCVM && <td className="ta-right u-muted">{row.averageCostCVM != null ? fmt2(row.averageCostCVM) : ""}</td>}
                               {mode === "name" && showAvgCostC   && <td className="ta-right u-muted">{row.averageCostC   != null ? fmt2(row.averageCostC)   : ""}</td>}
                               {mode === "name" && showLastCostC  && <td className="ta-right u-muted">{row.lastCostC      != null ? fmt2(row.lastCostC)      : ""}</td>}
                               {mode === "name" && showLastCostCVM&& <td className="ta-right u-muted">{row.lastCostCVM    != null ? fmt2(row.lastCostCVM)    : ""}</td>}
-                              <td className="ta-right">{row.qtyBox   ? fmt2(row.qtyBox)   : ""}</td>
-                              <td className="ta-right">{row.qtySheet ? fmt2(row.qtySheet) : ""}</td>
-                              <td className="ta-right u-muted">{row.sqmTotal ? fmt2(row.sqmTotal) : ""}</td>
                               {showAmountCol && <td className="ta-right u-muted">{row.sqmTotal ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
                             </tr>
                           )
                         )}
 
+                        {/* Group total row */}
                         {transferMode ? (
                           <tr>
                             <td colSpan={2 + nameCostCols} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
@@ -1076,10 +1065,17 @@ export default function ReportModal({
                           </tr>
                         ) : (
                           <tr>
-                            <td colSpan={nonCostBeforeQty + costColCount} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
+                            {/* spans only: origin + name + dim = 3 fixed cols */}
+                            <td colSpan={3} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSheet ? fmt2(totSheet) : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSqm   ? fmt2(totSqm)   : ""}</td>
+                            {mode === "real" && showAvgCost    && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "real" && showLastCost   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "name" && showAvgCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "name" && showAvgCostC   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "name" && showLastCostC  && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "name" && showLastCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
                             {showAmountCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{showAmountTotals ? fmt2(totAmount) : ""}</td>}
                           </tr>
                         )}
@@ -1089,6 +1085,7 @@ export default function ReportModal({
                 );
               })}
 
+              {/* Grand total */}
               {!loading && displayGroups && displayGroups.length > 0 && (
                 <div className="report-group" key="grand-total">
                   <div className="report-group-head">
