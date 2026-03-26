@@ -94,8 +94,10 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
   };
 
   const formatNumber = (value) => {
-    if (!value) return "";
-    return new Intl.NumberFormat().format(value);
+    if (value === "" || value === null || value === undefined) return "";
+    const num = parseFloat(String(value).replace(/,/g, ""));
+    if (isNaN(num)) return "";
+    return new Intl.NumberFormat("en-US").format(num);
   };
 
   const handleSave = () => {
