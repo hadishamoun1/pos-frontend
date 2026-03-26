@@ -66,6 +66,13 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     return data;
   };
 
+  // ── NEW: normalize Arabic-Indic & Persian digits to ASCII ──────────────
+  const normalizeDigits = (value) =>
+    value
+      .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+      .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+  // ───────────────────────────────────────────────────────────────────────
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
@@ -74,7 +81,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         ...prev,
         [name]:
           name === "amount" || name === "exchangeRate" || name === "amountExchanged"
-            ? value.replace(/,/g, "")
+            ? normalizeDigits(value).replace(/,/g, "") // ← normalize first, then strip commas
             : value,
       };
 
