@@ -69,8 +69,8 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
   // ── NEW: normalize Arabic-Indic & Persian digits to ASCII ──────────────
   const normalizeDigits = (value) =>
     value
-      .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-      .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+      .replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660) // Arabic-Indic: ٠=0x0660
+      .replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0); // Persian: ۰=0x06F0
   // ───────────────────────────────────────────────────────────────────────
 
   const handleInputChange = (e) => {
