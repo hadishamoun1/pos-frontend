@@ -255,7 +255,7 @@ export default function InventoryActivityPage() {
         },
       },
 
-      { Header: "Item #", accessor: "ItemNum" },
+     { Header: "Item #", accessor: "itemNumber", id: "itemNumber" },
       { Header: "Category", accessor: "category" },
       { Header: "Subcategory", accessor: "subCategory" },
       { Header: "Item Name", accessor: "name" },
@@ -299,7 +299,7 @@ export default function InventoryActivityPage() {
   /** ---------- react-table setup ---------- */
   const data = useMemo(() => {
     return (rows || []).map((r) => {
-      const ItemNum = r.description?.itemNumber ?? "—";
+const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—"; 
       const category = r.category ?? r.description?.categoryName ?? "—";
       const subCategory = r.subCategory ?? r.description?.subCategory ?? "—";
       const color = r.color ?? r.description?.colorName ?? "—";
@@ -307,7 +307,7 @@ export default function InventoryActivityPage() {
 
       return {
         id: r.id,
-        ItemNum,
+        itemNumber,
         category,
         subCategory,
         color,
