@@ -276,6 +276,7 @@ function useGroupedByDescription(
         }
       } else if (t === "sqm") {
         b.sheetSqm += s;
+        b.sheetQty += q; 
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
