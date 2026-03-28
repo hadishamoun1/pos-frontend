@@ -17,7 +17,6 @@ const buildNameThkAr = (itemName, thicknessNum) => {
 
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
-// ✅ per-sheet sqm from dimensions in cm
 const perSheetSqmOf = (lengthCm, widthCm) => {
   const L = toNum(lengthCm), W = toNum(widthCm);
   return L > 0 && W > 0 ? (L * W) / 10000 : 0;
@@ -59,7 +58,6 @@ const prettyDimsWithSPB = (L, W, spb) => {
   return `${base}-${Number.isFinite(s) && s > 0 ? pad3(s) : "000"}`;
 };
 
-// ✅ Only used for qty (not sqm) — sqm is now computed from qty × dims
 const deriveBalances = (row, _mode) => {
   const typeLower = typeOf(row?.type);
 
@@ -162,6 +160,10 @@ function useGroupedByDescription(
 
       const L = Math.floor(Number(r.length) || 0);
       const W = Math.floor(Number(r.width) || 0);
+
+      // ✅ Skip items with no dimensions in the SPB index too
+      if (L === 0 || W === 0) return;
+
       const origin = String(r.origin ?? "").trim();
       const thicknessNum = Number(r?.thickness ?? 0);
       const thkKey = normThkKey(thicknessNum);
@@ -206,7 +208,6 @@ function useGroupedByDescription(
         g.headerCombos.push(headerLabel);
       }
 
-      // ✅ Only use qty from deriveBalances — sqm will be computed from qty × dims
       const { qty } = deriveBalances(r, mode);
       const t = typeOf(r.type);
 
@@ -227,7 +228,6 @@ function useGroupedByDescription(
           origin,
           itemNumber: g.itemNumber || "",
           sheetQty: 0,
-          sheetSqm: 0,       // ✅ will be computed from sheetQty × dims at emit time
           boxQtyPerSpb: new Map(),
           avgCostPerSpb: new Map(),
           lastCostPerSpb: new Map(),
@@ -239,7 +239,6 @@ function useGroupedByDescription(
           averageCostC: null,
           lastCostC: null,
           lastCostCVM: null,
-          // ✅ sqm-type items still need backend sqm (no dims)
           sqmTypeQty: 0,
           sqmTypeSqm: 0,
         });
@@ -262,7 +261,6 @@ function useGroupedByDescription(
 
       if (t === "box") {
         const spb = Math.max(0, Math.floor(Number(r.sheetsPerBox) || 0));
-        // ✅ accumulate qty only — sqm computed at emit time from qty × spb × perSheetSqm
         b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
 
         const avg = Number(r.averageCost);
@@ -273,7 +271,6 @@ function useGroupedByDescription(
         else if (Number.isFinite(last)) b.fallbackLastCost = last;
 
       } else if (t === "sheet") {
-        // ✅ accumulate qty only — sqm computed at emit time from qty × perSheetSqm
         b.sheetQty += q;
 
         const sAvg = Number(r.averageCost);
@@ -288,7 +285,6 @@ function useGroupedByDescription(
         }
 
       } else if (t === "sqm") {
-        // ✅ sqm items have no length/width so we still use backend sqm value
         const { sqm: sqmVal } = deriveBalances(r, mode);
         b.sqmTypeQty += q;
         b.sqmTypeSqm += Number.isFinite(sqmVal) ? sqmVal : 0;
@@ -322,7 +318,10 @@ function useGroupedByDescription(
       g.order.forEach((bucketKey) => {
         const b = g.buckets.get(bucketKey);
 
-        // ✅ Compute perSheetSqm from the bucket's length/width
+        // ✅ Skip buckets with no dimensions (length=0 or width=0)
+        // These are sqm-type ghost entries — e.g. "- - 055" rows
+        if (b.length === 0 || b.width === 0) return;
+
         const perSheet = perSheetSqmOf(b.length, b.width);
 
         const exactKey = `${g.descId}|${b.itemNameKey}|${b.thicknessKey}|${b.length}x${b.width}|${b.origin}`;
@@ -355,20 +354,19 @@ function useGroupedByDescription(
           let anyRow = false;
 
           spbs.forEach((spb) => {
-            const qtyBox   = Number(b.boxQtyPerSpb.get(spb) || 0);
+            const qtyBox      = Number(b.boxQtyPerSpb.get(spb) || 0);
             const attachSheets = spb === attachSpb;
-            const qtySheet = attachSheets ? Number(b.sheetQty || 0) : 0;
+            const qtySheet    = attachSheets ? Number(b.sheetQty || 0) : 0;
 
             if (!attachSheets && qtyBox === 0) return;
 
-            // ✅ Compute sqm from qty × dims (not from backend sqm)
-            const sqmBox   = qtyBox * spb * perSheet;
-            const sqmSheet = attachSheets ? (b.sheetQty || 0) * perSheet : 0;
-            // Also add any sqm-type residual if attached
+            // ✅ Compute sqm from qty × dims
+            const sqmBox    = qtyBox * spb * perSheet;
+            const sqmSheet  = attachSheets ? (b.sheetQty || 0) * perSheet : 0;
             const sqmSqmType = attachSheets ? (b.sqmTypeSqm || 0) : 0;
-            const rowSqm   = sqmBox + sqmSheet + sqmSqmType;
+            const rowSqm    = sqmBox + sqmSheet + sqmSqmType;
 
-            // ✅ Skip rows with no qty and negligible sqm (cuts loss residuals)
+            // ✅ Skip rows with no qty and negligible sqm
             if (qtyBox === 0 && qtySheet === 0 && rowSqm < SQM_DISPLAY_THRESHOLD) return;
 
             anyRow = true;
@@ -392,10 +390,8 @@ function useGroupedByDescription(
 
           if (!anyRow) {
             const fallbackQtySheet = Number(b.sheetQty || 0);
-            // ✅ Compute sqm from sheet qty × dims
             const fallbackSqm = fallbackQtySheet * perSheet + (b.sqmTypeSqm || 0);
 
-            // ✅ Skip if no real qty and sqm is negligible
             if (fallbackQtySheet === 0 && fallbackSqm < SQM_DISPLAY_THRESHOLD) return;
 
             rowsOut.push({
@@ -417,10 +413,8 @@ function useGroupedByDescription(
           }
         } else {
           const sheetQty = Number(b.sheetQty || 0);
-          // ✅ Compute sqm from sheet qty × dims
           const sheetSqm = sheetQty * perSheet + (b.sqmTypeSqm || 0);
 
-          // ✅ Require meaningful qty OR meaningful sqm (>= threshold)
           if (sheetQty > 0 || sheetSqm >= SQM_DISPLAY_THRESHOLD) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:0`,
@@ -463,7 +457,7 @@ function useGroupedByDescription(
       return g;
     });
 
-    // ✅ Filter out groups that ended up with no rows after threshold filtering
+    // ✅ Filter out groups that ended up with no rows
     const filteredGroups = allGroups.filter((g) => g.rows.length > 0);
 
     const num = (x) => (x == null ? null : Number(x));
@@ -757,7 +751,6 @@ export default function ReportModal({
   const { groups } = useGroupedByDescription(rows, mode, { debug, rowsForSpbIndex });
 
   const [transferToSqm, setTransferToSqm] = useState(false);
-
   const [showAvgCost,     setShowAvgCost]     = useState(false);
   const [showLastCost,    setShowLastCost]    = useState(false);
   const [showAvgCostCVM,  setShowAvgCostCVM]  = useState(false);
