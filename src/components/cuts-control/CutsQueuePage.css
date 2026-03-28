@@ -357,3 +357,52 @@
   color: #7f1d1d;
   font-size: 12px;
 }
+/* ── Add these to the bottom of CutsQueuePage.css ── */
+
+/* Action buttons */
+.btn-sm {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #991b1b;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+/* Remaining sqm highlight */
+.remaining-sqm {
+  color: #92400e;
+  font-weight: 700;
+}
+
+/* Right-align helper */
+.ta-right {
+  text-align: right;
+}
+
+/* Row open highlight */
+.row-open td {
+  background: #f0f9ff;
+}
+
+/* Detail grid — 3 columns, collapse on small screens */
+.detailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px 6px;
+}
+
+@media (max-width: 900px) {
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}
