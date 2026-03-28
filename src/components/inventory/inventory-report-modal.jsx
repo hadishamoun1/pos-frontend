@@ -16,10 +16,13 @@ const buildNameThkAr = (itemName, thicknessNum) => {
 };
 
 const toNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+
+// ✅ per-sheet sqm from dimensions in cm
 const perSheetSqmOf = (lengthCm, widthCm) => {
   const L = toNum(lengthCm), W = toNum(widthCm);
   return L > 0 && W > 0 ? (L * W) / 10000 : 0;
 };
+
 const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
   const SPB = Math.max(1, toNum(sheetsPerBox));
   const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
@@ -32,6 +35,7 @@ const sqmToQty = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueSqm }) => {
     return perSheetSqm > 0 ? toNum(valueSqm) / perSheetSqm : toNum(valueSqm);
   return toNum(valueSqm);
 };
+
 const qtyToSqm = ({ itemType, lengthCm, widthCm, sheetsPerBox, valueQty }) => {
   const SPB = Math.max(1, toNum(sheetsPerBox));
   const perSheetSqm = perSheetSqmOf(lengthCm, widthCm);
@@ -55,6 +59,7 @@ const prettyDimsWithSPB = (L, W, spb) => {
   return `${base}-${Number.isFinite(s) && s > 0 ? pad3(s) : "000"}`;
 };
 
+// ✅ Only used for qty (not sqm) — sqm is now computed from qty × dims
 const deriveBalances = (row, _mode) => {
   const typeLower = typeOf(row?.type);
 
@@ -106,6 +111,9 @@ const deriveBalances = (row, _mode) => {
     sqm: Number.isFinite(sqm) ? Number(sqm) : undefined,
   };
 };
+
+// ✅ Threshold: rows with zero qty AND sqm below this are hidden
+const SQM_DISPLAY_THRESHOLD = 0.1;
 
 /* -------- Grouping & detailed rows (with SPB) -------- */
 function useGroupedByDescription(
@@ -198,7 +206,8 @@ function useGroupedByDescription(
         g.headerCombos.push(headerLabel);
       }
 
-      const { qty, sqm } = deriveBalances(r, mode);
+      // ✅ Only use qty from deriveBalances — sqm will be computed from qty × dims
+      const { qty } = deriveBalances(r, mode);
       const t = typeOf(r.type);
 
       const L = Math.floor(Number(r.length) || 0);
@@ -218,9 +227,8 @@ function useGroupedByDescription(
           origin,
           itemNumber: g.itemNumber || "",
           sheetQty: 0,
-          sheetSqm: 0,
+          sheetSqm: 0,       // ✅ will be computed from sheetQty × dims at emit time
           boxQtyPerSpb: new Map(),
-          boxSqmPerSpb: new Map(),
           avgCostPerSpb: new Map(),
           lastCostPerSpb: new Map(),
           fallbackAvgCost: null,
@@ -231,14 +239,15 @@ function useGroupedByDescription(
           averageCostC: null,
           lastCostC: null,
           lastCostCVM: null,
+          // ✅ sqm-type items still need backend sqm (no dims)
+          sqmTypeQty: 0,
+          sqmTypeSqm: 0,
         });
         g.order.push(bucketKey);
       }
 
       const b = g.buckets.get(bucketKey);
-
       const q = Number.isFinite(qty) ? qty : 0;
-      const s = Number.isFinite(sqm) ? sqm : 0;
 
       if (desc) {
         const acvm = Number(desc.averageCostCVM);
@@ -253,17 +262,20 @@ function useGroupedByDescription(
 
       if (t === "box") {
         const spb = Math.max(0, Math.floor(Number(r.sheetsPerBox) || 0));
+        // ✅ accumulate qty only — sqm computed at emit time from qty × spb × perSheetSqm
         b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
-        b.boxSqmPerSpb.set(spb, (b.boxSqmPerSpb.get(spb) || 0) + s);
+
         const avg = Number(r.averageCost);
         if (Number.isFinite(avg) && spb > 0) b.avgCostPerSpb.set(spb, avg);
         else if (Number.isFinite(avg)) b.fallbackAvgCost = avg;
         const last = Number(r.lastCost);
         if (Number.isFinite(last) && spb > 0) b.lastCostPerSpb.set(spb, last);
         else if (Number.isFinite(last)) b.fallbackLastCost = last;
+
       } else if (t === "sheet") {
+        // ✅ accumulate qty only — sqm computed at emit time from qty × perSheetSqm
         b.sheetQty += q;
-        b.sheetSqm += s;
+
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -274,9 +286,13 @@ function useGroupedByDescription(
           if (b.sheetLastCost == null) b.sheetLastCost = sLast;
           if (b.fallbackLastCost == null) b.fallbackLastCost = sLast;
         }
+
       } else if (t === "sqm") {
-        b.sheetSqm += s;
-        b.sheetQty += q; 
+        // ✅ sqm items have no length/width so we still use backend sqm value
+        const { sqm: sqmVal } = deriveBalances(r, mode);
+        b.sqmTypeQty += q;
+        b.sqmTypeSqm += Number.isFinite(sqmVal) ? sqmVal : 0;
+
         const sAvg = Number(r.averageCost);
         if (Number.isFinite(sAvg)) {
           if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
@@ -305,6 +321,9 @@ function useGroupedByDescription(
 
       g.order.forEach((bucketKey) => {
         const b = g.buckets.get(bucketKey);
+
+        // ✅ Compute perSheetSqm from the bucket's length/width
+        const perSheet = perSheetSqmOf(b.length, b.width);
 
         const exactKey = `${g.descId}|${b.itemNameKey}|${b.thicknessKey}|${b.length}x${b.width}|${b.origin}`;
         const spbSetExact = exactSpbIndex.get(exactKey);
@@ -336,11 +355,21 @@ function useGroupedByDescription(
           let anyRow = false;
 
           spbs.forEach((spb) => {
-            const qtyBox = Number(b.boxQtyPerSpb.get(spb) || 0);
-            const sqmBox = Number(b.boxSqmPerSpb.get(spb) || 0);
+            const qtyBox   = Number(b.boxQtyPerSpb.get(spb) || 0);
             const attachSheets = spb === attachSpb;
+            const qtySheet = attachSheets ? Number(b.sheetQty || 0) : 0;
 
             if (!attachSheets && qtyBox === 0) return;
+
+            // ✅ Compute sqm from qty × dims (not from backend sqm)
+            const sqmBox   = qtyBox * spb * perSheet;
+            const sqmSheet = attachSheets ? (b.sheetQty || 0) * perSheet : 0;
+            // Also add any sqm-type residual if attached
+            const sqmSqmType = attachSheets ? (b.sqmTypeSqm || 0) : 0;
+            const rowSqm   = sqmBox + sqmSheet + sqmSqmType;
+
+            // ✅ Skip rows with no qty and negligible sqm (cuts loss residuals)
+            if (qtyBox === 0 && qtySheet === 0 && rowSqm < SQM_DISPLAY_THRESHOLD) return;
 
             anyRow = true;
             rowsOut.push({
@@ -350,8 +379,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox,
-              qtySheet: attachSheets ? Number(b.sheetQty || 0) : 0,
-              sqmTotal: Number(sqmBox + (attachSheets ? b.sheetSqm || 0 : 0)),
+              qtySheet,
+              sqmTotal: rowSqm,
               averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(spb) ?? b.fallbackLastCost ?? null,
               averageCostCVM: b.averageCostCVM,
@@ -362,6 +391,13 @@ function useGroupedByDescription(
           });
 
           if (!anyRow) {
+            const fallbackQtySheet = Number(b.sheetQty || 0);
+            // ✅ Compute sqm from sheet qty × dims
+            const fallbackSqm = fallbackQtySheet * perSheet + (b.sqmTypeSqm || 0);
+
+            // ✅ Skip if no real qty and sqm is negligible
+            if (fallbackQtySheet === 0 && fallbackSqm < SQM_DISPLAY_THRESHOLD) return;
+
             rowsOut.push({
               idKey: `${bucketKey}|spb:${attachSpb}`,
               dim: prettyDimsWithSPB(b.length, b.width, attachSpb),
@@ -369,8 +405,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox: 0,
-              qtySheet: Number(b.sheetQty || 0),
-              sqmTotal: Number(b.sheetSqm || 0),
+              qtySheet: fallbackQtySheet,
+              sqmTotal: fallbackSqm,
               averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
               lastCost: b.lastCostPerSpb.get(attachSpb) ?? b.fallbackLastCost ?? null,
               averageCostCVM: b.averageCostCVM,
@@ -380,7 +416,12 @@ function useGroupedByDescription(
             });
           }
         } else {
-          if ((b.sheetQty || 0) > 0 || (b.sheetSqm || 0) > 0) {
+          const sheetQty = Number(b.sheetQty || 0);
+          // ✅ Compute sqm from sheet qty × dims
+          const sheetSqm = sheetQty * perSheet + (b.sqmTypeSqm || 0);
+
+          // ✅ Require meaningful qty OR meaningful sqm (>= threshold)
+          if (sheetQty > 0 || sheetSqm >= SQM_DISPLAY_THRESHOLD) {
             rowsOut.push({
               idKey: `${bucketKey}|spb:0`,
               dim: `${prettyDimsBase(b.length, b.width)}-000`,
@@ -388,8 +429,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox: 0,
-              qtySheet: Number(b.sheetQty || 0),
-              sqmTotal: Number(b.sheetSqm || 0),
+              qtySheet: sheetQty,
+              sqmTotal: sheetSqm,
               averageCost: b.fallbackAvgCost ?? null,
               lastCost: b.fallbackLastCost ?? null,
               averageCostCVM: b.averageCostCVM,
@@ -422,8 +463,11 @@ function useGroupedByDescription(
       return g;
     });
 
+    // ✅ Filter out groups that ended up with no rows after threshold filtering
+    const filteredGroups = allGroups.filter((g) => g.rows.length > 0);
+
     const num = (x) => (x == null ? null : Number(x));
-    allGroups.sort((a, b) => {
+    filteredGroups.sort((a, b) => {
       const ai = num(a.sortIndex), bi = num(b.sortIndex);
       if (ai == null && bi != null) return 1;
       if (ai != null && bi == null) return -1;
@@ -433,7 +477,7 @@ function useGroupedByDescription(
       return as.localeCompare(bs, "ar", { numeric: true, sensitivity: "base" });
     });
 
-    return { groups: allGroups };
+    return { groups: filteredGroups };
   }, [rows, mode, rowsForSpbIndex, debug]);
 }
 
@@ -471,7 +515,6 @@ function useTransferredGroups(groups, transferToSqm, mode) {
 }
 
 /* --------- Print HTML --------- */
-// Column order: Origin | Name+Thk | Dimension | Qty(Box) | Qty(Sheet) | SQM | Avg Cost | Last Cost | Total Amount
 function buildPrintHTML({
   groups,
   title = "Inventory Report",
@@ -502,7 +545,6 @@ function buildPrintHTML({
 
   const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
-  // cost columns in "name" mode (used only in transfer mode)
   const costColsName = mode === "name"
     ? (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
       (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0)
@@ -522,20 +564,10 @@ function buildPrintHTML({
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
 
-  // ── NEW fixed column order (non-transfer) ──────────────────────────────
-  // Origin | Name+Thk | Dimension | Qty(Box) | Qty(Sheet) | SQM | AvgCost | LastCost | Amount
-  // Total fixed cols before amount: 7 (origin, name, dim, box, sheet, sqm, + cost cols)
-  // cost cols = (showAvgCost?1:0) + (showLastCost?1:0) for real; similar for name
   const costColsReal = mode === "real"
     ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0)
     : 0;
   const costCols = mode === "real" ? costColsReal : costColsName;
-
-  // colspan for "Group Total:" label in non-transfer: origin+name+dim+box+sheet = 5 fixed + costCols
-  // then 3 value cols: box, sheet, sqm → label spans 3 + costCols, values in last 3
-  // Actually: origin(1) + name(1) + dim(1) = 3 label cols, then costCols, then box(1)+sheet(1)+sqm(1)
-  // So label colspan = 3 + costCols, values = box, sheet, sqm individually
-  const labelColspan = 3 + costCols;
 
   const groupBlocks = (groups || [])
     .map((g) => {
@@ -827,8 +859,6 @@ export default function ReportModal({
     if (doc.readyState === "complete") doPrint(); else iframe.onload = doPrint;
   };
 
-  // ── cost column count for the preview table ─────────────────────────────
-  // only relevant in non-transfer mode
   const costColCount = !transferMode
     ? mode === "real"
       ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0)
@@ -837,10 +867,6 @@ export default function ReportModal({
         (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0)
       : 0
     : 0;
-
-  // colspan for "Group Total:" cell:
-  // non-transfer: origin(1) + name(1) + dim(1) + costCols = 3 + costColCount
-  const groupTotalLabelColspan = 3 + costColCount;
 
   return (
     <div className="invb-report-overlay" onClick={onClose}>
@@ -958,7 +984,6 @@ export default function ReportModal({
                   totAmount += sqmAmountOfRow(r);
                 }
 
-                // name-mode cost cols count (transfer mode header)
                 const nameCostCols =
                   (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
                   (showLastCostC  ? 1 : 0) + (showLastCostCVM ? 1 : 0);
@@ -993,7 +1018,6 @@ export default function ReportModal({
 
                     <table className="invb-table invb-table--compact invb-table--striped">
                       <thead>
-                        {/* ── NEW column order ── */}
                         {transferMode ? (
                           <tr>
                             <th>Origin</th>
@@ -1039,7 +1063,6 @@ export default function ReportModal({
                             </tr>
                           ) : (
                             <tr key={row.idKey}>
-                              {/* Column order: Origin | Name+Thk | Dim | Box | Sheet | SQM | Avg Cost | Last Cost | Amount */}
                               <td className="truncate">{row.origin || ""}</td>
                               <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
                               <td className="ta-center">{row.dim}</td>
@@ -1066,7 +1089,6 @@ export default function ReportModal({
                           </tr>
                         ) : (
                           <tr>
-                            {/* spans only: origin + name + dim = 3 fixed cols */}
                             <td colSpan={3} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSheet ? fmt2(totSheet) : ""}</td>
