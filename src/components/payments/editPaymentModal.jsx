@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
+import PayeeModal from "./PayeeModal";
 import "./editPaymentModal.css";
 
 const EditPaymentModal = ({ onClose, row, onSave }) => {
   const [rowData, setRowData] = useState({
-    supplier: "",
+    payee: "",
+    payeeType: "",
+    supplierId: "",
+    accountId: "",
     amount: "",
     currency: "",
     date: "",
@@ -17,13 +21,20 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
     comments: "",
     paymentType: "",
   });
+  const [isPayeeModalOpen, setIsPayeeModalOpen] = useState(false);
 
   useEffect(() => {
     if (row) {
       const detail = row.details?.[0] || {};
       const derivedCurrency = row.paymentType?.includes("USD") ? "USD" : "LL";
+      const isAccount = !row.supplierId && !!row.accountId;
       setRowData({
-        supplier: row.supplierName || "",
+        payee: isAccount
+          ? (row.accountName || "")
+          : (row.supplierName || ""),
+        payeeType: isAccount ? "account" : "supplier",
+        supplierId: row.supplierId || "",
+        accountId: row.accountId || "",
         amount: detail.amount || "",
         currency: derivedCurrency,
         date: row.date || "",
@@ -39,6 +50,17 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
       });
     }
   }, [row]);
+
+  const handleSelectPayee = (payee) => {
+    setRowData((prev) => ({
+      ...prev,
+      payee: payee.displayName,
+      payeeType: payee.type,
+      supplierId: payee.type === "supplier" ? payee.id : "",
+      accountId: payee.type === "account" ? payee.id : "",
+    }));
+    setIsPayeeModalOpen(false);
+  };
 
   const recalculate = (data, changedField) => {
     const amount = parseFloat(data.amount || "0");
@@ -103,8 +125,9 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
   const handleSave = () => {
     const updatedRow = {
       ...row,
-      supplierId: row.supplierId,
-      supplierName: rowData.supplier,
+      ...(rowData.payeeType === "account"
+        ? { accountId: rowData.accountId, supplierId: null }
+        : { supplierId: rowData.supplierId, accountId: null }),
       date: rowData.date,
       invoiceId: row.invoiceId || "",
       paymentNumber: rowData.paymentNumber,
@@ -142,7 +165,7 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         <table className="edit-payment-modal-table">
           <thead>
             <tr>
-              <th className="edit-payment-modal-supplier">Supplier</th>
+              <th className="edit-payment-modal-supplier">Payee</th>
               <th className="edit-payment-modal-payment-type">Pmt Type</th>
               <th className="edit-payment-modal-currency">Currency</th>
               <th className="edit-payment-modal-amount">Amount</th>
@@ -162,10 +185,10 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
               <td>
                 <input
                   type="text"
-                  name="supplier"
-                  value={rowData.supplier}
-                  onChange={handleInputChange}
-                  placeholder="Enter Supplier"
+                  value={rowData.payee}
+                  readOnly
+                  onClick={() => setIsPayeeModalOpen(true)}
+                  placeholder="Select Payee"
                 />
               </td>
               <td>
@@ -283,6 +306,13 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
           </tbody>
         </table>
       </div>
+
+      {isPayeeModalOpen && (
+        <PayeeModal
+          onClose={() => setIsPayeeModalOpen(false)}
+          onSelectPayee={handleSelectPayee}
+        />
+      )}
     </div>
   );
 };

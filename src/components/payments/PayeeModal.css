@@ -1,0 +1,295 @@
+/* ── Overlay ─────────────────────────────────────────────────────────────── */
+.payee-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  backdrop-filter: blur(2px);
+}
+
+/* ── Modal shell ─────────────────────────────────────────────────────────── */
+.payee-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 720px;
+  max-width: 95vw;
+  height: 88vh;
+  max-height: 820px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: payee-slide-in 0.18s ease;
+}
+
+@keyframes payee-slide-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)     scale(1);    }
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.payee-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.payee-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.payee-header-icon {
+  font-size: 1.35rem;
+}
+
+.payee-header-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: 0.01em;
+}
+
+.payee-close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: #555;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.payee-close-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.payee-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 20px 0;
+  flex-shrink: 0;
+}
+
+.payee-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  border: 2px solid transparent;
+  border-radius: 8px 8px 0 0;
+  background: #f8f9fa;
+  color: #666;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  bottom: -1px;
+  border-bottom: 2px solid transparent;
+}
+
+.payee-tab:hover:not(.active) {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.payee-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  border-color: #e5e7eb #e5e7eb #ffffff;
+  border-bottom: 2px solid #ffffff;
+  box-shadow: 0 -2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.payee-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #e0e7ff;
+  color: #3730a3;
+  transition: background 0.15s, color 0.15s;
+}
+
+.payee-tab.active .payee-tab-badge {
+  background: #2563eb;
+  color: #fff;
+}
+
+/* ── Tab body border ─────────────────────────────────────────────────────── */
+.payee-tabs {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+.payee-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 14px 20px 0;
+  flex-shrink: 0;
+}
+
+.payee-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 0.9rem;
+  pointer-events: none;
+  color: #9ca3af;
+}
+
+.payee-search-input {
+  width: 100%;
+  padding: 10px 36px 10px 36px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1f2937;
+  background: #f9fafb;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.payee-search-input:focus {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.payee-search-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.payee-search-clear:hover {
+  color: #374151;
+}
+
+/* ── Results info ────────────────────────────────────────────────────────── */
+.payee-results-info {
+  padding: 8px 20px 4px;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* ── Table wrapper (scrollable) ──────────────────────────────────────────── */
+.payee-table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  margin: 6px 0 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.payee-table-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+.payee-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.payee-table-wrapper::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+.payee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.payee-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 16px;
+  border-bottom: 2px solid #e5e7eb;
+  text-align: left;
+  z-index: 1;
+}
+
+.payee-table tbody tr {
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+
+.payee-table tbody tr:hover {
+  background: #eff6ff;
+}
+
+.payee-table tbody tr:hover td {
+  color: #1d4ed8;
+}
+
+.payee-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.payee-table td {
+  padding: 11px 16px;
+  color: #374151;
+}
+
+.payee-row-index {
+  color: #9ca3af !important;
+  font-size: 0.78rem;
+  width: 32px;
+  text-align: center;
+}
+
+.payee-account-number {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.payee-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-style: italic;
+}

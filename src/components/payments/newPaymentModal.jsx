@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import SupplierModal from "./suppliersModal";
+import PayeeModal from "./PayeeModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
 import { axiosClient } from "../api/axiosClient";
 
 const emptyRow = () => ({
-  supplier: "",
+  payee: "",
+  payeeType: "",
   supplierId: "",
+  accountId: "",
   amount: "",
   currency: "",
   date: "",
@@ -97,18 +99,20 @@ const PaymentsModal = ({ onClose }) => {
     });
   };
 
-  const openSupplierModal = (index) => {
+  const openPayeeModal = (index) => {
     setActiveRowIndex(index);
     setIsSupplierModalOpen(true);
   };
 
-  const handleSelectSupplier = (supplier) => {
+  const handleSelectPayee = (payee) => {
     setRows((prev) => {
       const next = [...prev];
       next[activeRowIndex] = {
         ...next[activeRowIndex],
-        supplier: supplier.supplierName,
-        supplierId: supplier.id,
+        payee: payee.displayName,
+        payeeType: payee.type,
+        supplierId: payee.type === "supplier" ? payee.id : "",
+        accountId: payee.type === "account" ? payee.id : "",
       };
       return next;
     });
@@ -149,7 +153,9 @@ const PaymentsModal = ({ onClose }) => {
   const handleSubmit = async () => {
     try {
       const payload = rows.map((row) => ({
-        supplierId: row.supplierId,
+        ...(row.payeeType === "account"
+          ? { accountId: row.accountId }
+          : { supplierId: row.supplierId }),
         date: row.date,
         invoiceId: "",
         paymentType: row.paymentType,
@@ -226,7 +232,7 @@ const PaymentsModal = ({ onClose }) => {
           <table className="payment-voucher-modal-table">
             <thead>
               <tr>
-                <th className="payment-voucher-modal-supplier">Supplier</th>
+                <th className="payment-voucher-modal-supplier">Payee</th>
                 <th className="payment-voucher-modal-payment-type">Pmt Type</th>
                 <th className="payment-voucher-modal-currency">Currency</th>
                 <th className="payment-voucher-modal-amount">Amount</th>
@@ -247,10 +253,10 @@ const PaymentsModal = ({ onClose }) => {
                   <td className="payment-voucher-modal-supplier">
                     <input
                       type="text"
-                      value={row.supplier}
+                      value={row.payee}
                       readOnly
-                      onClick={() => openSupplierModal(index)}
-                      placeholder="Select Supplier"
+                      onClick={() => openPayeeModal(index)}
+                      placeholder="Select Payee"
                     />
                   </td>
 
@@ -396,9 +402,9 @@ const PaymentsModal = ({ onClose }) => {
         )}
 
         {isSupplierModalOpen && (
-          <SupplierModal
+          <PayeeModal
             onClose={() => setIsSupplierModalOpen(false)}
-            onSelectSupplier={handleSelectSupplier}
+            onSelectPayee={handleSelectPayee}
           />
         )}
 

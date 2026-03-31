@@ -335,7 +335,7 @@ const PaymentsPage = () => {
           <thead>
             <tr>
               <th className="payment-voucher-select">Select</th>
-              <th className="payment-voucher-supplier">Supplier</th>
+              <th className="payment-voucher-supplier">Payee</th>
               <th className="payment-voucher-amount">Amount</th>
               <th className="payment-voucher-payment-type">Pmt Type</th>
               <th className="payment-voucher-date">Date</th>
@@ -366,10 +366,10 @@ const PaymentsPage = () => {
                   <td
                     className="payment-voucher-supplier"
                     onContextMenu={(e) =>
-                      handleContextMenu(e, "supplierName", row.supplierName)
+                      handleContextMenu(e, "supplierName", row.supplierName || row.accountName)
                     }
                   >
-                    {row.supplierName}
+                    {row.supplierName || row.accountName}
                   </td>
 
                   <td
