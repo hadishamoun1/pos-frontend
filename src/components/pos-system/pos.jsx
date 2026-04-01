@@ -47,16 +47,14 @@ const POSSystemPage = () => {
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [requestSearch, setRequestSearch] = useState("");
   const [editingInvoiceType, setEditingInvoiceType] = useState(null);
-const [showRequestPreview, setShowRequestPreview] = useState(false);
+  const [showRequestPreview, setShowRequestPreview] = useState(false);
   const [cutMode, setCutMode] = useState(false);
   const [showDeliveryNotePreview, setShowDeliveryNotePreview] = useState(false);
-    const [returnMode, setReturnMode] = useState(false);
-    const [activeCompany, setActiveCompany] = useState(null);
-
+  const [returnMode, setReturnMode] = useState(false);
+  const [activeCompany, setActiveCompany] = useState(null);
 
   // invoiceItemId -> qty
   const [returnSelection, setReturnSelection] = useState({});
-
 
   const [selectedRequestNumber, setSelectedRequestNumber] = useState("");
 
@@ -152,132 +150,129 @@ const [showRequestPreview, setShowRequestPreview] = useState(false);
   };
 
   const toggleReturnRow = (invoiceItemId, checked, row) => {
-  if (!invoiceItemId) return;
+    if (!invoiceItemId) return;
 
-  setReturnSelection((prev) => {
-    const next = { ...prev };
+    setReturnSelection((prev) => {
+      const next = { ...prev };
 
-    if (!checked) {
-      delete next[invoiceItemId];
-      return next;
-    }
+      if (!checked) {
+        delete next[invoiceItemId];
+        return next;
+      }
 
-    const baseQty = getRowBaseReturnQty(row);
+      const baseQty = getRowBaseReturnQty(row);
 
-    next[invoiceItemId] = {
-      invoiceItemId: Number(invoiceItemId),
-      itemBatchId: row?.batchId != null ? Number(row.batchId) : null, // ✅ REQUIRED
-      itemVariantId: row?.itemVariantId != null ? Number(row.itemVariantId) : null,
-      itemType: String(row?.itemType ?? row?.type ?? "").toLowerCase(),
-      sqmPieceId: row?.sqmPieceId ?? null,
-      maxQty: baseQty > 0 ? baseQty : null,
-      quantity: baseQty > 0 ? Math.min(1, baseQty) : 1,
-    };
-
-    return next;
-  });
-};
-
-
-useEffect(() => {
-  axiosClient.get("/company")
-    .then((res) => {
-      const companies = Array.isArray(res.data) ? res.data : [];
-      setActiveCompany(companies.find((c) => c.isActive) || null);
-    })
-    .catch(() => setActiveCompany(null));
-}, []);
-
-const isShamounActive = useMemo(() => {
-  if (!activeCompany) return false;
-  return String(activeCompany.companyName || "").trim().toLowerCase() === "shamoun";
-}, [activeCompany]);
-
-const isRevoActive = useMemo(() => {
-  return String(activeCompany?.companyName || "").trim().toLowerCase() === "revo";
-}, [activeCompany]);
-
-const changeReturnQty = (invoiceItemId, value) => {
-  if (!invoiceItemId) return;
-
-  setReturnSelection((prev) => {
-    const curr = prev[invoiceItemId];
-    if (!curr) return prev;
-
-    const n = Math.max(0, Math.floor(Number(value || 0)));
-    const capped = curr.maxQty ? Math.min(n, curr.maxQty) : n;
-
-    return {
-      ...prev,
-      [invoiceItemId]: { ...curr, quantity: capped },
-    };
-  });
-};
-
-const handleCreateReturnInvoiceSelected = async () => {
-  if (!selectedInvoiceId) {
-    showNotification("error", "Please select an invoice first.");
-    return;
-  }
-
-  const lines = Object.values(returnSelection || {}).filter(
-    (l) => Number(l.quantity) > 0
-  );
-
-  if (!lines.length) {
-    showNotification("error", "Select at least 1 item and enter a quantity > 0.");
-    return;
-  }
-
-  const missing = lines.find((l) => !l.itemBatchId);
-  if (missing) {
-    showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
-    return;
-  }
-
-  confirmAction(`Create return invoice for ${lines.length} item(s)?`, async () => {
-    try {
-      setLoading(true);
-      const returnDate = new Date().toISOString().slice(0, 10);
-
-      const payload = {
-        date: returnDate,
-        currencyCode: customerPreview.currencyCode,
-        items: lines.map((l) => ({
-          invoiceItemId: Number(l.invoiceItemId),
-          itemBatchId: Number(l.itemBatchId), // ✅ REQUIRED
-          itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
-          itemType: l.itemType || undefined,
-          sqmPieceId: l.sqmPieceId ?? undefined,
-          quantity: Number(l.quantity),
-        })),
+      next[invoiceItemId] = {
+        invoiceItemId: Number(invoiceItemId),
+        itemBatchId: row?.batchId != null ? Number(row.batchId) : null, // ✅ REQUIRED
+        itemVariantId: row?.itemVariantId != null ? Number(row.itemVariantId) : null,
+        itemType: String(row?.itemType ?? row?.type ?? "").toLowerCase(),
+        sqmPieceId: row?.sqmPieceId ?? null,
+        maxQty: baseQty > 0 ? baseQty : null,
+        quantity: baseQty > 0 ? Math.min(1, baseQty) : 1,
       };
 
-      console.log("📤 RTN payload:", payload);
+      return next;
+    });
+  };
 
-      const res = await axiosClient.post(
-        `/invoices/${selectedInvoiceId}/return`,
-        payload
-      );
+  useEffect(() => {
+    axiosClient.get("/company")
+      .then((res) => {
+        const companies = Array.isArray(res.data) ? res.data : [];
+        setActiveCompany(companies.find((c) => c.isActive) || null);
+      })
+      .catch(() => setActiveCompany(null));
+  }, []);
 
-      const rtn = res.data;
-      showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+  const isShamounActive = useMemo(() => {
+    if (!activeCompany) return false;
+    return String(activeCompany.companyName || "").trim().toLowerCase() === "shamoun";
+  }, [activeCompany]);
 
-      cancelReturnSelection();
-      await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
-    } catch (err) {
-      console.error("❌ Return invoice failed:", err);
-      showNotification(
-        "error",
-        `Failed to create return invoice. ${err.response?.data?.message || err.message}`
-      );
-    } finally {
-      setLoading(false);
+  const isRevoActive = useMemo(() => {
+    return String(activeCompany?.companyName || "").trim().toLowerCase() === "revo";
+  }, [activeCompany]);
+
+  const changeReturnQty = (invoiceItemId, value) => {
+    if (!invoiceItemId) return;
+
+    setReturnSelection((prev) => {
+      const curr = prev[invoiceItemId];
+      if (!curr) return prev;
+
+      const n = Math.max(0, Math.floor(Number(value || 0)));
+      const capped = curr.maxQty ? Math.min(n, curr.maxQty) : n;
+
+      return {
+        ...prev,
+        [invoiceItemId]: { ...curr, quantity: capped },
+      };
+    });
+  };
+
+  const handleCreateReturnInvoiceSelected = async () => {
+    if (!selectedInvoiceId) {
+      showNotification("error", "Please select an invoice first.");
+      return;
     }
-  });
-};
 
+    const lines = Object.values(returnSelection || {}).filter(
+      (l) => Number(l.quantity) > 0
+    );
 
+    if (!lines.length) {
+      showNotification("error", "Select at least 1 item and enter a quantity > 0.");
+      return;
+    }
+
+    const missing = lines.find((l) => !l.itemBatchId);
+    if (missing) {
+      showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
+      return;
+    }
+
+    confirmAction(`Create return invoice for ${lines.length} item(s)?`, async () => {
+      try {
+        setLoading(true);
+        const returnDate = new Date().toISOString().slice(0, 10);
+
+        const payload = {
+          date: returnDate,
+          currencyCode: customerPreview.currencyCode,
+          items: lines.map((l) => ({
+            invoiceItemId: Number(l.invoiceItemId),
+            itemBatchId: Number(l.itemBatchId), // ✅ REQUIRED
+            itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
+            itemType: l.itemType || undefined,
+            sqmPieceId: l.sqmPieceId ?? undefined,
+            quantity: Number(l.quantity),
+          })),
+        };
+
+        console.log("📤 RTN payload:", payload);
+
+        const res = await axiosClient.post(
+          `/invoices/${selectedInvoiceId}/return`,
+          payload
+        );
+
+        const rtn = res.data;
+        showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+
+        cancelReturnSelection();
+        await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
+      } catch (err) {
+        console.error("❌ Return invoice failed:", err);
+        showNotification(
+          "error",
+          `Failed to create return invoice. ${err.response?.data?.message || err.message}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    });
+  };
 
   const handleCreateInvoiceConfirmed = (type) => {
     const label =
@@ -303,74 +298,74 @@ const handleCreateReturnInvoiceSelected = async () => {
     );
   };
 
-const handleCreateReturnInvoice = async () => {
-  if (!selectedInvoiceId) {
-    showNotification("error", "Please select an invoice first.");
-    return;
-  }
+  const handleCreateReturnInvoice = async () => {
+    if (!selectedInvoiceId) {
+      showNotification("error", "Please select an invoice first.");
+      return;
+    }
 
-  if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
-    showNotification("error", "You cannot create a return from an RTN invoice.");
-    return;
-  }
+    if (String(editingInvoiceType || "").toUpperCase() === "RTN") {
+      showNotification("error", "You cannot create a return from an RTN invoice.");
+      return;
+    }
 
-  const lines = Object.values(returnSelection || {})
-    .filter((l) => Number(l.quantity) > 0);
+    const lines = Object.values(returnSelection || {})
+      .filter((l) => Number(l.quantity) > 0);
 
-  if (!lines.length) {
-    showNotification("error", "Select at least one item and enter RTN Qty.");
-    return;
-  }
+    if (!lines.length) {
+      showNotification("error", "Select at least one item and enter RTN Qty.");
+      return;
+    }
 
-  // ✅ Validate required fields
-  const missing = lines.find((l) => !l.itemBatchId);
-  if (missing) {
-    showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
-    return;
-  }
+    // ✅ Validate required fields
+    const missing = lines.find((l) => !l.itemBatchId);
+    if (missing) {
+      showNotification("error", "Some selected lines are missing itemBatchId (batchId).");
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const returnDate = new Date().toISOString().slice(0, 10);
+      const returnDate = new Date().toISOString().slice(0, 10);
 
-    const payload = {
-      date: returnDate,
-      items: lines.map((l) => ({
-        invoiceItemId: Number(l.invoiceItemId),
-        itemBatchId: Number(l.itemBatchId),      // ✅ REQUIRED by backend
-        itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
-        itemType: l.itemType || undefined,
-        sqmPieceId: l.sqmPieceId ?? undefined,
-        quantity: Number(l.quantity),
-      })),
-    };
+      const payload = {
+        date: returnDate,
+        items: lines.map((l) => ({
+          invoiceItemId: Number(l.invoiceItemId),
+          itemBatchId: Number(l.itemBatchId),      // ✅ REQUIRED by backend
+          itemVariantId: l.itemVariantId ? Number(l.itemVariantId) : undefined,
+          itemType: l.itemType || undefined,
+          sqmPieceId: l.sqmPieceId ?? undefined,
+          quantity: Number(l.quantity),
+        })),
+      };
 
-    console.log("📤 RTN payload:", payload);
+      console.log("📤 RTN payload:", payload);
 
-    const res = await axiosClient.post(
-      `/invoices/${selectedInvoiceId}/return`,
-      payload
-    );
+      const res = await axiosClient.post(
+        `/invoices/${selectedInvoiceId}/return`,
+        payload
+      );
 
-    const rtn = res.data;
-    showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
+      const rtn = res.data;
+      showNotification("success", `Return invoice created: ${rtn.invoiceNumber || "RTN"}`);
 
-    // cleanup
-    setReturnSelection({});
-    setReturnMode(false);
+      // cleanup
+      setReturnSelection({});
+      setReturnMode(false);
 
-    await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
-  } catch (err) {
-    console.error("❌ Return invoice failed:", err);
-    showNotification(
-      "error",
-      `Failed to create return invoice. ${err.response?.data?.message || err.message}`
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+      await handleSelectInvoice({ id: rtn.id, invoiceType: "RTN" });
+    } catch (err) {
+      console.error("❌ Return invoice failed:", err);
+      showNotification(
+        "error",
+        `Failed to create return invoice. ${err.response?.data?.message || err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -445,7 +440,6 @@ const handleCreateReturnInvoice = async () => {
         it?.itemBatchId
       );
     });
-
 
     const expanded = [];
     (selectedItems || []).forEach((item) => {
@@ -541,197 +535,184 @@ const handleCreateReturnInvoice = async () => {
     setTableData((prev) => [...prev, ...newRows]);
   };
 
-  
-const requestForPreview = {
-  requestNumber: selectedRequestNumber || "", 
-  customerName: selectedCustomerName || customerInput || "",
-  requestDate: date,
-  address: customerPreview?.customerAddress || "",
-  telephone: customerPreview?.customerPhone || "",
-  items: (tableData || []).map((r, i) => ({
-    itemNumber: i + 1,
-    
-    // ✅ Use invoiceDisplayName if available, otherwise use item
-    itemName: r.invoiceDisplayName || r.item || "",
-    
-    box: r.box ?? "",
-    sheet: r.sheet ?? "",
-    length: r.length ?? "",
-    width: r.width ?? "",
-    sqm: r.sqm ?? "",
-    unit: (String(r.type || r.itemType || "").toUpperCase() || ""),
-    unitPrice: r.price ?? "",
-    invoicePrice: r.total ?? "",
-  })),
-};
+  const requestForPreview = {
+    requestNumber: selectedRequestNumber || "",
+    customerName: selectedCustomerName || customerInput || "",
+    requestDate: date,
+    address: customerPreview?.customerAddress || "",
+    telephone: customerPreview?.customerPhone || "",
+    items: (tableData || []).map((r, i) => ({
+      itemNumber: i + 1,
+      itemName: r.invoiceDisplayName || r.item || "",
+      box: r.box ?? "",
+      sheet: r.sheet ?? "",
+      length: r.length ?? "",
+      width: r.width ?? "",
+      sqm: r.sqm ?? "",
+      unit: (String(r.type || r.itemType || "").toUpperCase() || ""),
+      unitPrice: r.price ?? "",
+      invoicePrice: r.total ?? "",
+    })),
+  };
 
+  const handleSelectRequest = async (reqOrId) => {
+    const id =
+      typeof reqOrId === "object"
+        ? reqOrId?.id ?? reqOrId?.requestId ?? null
+        : reqOrId;
 
+    console.log("Fetching request details for:", reqOrId, "→ id:", id);
+    if (!id) return;
 
-const handleSelectRequest = async (reqOrId) => {
-  const id =
-    typeof reqOrId === "object"
-      ? reqOrId?.id ?? reqOrId?.requestId ?? null
-      : reqOrId;
+    setSelectedRequestId(id);
+    setSelectedInvoiceId(null);
+    setLoading(true);
+    setIsEditable(false);
 
-  console.log("Fetching request details for:", reqOrId, "→ id:", id);
-  if (!id) return;
+    if (typeof reqOrId === "object") {
+      setSelectedRequestNumber(reqOrId?.requestNumber || "");
+      setSelectedCustomerName(reqOrId?.customerName || "");
+      setCustomerInput(reqOrId?.customerName || "");
+      setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
 
-  setSelectedRequestId(id);
-  setSelectedInvoiceId(null);
-  setLoading(true);
-  setIsEditable(false);
-
-  if (typeof reqOrId === "object") {
-    setSelectedRequestNumber(reqOrId?.requestNumber || "");
-    setSelectedCustomerName(reqOrId?.customerName || "");
-    setCustomerInput(reqOrId?.customerName || "");
-    setDate(toYMD(reqOrId?.requestDate || reqOrId?.date));
-
-    if (reqOrId?.vatPercentage != null) {
-      setVat(String(parseFloat(reqOrId.vatPercentage)));
+      if (reqOrId?.vatPercentage != null) {
+        setVat(String(parseFloat(reqOrId.vatPercentage)));
+      }
+    } else {
+      setSelectedRequestNumber("");
     }
-  } else {
-    setSelectedRequestNumber("");
-  }
 
-  try {
-    const { data: request } = await axiosClient.get(`/requests/${id}`);
-    console.log("Fetched Request:", request);
+    try {
+      const { data: request } = await axiosClient.get(`/requests/${id}`);
+      console.log("Fetched Request:", request);
 
-    setSelectedRequestNumber(
-      request?.requestNumber ||
-        (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") ||
-        ""
-    );
+      setSelectedRequestNumber(
+        request?.requestNumber ||
+          (typeof reqOrId === "object" ? reqOrId?.requestNumber : "") ||
+          ""
+      );
 
-    setCustomerInput(request.customerName || "");
-    setSelectedCustomerName(request.customerName || "");
-    setSelectedCustomerId(request.customerId || null);
-    setSelectedInvoiceType(request.invoiceType || "Both");
-    setDate(toYMD(request.requestDate || request.date));
+      setCustomerInput(request.customerName || "");
+      setSelectedCustomerName(request.customerName || "");
+      setSelectedCustomerId(request.customerId || null);
+      setSelectedInvoiceType(request.invoiceType || "Both");
+      setDate(toYMD(request.requestDate || request.date));
 
-    const reqVat =
-      request?.vatPercentage != null
-        ? String(parseFloat(request.vatPercentage))
-        : "0";
-    setVat(reqVat);
+      const reqVat =
+        request?.vatPercentage != null
+          ? String(parseFloat(request.vatPercentage))
+          : "0";
+      setVat(reqVat);
 
-    // ✅ FIX: overwrite customerPreview from REQUEST response
-    setCustomerPreview((prev) => ({
-      ...prev,
-      customerName: request?.customerName || prev.customerName || "",
-      customerAddress: request?.customerAddress ?? request?.address ?? "",
-      customerPhoneNumber: request?.customerPhoneNumber ?? request?.telephone ?? "",
-      // keep your existing keys used elsewhere:
-      customerPhone: request?.customerPhoneNumber ?? request?.telephone ?? "",
-    }));
+      // ✅ FIX: overwrite customerPreview from REQUEST response
+      setCustomerPreview((prev) => ({
+        ...prev,
+        customerName: request?.customerName || prev.customerName || "",
+        customerAddress: request?.customerAddress ?? request?.address ?? "",
+        customerPhoneNumber: request?.customerPhoneNumber ?? request?.telephone ?? "",
+        // keep your existing keys used elsewhere:
+        customerPhone: request?.customerPhoneNumber ?? request?.telephone ?? "",
+      }));
 
-    const details = Array.isArray(request.details) ? request.details : [];
+      const details = Array.isArray(request.details) ? request.details : [];
 
-    const updatedData = details.map((detail) => {
-      const itemType = String(detail?.itemType || "").toLowerCase();
-      const stockMode = detail?.stockMode ?? null;
+      const updatedData = details.map((detail) => {
+        const itemType = String(detail?.itemType || "").toLowerCase();
+        const stockMode = detail?.stockMode ?? null;
 
-      const qty = Number(detail?.quantity ?? 0);
+        const qty = Number(detail?.quantity ?? 0);
 
-      const isBox = itemType === "box";
-      const isUnit = itemType === "unit";
+        const isBox = itemType === "box";
+        const isUnit = itemType === "unit";
 
-      const boxVal = isBox ? qty : "";
-      const sheetVal = isBox ? detail?.sheetsPerBox ?? "" : qty;
+        const boxVal = isBox ? qty : "";
+        const sheetVal = isBox ? detail?.sheetsPerBox ?? "" : qty;
 
-      const sqmVal = isUnit ? 0 : detail?.sqm ?? "";
+        const sqmVal = isUnit ? 0 : detail?.sqm ?? "";
 
+        return {
+          __rowKey: makeKey(),
+
+          itemVariantId: detail?.itemVariantId || null,
+          batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
+
+          origin: detail?.origin || "",
+          condition: detail?.condition || "",
+
+          // ✅ Keep normal formatting for table display
+          item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
+
+          // ✅ Store invoiceDisplayName separately for preview modal ONLY
+          invoiceDisplayName: detail?.invoiceDisplayName || null,
+
+          type: itemType,
+
+          itemType,
+          stockMode,
+
+          thickness: detail?.thickness || "",
+          length: detail?.length ?? "",
+          width: detail?.width ?? "",
+
+          box: boxVal,
+          sheet: sheetVal,
+
+          sqm: sqmVal,
+          price: detail?.price ?? "",
+          total: detail?.total ?? "0.00",
+        };
+      });
+
+      setTableData(updatedData);
+    } catch (error) {
+      console.error("Error fetching request details:", error);
+      showNotification(
+        "error",
+        `Failed to fetch request details: ${
+          error.response?.data?.message || error.message
+        }`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deliveryDocForPreview = useMemo(() => {
+    // If request selected -> reuse requestForPreview (already has requestNumber, items, customer)
+    if (selectedRequestId !== null) return requestForPreview;
+
+    // If invoice selected -> build from invoice state
+    if (selectedInvoiceId !== null) {
       return {
-        __rowKey: makeKey(),
-
-        itemVariantId: detail?.itemVariantId || null,
-        batchId: detail?.itemBatchId ?? detail?.batchId ?? null,
-
-        origin: detail?.origin || "",
-        condition: detail?.condition || "",
-
-        // ✅ Keep normal formatting for table display
-        item: fmtItemLabel(itemType, detail?.thickness, detail?.itemName),
-
-        // ✅ Store invoiceDisplayName separately for preview modal ONLY
-        invoiceDisplayName: detail?.invoiceDisplayName || null,
-
-        type: itemType,
-
-        itemType,
-        stockMode,
-
-        thickness: detail?.thickness || "",
-        length: detail?.length ?? "",
-        width: detail?.width ?? "",
-
-        box: boxVal,
-        sheet: sheetVal,
-
-        sqm: sqmVal,
-        price: detail?.price ?? "",
-        total: detail?.total ?? "0.00",
+        customerName: selectedCustomerName || customerInput || "",
+        invoiceDate: date,
+        address: customerPreview?.customerAddress || "",
+        telephone: customerPreview?.customerPhone || "",
+        // IMPORTANT: items must match your invoice table data shape
+        items: (tableData || []).map((r, i) => ({
+          itemNumber: i + 1,
+          itemName: r.invoiceDisplayName || r.item || "",
+          box: r.box ?? "",
+          sheet: r.sheet ?? "",
+          length: r.length ?? "",
+          width: r.width ?? "",
+          sqm: r.sqm ?? "",
+          unit: String(r.type || r.itemType || "").toUpperCase(),
+        })),
       };
-    });
+    }
 
-    setTableData(updatedData);
-  } catch (error) {
-    console.error("Error fetching request details:", error);
-    showNotification(
-      "error",
-      `Failed to fetch request details: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-
-const deliveryDocForPreview = useMemo(() => {
-  // If request selected -> reuse requestForPreview (already has requestNumber, items, customer)
-  if (selectedRequestId !== null) return requestForPreview;
-
-  // If invoice selected -> build from invoice state
-  if (selectedInvoiceId !== null) {
-    return {
-    
-      customerName: selectedCustomerName || customerInput || "",
-      invoiceDate: date,
-      address: customerPreview?.customerAddress || "",
-      telephone: customerPreview?.customerPhone || "",
-      // IMPORTANT: items must match your invoice table data shape
-      items: (tableData || []).map((r, i) => ({
-        itemNumber: i + 1,
-        itemName: r.item || "",
-        box: r.box ?? "",
-        sheet: r.sheet ?? "",
-        length: r.length ?? "",
-        width: r.width ?? "",
-        sqm: r.sqm ?? "",
-        unit: String(r.type || r.itemType || "").toUpperCase(),
-      })),
-    };
-  }
-
-  return null;
-}, [
-  selectedRequestId,
-  selectedInvoiceId,
-  requestForPreview,
-  
-  selectedCustomerName,
-  customerInput,
-  date,
-  customerPreview,
-  tableData,
-]);
-
-
+    return null;
+  }, [
+    selectedRequestId,
+    selectedInvoiceId,
+    requestForPreview,
+    selectedCustomerName,
+    customerInput,
+    date,
+    customerPreview,
+    tableData,
+  ]);
 
   // ====================== PRICING (Get Price) ======================
 
@@ -828,8 +809,6 @@ const deliveryDocForPreview = useMemo(() => {
     }
   };
 
-
-
   const calculateSQM = (length, width, type, box, sheet) => {
     if (!length || !width || box === "" || sheet === "" || sheet === undefined) {
       return "";
@@ -866,7 +845,7 @@ const deliveryDocForPreview = useMemo(() => {
     setCutMode(false);
     setDate(today);
     setSelectedRequestNumber("");
-        setReturnMode(false);
+    setReturnMode(false);
     setReturnSelection({});
   };
 
@@ -1128,8 +1107,8 @@ const deliveryDocForPreview = useMemo(() => {
     const totalWithoutVAT = items.reduce((acc, item) => acc + item.totalAmount, 0);
     const totalVAT = items.reduce((acc, item) => acc + item.vat, 0);
     const grandTotal = totalWithoutVAT + totalVAT;
-      const invoiceDateToUse =
-    selectedRequestId !== null ? toYMDLocal(new Date()) : date;
+    const invoiceDateToUse =
+      selectedRequestId !== null ? toYMDLocal(new Date()) : date;
 
     const payload = {
       customerId: selectedCustomerId,
@@ -1137,7 +1116,7 @@ const deliveryDocForPreview = useMemo(() => {
       invoiceType,
       documentNumber: "DOC-0001",
       date: invoiceDateToUse,
-      currencyCode: customerPreview.currencyCode ,
+      currencyCode: customerPreview.currencyCode,
       totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
       totalVAT: Number(totalVAT.toFixed(2)),
       grandTotal: Number(grandTotal.toFixed(2)),
@@ -1198,7 +1177,7 @@ const deliveryDocForPreview = useMemo(() => {
     }
 
     setSelectedInvoiceId(invId);
-      setReturnMode(false);
+    setReturnMode(false);
     setReturnSelection({});
     setSelectedRequestId(null);
     setEditingInvoiceType(invoiceSummary.invoiceType || "S");
@@ -1206,7 +1185,7 @@ const deliveryDocForPreview = useMemo(() => {
     let invoice = invoiceSummary;
     try {
       // ✅ FIX
-const res = await axiosClient.get(`/invoices/v1/${invId}`);
+      const res = await axiosClient.get(`/invoices/v1/${invId}`);
       invoice = res.data;
       console.log("📥 Full invoice from API:", invoice);
     } catch (err) {
@@ -1282,6 +1261,7 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
           __rowKey: makeKey(),
           origin: item?.origin || "",
           item: label,
+          invoiceDisplayName: item?.invoiceDisplayName || "",
           type,
           condition: item?.batch?.condition || item?.condition || "",
           length: item?.length || "",
@@ -1491,19 +1471,19 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
 
     try {
       // ✅ FIX
-  const response = await axiosClient.put(
-    `/invoices/${selectedInvoiceId}`,
-    invoiceDataToSave
-  );
+      const response = await axiosClient.put(
+        `/invoices/${selectedInvoiceId}`,
+        invoiceDataToSave
+      );
 
-  console.log("✅ Invoice Updated:", response.data);
-  showNotification("success", "Invoice updated successfully!");
+      console.log("✅ Invoice Updated:", response.data);
+      showNotification("success", "Invoice updated successfully!");
 
-  // ✅ refresh state so preview shows the latest
-  await handleSelectInvoice({ id: selectedInvoiceId, invoiceType: typeToSave });
+      // ✅ refresh state so preview shows the latest
+      await handleSelectInvoice({ id: selectedInvoiceId, invoiceType: typeToSave });
 
-  // optional: exit edit mode
-  setIsEditable?.(false);
+      // optional: exit edit mode
+      setIsEditable?.(false);
       showNotification("success", "Invoice updated successfully!");
     } catch (err) {
       console.error("❌ Error saving invoice:", err);
@@ -1591,10 +1571,10 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
         <div className="pos-page-toolbar">
           <Toolbar
             returnMode={returnMode}
-  returnSelectedCount={Object.keys(returnSelection).length}
-  onStartReturnSelection={startReturnSelection}
-  onCancelReturnSelection={cancelReturnSelection}
-  onConfirmReturnSelected={handleCreateReturnInvoiceSelected}
+            returnSelectedCount={Object.keys(returnSelection).length}
+            onStartReturnSelection={startReturnSelection}
+            onCancelReturnSelection={cancelReturnSelection}
+            onConfirmReturnSelected={handleCreateReturnInvoiceSelected}
             handleNewTransaction={handleNewTransaction}
             handleEditInvoice={handleEditInvoice}
             handleSaveRequest={handleSaveRequest}
@@ -1614,74 +1594,74 @@ const res = await axiosClient.get(`/invoices/v1/${invId}`);
             canOpenStatement={!!selectedCustomerId}
             handleCreateReturnInvoice={handleCreateReturnInvoiceConfirmed}
             setShowRequestPreview={setShowRequestPreview}
-            setShowDeliveryNotePreview={setShowDeliveryNotePreview}  
-
+            setShowDeliveryNotePreview={setShowDeliveryNotePreview}
             canCreateReturnInvoice={
               !!selectedInvoiceId && String(editingInvoiceType || "").toUpperCase() !== "RTN"
             }
           />
 
-{showPreview && isShamounActive && (
-  <InvoiceModal
-    isOpen={showPreview}
-    onClose={() => setShowPreview(false)}
-    invoiceData={{
-      ...customerPreview,
-      ...(invoiceData || {}),
-      date: invoiceData?.date ?? date,
-      vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
-      currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
-      currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
-      invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
-    }}
-    cssHref="/invoicePreview.css"
-  />
-)}
+          {showPreview && isShamounActive && (
+            <InvoiceModal
+              isOpen={showPreview}
+              onClose={() => setShowPreview(false)}
+              invoiceData={{
+                ...customerPreview,
+                ...(invoiceData || {}),
+                date: invoiceData?.date ?? date,
+                vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
+                currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
+                currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
+                invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
+              }}
+              cssHref="/invoicePreview.css"
+            />
+          )}
 
-{showPreview && isRevoActive && (
-  <RevoInvoiceModal
-    isOpen={showPreview}
-    onClose={() => setShowPreview(false)}
-    invoiceData={{
-      ...customerPreview,
-      ...(invoiceData || {}),
-      date: invoiceData?.date ?? date,
-      vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
-      currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
-      currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
-      invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
-    }}
-  />
-)}
+          {showPreview && isRevoActive && (
+            <RevoInvoiceModal
+              isOpen={showPreview}
+              onClose={() => setShowPreview(false)}
+              invoiceData={{
+                ...customerPreview,
+                ...(invoiceData || {}),
+                date: invoiceData?.date ?? date,
+                vatPercentage: invoiceData?.vatPercentage ?? (Number(vat) || 0),
+                currencyRate: invoiceData?.currencyRate ?? (Number(currencyRate) || 1),
+                currencyCode: invoiceData?.currencyCode ?? customerPreview.currencyCode ?? "USD",
+                invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
+              }}
+            />
+          )}
 
-{showPreview && !isShamounActive && !isRevoActive && (
-  <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
-    <div style={{ background:"#fff", borderRadius:12, padding:32, maxWidth:400, textAlign:"center" }}>
-      <p style={{ fontSize:16, marginBottom:16 }}>
-        {activeCompany
-          ? `Invoice preview is not configured for "${activeCompany.companyName}".`
-          : "No active company set. Go to Settings → Company."}
-      </p>
-      <button onClick={() => setShowPreview(false)} style={{ padding:"8px 20px", background:"#2563eb", color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>
-        Close
-      </button>
-    </div>
-  </div>
-)}
+          {showPreview && !isShamounActive && !isRevoActive && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
+              <div style={{ background:"#fff", borderRadius:12, padding:32, maxWidth:400, textAlign:"center" }}>
+                <p style={{ fontSize:16, marginBottom:16 }}>
+                  {activeCompany
+                    ? `Invoice preview is not configured for "${activeCompany.companyName}".`
+                    : "No active company set. Go to Settings → Company."}
+                </p>
+                <button onClick={() => setShowPreview(false)} style={{ padding:"8px 20px", background:"#2563eb", color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+
           <RequestPreviewModal
-  open={showRequestPreview}
-  onClose={() => setShowRequestPreview(false)}
-  request={requestForPreview}
-  currencyCode={customerPreview.currencyCode}
-  vatPercent={Number(vat || 0)} 
-  currencyRate={Number(currencyRate || 0)}
-/>
+            open={showRequestPreview}
+            onClose={() => setShowRequestPreview(false)}
+            request={requestForPreview}
+            currencyCode={customerPreview.currencyCode}
+            vatPercent={Number(vat || 0)}
+            currencyRate={Number(currencyRate || 0)}
+          />
 
-<DeliveryNoteModal
-  open={showDeliveryNotePreview}
-  onClose={() => setShowDeliveryNotePreview(false)}
-  doc={deliveryDocForPreview || {}}
-/>
+          <DeliveryNoteModal
+            open={showDeliveryNotePreview}
+            onClose={() => setShowDeliveryNotePreview(false)}
+            doc={deliveryDocForPreview || {}}
+          />
 
           <StatementModal
             isOpen={showStatement}
