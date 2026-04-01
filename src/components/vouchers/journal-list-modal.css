@@ -327,6 +327,35 @@
   cursor: not-allowed;
 }
 
+.action-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.delete-btn {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.06s ease, box-shadow 0.15s ease;
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.20);
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+  box-shadow: 0 10px 22px rgba(239, 68, 68, 0.30);
+}
+
+.delete-btn:active {
+  transform: scale(0.98);
+}
+
 /* Empty row */
 .empty-row {
   text-align: center;

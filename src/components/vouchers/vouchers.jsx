@@ -1054,6 +1054,15 @@ const JournalVoucherPage = () => {
     setIsSaved(true);
   };
 
+  const handleDeleteJV = async (journal) => {
+    try {
+      await axiosClient.delete(`/journal-vouchers/${journal.id}`);
+      setJournalData((prev) => prev.filter((j) => j.id !== journal.id));
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to delete journal voucher.");
+    }
+  };
+
   const handleReset = () => {
     setDate("");
     setType("");
@@ -1407,7 +1416,7 @@ const JournalVoucherPage = () => {
     <div>
       <div className="general-vouchers-container" onClick={handleCloseContextMenu}>
         <AccountSelectionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelect={handleAccountSelection} />
-        <JournalListsModal isOpen={isJournalListOpen} onClose={() => setIsJournalListOpen(false)} journalData={journalData} onView={handleView} onLoadMore={handleLoadMore} hasMore={hasMoreSummary} loadingMore={loadingMoreSummary} searchSeq={summarySeq} onSearchSeqChange={handleSearchSeqChange} searchText={searchText} onSearchTextChange={handleSearchTextChange} kindFilter={kindFilter} onKindFilterChange={(val) => { setKindFilter(val); runJournalListSearch({ kindFilter: val }); }} onSearchNow={() => runJournalListSearch()} />
+        <JournalListsModal isOpen={isJournalListOpen} onClose={() => setIsJournalListOpen(false)} journalData={journalData} onView={handleView} onDelete={handleDeleteJV} onLoadMore={handleLoadMore} hasMore={hasMoreSummary} loadingMore={loadingMoreSummary} searchSeq={summarySeq} onSearchSeqChange={handleSearchSeqChange} searchText={searchText} onSearchTextChange={handleSearchTextChange} kindFilter={kindFilter} onKindFilterChange={(val) => { setKindFilter(val); runJournalListSearch({ kindFilter: val }); }} onSearchNow={() => runJournalListSearch()} />
 
         <div className="general-vouchers-header">
           <div className="header-left">

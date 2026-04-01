@@ -23,6 +23,7 @@ const JournalListsModal = ({
   onClose,
   journalData,
   onView,
+  onDelete,
 
   // pagination
   onLoadMore,
@@ -167,9 +168,19 @@ const JournalListsModal = ({
 
                         <td className="mono">{item.jvType}</td>
 
-                        <td>
+                        <td className="action-cell">
                           <button className="view-btn" onClick={() => onView?.(item)}>
                             View
+                          </button>
+                          <button
+                            className="delete-btn"
+                            onClick={() => {
+                              if (window.confirm(`Delete ${item.jvNumber}? This cannot be undone.`)) {
+                                onDelete?.(item);
+                              }
+                            }}
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
