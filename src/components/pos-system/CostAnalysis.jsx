@@ -278,11 +278,14 @@ export default function CostAnalysis() {
       }
     });
 
-    // sort each variant's history by normalized date
+    // sort each variant's history by actual date value (not formatted string)
     arr.forEach((v) => {
-      v.history.sort((ra, rb) =>
-        String(getRowDate(ra)).localeCompare(String(getRowDate(rb)))
-      );
+      v.history.sort((ra, rb) => {
+        const da = new Date(ra?.dateForEachInvoice || ra?.transactionDate || 0).getTime();
+        const db = new Date(rb?.dateForEachInvoice || rb?.transactionDate || 0).getTime();
+        if (da !== db) return da - db;
+        return (ra.id ?? 0) - (rb.id ?? 0);
+      });
     });
 
     return arr;
