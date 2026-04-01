@@ -12,17 +12,30 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const filterDebounceRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const highlightedRowRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) fetchAccounts();
+    if (isOpen) {
+      fetchAccounts();
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    }
 
     return () => {
       if (filterDebounceRef.current) clearTimeout(filterDebounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -110,6 +123,18 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
       };
     });
   }, [flatIndex]);
+
+  // Reset highlight when search changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [searchQuery]);
+
+  // Scroll highlighted row into view
+  useEffect(() => {
+    if (highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [highlightedIndex]);
 
   // ─────────────────────────────────────────────────────────────
   // Debounced local search
@@ -258,10 +283,11 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
   // Flat renderer for search results
   const renderSearchRows = (rows) =>
-    rows.map((r) => (
+    rows.map((r, i) => (
       <tr
         key={`${r.kind}-${r.id}`}
-        className="acc-modal-selection-row"
+        ref={i === highlightedIndex ? highlightedRowRef : null}
+        className={`acc-modal-selection-row${i === highlightedIndex ? " acc-row-highlighted" : ""}`}
         onClick={() => onSelect({ ...r, entityType: r.kind })}
       >
         <td className="acc-modal-selection-cell">{r.accountNumber}</td>
@@ -286,6 +312,27 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
   const handleSearchChange = (e) => setSearchQuery(e.target.value);
 
+  const handleSearchKeyDown = (e) => {
+    const rows = searchResults;
+    if (!rows || rows.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => Math.min(prev + 1, rows.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => Math.max(prev - 1, -1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && highlightedIndex < rows.length) {
+        const r = rows[highlightedIndex];
+        onSelect({ ...r, entityType: r.kind });
+      } else if (rows.length === 1) {
+        const r = rows[0];
+        onSelect({ ...r, entityType: r.kind });
+      }
+    }
+  };
+
   return (
     isOpen && (
       <div className="acc-modal-selection-overlay">
@@ -304,11 +351,13 @@ const AccountSelectionModal = ({ isOpen, onClose, onSelect }) => {
             {!loading && !error && (
               <div className="acc-modal-selection-table-wrapper">
                 <input
+                  ref={searchInputRef}
                   type="text"
                   className="acc-modal-selection-search-input"
                   placeholder="Search by Account Number or Account Name..."
                   value={searchQuery}
                   onChange={handleSearchChange}
+                  onKeyDown={handleSearchKeyDown}
                 />
 
                 {filtering && (

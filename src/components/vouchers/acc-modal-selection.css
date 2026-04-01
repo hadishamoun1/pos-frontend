@@ -119,6 +119,12 @@
   color: #0056b3;
 }
 
+/* Keyboard-highlighted row */
+.acc-row-highlighted td {
+  background-color: #cce4f7 !important;
+  color: #003f8a !important;
+}
+
 /* Fade-in Animation */
 @keyframes fadeIn {
   from {
