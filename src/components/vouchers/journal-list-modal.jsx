@@ -1,5 +1,6 @@
 import React from "react";
 import "./journal-list-modal.css";
+import PermGate from "../auth/PermGate";
 
 const kindLabel = (k) => {
   const x = String(k || "").toUpperCase();
@@ -172,16 +173,18 @@ const JournalListsModal = ({
                           <button className="view-btn" onClick={() => onView?.(item)}>
                             View
                           </button>
-                          <button
-                            className="delete-btn"
-                            onClick={() => {
-                              if (window.confirm(`Delete ${item.jvNumber}? This cannot be undone.`)) {
-                                onDelete?.(item);
-                              }
-                            }}
-                          >
-                            Delete
-                          </button>
+                          <PermGate perm="journal.delete">
+                            <button
+                              className="delete-btn"
+                              onClick={() => {
+                                if (window.confirm(`Delete ${item.jvNumber}? This cannot be undone.`)) {
+                                  onDelete?.(item);
+                                }
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </PermGate>
                         </td>
                       </tr>
                     );
