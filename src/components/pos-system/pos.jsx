@@ -888,7 +888,7 @@ const POSSystemPage = () => {
 
       if (lengthNum && widthNum && sheetNum) {
         const sqmPerSheet = (lengthNum / 100) * (widthNum / 100);
-        row.sqm = (sqmPerSheet * sheetNum).toFixed(2);
+        row.sqm = (sqmPerSheet * sheetNum).toFixed(4);
       } else {
         row.sqm = "";
       }
