@@ -228,6 +228,11 @@
   z-index: 4;
 }
 
+/* SQM tab has no bubbles — stick right below the search input */
+.sqm-pieces-tab .search-modal-table thead th {
+  top: var(--search-filter-h);
+}
+
 /* ✅ Center the checkbox column perfectly */
 .search-modal-table th.col-select {
   width: 70px;

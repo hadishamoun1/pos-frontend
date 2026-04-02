@@ -1,12 +1,13 @@
 // src/components/pos-system/SqmPiecesTab.jsx
-import React, {
+import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { axiosClient } from "../api/axiosClient"; // ✅ use api client (baseURL includes /api)
+import { axiosClient } from "../api/axiosClient";
 
 const num = (v) => {
   const n = Number(v);
@@ -22,38 +23,54 @@ const fmt2 = (v) => {
   });
 };
 
+const THICKNESS_BUBBLES = ["3", "4", "5", "5.5", "6", "8", "10", "12", "15", "19"];
+
+const normalizeDigits = (s = "") =>
+  String(s)
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/،/g, ",");
+
+const looksLikeDims = (s) => {
+  if (!s) return false;
+  const t = normalizeDigits(s).trim();
+  if (!t.includes("*")) return false;
+  const [L, R] = t.split("*");
+  return /^\s*\d+(\.\d+)?\s*$/.test(L) && /^\s*\d+(\.\d+)?\s*$/.test(R ?? "");
+};
+
+const isPlainNumber = (s) =>
+  /^\d{1,5}(\.\d+)?$/.test(normalizeDigits(String(s || "")).trim());
+
 const SqmPiecesTab = forwardRef(function SqmPiecesTab(
   {
     modalOpen,
     isActive,
     onSelectionCountChange,
-
-    // ✅ NEW (from SearchModal): selection kept in parent
     selectedMap: selectedMapProp,
     setSelectedMap: setSelectedMapProp,
   },
   ref
 ) {
-  const [rows, setRows] = useState([]);
+  const [allRows, setAllRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ✅ Backward compatible:
-  // If parent provides selectedMap/setSelectedMap, use them.
-  // Otherwise keep internal selection.
+  const [inputValue, setInputValue] = useState("");
+  const [nameChip, setNameChip] = useState("");
+  const [dimsChip, setDimsChip] = useState("");
+  const [thicknessFilter, setThicknessFilter] = useState("");
+
   const [internalSelectedMap, setInternalSelectedMap] = useState(() => new Map());
   const selectedMap = selectedMapProp ?? internalSelectedMap;
   const setSelectedMap = setSelectedMapProp ?? setInternalSelectedMap;
 
-  // abort in-flight
   const abortRef = useRef(null);
+  const searchInputRef = useRef(null);
+
   const cancelInFlight = () => {
     const ctl = abortRef.current;
     if (ctl && typeof ctl.abort === "function") {
-      try {
-        ctl.abort();
-      } catch {}
+      try { ctl.abort(); } catch {}
     }
     const next = new AbortController();
     abortRef.current = next;
@@ -62,16 +79,15 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
 
   const normalizeApiRows = (data) => {
     const rawRows = Array.isArray(data) ? data : data?.rows || [];
-
     return rawRows.map((r) => {
       const pieceId = r.sqmPieceId ?? r.id;
       return {
         ...r,
-        id: pieceId, // stable key
+        id: pieceId,
         type: "sqm",
         sqmPieceId: pieceId,
         itemVariantId: r.itemVariantId,
-        batchId: r.itemBatchId, // ✅ used by POS table
+        batchId: r.itemBatchId,
         thickness: r.thickness,
         itemName: r.itemName,
         length: r.length,
@@ -93,53 +109,129 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     if (!modalOpen || !isActive) return;
     setLoading(true);
     setErrorMsg("");
-
     try {
       const signal = cancelInFlight();
-
-      // ✅ FIX: use axiosClient + relative path only (NO baseUrl)
       const res = await axiosClient.get(`/sqm-pieces/pos-pieces`, {
         params: { q: query.trim() || undefined },
         signal,
       });
-
-      const normalized = normalizeApiRows(res.data);
-      setRows(normalized);
-      // ✅ DO NOT clear selection here
+      setAllRows(normalizeApiRows(res.data));
     } catch (err) {
       if (isCanceled(err)) return;
-
       console.error("Failed to load SQM pieces for POS search", err);
       setErrorMsg(
-        err?.response?.data?.message ||
-          "Failed to load SQM pieces. Please try again."
+        err?.response?.data?.message || "Failed to load SQM pieces. Please try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Reset selection ONLY when modal opens (same behavior you had)
+  // Reset on modal open
   useEffect(() => {
     if (!modalOpen) return;
     setSelectedMap(new Map());
     onSelectionCountChange?.(0);
-    // optional:
-    // setSearchText("");
-    // setRows([]);
-  }, [modalOpen]); // keep same behavior
+  }, [modalOpen]);
 
-  // When SQM tab becomes active, load rows
+  // Fetch when tab becomes active or nameChip changes
   useEffect(() => {
     if (!modalOpen || !isActive) return;
-    fetchPieces(searchText);
+    fetchPieces(nameChip);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalOpen, isActive]);
+  }, [modalOpen, isActive, nameChip]);
 
-  // expose collectSelected() to parent (doesn't hurt, even if parent doesn't use it)
+  // Client-side filtering: thickness + dimensions
+  const rows = useMemo(() => {
+    let filtered = allRows;
+
+    if (thicknessFilter) {
+      filtered = filtered.filter(
+        (r) => String(Number(r.thickness)) === thicknessFilter
+      );
+    }
+
+    if (dimsChip) {
+      const raw = normalizeDigits(dimsChip.trim());
+      if (raw.includes("*")) {
+        const [lStr, rStr] = raw.split("*");
+        const L = parseFloat(lStr);
+        const W = parseFloat(rStr);
+        if (Number.isFinite(L) && Number.isFinite(W)) {
+          filtered = filtered.filter(
+            (r) =>
+              (num(r.length) === L && num(r.width) === W) ||
+              (num(r.length) === W && num(r.width) === L)
+          );
+        }
+      } else {
+        const N = parseFloat(raw);
+        if (Number.isFinite(N)) {
+          filtered = filtered.filter(
+            (r) => num(r.length) === N || num(r.width) === N
+          );
+        }
+      }
+    }
+
+    return filtered;
+  }, [allRows, thicknessFilter, dimsChip]);
+
   useImperativeHandle(ref, () => ({
     collectSelected: () => Array.from(selectedMap.values()),
   }));
+
+  const handleEnter = (e) => {
+    if (e.key !== "Enter") return;
+    const raw = normalizeDigits(inputValue.trim());
+    if (!raw) return;
+
+    const parts = raw.split(/\s+/).filter(Boolean);
+
+    // Check for explicit L*W token
+    const dimsToken = parts.find((p) => looksLikeDims(p));
+    if (dimsToken) {
+      setDimsChip(dimsToken);
+      const rest = parts.filter((p) => p !== dimsToken).join(" ").trim();
+      if (rest) setNameChip(rest);
+      setInputValue("");
+      return;
+    }
+
+    // Two plain numbers → treat as L*W
+    const numIdxs = parts.reduce((acc, p, i) => {
+      if (isPlainNumber(p)) acc.push(i);
+      return acc;
+    }, []);
+    if (numIdxs.length >= 2) {
+      setDimsChip(`${parts[numIdxs[0]]}*${parts[numIdxs[1]]}`);
+      const rest = parts.filter((_, i) => !numIdxs.slice(0, 2).includes(i)).join(" ").trim();
+      if (rest) setNameChip(rest);
+      setInputValue("");
+      return;
+    }
+
+    // One plain number → single dimension filter
+    if (numIdxs.length === 1) {
+      setDimsChip(parts[numIdxs[0]]);
+      const rest = parts.filter((_, i) => i !== numIdxs[0]).join(" ").trim();
+      if (rest) setNameChip(rest);
+      setInputValue("");
+      return;
+    }
+
+    // Pure text → name chip (sent to backend)
+    setNameChip(raw);
+    setInputValue("");
+  };
+
+  const clearEverything = () => {
+    setInputValue("");
+    setNameChip("");
+    setDimsChip("");
+    setThicknessFilter("");
+    setTimeout(() => searchInputRef.current?.focus?.(), 0);
+  };
 
   const toggleRow = (row) => {
     const rowId = row.id;
@@ -152,21 +244,17 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     });
   };
 
-  // Select/Deselect ALL visible rows only
   const toggleAllVisible = () => {
     setSelectedMap((prev) => {
       const next = new Map(prev);
       const visibleIds = rows.map((r) => r.id);
-
       const allVisibleSelected =
         rows.length > 0 && visibleIds.every((id) => next.has(id));
-
       if (allVisibleSelected) {
         visibleIds.forEach((id) => next.delete(id));
       } else {
         rows.forEach((r) => next.set(r.id, r));
       }
-
       onSelectionCountChange?.(next.size);
       return next;
     });
@@ -178,23 +266,83 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
     rows.some((r) => selectedMap.has(r.id)) && !allVisibleChecked;
 
   return (
-    <div>
+    <div className="sqm-pieces-tab">
+      {/* ── Search input row ── */}
       <div className="search-modal-item-input-row">
-        <input
-          type="text"
-          className="search-modal-items-input"
-          placeholder="Search SQM pieces by item, transfer..."
-          value={searchText}
-          onChange={(e) => {
-            const value = e.target.value;
-            setSearchText(value);
-            if (modalOpen && isActive) fetchPieces(value);
-          }}
-        />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="search-modal-items-input"
+            placeholder="Search by item name, transfer # … then press Enter"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleEnter}
+            autoFocus
+          />
+          <button
+            type="button"
+            className="search-clear-btn"
+            onClick={clearEverything}
+            title="Clear"
+          >
+            Clear
+          </button>
+        </div>
+
         <div className="search-modal-chips">
-          <span style={{ fontSize: 12, opacity: 0.75 }}>
+          {nameChip && (
+            <span className="search-chip" title={nameChip}>
+              <span className="search-chip-label search-chip-label--name" dir="rtl">
+                {nameChip}
+              </span>
+              <button
+                className="search-chip-x"
+                onClick={() => setNameChip("")}
+                aria-label="Remove name filter"
+              >
+                ×
+              </button>
+            </span>
+          )}
+
+          {dimsChip && (
+            <span className="search-chip" title={dimsChip}>
+              <span className="search-chip-label search-chip-label--dims" dir="ltr">
+                <bdi>{dimsChip}</bdi>
+              </span>
+              <button
+                className="search-chip-x"
+                onClick={() => setDimsChip("")}
+                aria-label="Remove dimension filter"
+              >
+                ×
+              </button>
+            </span>
+          )}
+
+          <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.75 }}>
             Selected: {selectedMap.size}
           </span>
+        </div>
+      </div>
+
+      {/* ── Thickness bubbles ── */}
+      <div className="search-quick-bubbles-wrap">
+        <div className="search-quick-bubbles-row thickness-row">
+          {THICKNESS_BUBBLES.map((t) => {
+            const active = thicknessFilter === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setThicknessFilter(active ? "" : t)}
+                className={"quick-bubble quick-bubble-thick" + (active ? " active" : "")}
+              >
+                {t} ملم
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -224,9 +372,7 @@ const SqmPiecesTab = forwardRef(function SqmPiecesTab(
         <tbody>
           {loading ? (
             <tr className="empty-row">
-              <td className="empty-cell" colSpan={6}>
-                Loading SQM pieces…
-              </td>
+              <td className="empty-cell" colSpan={6}>Loading SQM pieces…</td>
             </tr>
           ) : !rows.length ? (
             <tr className="empty-row">

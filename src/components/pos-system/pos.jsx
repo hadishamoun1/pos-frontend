@@ -660,6 +660,8 @@ const POSSystemPage = () => {
           sqm: sqmVal,
           price: detail?.price ?? "",
           total: detail?.total ?? "0.00",
+
+          sqmPieceId: detail?.sqmPieceId ?? null,
         };
       });
 
@@ -1353,6 +1355,9 @@ const POSSystemPage = () => {
         price: Number(item.price),
         total: Number(item.total),
         quantity: item.box ? Number(item.box) : Number(item.sheet),
+        sqmPieceId: item.sqmPieceId ?? null,
+        length: item.length !== "" && item.length != null ? Number(item.length) : null,
+        width: item.width !== "" && item.width != null ? Number(item.width) : null,
       })),
     };
 
@@ -1522,6 +1527,9 @@ const POSSystemPage = () => {
         price: Number(item.price),
         total: Number(item.total),
         quantity: item.box ? Number(item.box) : Number(item.sheet),
+        sqmPieceId: item.sqmPieceId ?? null,
+        length: item.length !== "" && item.length != null ? Number(item.length) : null,
+        width: item.width !== "" && item.width != null ? Number(item.width) : null,
       })),
     };
 
