@@ -315,7 +315,21 @@ function useGroupedByDescription(
     const allGroups = Array.from(groupsById.values()).map((g) => {
       const rowsOut = [];
 
-      g.order.forEach((bucketKey) => {
+      const sortedOrder = [...g.order].sort((keyA, keyB) => {
+        const a = g.buckets.get(keyA);
+        const b = g.buckets.get(keyB);
+        // 1) thickness ASC
+        if (a.thicknessNum !== b.thicknessNum) return a.thicknessNum - b.thicknessNum;
+        // 2) item name ASC
+        const nameCmp = String(a.itemNameKey || "").localeCompare(String(b.itemNameKey || ""));
+        if (nameCmp !== 0) return nameCmp;
+        // 3) length DESC
+        if (a.length !== b.length) return b.length - a.length;
+        // 4) width DESC
+        return b.width - a.width;
+      });
+
+      sortedOrder.forEach((bucketKey) => {
         const b = g.buckets.get(bucketKey);
 
         // ✅ Skip buckets with no dimensions (length=0 or width=0)
