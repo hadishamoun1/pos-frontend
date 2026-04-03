@@ -318,11 +318,11 @@ function useGroupedByDescription(
       const sortedOrder = [...g.order].sort((keyA, keyB) => {
         const a = g.buckets.get(keyA);
         const b = g.buckets.get(keyB);
-        // 1) thickness ASC
-        if (a.thicknessNum !== b.thicknessNum) return a.thicknessNum - b.thicknessNum;
-        // 2) item name ASC
+        // 1) item name ASC
         const nameCmp = String(a.itemNameKey || "").localeCompare(String(b.itemNameKey || ""));
         if (nameCmp !== 0) return nameCmp;
+        // 2) thickness ASC
+        if (a.thicknessNum !== b.thicknessNum) return a.thicknessNum - b.thicknessNum;
         // 3) length ASC
         if (a.length !== b.length) return a.length - b.length;
         // 4) width ASC
