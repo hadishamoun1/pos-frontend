@@ -323,10 +323,10 @@ function useGroupedByDescription(
         // 2) item name ASC
         const nameCmp = String(a.itemNameKey || "").localeCompare(String(b.itemNameKey || ""));
         if (nameCmp !== 0) return nameCmp;
-        // 3) length DESC
-        if (a.length !== b.length) return b.length - a.length;
-        // 4) width DESC
-        return b.width - a.width;
+        // 3) length ASC
+        if (a.length !== b.length) return a.length - b.length;
+        // 4) width ASC
+        return a.width - b.width;
       });
 
       sortedOrder.forEach((bucketKey) => {
