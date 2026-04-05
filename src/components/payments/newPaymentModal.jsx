@@ -1,19 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PayeeModal from "./PayeeModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
 import { axiosClient } from "../api/axiosClient";
 
-const emptyRow = () => ({
+const DEFAULT_EXCHANGE_RATES = {
+  revo: "11700",
+  shamoun: "89500",
+};
+
+const emptyRow = (defaultExRate = "89500") => ({
   payee: "",
   payeeType: "",
   supplierId: "",
   accountId: "",
   amount: "",
   currency: "",
-  date: "",
   type: "S",
-  exchangeRate: "89500",
+  exchangeRate: defaultExRate,
   amountExchanged: "",
   checkNumber: "",
   bankName: "",
@@ -23,6 +27,8 @@ const emptyRow = () => ({
 });
 
 const PaymentsModal = ({ onClose }) => {
+  const [defaultExRate, setDefaultExRate] = useState("89500");
+  const [globalDate, setGlobalDate] = useState("");
   const [rows, setRows] = useState([emptyRow()]);
   const [contextMenu, setContextMenu] = useState({
     visible: false,
@@ -37,6 +43,18 @@ const PaymentsModal = ({ onClose }) => {
     type: "",
     message: "",
   });
+
+  useEffect(() => {
+    axiosClient.get("/company").then(({ data }) => {
+      const active = Array.isArray(data) ? data.find((c) => c.isActive) : data;
+      const isRevo = active?.companyName?.toLowerCase().includes("revo");
+      const rate = isRevo
+        ? DEFAULT_EXCHANGE_RATES.revo
+        : DEFAULT_EXCHANGE_RATES.shamoun;
+      setDefaultExRate(rate);
+      setRows([emptyRow(rate)]);
+    }).catch(() => {});
+  }, []);
 
   const formatNumber = (value) => {
     if (value === null || value === undefined || value === "") return "";
@@ -120,7 +138,7 @@ const PaymentsModal = ({ onClose }) => {
   };
 
   const addRow = () => {
-    setRows((prev) => [...prev, emptyRow()]);
+    setRows((prev) => [...prev, emptyRow(defaultExRate)]);
   };
 
   const handleContextMenu = (e, index) => {
@@ -144,7 +162,7 @@ const PaymentsModal = ({ onClose }) => {
 
   const handleDeleteRow = () => {
     setRows((prev) => {
-      if (prev.length === 1) return [emptyRow()];
+      if (prev.length === 1) return [emptyRow(defaultExRate)];
       return prev.filter((_, index) => index !== contextMenu.rowIndex);
     });
     handleCloseContextMenu();
@@ -156,7 +174,7 @@ const PaymentsModal = ({ onClose }) => {
         ...(row.payeeType === "account"
           ? { accountId: row.accountId }
           : { supplierId: row.supplierId }),
-        date: row.date,
+        date: globalDate,
         invoiceId: "",
         paymentType: row.paymentType,
         type: row.type,
@@ -169,7 +187,7 @@ const PaymentsModal = ({ onClose }) => {
             amountExchanged: parseFloat(row.amountExchanged || 0),
             checkDueDate: row.dueDate,
             checkNumber: row.checkNumber,
-            checkDate: row.date,
+            checkDate: globalDate,
             bankName: row.bankName,
             description: row.comments,
           },
@@ -178,7 +196,8 @@ const PaymentsModal = ({ onClose }) => {
 
       await axiosClient.post("/payment-vouchers/v1/bulk", payload);
 
-      setRows([emptyRow()]);
+      setRows([emptyRow(defaultExRate)]);
+      setGlobalDate("");
       setNotificationData({
         type: "success",
         message: "Payment voucher created successfully!",
@@ -212,6 +231,15 @@ const PaymentsModal = ({ onClose }) => {
         <div className="payment-voucher-modal-header">
           <h1>New Payment Voucher</h1>
 
+          <div className="payment-voucher-modal-header-date">
+            <label>Date</label>
+            <input
+              type="date"
+              value={globalDate}
+              onChange={(e) => setGlobalDate(e.target.value)}
+            />
+          </div>
+
           <div className="payment-voucher-modal-actions">
             <button
               onClick={handleSubmit}
@@ -236,7 +264,6 @@ const PaymentsModal = ({ onClose }) => {
                 <th className="payment-voucher-modal-payment-type">Pmt Type</th>
                 <th className="payment-voucher-modal-currency">Currency</th>
                 <th className="payment-voucher-modal-amount">Amount</th>
-                <th className="payment-voucher-modal-date">Date</th>
                 <th className="payment-voucher-modal-type">Type</th>
                 <th className="payment-voucher-modal-exchange-rate">Ex Rate</th>
                 <th className="payment-voucher-modal-amount-exchanged">Amount Ex</th>
@@ -290,15 +317,6 @@ const PaymentsModal = ({ onClose }) => {
                       value={formatNumber(row.amount)}
                       onChange={(e) => handleInputChange(index, e)}
                       placeholder="Enter amount"
-                    />
-                  </td>
-
-                  <td className="payment-voucher-modal-date">
-                    <input
-                      type="date"
-                      name="date"
-                      value={row.date}
-                      onChange={(e) => handleInputChange(index, e)}
                     />
                   </td>
 
