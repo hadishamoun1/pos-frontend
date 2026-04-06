@@ -271,6 +271,7 @@
 
 /* Modern buttons */
 .unit-price-add-row-button,
+.unit-price-load-settings-button,
 .unit-price-save-button {
   border: none;
   border-radius: 12px;
@@ -288,18 +289,25 @@
   color: #fff;
 }
 
+.unit-price-load-settings-button {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+}
+
 .unit-price-save-button {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #fff;
 }
 
 .unit-price-add-row-button:hover,
+.unit-price-load-settings-button:hover,
 .unit-price-save-button:hover {
   transform: translateY(-1px);
   filter: brightness(0.97);
 }
 
 .unit-price-add-row-button:disabled,
+.unit-price-load-settings-button:disabled,
 .unit-price-save-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -352,6 +360,7 @@
   }
 
   .unit-price-add-row-button,
+  .unit-price-load-settings-button,
   .unit-price-save-button {
     flex: 1;
     min-width: 160px;
@@ -364,6 +373,7 @@
   }
 
   .unit-price-add-row-button,
+  .unit-price-load-settings-button,
   .unit-price-save-button {
     width: 100%;
   }

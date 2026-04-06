@@ -150,6 +150,37 @@ export default function UnitPriceModal({
     return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("181"));
   }, [accounts, flattenAccounts]);
 
+  const loadDefaults = useCallback(async () => {
+    try {
+      const { data } = await axiosClient.get(`/purchase-invoice-setting`);
+      const mapped = (data || []).map((row) => ({
+        id: undefined,
+        purchaseInvoiceSettingId: row.id,
+        chargeName: row.chargeName || "",
+        accountId: row.accountId ?? null,
+        accountNumber: row.accountNumber ?? "",
+        chargeType: row.type || "amount",
+        value: row.value || 0,
+        valueOFR: 0,
+        currency: (row.currency || "USD").toLowerCase(),
+        valueExch: row.valueEx || 0,
+        valueExchOFR: 0,
+        addToItemCost: !!row.atc,
+        invoiceNbTax: "",
+        supplierId: null,
+        supplierOfTax: "",
+        accNbOfSupplier: "",
+        shipping: !!row.shipping,
+        taxAccountId: null,
+        taxSupplierId: null,
+        supplierOfTaxType: "supplier",
+      }));
+      setRows(mapped);
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   // Prefer already-typed rows from parent; only fetch rows if none exist
   useEffect(() => {
     if (!isVisible) return;
@@ -195,41 +226,6 @@ export default function UnitPriceModal({
           };
         });
 
-        setRows(mapped);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-
-    const loadDefaults = async () => {
-      try {
-        const { data } = await axiosClient.get(`/purchase-invoice-setting`);
-        const mapped = (data || []).map((row) => ({
-          id: undefined,
-          purchaseInvoiceSettingId: row.id,
-          chargeName: row.chargeName || "",
-          accountId: row.accountId ?? null,
-          accountNumber: row.accountNumber ?? "",
-          chargeType: row.type || "amount",
-          value: row.value || 0,
-          valueOFR: 0,
-          currency: (row.currency || "USD").toLowerCase(),
-          valueExch: row.valueEx || 0,
-          valueExchOFR: 0,
-          addToItemCost: !!row.atc,
-          invoiceNbTax: "",
-          supplierId: null,
-          supplierOfTax: "",
-          accNbOfSupplier: "",
-          shipping: !!row.shipping,
-
-          // persisted selection
-          taxAccountId: null,
-          taxSupplierId: null,
-
-          // UI helper
-          supplierOfTaxType: "supplier",
-        }));
         setRows(mapped);
       } catch (e) {
         console.error(e);
@@ -700,6 +696,13 @@ export default function UnitPriceModal({
             onClick={handleAddRow}
           >
             + Add Row
+          </button>
+          <button
+            className="unit-price-load-settings-button"
+            disabled={!isEditable}
+            onClick={loadDefaults}
+          >
+            Load Settings
           </button>
           <button
             className="unit-price-save-button"
