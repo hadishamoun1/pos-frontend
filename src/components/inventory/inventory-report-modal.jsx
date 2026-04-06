@@ -312,12 +312,33 @@ function useGroupedByDescription(
       return bestSpb;
     };
 
+    const isSpecialItemName = (name) => {
+      const n = String(name || "").trim();
+      return n.includes("محجر") || n.includes("زلحفة");
+    };
+
     const allGroups = Array.from(groupsById.values()).map((g) => {
       const rowsOut = [];
+
+      const isSpecialGroup = [...g.buckets.values()].some((bkt) =>
+        isSpecialItemName(bkt.itemName)
+      );
 
       const sortedOrder = [...g.order].sort((keyA, keyB) => {
         const a = g.buckets.get(keyA);
         const b = g.buckets.get(keyB);
+
+        if (!isSpecialGroup) {
+          // Group by origin, Sescam first
+          const aOrigin = String(a.origin || "");
+          const bOrigin = String(b.origin || "");
+          const aIsSescam = aOrigin.toLowerCase() === "sescam";
+          const bIsSescam = bOrigin.toLowerCase() === "sescam";
+          if (aIsSescam !== bIsSescam) return aIsSescam ? -1 : 1;
+          const origCmp = aOrigin.localeCompare(bOrigin);
+          if (origCmp !== 0) return origCmp;
+        }
+
         // 1) item name ASC
         const nameCmp = String(a.itemNameKey || "").localeCompare(String(b.itemNameKey || ""));
         if (nameCmp !== 0) return nameCmp;
