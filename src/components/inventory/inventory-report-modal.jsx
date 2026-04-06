@@ -329,13 +329,17 @@ function useGroupedByDescription(
         const b = g.buckets.get(keyB);
 
         if (!isSpecialGroup) {
-          // Group by origin, Sescam first
-          const aOrigin = String(a.origin || "");
-          const bOrigin = String(b.origin || "");
-          const aIsSescam = aOrigin.toLowerCase() === "sescam";
-          const bIsSescam = bOrigin.toLowerCase() === "sescam";
-          if (aIsSescam !== bIsSescam) return aIsSescam ? -1 : 1;
-          const origCmp = aOrigin.localeCompare(bOrigin);
+          const ORIGIN_PRIORITY = ["sisecam", "agc", "s.g", "sphinx", "grandstar"];
+          const originRank = (origin) => {
+            const o = String(origin || "").trim().toLowerCase();
+            const idx = ORIGIN_PRIORITY.indexOf(o);
+            return idx === -1 ? ORIGIN_PRIORITY.length : idx;
+          };
+          const aRank = originRank(a.origin);
+          const bRank = originRank(b.origin);
+          if (aRank !== bRank) return aRank - bRank;
+          // same priority tier — sort alphabetically
+          const origCmp = String(a.origin || "").localeCompare(String(b.origin || ""));
           if (origCmp !== 0) return origCmp;
         }
 
