@@ -424,11 +424,11 @@
 }
 /* Other columns */
 .column-doc-nbr {
-  width: 80px;
+  width: 100px;
 }
 
 .column-description {
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .column-currency {

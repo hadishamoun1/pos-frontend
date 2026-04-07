@@ -347,6 +347,7 @@ const handleViewJournalVoucher = async () => {
 
       const invoiceData = {
         invoiceNumber,
+        supplierInvoiceNumber: invoiceNumber,
         date: inputedDate,
         expectedArrivalDate: invoiceDate,
         jvDate,
@@ -511,7 +512,7 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
     setSupplierName(fullInvoice.supplier.supplierName);
     setSelectedSupplierId(fullInvoice.supplier.id);
     // 2) invoice & dates
-    setInvoiceNumber(fullInvoice.invoiceNumber);
+    setInvoiceNumber(fullInvoice.supplierInvoiceNumber ?? "");
     setinputedDate(toYMD(fullInvoice.date));
     setInvoiceDate(fullInvoice.expectedArrivalDate?.slice(0, 10) || "");
     setJvDate(toYMD(fullInvoice.jvDate) || toYMD(fullInvoice.date));
@@ -624,7 +625,7 @@ setUnitPriceRows(
   const populateFromInvoice = (inv) => {
     setSupplierName(inv.supplier.supplierName);
     setSelectedSupplierId(inv.supplier.id);
-    setInvoiceNumber(inv.invoiceNumber);
+    setInvoiceNumber(inv.supplierInvoiceNumber ?? "");
     setinputedDate(toYMD(inv.date));
     setInvoiceDate(inv.expectedArrivalDate?.slice(0, 10) || "");
     setStatus(inv.status);

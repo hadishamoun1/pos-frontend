@@ -384,6 +384,44 @@ export default function UnitPriceModal({
     });
   };
 
+  // Acc. Nb free-type: search all tax account lists by account number
+  const handleAccNbInput = useCallback((i, typed) => {
+    const normalized = normalizeAccNo(typed);
+
+    const allTaxAccounts = [...taxAccounts4619, ...taxAccounts2233, ...taxAccounts181];
+    const matched = normalized
+      ? allTaxAccounts.find((a) => normalizeAccNo(a.accountNumber) === normalized)
+      : null;
+
+    setRows((prev) => {
+      const copy = [...(prev || [])];
+      const row = { ...copy[i] };
+
+      if (!typed.trim()) {
+        // Clear selection
+        row.taxAccountId = null;
+        row.taxSupplierId = null;
+        row.supplierOfTaxType = "supplier";
+        row.supplierOfTax = "";
+        row.accNbOfSupplier = "";
+      } else if (matched) {
+        // Full match found — select the account
+        row.taxAccountId = matched.id;
+        row.taxSupplierId = null;
+        row.supplierId = null;
+        row.supplierOfTaxType = "account";
+        row.supplierOfTax = `${matched.accountNumber} – ${matched.accountName}`;
+        row.accNbOfSupplier = matched.accountNumber;
+      } else {
+        // Still typing — just update the displayed text
+        row.accNbOfSupplier = typed;
+      }
+
+      copy[i] = row;
+      return copy;
+    });
+  }, [taxAccounts4619, taxAccounts2233, taxAccounts181, normalizeAccNo]);
+
   // ✅ When saving, send only what backend expects (keep extra UI fields if you want, backend ignores them)
   const save = () => {
     const payload = (safeRows || []).map((r) => ({
@@ -416,11 +454,33 @@ export default function UnitPriceModal({
   // Small perf: memoize suppliers map for select
   const supplierOptions = useMemo(() => suppliers || [], [suppliers]);
 
-  // 🔹 ENTER navigation across inputs & selects
+  // 🔹 Keyboard navigation: Enter / Arrow keys
   const handleEnterNav = useCallback((e) => {
-    if (e.key !== "Enter") return;
+    const { key, target } = e;
+    const isEnter      = key === "Enter";
+    const isArrowRight = key === "ArrowRight";
+    const isArrowLeft  = key === "ArrowLeft";
+    const isArrowDown  = key === "ArrowDown";
+    const isArrowUp    = key === "ArrowUp";
 
-    e.preventDefault();
+    if (!isEnter && !isArrowRight && !isArrowLeft && !isArrowDown && !isArrowUp) return;
+
+    const isTextInput =
+      target.tagName === "INPUT" &&
+      target.type !== "checkbox" &&
+      target.type !== "number";
+
+    // Let text inputs handle their own left/right cursor movement
+    if (isTextInput && (isArrowLeft || isArrowRight)) return;
+
+    // For number inputs and checkboxes, always block the default arrow behaviour
+    // (prevents value change at boundaries or when not navigating)
+    const isNumberOrCheckbox =
+      target.tagName === "INPUT" &&
+      (target.type === "number" || target.type === "checkbox");
+    if (isNumberOrCheckbox && (isArrowUp || isArrowDown || isArrowLeft || isArrowRight)) {
+      e.preventDefault();
+    }
 
     const root = tableRef.current;
     if (!root) return;
@@ -431,12 +491,23 @@ export default function UnitPriceModal({
       )
     ).filter((el) => el.tabIndex !== -1);
 
-    const idx = focusable.indexOf(e.target);
+    const idx = focusable.indexOf(target);
     if (idx === -1) return;
 
-    const next = focusable[idx + 1];
-    if (next) next.focus();
-  }, []);
+    const numRows = safeRows.length;
+    const colsPerRow = numRows > 0 ? Math.round(focusable.length / numRows) : focusable.length;
+
+    let targetIdx;
+    if (isEnter || isArrowRight)     targetIdx = idx + 1;
+    else if (isArrowLeft)            targetIdx = idx - 1;
+    else if (isArrowDown)            targetIdx = idx + colsPerRow;
+    else                             targetIdx = idx - colsPerRow;
+
+    if (targetIdx < 0 || targetIdx >= focusable.length) return;
+
+    if (!isNumberOrCheckbox) e.preventDefault();
+    focusable[targetIdx].focus();
+  }, [safeRows.length]);
 
   if (!isVisible) return null;
 
@@ -523,6 +594,7 @@ export default function UnitPriceModal({
                       value={r.value ?? 0}
                       onChange={(e) => handleInput(i, "value", e.target.value)}
                       onKeyDown={handleEnterNav}
+                      onWheel={(e) => e.target.blur()}
                     />
                   </td>
 
@@ -535,6 +607,7 @@ export default function UnitPriceModal({
                         handleInput(i, "valueOFR", e.target.value)
                       }
                       onKeyDown={handleEnterNav}
+                      onWheel={(e) => e.target.blur()}
                     />
                   </td>
 
@@ -562,6 +635,7 @@ export default function UnitPriceModal({
                         handleInput(i, "valueExch", e.target.value)
                       }
                       onKeyDown={handleEnterNav}
+                      onWheel={(e) => e.target.blur()}
                     />
                   </td>
 
@@ -574,6 +648,7 @@ export default function UnitPriceModal({
                         handleInput(i, "valueExchOFR", e.target.value)
                       }
                       onKeyDown={handleEnterNav}
+                      onWheel={(e) => e.target.blur()}
                     />
                   </td>
 
@@ -650,12 +725,13 @@ export default function UnitPriceModal({
                     </select>
                   </td>
 
-                  {/* Acc Nb: shows supplier account number OR account number (4619 / 2233 / 181) */}
+                  {/* Acc Nb: type an account number to auto-select in Supplier of Tax dropdown */}
                   <td>
                     <input
-                      readOnly
+                      disabled={!isEditable}
                       value={r.accNbOfSupplier || ""}
                       placeholder="Acct #"
+                      onChange={(e) => handleAccNbInput(i, e.target.value)}
                       onKeyDown={handleEnterNav}
                     />
                   </td>
