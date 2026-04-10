@@ -560,6 +560,7 @@ function buildPrintHTML({
   showLastCostCVM = false,
   showSqmAmount = false,
   showSqmAmountTotals = false,
+  showGroupHeaders = true,
   mode = "real",
   grandTotals = null,
 }) {
@@ -612,10 +613,10 @@ function buildPrintHTML({
         totAmount += sqmAmountOfRow(r);
       }
 
-      const header = `<div class="g-head">
+      const header = showGroupHeaders ? `<div class="g-head">
         <div class="g-title" style="direction:rtl;text-align:right">${escape(g.headerTitle || "")}</div>
         <div class="g-right"><span class="itmno">Item No.: <strong>${escape(g.itemNumber || "")}</strong></span></div>
-      </div>`;
+      </div>` : "";
 
       const thead = transferMode
         ? `<thead><tr>
@@ -874,6 +875,7 @@ export default function ReportModal({
       showAvgCost, showLastCost,
       showAvgCostCVM, showAvgCostC, showLastCostC, showLastCostCVM,
       showSqmAmount, showSqmAmountTotals,
+      showGroupHeaders,
       mode, grandTotals,
     });
 
