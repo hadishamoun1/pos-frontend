@@ -798,6 +798,7 @@ export default function ReportModal({
   const [showLastCostCVM, setShowLastCostCVM] = useState(false);
   const [showSqmAmount,       setShowSqmAmount]       = useState(false);
   const [showSqmAmountTotals, setShowSqmAmountTotals] = useState(false);
+  const [showGroupHeaders,    setShowGroupHeaders]    = useState(true);
 
   useEffect(() => {
     setTransferToSqm(false);
@@ -978,6 +979,13 @@ export default function ReportModal({
 
             <div className="row" style={{ gap: 16 }}>
               <label className="invb-chk">
+                <input type="checkbox" checked={showGroupHeaders} onChange={(e) => setShowGroupHeaders(e.target.checked)} />
+                Show Group Headers
+              </label>
+            </div>
+
+            <div className="row" style={{ gap: 16 }}>
+              <label className="invb-chk">
                 <input type="checkbox" checked={showSqmAmount} onChange={(e) => {
                   const v = e.target.checked;
                   setShowSqmAmount(v);
@@ -1022,31 +1030,33 @@ export default function ReportModal({
 
                 return (
                   <div className="report-group" key={`desc-${g.descId}`}>
-                    <div className="report-group-head">
-                      <div
-                        className="report-group-title"
-                        title={`Description ID: ${g.descId}`}
-                        style={{ direction: "rtl", textAlign: "right" }}
-                      >
-                        {g.headerTitle || ""}{" "}
-                        <span className="u-muted" style={{ fontWeight: 600 }}>— #{g.itemNumber || ""}</span>
+                    {showGroupHeaders && (
+                      <div className="report-group-head">
+                        <div
+                          className="report-group-title"
+                          title={`Description ID: ${g.descId}`}
+                          style={{ direction: "rtl", textAlign: "right" }}
+                        >
+                          {g.headerTitle || ""}{" "}
+                          <span className="u-muted" style={{ fontWeight: 600 }}>— #{g.itemNumber || ""}</span>
+                        </div>
+                        <div className="report-group-totals">
+                          {transferMode ? (
+                            <>
+                              <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
+                              {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
+                            </>
+                          ) : (
+                            <>
+                              <span>Boxes: <strong>{fmt2(totBox)}</strong></span>
+                              <span>Sheets: <strong>{fmt2(totSheet)}</strong></span>
+                              <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
+                              {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="report-group-totals">
-                        {transferMode ? (
-                          <>
-                            <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
-                            {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
-                          </>
-                        ) : (
-                          <>
-                            <span>Boxes: <strong>{fmt2(totBox)}</strong></span>
-                            <span>Sheets: <strong>{fmt2(totSheet)}</strong></span>
-                            <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
-                            {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    )}
 
                     <table className="invb-table invb-table--compact invb-table--striped">
                       <thead>
