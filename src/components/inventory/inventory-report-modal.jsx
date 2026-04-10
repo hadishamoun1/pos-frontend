@@ -348,10 +348,10 @@ function useGroupedByDescription(
         if (nameCmp !== 0) return nameCmp;
         // 2) thickness ASC
         if (a.thicknessNum !== b.thicknessNum) return a.thicknessNum - b.thicknessNum;
-        // 3) length ASC
-        if (a.length !== b.length) return a.length - b.length;
-        // 4) width ASC
-        return a.width - b.width;
+        // 3) width ASC
+        if (a.width !== b.width) return a.width - b.width;
+        // 4) length ASC
+        return a.length - b.length;
       });
 
       sortedOrder.forEach((bucketKey) => {
