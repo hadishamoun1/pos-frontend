@@ -606,12 +606,27 @@ function buildPrintHTML({
   const groupBlocks = (groups || [])
     .map((g) => {
       let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
+      let pWAvgNum = 0, pWAvgCVMNum = 0, pWAvgCNum = 0, pWLastCNum = 0, pWLastCVMNum = 0, pWDenom = 0;
       for (const r of g.rows || []) {
         totBox    += Number(r.qtyBox   || 0);
         totSheet  += Number(r.qtySheet || 0);
         totSqm    += Number(r.sqmTotal || 0);
         totAmount += sqmAmountOfRow(r);
+        const sqm = Number(r.sqmTotal || 0);
+        if (sqm > 0) {
+          pWDenom        += sqm;
+          if (r.averageCost    != null) pWAvgNum    += sqm * Number(r.averageCost);
+          if (r.averageCostCVM != null) pWAvgCVMNum += sqm * Number(r.averageCostCVM);
+          if (r.averageCostC   != null) pWAvgCNum   += sqm * Number(r.averageCostC);
+          if (r.lastCostC      != null) pWLastCNum  += sqm * Number(r.lastCostC);
+          if (r.lastCostCVM    != null) pWLastCVMNum+= sqm * Number(r.lastCostCVM);
+        }
       }
+      const pWAvg    = pWDenom > 0 ? pWAvgNum    / pWDenom : null;
+      const pWAvgCVM = pWDenom > 0 ? pWAvgCVMNum / pWDenom : null;
+      const pWAvgC   = pWDenom > 0 ? pWAvgCNum   / pWDenom : null;
+      const pWLastC  = pWDenom > 0 ? pWLastCNum  / pWDenom : null;
+      const pWLastCVM= pWDenom > 0 ? pWLastCVMNum/ pWDenom : null;
 
       const header = showGroupHeaders ? `<div class="g-head">
         <div class="g-title" style="direction:rtl;text-align:right">${escape(g.headerTitle || "")}</div>
@@ -693,12 +708,12 @@ function buildPrintHTML({
              <td class="tr" style="font-weight:700;background:#fafafa">${totBox   ? fmt2(totBox)   : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSheet ? fmt2(totSheet) : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSqm   ? fmt2(totSqm)   : ""}</td>
-             ${(mode === "real" && showAvgCost)    ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "real" && showAvgCost)    ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvg    != null ? fmt2(pWAvg)    : ""}</td>` : ""}
              ${(mode === "real" && showLastCost)   ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
-             ${(mode === "name" && showAvgCostCVM) ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
-             ${(mode === "name" && showAvgCostC)   ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
-             ${(mode === "name" && showLastCostC)  ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
-             ${(mode === "name" && showLastCostCVM)? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
+             ${(mode === "name" && showAvgCostCVM) ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvgCVM != null ? fmt2(pWAvgCVM) : ""}</td>` : ""}
+             ${(mode === "name" && showAvgCostC)   ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvgC   != null ? fmt2(pWAvgC)   : ""}</td>` : ""}
+             ${(mode === "name" && showLastCostC)  ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWLastC  != null ? fmt2(pWLastC)  : ""}</td>` : ""}
+             ${(mode === "name" && showLastCostCVM)? `<td class="tr" style="font-weight:700;background:#fafafa">${pWLastCVM!= null ? fmt2(pWLastCVM): ""}</td>` : ""}
              ${showAmountCol ? `<td class="tr" style="font-weight:700;background:#fafafa">${showAmountTotals ? fmt2(totAmount) : ""}</td>` : ""}
            </tr>`;
 
@@ -1019,12 +1034,29 @@ export default function ReportModal({
 
               {!loading && (displayGroups || []).map((g) => {
                 let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
+                let wAvgNumerator = 0, wAvgCVMNumerator = 0, wAvgCNumerator = 0;
+                let wLastCNumerator = 0, wLastCVMNumerator = 0;
+                let wAvgDenom = 0;
                 for (const r of g.rows) {
                   totBox    += Number(r.qtyBox   || 0);
                   totSheet  += Number(r.qtySheet || 0);
                   totSqm    += Number(r.sqmTotal || 0);
                   totAmount += sqmAmountOfRow(r);
+                  const sqm = Number(r.sqmTotal || 0);
+                  if (sqm > 0) {
+                    wAvgDenom        += sqm;
+                    if (r.averageCost    != null) wAvgNumerator    += sqm * Number(r.averageCost);
+                    if (r.averageCostCVM != null) wAvgCVMNumerator += sqm * Number(r.averageCostCVM);
+                    if (r.averageCostC   != null) wAvgCNumerator   += sqm * Number(r.averageCostC);
+                    if (r.lastCostC      != null) wLastCNumerator  += sqm * Number(r.lastCostC);
+                    if (r.lastCostCVM    != null) wLastCVMNumerator+= sqm * Number(r.lastCostCVM);
+                  }
                 }
+                const wAvg    = wAvgDenom > 0 ? wAvgNumerator    / wAvgDenom : null;
+                const wAvgCVM = wAvgDenom > 0 ? wAvgCVMNumerator / wAvgDenom : null;
+                const wAvgC   = wAvgDenom > 0 ? wAvgCNumerator   / wAvgDenom : null;
+                const wLastC  = wAvgDenom > 0 ? wLastCNumerator  / wAvgDenom : null;
+                const wLastCVM= wAvgDenom > 0 ? wLastCVMNumerator/ wAvgDenom : null;
 
                 const nameCostCols =
                   (showAvgCostCVM ? 1 : 0) + (showAvgCostC ? 1 : 0) +
@@ -1137,12 +1169,12 @@ export default function ReportModal({
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSheet ? fmt2(totSheet) : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSqm   ? fmt2(totSqm)   : ""}</td>
-                            {mode === "real" && showAvgCost    && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "real" && showAvgCost    && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvg    != null ? fmt2(wAvg)    : ""}</td>}
                             {mode === "real" && showLastCost   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
-                            {mode === "name" && showAvgCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
-                            {mode === "name" && showAvgCostC   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
-                            {mode === "name" && showLastCostC  && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
-                            {mode === "name" && showLastCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
+                            {mode === "name" && showAvgCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvgCVM != null ? fmt2(wAvgCVM) : ""}</td>}
+                            {mode === "name" && showAvgCostC   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvgC   != null ? fmt2(wAvgC)   : ""}</td>}
+                            {mode === "name" && showLastCostC  && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wLastC  != null ? fmt2(wLastC)  : ""}</td>}
+                            {mode === "name" && showLastCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wLastCVM!= null ? fmt2(wLastCVM): ""}</td>}
                             {showAmountCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{showAmountTotals ? fmt2(totAmount) : ""}</td>}
                           </tr>
                         )}
