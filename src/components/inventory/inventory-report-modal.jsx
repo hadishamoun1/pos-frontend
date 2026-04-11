@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./inventory-report-modal.css";
 
 /* ----------------- Utilities ----------------- */
@@ -815,43 +815,6 @@ export default function ReportModal({
   const [showSqmAmount,       setShowSqmAmount]       = useState(false);
   const [showSqmAmountTotals, setShowSqmAmountTotals] = useState(false);
   const [showGroupHeaders,    setShowGroupHeaders]    = useState(true);
-  const tableWrapRef = useRef(null);
-
-  // Auto-fit text: shrink font per-cell, fall back to 2-line clamp
-  useEffect(() => {
-    const wrap = tableWrapRef.current;
-    if (!wrap) return;
-
-    // Reset all cells first
-    const tds = wrap.querySelectorAll(".invb-table td");
-    tds.forEach((td) => {
-      td.style.fontSize = "";
-      td.classList.remove("two-line");
-      td.style.whiteSpace = "nowrap";
-    });
-
-    // One rAF so the browser has laid out with the reset styles
-    requestAnimationFrame(() => {
-      tds.forEach((td) => {
-        if (td.scrollWidth <= td.clientWidth) return;
-
-        const base = parseFloat(getComputedStyle(td).fontSize) || 13;
-        const ratio = td.clientWidth / td.scrollWidth;
-        const fitted = Math.max(8, base * ratio);
-        td.style.fontSize = `${fitted}px`;
-
-        // If still overflows at fitted size, switch to 2-line
-        if (td.scrollWidth > td.clientWidth + 1) {
-          td.style.fontSize = "";
-          td.style.whiteSpace = "";
-          td.classList.add("two-line");
-        }
-      });
-    });
-  }, [displayGroups, showGroupHeaders, showAvgCost, showLastCost,
-      showAvgCostCVM, showAvgCostC, showLastCostC, showLastCostCVM,
-      showAmountCol, transferToSqm]);
-
   useEffect(() => {
     setTransferToSqm(false);
     if (mode !== "real") { setShowAvgCost(false); setShowLastCost(false); }
@@ -1060,7 +1023,7 @@ export default function ReportModal({
 
           {/* ── Preview table ── */}
           <div className="invb-report-preview">
-            <div className="invb-tablewrap" ref={tableWrapRef}>
+            <div className="invb-tablewrap">
               {loading && (
                 <div className="invb-empty" style={{ padding: 16 }}>Gathering all items for the report…</div>
               )}
