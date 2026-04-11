@@ -77,6 +77,26 @@
 }
 
 .invb-empty { padding: 24px; text-align: center; opacity: .7; }
+
+/* Auto-fit text: base state — one line, no wrap */
+.invb-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 0;           /* forces table-layout: fixed to respect column widths */
+}
+.invb-table {
+  table-layout: fixed;
+  width: 100%;
+}
+/* 2-line fallback applied by JS when min font still overflows */
+.invb-table td.two-line {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .invb-table th.col-ar,
 .invb-table td.col-ar,
 .table th.col-ar,
