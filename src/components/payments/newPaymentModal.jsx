@@ -38,6 +38,7 @@ const PaymentsModal = ({ onClose }) => {
   });
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [notificationData, setNotificationData] = useState({
     type: "",
@@ -169,6 +170,8 @@ const PaymentsModal = ({ onClose }) => {
   };
 
   const handleSubmit = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       const payload = rows.map((row) => ({
         ...(row.payeeType === "account"
@@ -216,6 +219,8 @@ const PaymentsModal = ({ onClose }) => {
         message: String(msg),
       });
       setIsNotificationVisible(true);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -244,8 +249,9 @@ const PaymentsModal = ({ onClose }) => {
             <button
               onClick={handleSubmit}
               className="payment-voucher-modal-save"
+              disabled={isSaving}
             >
-              Save
+              {isSaving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={onClose}
@@ -403,6 +409,23 @@ const PaymentsModal = ({ onClose }) => {
           <button onClick={addRow} className="payment-voucher-modal-add-row">
             Add Row
           </button>
+
+          <div className="payment-voucher-modal-totals">
+            {["USD", "LL"].map((cur) => {
+              const total = rows
+                .filter((r) => r.currency === cur)
+                .reduce((sum, r) => sum + (parseFloat(String(r.amount).replace(/,/g, "")) || 0), 0);
+              if (total === 0) return null;
+              return (
+                <span key={cur} className="payment-voucher-modal-total-item">
+                  <span className="payment-voucher-modal-total-label">Total {cur}:</span>
+                  <span className="payment-voucher-modal-total-value">
+                    {total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
         </div>
 
         {contextMenu.visible && (
