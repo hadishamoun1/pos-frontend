@@ -4,11 +4,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: url("../../../public/assets/background.png") no-repeat center
-    center;
-
   background-size: cover;
-  background-position: center;
 }
 
 .welcome-text {

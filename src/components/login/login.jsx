@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as faceapi from "face-api.js";
 import { useLanguage } from "../contexts/LanguageContext";
 import "./login.css";
 
@@ -21,6 +20,7 @@ const LoginPage = () => {
   // Face login state
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const faceapiRef = useRef(null);
 
   const [modelsReady, setModelsReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -131,6 +131,10 @@ const LoginPage = () => {
 
     setFaceStatus("Loading face models...");
     try {
+      if (!faceapiRef.current) {
+        faceapiRef.current = await import("face-api.js");
+      }
+      const faceapi = faceapiRef.current;
       await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL);
       await faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS_URL);
       await faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL);
@@ -208,6 +212,7 @@ const LoginPage = () => {
     if (!videoRef.current) throw new Error("Camera not ready");
     if (!cameraReady) throw new Error("Camera is not ready");
     if (!modelsReady) throw new Error("Face models are not ready yet");
+    const faceapi = faceapiRef.current;
 
     setLivenessBusy(true);
     setLivenessPassed(false);
@@ -304,6 +309,7 @@ const LoginPage = () => {
       setErr("Camera not ready");
       return;
     }
+    const faceapi = faceapiRef.current;
 
     setErr("");
     setFaceBusy(true);
@@ -435,7 +441,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="auth-container">
+    <div className="auth-container" style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/background.png)` }}>
       <div className="auth-form">
         <div className="welcome-text">Welcome to Shamoun Co.</div>
         <h2>Login</h2>

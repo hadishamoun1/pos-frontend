@@ -53,7 +53,7 @@ const DashboardPage = () => {
   );
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="dashboard-wrapper" style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/background.png)` }}>
       <header className="dashboard-header">
         <h1 className="dashboard-title">{t("dashboard.title")}</h1>
         <p className="dashboard-subtitle">{t("dashboard.subtitle")}</p>

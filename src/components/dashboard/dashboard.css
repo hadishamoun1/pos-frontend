@@ -1,7 +1,6 @@
 .dashboard-wrapper {
   min-height: 100vh;
-  background: url("../../../public/assets/background.png");
-  background-size: cover; /* Ensure the image covers the entire background */
+  background-size: cover;  
   padding: 2rem;
   display: flex;
   flex-direction: column;

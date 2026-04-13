@@ -19,21 +19,26 @@ export default function MaintenanceModePage() {
 
   async function load() {
     setLoading(true);
-    const r = await apiState();
+    try {
+      const r = await apiState();
 
-    // Safe default: if state endpoint fails, assume locked
-    if (!r.ok) {
+      // Safe default: if state endpoint fails, assume locked
+      if (!r.ok) {
+        setIsLocked(true);
+        return;
+      }
+
+      setIsLocked(!!r.data?.isLocked);
+
+      // If system is NOT locked anymore, return to login
+      if (r.data && !r.data.isLocked) {
+        window.location.href = "/";
+      }
+    } catch {
+      // Backend unreachable — assume locked, show the page
       setIsLocked(true);
+    } finally {
       setLoading(false);
-      return;
-    }
-
-    setIsLocked(!!r.data?.isLocked);
-    setLoading(false);
-
-    // If system is NOT locked anymore, return to login
-    if (r.data && !r.data.isLocked) {
-      window.location.href = "/";
     }
   }
 

@@ -299,6 +299,20 @@ function useGroupedByDescription(
           if (b.sheetLastCost == null) b.sheetLastCost = sLast;
           if (b.fallbackLastCost == null) b.fallbackLastCost = sLast;
         }
+
+      } else if (t === "unit" || typeOf(r.stockMode) === "qty") {
+        b.sheetQty += q;
+
+        const sAvg = Number(r.averageCost);
+        if (Number.isFinite(sAvg)) {
+          if (b.sheetAvgCost == null) b.sheetAvgCost = sAvg;
+          if (b.fallbackAvgCost == null) b.fallbackAvgCost = sAvg;
+        }
+        const sLast = Number(r.lastCost);
+        if (Number.isFinite(sLast)) {
+          if (b.sheetLastCost == null) b.sheetLastCost = sLast;
+          if (b.fallbackLastCost == null) b.fallbackLastCost = sLast;
+        }
       }
     });
 
@@ -358,8 +372,29 @@ function useGroupedByDescription(
         const b = g.buckets.get(bucketKey);
 
         // ✅ Skip buckets with no dimensions (length=0 or width=0)
-        // These are sqm-type ghost entries — e.g. "- - 055" rows
-        if (b.length === 0 || b.width === 0) return;
+        // EXCEPT unit-type items which legitimately have no dimensions
+        if (b.length === 0 || b.width === 0) {
+          const unitQty = Number(b.sheetQty || 0);
+          if (unitQty > 0) {
+            rowsOut.push({
+              idKey: `${bucketKey}|unit`,
+              dim: "Unit",
+              itemNumber: b.itemNumber || "",
+              origin: b.origin,
+              nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
+              qtyBox: 0,
+              qtySheet: unitQty,
+              sqmTotal: 0,
+              averageCost: b.fallbackAvgCost ?? null,
+              lastCost: b.fallbackLastCost ?? null,
+              averageCostCVM: b.averageCostCVM,
+              averageCostC: b.averageCostC,
+              lastCostC: b.lastCostC,
+              lastCostCVM: b.lastCostCVM,
+            });
+          }
+          return;
+        }
 
         const perSheet = perSheetSqmOf(b.length, b.width);
 
@@ -649,7 +684,7 @@ function buildPrintHTML({
              <th class="tc col-ar">Name+Thk (AR)</th>
              <th class="tc">Dimension</th>
              <th class="tr">Qty (Box)</th>
-             <th class="tr">Qty (Sheet)</th>
+             <th class="tr">Qty (Sheet/Unit)</th>
              <th class="tr">SQM (Total)</th>
              ${mode === "real" && showAvgCost    ? `<th class="tr">Avg Cost</th>`     : ""}
              ${mode === "real" && showLastCost   ? `<th class="tr">Last Cost</th>`    : ""}
@@ -1110,7 +1145,7 @@ export default function ReportModal({
                             <th className="ta-center col-ar">Name+Thk (AR)</th>
                             <th className="ta-center">Dimension</th>
                             <th className="ta-right">Qty (Box)</th>
-                            <th className="ta-right">Qty (Sheet)</th>
+                            <th className="ta-right">Qty (Sheet/Unit)</th>
                             <th className="ta-right">SQM (Total)</th>
                             {mode === "real" && showAvgCost    && <th className="ta-right">Avg Cost</th>}
                             {mode === "real" && showLastCost   && <th className="ta-right">Last Cost</th>}

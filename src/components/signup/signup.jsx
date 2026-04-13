@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as faceapi from "face-api.js";
 import "../login/login.css";
 
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
@@ -29,6 +28,7 @@ const SignupPage = () => {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const faceapiRef = useRef(null);
 
   // ✅ Better readable UI message colors
   const uiMsgStyles = {
@@ -127,6 +127,11 @@ const SignupPage = () => {
         if (!r.ok) throw new Error(`Model file not reachable: ${url} (${r.status})`);
       }
 
+      if (!faceapiRef.current) {
+        faceapiRef.current = await import("face-api.js");
+      }
+      const faceapi = faceapiRef.current;
+
       await faceapi.nets.tinyFaceDetector.loadFromUri(base);
       console.log("[Face] tinyFaceDetector loaded");
 
@@ -196,6 +201,7 @@ const SignupPage = () => {
     if (!videoRef.current) throw new Error("Camera not ready");
     if (!cameraReady) throw new Error("Camera is not ready");
     if (!modelsReady) throw new Error("Face models are not ready yet");
+    const faceapi = faceapiRef.current;
 
     setLivenessBusy(true);
     setLivenessPassed(false);
@@ -307,6 +313,7 @@ const SignupPage = () => {
     setLivenessPassed(false);
     setFaceStatus("Starting liveness check...");
     console.log("[Face] starting liveness + detectSingleFace...");
+    const faceapi = faceapiRef.current;
 
     try {
       // ✅ liveness before enrollment scan
