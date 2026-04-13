@@ -372,7 +372,8 @@ function useGroupedByDescription(
         const b = g.buckets.get(bucketKey);
 
         // ✅ Skip buckets with no dimensions (length=0 or width=0)
-        // EXCEPT unit-type items which legitimately have no dimensions
+        // Items with L=0, W=0, thickness=0 are dummy placeholders — always skip.
+        // Items with L=0, W=0 but thickness>0 are real unit items — show as "Unit" row.
         if (b.length === 0 || b.width === 0) {
           const unitQty = Number(b.sheetQty || 0);
           if (unitQty > 0) {
