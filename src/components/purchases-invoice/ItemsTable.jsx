@@ -129,8 +129,16 @@ export default function ItemsTable({
   };
 
   const applyTotals = (row) => {
-    row.total = round2(num(row.sqm, 0) * num(row.unitPrice, 0));
-    row.totalOFR = round2(num(row.sqmOfr, 0) * num(row.priceOFR, 0));
+    const isUnit =
+      String(row.type || "").toLowerCase() === "unit" ||
+      String(row.stockMode || "").toLowerCase() === "qty";
+    if (isUnit) {
+      row.total    = round2(num(row.quantity, 0) * num(row.unitPrice, 0));
+      row.totalOFR = round2(num(row.quantity, 0) * num(row.priceOFR, 0));
+    } else {
+      row.total    = round2(num(row.sqm, 0) * num(row.unitPrice, 0));
+      row.totalOFR = round2(num(row.sqmOfr, 0) * num(row.priceOFR, 0));
+    }
   };
 
   const handleItemChange = (index, field, value) => {
