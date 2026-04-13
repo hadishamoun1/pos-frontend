@@ -177,11 +177,25 @@ const StatementReportModal = ({
       ]);
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
       const canvas = await html2canvas(root, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
       const imgData = canvas.toDataURL("image/png");
       const imgW = pageW;
       const imgH = (canvas.height * imgW) / canvas.width;
-      pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+
+      let heightLeft = imgH;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+
+      while (heightLeft > 0) {
+        position -= pageH;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
+      }
+
       pdf.save(`statement-${toDMY(statementDate)}.pdf`);
     } catch {
       handlePrint();
