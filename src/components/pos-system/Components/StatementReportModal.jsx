@@ -175,25 +175,67 @@ const StatementReportModal = ({
         import("html2canvas"),
         import("jspdf"),
       ]);
+
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const canvas = await html2canvas(root, { scale: 2, useCORS: true, backgroundColor: "#ffffff", logging: false });
-      const imgData = canvas.toDataURL("image/png");
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
 
-      let heightLeft = imgH;
-      let position = 0;
+      const canvas = await html2canvas(root, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
 
-      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
+      // pixels-per-point ratio (canvas px → pdf pt)
+      const pxToPt = pageW / canvas.width;
+      // page height expressed in canvas pixels
+      const pageHPx = pageH / pxToPt;
 
-      while (heightLeft > 0) {
-        position -= pageH;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-        heightLeft -= pageH;
+      // Collect the bottom-edge of every <tr> in canvas-pixel coordinates
+      const rootRect = root.getBoundingClientRect();
+      const domToPx = canvas.width / rootRect.width; // DOM px → canvas px
+      const rowBottomsPx = Array.from(root.querySelectorAll("tr"))
+        .map((tr) => (tr.getBoundingClientRect().bottom - rootRect.top) * domToPx)
+        .filter((v) => v > 0 && v < canvas.height)
+        .sort((a, b) => a - b);
+
+      // Given a "desired" cut position (canvas px), snap to the nearest
+      // row-bottom that is ≤ that position (never cut through a row).
+      const snapCut = (desiredY) => {
+        let snap = desiredY;
+        for (let i = rowBottomsPx.length - 1; i >= 0; i--) {
+          if (rowBottomsPx[i] <= desiredY) { snap = rowBottomsPx[i]; break; }
+        }
+        return snap;
+      };
+
+      let currentY = 0;
+      let pageNum = 0;
+
+      while (currentY < canvas.height) {
+        const remaining = canvas.height - currentY;
+        const isLastSlice = remaining <= pageHPx;
+        const sliceHPx = isLastSlice ? remaining : snapCut(currentY + pageHPx) - currentY;
+
+        // Render this slice into its own canvas
+        const slice = document.createElement("canvas");
+        slice.width = canvas.width;
+        slice.height = Math.ceil(sliceHPx);
+        slice.getContext("2d").drawImage(
+          canvas,
+          0, currentY, canvas.width, sliceHPx,
+          0, 0,        canvas.width, sliceHPx,
+        );
+
+        if (pageNum > 0) pdf.addPage();
+        pdf.addImage(slice.toDataURL("image/png"), "PNG", 0, 0, pageW, sliceHPx * pxToPt);
+
+        currentY += sliceHPx;
+        pageNum++;
+
+        // Safety: if snapCut returned 0 progress, just advance by a full page
+        if (sliceHPx <= 0) { currentY += pageHPx; }
       }
 
       pdf.save(`statement-${toDMY(statementDate)}.pdf`);
