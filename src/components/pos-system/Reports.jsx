@@ -64,7 +64,15 @@ const TABS = [
 
 export default function ReportsPage() {
   const visibleTabs = TABS.filter((t) => !t.perm || hasPerm(t.perm));
-  const [active, setActive] = useState(visibleTabs[0]?.key || "trial-balance");
+  const [active, setActive] = useState(() => {
+    const saved = sessionStorage.getItem("reports_active_tab");
+    return saved && visibleTabs.some((t) => t.key === saved) ? saved : (visibleTabs[0]?.key || "trial-balance");
+  });
+
+  const handleSetActive = (key) => {
+    sessionStorage.setItem("reports_active_tab", key);
+    setActive(key);
+  };
 
   const noAccess =
     (active === "trial-balance"       && !hasPerm("reports.trialBalance"))      ||
@@ -81,7 +89,7 @@ export default function ReportsPage() {
           <button
             key={t.key}
             className={`reports-tab ${active === t.key ? "active" : ""}`}
-            onClick={() => !t.disabled && setActive(t.key)}
+            onClick={() => !t.disabled && handleSetActive(t.key)}
             disabled={t.disabled}
           >
             {t.label}

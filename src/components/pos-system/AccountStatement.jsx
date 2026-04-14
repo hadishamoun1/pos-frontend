@@ -49,6 +49,9 @@ export default function AccountStatement() {
   const [accLoading, setAccLoading] = useState(false);
   const [accError, setAccError] = useState("");
   const [accountId, setAccountId] = useState(saved?.accountId ?? "");
+  const [accSearch, setAccSearch] = useState("");
+  const [accOpen, setAccOpen] = useState(false);
+  const accComboRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -61,6 +64,17 @@ export default function AccountStatement() {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ from, to, type, currency, accountId, meta, items }));
     } catch {}
   }, [from, to, type, currency, accountId, meta, items]);
+
+  // Close account combobox when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (accComboRef.current && !accComboRef.current.contains(e.target)) {
+        setAccOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // ✅ Fetch active company — same pattern as StatementModal
   const navigate = useNavigate();
@@ -110,6 +124,21 @@ export default function AccountStatement() {
   }, []);
 
   const flatAccounts = useMemo(() => flattenTree(accTree), [accTree]);
+
+  const selectedAccount = flatAccounts.find((a) => a.id === accountId);
+  const filteredAccounts = accSearch.trim()
+    ? flatAccounts.filter((a) =>
+        a.label.toLowerCase().includes(accSearch.toLowerCase()) ||
+        a.code.toLowerCase().includes(accSearch.toLowerCase()) ||
+        a.name.toLowerCase().includes(accSearch.toLowerCase())
+      )
+    : flatAccounts;
+
+  const handleAccSelect = (a) => {
+    setAccountId(a.id);
+    setAccSearch("");
+    setAccOpen(false);
+  };
 
   function flattenTree(nodes) {
     const out = [];
@@ -394,11 +423,40 @@ export default function AccountStatement() {
         <div className="tb-controls tb-controls-grid">
           <label className="tb-field">
             Account
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accLoading}>
-              {flatAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.label}</option>
-              ))}
-            </select>
+            <div ref={accComboRef} style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder={accLoading ? "Loading…" : "Search account…"}
+                disabled={accLoading}
+                value={accOpen ? accSearch : (selectedAccount?.label ?? "")}
+                onChange={(e) => { setAccSearch(e.target.value); setAccOpen(true); }}
+                onFocus={() => { setAccSearch(""); setAccOpen(true); }}
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              {accOpen && filteredAccounts.length > 0 && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 999,
+                  background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)", maxHeight: 260, overflowY: "auto",
+                }}>
+                  {filteredAccounts.map((a) => (
+                    <div
+                      key={a.id}
+                      onMouseDown={() => handleAccSelect(a)}
+                      style={{
+                        padding: "7px 12px", cursor: "pointer", fontSize: 13,
+                        background: a.id === accountId ? "#eff6ff" : "transparent",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f0f9ff"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = a.id === accountId ? "#eff6ff" : "transparent"}
+                    >
+                      {a.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </label>
           <label className="tb-field">
             From
