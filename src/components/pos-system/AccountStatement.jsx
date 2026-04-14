@@ -1,5 +1,6 @@
 // src/components/pos-system/AccountStatement.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Reports.css";
 import { axiosClient } from "../api/axiosClient";
 import revoLogoSrc from "../revo-logo/revo.png"; // ✅ same level as this file
@@ -39,6 +40,7 @@ export default function AccountStatement() {
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
   const [type, setType] = useState("ALL");
+  const [currency, setCurrency] = useState("USD");
 
   const [accTree, setAccTree] = useState([]);
   const [accLoading, setAccLoading] = useState(false);
@@ -51,6 +53,7 @@ export default function AccountStatement() {
   const [items, setItems] = useState([]);
 
   // ✅ Fetch active company — same pattern as StatementModal
+  const navigate = useNavigate();
   const [companyKey, setCompanyKey] = useState("shamoun");
   useEffect(() => {
     axiosClient.get("/company")
@@ -138,7 +141,7 @@ export default function AccountStatement() {
         accountId: sel?.kind === "account" ? String(sel.idNum) : undefined,
         customerId: sel?.kind === "customer" ? String(sel.idNum) : undefined,
         supplierId: sel?.kind === "supplier" ? String(sel.idNum) : undefined,
-        type, from, to,
+        type, from, to, currency,
       });
       const res = await axiosClient.get(ENDPOINTS.accountStatementOFR, { params });
       const data = res.data || {};
@@ -313,7 +316,7 @@ export default function AccountStatement() {
         const colgroup = idoc.createElement("colgroup");
         colgroup.innerHTML = `<col style="width:15%"/><col style="width:17%"/><col style="width:25%"/><col style="width:12%"/><col style="width:12%"/><col style="width:19%"/>`;
         const thead = idoc.createElement("thead");
-        thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الشرح</th><th>عليكم</th><th>لكم</th><th>الرصيد</th></tr>`;
+        thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الشرح</th><th>DR ${currency}</th><th>CR ${currency}</th><th>الرصيد</th></tr>`;
         const tbody = idoc.createElement("tbody");
         table.appendChild(colgroup); table.appendChild(thead); table.appendChild(tbody);
         return { table, tbody };
@@ -401,6 +404,13 @@ export default function AccountStatement() {
               {["ALL", "S", "G"].map((t) => (<option key={t} value={t}>{t}</option>))}
             </select>
           </label>
+          <label className="tb-field">
+            Currency
+            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <option value="USD">USD</option>
+              <option value="LL">LL</option>
+            </select>
+          </label>
           <button className="tb-btn tb-btn-primary" onClick={fetchStatement} disabled={loading || accLoading || !accountId}>
             {loading || accLoading ? "Loading…" : "Generate"}
           </button>
@@ -429,13 +439,26 @@ export default function AccountStatement() {
           <thead>
             <tr>
               <th>Date</th><th>JV Number</th><th>Doc No.</th><th>Kind</th>
-              <th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th>
+              <th>Description</th>
+              <th>DR {currency}</th>
+              <th>CR {currency}</th>
+              <th>Balance</th>
             </tr>
           </thead>
           <tbody>
             {items.map((r, i) => (
               <tr key={r._ord ?? i}>
-                <td>{r.date ?? ""}</td><td>{r.jvNumber ?? ""}</td>
+                <td>{r.date ?? ""}</td>
+                <td>
+                  {r.journalVoucherId ? (
+                    <span
+                      style={{ color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}
+                      onClick={() => navigate(`/journal-voucher/${r.journalVoucherId}`)}
+                    >
+                      {r.jvNumber ?? ""}
+                    </span>
+                  ) : (r.jvNumber ?? "")}
+                </td>
                 <td>{r.docNbr ?? ""}</td><td>{r.kind ?? ""}</td>
                 <td>{displayDesc(r.description)}</td>
                 <td className="num">{fmt(r.debit)}</td>
@@ -562,7 +585,7 @@ export default function AccountStatement() {
               <thead>
                 <tr>
                   <th>تاريخ</th><th>رقم الفاتورة</th><th>الشرح</th>
-                  <th>عليكم</th><th>لكم</th><th>الرصيد</th>
+                  <th>DR {currency}</th><th>CR {currency}</th><th>الرصيد</th>
                 </tr>
               </thead>
               <tbody>
