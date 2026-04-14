@@ -37,20 +37,30 @@ export default function AccountStatement() {
 
   const [{ from: defaultFrom, to: defaultTo }] = useState(() => getDefaultRange());
 
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState(defaultTo);
-  const [type, setType] = useState("ALL");
-  const [currency, setCurrency] = useState("USD");
+  const SESSION_KEY = "accountStatement_state";
+  const saved = (() => { try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch { return null; } })();
+
+  const [from, setFrom] = useState(saved?.from ?? defaultFrom);
+  const [to, setTo] = useState(saved?.to ?? defaultTo);
+  const [type, setType] = useState(saved?.type ?? "ALL");
+  const [currency, setCurrency] = useState(saved?.currency ?? "USD");
 
   const [accTree, setAccTree] = useState([]);
   const [accLoading, setAccLoading] = useState(false);
   const [accError, setAccError] = useState("");
-  const [accountId, setAccountId] = useState("");
+  const [accountId, setAccountId] = useState(saved?.accountId ?? "");
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [meta, setMeta] = useState(null);
-  const [items, setItems] = useState([]);
+  const [meta, setMeta] = useState(saved?.meta ?? null);
+  const [items, setItems] = useState(saved?.items ?? []);
+
+  // Persist filters + results so navigating away and back restores everything
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ from, to, type, currency, accountId, meta, items }));
+    } catch {}
+  }, [from, to, type, currency, accountId, meta, items]);
 
   // ✅ Fetch active company — same pattern as StatementModal
   const navigate = useNavigate();
