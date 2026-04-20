@@ -29,6 +29,10 @@ const AccountingPage = () => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterCustomer, setFilterCustomer] = useState("");
+  const [filterCashNumber, setFilterCashNumber] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
@@ -343,28 +347,59 @@ const AccountingPage = () => {
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
 
+  const clearFilters = () => {
+    setFilterCustomer("");
+    setFilterCashNumber("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setSearchTerm("");
+  };
+
+  const hasActiveFilters = filterCustomer || filterCashNumber || filterDateFrom || filterDateTo;
+
   const searchAbortRef = useRef(null);
   useEffect(() => {
+    const norm = (v) => String(v ?? "").toLowerCase();
     const term = (searchTerm || "").trim();
-    if (!term) {
-      setFilteredData(data);
-      return;
+
+    let result = data;
+
+    // Filter by customer name
+    if (filterCustomer.trim()) {
+      const fc = norm(filterCustomer.trim());
+      result = result.filter((r) => norm(r.customerName).includes(fc));
     }
 
-    const norm = (v) => String(v ?? "").toLowerCase();
-    const tt = norm(term);
+    // Filter by cash number
+    if (filterCashNumber.trim()) {
+      const fn = norm(filterCashNumber.trim());
+      result = result.filter((r) => norm(r.cashNumber).includes(fn));
+    }
 
-    const quick = data.filter(
-      (r) =>
-        norm(r.customerName).includes(tt) ||
-        norm(r.refInvoice).includes(tt) ||
-        norm(r.invoiceNumber).includes(tt) ||
-        norm(r.comments).includes(tt) ||
-        norm(r.pmtType).includes(tt)
-    );
+    // Filter by date range
+    if (filterDateFrom) {
+      result = result.filter((r) => r.date >= filterDateFrom);
+    }
+    if (filterDateTo) {
+      result = result.filter((r) => r.date <= filterDateTo);
+    }
 
-    setFilteredData(quick);
-    if (term.length < 2) return;
+    // General search term
+    if (term) {
+      const tt = norm(term);
+      result = result.filter(
+        (r) =>
+          norm(r.customerName).includes(tt) ||
+          norm(r.refInvoice).includes(tt) ||
+          norm(r.invoiceNumber).includes(tt) ||
+          norm(r.comments).includes(tt) ||
+          norm(r.pmtType).includes(tt)
+      );
+    }
+
+    setFilteredData(result);
+
+    if (!term || term.length < 2) return;
 
     const timeout = setTimeout(async () => {
       if (searchAbortRef.current) searchAbortRef.current.abort();
@@ -385,11 +420,11 @@ const AccountingPage = () => {
             .filter(Boolean)
         );
 
-        const byServer = data.filter((r) =>
+        const byServer = result.filter((r) =>
           jvSet.has((r.invoiceNumber || "").toLowerCase())
         );
 
-        setFilteredData(byServer.length ? byServer : quick);
+        setFilteredData(byServer.length ? byServer : result);
       } catch (err) {
         if (err?.code === "ERR_CANCELED") return;
         if (err?.name === "CanceledError") return;
@@ -400,7 +435,7 @@ const AccountingPage = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchTerm, data]);
+  }, [searchTerm, filterCustomer, filterCashNumber, filterDateFrom, filterDateTo, data]);
 
   const handlePreviewReceipt = (record) => setReceiptPreviewRecord(record);
 
@@ -409,13 +444,44 @@ const AccountingPage = () => {
       <div className="accounting-container">
         <div className="accounting-section top-section">
           <div className="top-toolbar">
-            <input
-              type="text"
-              placeholder={t("receivables.page.searchPlaceholder")}
-              className="search-input"
-              value={searchTerm}
-              onChange={handleSearch}
-            />
+            <div className="rct-filters">
+              <input
+                type="text"
+                placeholder="Customer name…"
+                className="rct-filter-input"
+                value={filterCustomer}
+                onChange={(e) => setFilterCustomer(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Cash number…"
+                className="rct-filter-input"
+                value={filterCashNumber}
+                onChange={(e) => setFilterCashNumber(e.target.value)}
+              />
+              <label className="rct-filter-label">From</label>
+              <input
+                type="date"
+                className="rct-filter-input rct-filter-date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+              />
+              <label className="rct-filter-label">To</label>
+              <input
+                type="date"
+                className="rct-filter-input rct-filter-date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+              />
+              {hasActiveFilters && (
+                <button className="rct-filter-clear" onClick={clearFilters} title="Clear all filters">
+                  ✕ Clear
+                </button>
+              )}
+              <span className="rct-filter-count">
+                {filteredData.length} / {data.length}
+              </span>
+            </div>
 
             <div className="button-group">
               {canCreate && (

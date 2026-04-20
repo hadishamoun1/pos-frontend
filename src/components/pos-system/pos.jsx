@@ -1608,7 +1608,7 @@ const POSSystemPage = () => {
             }
           />
 
-          {showPreview && isShamounActive && (
+{showPreview && isShamounActive && (
             <InvoiceModal
               isOpen={showPreview}
               onClose={() => setShowPreview(false)}

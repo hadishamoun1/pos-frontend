@@ -1,0 +1,397 @@
+.inv-report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: #111827;
+}
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.inv-report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.inv-report-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.inv-report-filter-group input[type="date"],
+.inv-report-filter-group input[type="number"],
+.inv-report-filter-group select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 130px;
+}
+
+.inv-report-filter-group input:focus,
+.inv-report-filter-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.inv-report-apply-btn {
+  height: 38px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  align-self: flex-end;
+}
+
+.inv-report-apply-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.inv-report-apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inv-report-pdf-btn {
+  height: 38px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.inv-report-pdf-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.inv-report-pdf-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.inv-report-pdf-header-btn {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.inv-report-sig-btn {
+  height: 38px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, #6b7280 0%, #4b5563 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.inv-report-sig-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.inv-report-sig-btn--active {
+  background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+/* ── PDF Generation Overlay ──────────────────────────────── */
+.inv-report-pdf-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: invOverlayIn 0.2s ease;
+}
+
+.inv-report-pdf-dialog {
+  background: #fff;
+  border-radius: 18px;
+  padding: 36px 40px 32px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.2),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+  animation: invDialogIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Spinner */
+.inv-report-pdf-spinner {
+  width: 52px;
+  height: 52px;
+  border: 5px solid #e0e7ff;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: invSpin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes invSpin {
+  to { transform: rotate(360deg); }
+}
+
+.inv-report-pdf-dialog-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
+}
+
+.inv-report-pdf-dialog-sub {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inv-report-pdf-dialog-inv {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Progress track */
+.inv-report-pdf-bar-track {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.inv-report-pdf-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.inv-report-pdf-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d4ed8;
+  letter-spacing: 0.3px;
+}
+
+@keyframes invOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes invDialogIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Meta row ────────────────────────────────────────────── */
+.inv-report-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.inv-report-meta-sum {
+  color: #111827;
+}
+
+/* ── Table ───────────────────────────────────────────────── */
+.inv-report-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.inv-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.inv-report-table thead {
+  background: linear-gradient(to right, #2563eb, #1d4ed8);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.inv-report-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.inv-report-table th:last-child {
+  border-right: none;
+}
+
+.inv-report-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.inv-report-table td:last-child {
+  border-right: none;
+}
+
+.inv-report-table tbody tr:nth-child(even) td {
+  background: #f8fafc;
+}
+
+.inv-report-table tbody tr:hover td {
+  background: #eff6ff;
+}
+
+.inv-report-table tfoot td {
+  border-top: 2px solid #e5e7eb;
+  background: #f0f7ff;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+.inv-report-foot-label {
+  text-align: right;
+  color: #374151;
+  font-size: 13px;
+}
+
+.inv-report-foot-total {
+  color: #1d4ed8;
+  font-size: 15px;
+}
+
+.inv-report-table td.num,
+.inv-report-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Invoice number ──────────────────────────────────────── */
+.inv-report-inv-num {
+  font-weight: 600;
+  color: #374151;
+  font-family: monospace;
+}
+
+/* ── Type badges ─────────────────────────────────────────── */
+.inv-report-type-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.type-S   { background: #dbeafe; color: #1d4ed8; }
+.type-G   { background: #fef9c3; color: #854d0e; }
+.type-RTN { background: #fee2e2; color: #b91c1c; }
+.type-RVR { background: #e9d5ff; color: #7c3aed; }
+
+/* ── Pagination ──────────────────────────────────────────── */
+.inv-report-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  font-size: 14px;
+  color: #374151;
+}
+
+.inv-report-pagination button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.inv-report-pagination button:hover:not(:disabled) {
+  background: #f0f7ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.inv-report-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Error ───────────────────────────────────────────────── */
+.inv-report-error {
+  padding: 10px 14px;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.inv-report-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #9ca3af;
+  font-size: 14px;
+}

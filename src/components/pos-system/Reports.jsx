@@ -7,6 +7,7 @@ import CostAnalysis from "./CostAnalysis";
 import CustomerBalances from "./CustomerBalances";
 import ProfitabilityReport from "./Profitability-report";
 import CustomerActivityReport from "./Customeractivityreport"; // ✅ NEW
+import InvoiceReport from "./InvoiceReport";
 
 // ✅ Permission check helper
 function hasPerm(perm) {
@@ -49,11 +50,15 @@ const TABS = [
     label: "Profitability / الربحية",
     perm: "reports.profitability",
   },
-  // ✅ NEW TAB
   {
     key: "customer-activity",
     label: "Customer Activity / نشاط الزبائن",
-    perm: "reports.customerBalances", // reuse same perm or create reports.customerActivity
+    perm: "reports.customerBalances",
+  },
+  {
+    key: "invoice-report",
+    label: "Invoice Report / تقرير الفواتير",
+    perm: "invoices.view",
   },
   {
     key: "aging",
@@ -80,7 +85,8 @@ export default function ReportsPage() {
     (active === "cost-analysis"       && !hasPerm("reports.costAnalysis"))       ||
     (active === "customer-balances"   && !hasPerm("reports.customerBalances"))  ||
     (active === "profitability"       && !hasPerm("reports.profitability"))      ||
-    (active === "customer-activity"   && !hasPerm("reports.customerBalances"));
+    (active === "customer-activity"   && !hasPerm("reports.customerBalances"))  ||
+    (active === "invoice-report"      && !hasPerm("invoices.view"));
 
   return (
     <div className="reports-page">
@@ -104,8 +110,8 @@ export default function ReportsPage() {
         {active === "customer-balances" && hasPerm("reports.customerBalances") && <CustomerBalances />}
         {active === "profitability"     && hasPerm("reports.profitability")    && <ProfitabilityReport />}
 
-        {/* ✅ NEW */}
         {active === "customer-activity" && hasPerm("reports.customerBalances") && <CustomerActivityReport />}
+        {active === "invoice-report"    && hasPerm("invoices.view")            && <InvoiceReport />}
 
         {noAccess && (
           <div className="reports-no-access">

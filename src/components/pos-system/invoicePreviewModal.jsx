@@ -3,6 +3,23 @@ import React, { useMemo, useRef, useEffect, useState } from "react";
 import html2pdf from "html2pdf.js"; // (kept if you use it elsewhere)
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { axiosClient } from "../api/axiosClient";
+import revoLogoSrc from "../revo-logo/revo.png";
+
+async function toBase64(url) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+}
 
 /* =========================
    Helpers: numbers & dates
@@ -144,7 +161,7 @@ const MODAL_CSS = `
 /* =========================
    Invoice (inside iframe) - WITH EDIT MODE STYLES
    ========================= */
-const INLINE_INVOICE_CSS = `
+export const INLINE_INVOICE_CSS = `
 :root {
   --a4-w-mm: 210mm;
   --a4-h-mm: 297mm;
@@ -402,9 +419,9 @@ const INLINE_INVOICE_CSS = `
    Build full iframe HTML
    FIX: صندوق editable for ANY type (sheet/unit/sqm/box)
    ========================= */
-function buildInvoiceHtml(
+export function buildInvoiceHtml(
   invoiceData = {},
-  { inlineCss, baseHref = "/", editMode = false } = {}
+  { inlineCss, baseHref = "/", editMode = false, isRevo = false, logoBase64 = "", forceHeaderOnG = false, shamounSigBase64 = "" } = {}
 ) {
   const {
     invoiceNumber = "",
@@ -609,7 +626,7 @@ ${baseTag}
 ${styleTag}
 </head>
 <body>
-  <div id="pages-root" data-invoice-type="${invoiceType}"></div>
+  <div id="pages-root" data-invoice-type="${invoiceType}" data-force-header="${forceHeaderOnG ? '1' : '0'}"></div>
 
   <div id="source" style="display:none">
     <table class="invoice-table" id="source-table">
@@ -630,6 +647,23 @@ ${styleTag}
     </table>
     ${addRowButton}
 
+    ${isRevo ? `
+    <div class="invoice-header" id="source-header">
+      <div class="right-info">
+        <h2 class="company-arabic-title">شركة ريفو جلاس</h2>
+        <p class="small-subtitle">سوريا – حلب – الراموسة</p>
+        <div class="invoice-arabic-contact">
+          <div class="invoice-arabic-line"><span class="invoice-arabic-label">تلفون</span><span class="invoice-arabic-colon">:</span><span class="invoice-arabic-value">+963 995118111</span></div>
+          <div class="invoice-arabic-line"><span class="invoice-arabic-label">الاستفسار</span><span class="invoice-arabic-colon">:</span><span class="invoice-arabic-value">+963 995434366</span></div>
+          <div class="invoice-arabic-line"><span class="invoice-arabic-label">البريد</span><span class="invoice-arabic-colon">:</span><span class="invoice-arabic-value">revo.glass.co@gmail.com</span></div>
+        </div>
+      </div>
+      <div class="left-info" style="display:flex;align-items:center;justify-content:center;">
+        ${logoBase64
+          ? `<img src="${logoBase64}" alt="Revo" style="max-height:120px;max-width:180px;object-fit:contain;" />`
+          : `<h1 class="company-title">REVO GLASS COMPANY</h1>`}
+      </div>
+    </div>` : `
     <div class="invoice-header" id="source-header">
       <div class="right-info">
         <h2 class="company-arabic-title">شركة شمعون</h2>
@@ -649,7 +683,7 @@ ${styleTag}
         <p>Email: info@shamoun.com</p>
         <p>VAT Reg.No 10909-601</p>
       </div>
-    </div>
+    </div>`}
 
     <div class="invoice-meta" id="source-meta">
       <div class="meta-right">
@@ -705,7 +739,8 @@ ${styleTag}
             <div class="footer-left-cell"></div>
             <div class="footer-left-cell border-left"></div>
           </div>
-          <div class="footer-left-label-row">
+          <div class="footer-left-label-row" style="position:relative;">
+            ${shamounSigBase64 ? `<img src="${shamounSigBase64}" style="position:absolute;left:2px;top:50%;transform:translateY(-50%);height:86px;max-width:48%;object-fit:contain;" />` : ""}
             <span class="footer-left-label">المستلم:</span>
             <span class="footer-left-label">الإمضاء:</span>
           </div>
@@ -809,7 +844,8 @@ ${styleTag}
         const addRowBtn = document.querySelector('.add-row-container');
 
         const invoiceTypeAttr = (pagesRoot?.getAttribute('data-invoice-type') || '').toUpperCase();
-        const shouldShowHeaderOnFirstPage = invoiceTypeAttr !== 'G';
+        const forceHeaderAttr = pagesRoot?.getAttribute('data-force-header') === '1';
+        const shouldShowHeaderOnFirstPage = invoiceTypeAttr !== 'G' || forceHeaderAttr;
 
         if (srcFooter) {
           const total = parseFloat(srcFooter.getAttribute('data-grandtotal') || '0');
@@ -962,6 +998,18 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
 
   const [renderVersion, setRenderVersion] = useState(0);
 
+  const [isRevo, setIsRevo] = useState(false);
+  const [logoBase64, setLogoBase64] = useState("");
+
+  useEffect(() => {
+    axiosClient.get("/company").then(({ data }) => {
+      const active = Array.isArray(data) ? data.find((c) => c.isActive) : null;
+      const revo = !!active?.companyName?.toLowerCase().includes("revo");
+      setIsRevo(revo);
+      if (revo) toBase64(revoLogoSrc).then(setLogoBase64);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     editedItemsRef.current = editedItems;
   }, [editedItems]);
@@ -1004,9 +1052,11 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
       inlineCss: INLINE_INVOICE_CSS,
       baseHref,
       editMode: editMode && !savedEditedData,
+      isRevo,
+      logoBase64,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceData, editMode, savedEditedData, renderVersion]);
+  }, [invoiceData, editMode, savedEditedData, renderVersion, isRevo, logoBase64]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -1354,6 +1404,8 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
       inlineCss: INLINE_INVOICE_CSS,
       baseHref,
       editMode: false,
+      isRevo,
+      logoBase64,
     });
 
     printFrame.srcdoc = printHtml;

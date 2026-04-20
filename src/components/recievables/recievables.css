@@ -22,10 +22,82 @@
 .top-toolbar,
 .bottom-toolbar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   width: 100%;
   padding: 0.75rem 0;
+}
+
+/* ── Receivables Filters ──────────────────────────────── */
+.rct-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: #f8faff;
+  border: 1px solid #e2e6f0;
+  border-radius: 10px;
+}
+
+.rct-filter-input {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1.5px solid #d4daf0;
+  border-radius: 7px;
+  background: #fff;
+  color: #1e2a45;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 150px;
+}
+.rct-filter-input:focus {
+  border-color: #4f6af0;
+  box-shadow: 0 0 0 3px rgba(79, 106, 240, 0.1);
+}
+
+.rct-filter-date {
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.rct-filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.rct-filter-clear {
+  height: 34px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #f43f5e, #c4183c);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  white-space: nowrap;
+}
+.rct-filter-clear:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.rct-filter-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #e8ecf4;
+  padding: 4px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
 }
 
 .search-input {
@@ -219,7 +291,7 @@
 /* 3rd col: "date" */
 .accounting-table th:nth-child(3),
 .accounting-table td:nth-child(3) {
-  width: 8%;
+  width: 10%;
 }
 
 /* 4th col: "cash number" */
