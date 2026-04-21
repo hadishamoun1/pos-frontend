@@ -283,8 +283,9 @@ const StockTab = forwardRef(function StockTab(
   const flattenVariants = useCallback((variants) => {
     const out = [];
     for (const v of (variants || [])) {
+      const isService = String(v.stockMode || "").toLowerCase() === "none";
       const stockQty = Number(v.ones?.balance ?? 0);
-      if (!(stockQty > 0)) continue;
+      if (!isService && !(stockQty > 0)) continue;
 
       for (const b of (v.batches || [])) {
         out.push({
@@ -300,7 +301,7 @@ const StockTab = forwardRef(function StockTab(
           stockMode: v.stockMode,
           condition: b.condition,
           dateReceived: b.dateReceived,
-          stockQty,
+          stockQty: isService ? "" : stockQty,
         });
       }
     }
