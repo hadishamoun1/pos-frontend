@@ -262,7 +262,8 @@ const StockTab = forwardRef(function StockTab(
     for (const v of (variants || [])) {
       const batches = Array.isArray(v.batches) ? v.batches : [];
       for (const b of batches) {
-        if (Number(b.balanceOFR) <= 0) continue;
+        const qty = Number(b.balance);
+        if (!(qty > 0)) continue;
         out.push({
           variantId: v.variantId,
           batchId: b.id,
@@ -276,7 +277,7 @@ const StockTab = forwardRef(function StockTab(
           stockMode: v.stockMode,
           condition: b.condition,
           dateReceived: b.dateReceived,
-          balanceOFR: b.balanceOFR,
+          stockQty: qty,
         });
       }
     }
@@ -302,7 +303,7 @@ const StockTab = forwardRef(function StockTab(
       origin: row.origin || "",
       condition: row.condition ?? "",
       dateReceived: row.dateReceived ?? "",
-      balanceOFR: row.balanceOFR ?? "",
+      stockQty: row.stockQty ?? "",
     };
   }, []);
 
@@ -617,7 +618,7 @@ const StockTab = forwardRef(function StockTab(
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
-        balanceOFR: r.balanceOFR ?? "",
+        stockQty: r.stockQty ?? "",
       };
     });
   }, [flatRows]);
@@ -932,8 +933,8 @@ const StockTab = forwardRef(function StockTab(
               }
             }
             
-            const stockBox = isBox ? (r.balanceOFR ?? "") : "";
-            const stockSheet = isSheet ? (r.balanceOFR ?? "") : "";
+            const stockBox = isBox ? (r.stockQty ?? "") : "";
+            const stockSheet = isSheet ? (r.stockQty ?? "") : "";
 
             return (
               <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""}>
