@@ -261,9 +261,24 @@ const StockTab = forwardRef(function StockTab(
     const out = [];
     for (const v of (variants || [])) {
       const batches = Array.isArray(v.batches) ? v.batches : [];
+      const variantQty = Number(v.ones?.balance ?? 0);
+      const variantSqm = Number(v.ofrTotalsSqm?.balanceOFR ?? 0);
+      const type = String(v.type || "").toLowerCase();
+
       for (const b of batches) {
-        const qty = Number(b.balance);
-        if (!(qty > 0)) continue;
+        const batchSqm = Number(b.balanceOFR ?? 0);
+        if (!(batchSqm > 0)) continue;
+
+        let stockQty;
+        if (variantSqm > 0) {
+          const raw = variantQty * (batchSqm / variantSqm);
+          stockQty = (type === "box" || type === "sheet") ? Math.round(raw) : Number(raw.toFixed(2));
+        } else {
+          stockQty = variantQty;
+        }
+
+        if (!(stockQty > 0)) continue;
+
         out.push({
           variantId: v.variantId,
           batchId: b.id,
@@ -277,7 +292,7 @@ const StockTab = forwardRef(function StockTab(
           stockMode: v.stockMode,
           condition: b.condition,
           dateReceived: b.dateReceived,
-          stockQty: qty,
+          stockQty,
         });
       }
     }
