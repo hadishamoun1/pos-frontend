@@ -257,48 +257,6 @@ const StockTab = forwardRef(function StockTab(
     [limit]
   );
 
-  const flattenVariants = useCallback((variants) => {
-    const out = [];
-    for (const v of (variants || [])) {
-      const batches = Array.isArray(v.batches) ? v.batches : [];
-      const variantQty = Number(v.ones?.balance ?? 0);
-      const variantSqm = Number(v.ofrTotalsSqm?.balanceOFR ?? 0);
-      const type = String(v.type || "").toLowerCase();
-
-      for (const b of batches) {
-        const batchSqm = Number(b.balanceOFR ?? 0);
-        if (!(batchSqm > 0)) continue;
-
-        let stockQty;
-        if (variantSqm > 0) {
-          const raw = variantQty * (batchSqm / variantSqm);
-          stockQty = (type === "box" || type === "sheet") ? Math.round(raw) : Number(raw.toFixed(2));
-        } else {
-          stockQty = variantQty;
-        }
-
-        if (!(stockQty > 0)) continue;
-
-        out.push({
-          variantId: v.variantId,
-          batchId: b.id,
-          itemName: v.itemName,
-          type: v.type,
-          thickness: v.thickness,
-          length: v.length,
-          width: v.width,
-          sheetsPerBox: v.sheetsPerBox,
-          origin: v.origin,
-          stockMode: v.stockMode,
-          condition: b.condition,
-          dateReceived: b.dateReceived,
-          stockQty,
-        });
-      }
-    }
-    return out;
-  }, []);
-
   const rowToPayload = useCallback((row, repeat = 1) => {
     const [variantStr, batchStr] = String(row.uniqueId).split("-");
     return {
@@ -318,7 +276,7 @@ const StockTab = forwardRef(function StockTab(
       origin: row.origin || "",
       condition: row.condition ?? "",
       dateReceived: row.dateReceived ?? "",
-      stockQty: row.stockQty ?? "",
+      balanceOFR: row.balanceOFR ?? "",
     };
   }, []);
 
@@ -328,15 +286,15 @@ const StockTab = forwardRef(function StockTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        const res = await axiosClient.get("/items/v1/real-variant-ledger", {
-          params: { page: targetPage, limit },
-          signal,
-        });
-        const { data: variants, hasMore: hm } = normalizeEnvelope(res.data);
-        const flat = flattenVariants(variants);
 
-        if (targetPage === 1) setFlatRows(flat);
-        else setFlatRows((prev) => [...prev, ...flat]);
+        const url = `/items/v2/filtered-items`;
+        const params = { page: targetPage, limit };
+
+        const res = await axiosClient.get(url, { params, signal });
+        const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
+
+        if (targetPage === 1) setFlatRows(flat || []);
+        else setFlatRows((prev) => [...prev, ...(flat || [])]);
 
         setNestedItems([]);
         setPage(targetPage);
@@ -349,7 +307,7 @@ const StockTab = forwardRef(function StockTab(
         setLoading(false);
       }
     },
-    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants]
+    [isActive, limit, modalOpen, normalizeEnvelope]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -359,25 +317,29 @@ const StockTab = forwardRef(function StockTab(
     setLoading(true);
     try {
       const signal = cancelInFlight();
+
+      const url = `/items/pos/search-modal-instock`;
       const params = { page: 1, limit: 200 };
 
-      const qParts = [];
-      if (nameChip) qParts.push(normalizeArabic(nameChip));
-      if (dimsChip) qParts.push(normalizeDigits(dimsChip.trim()));
-      if (qParts.length) params.q = qParts.join(" ");
+      if (nameChip) params.q = normalizeArabic(nameChip);
 
-      const res = await axiosClient.get("/items/v1/real-variant-ledger", { params, signal });
-      const { data: variants } = normalizeEnvelope(res.data);
-      const flat = flattenVariants(variants);
+      const raw = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      if (raw) {
+        if (looksLikeDims(raw)) params.dims = raw;
+        else if (isPlainNumber(raw)) params.length = Number(raw);
+      }
 
-      setFlatRows(flat);
-      setNestedItems([]);
+      const res = await axiosClient.get(url, { params, signal });
+      const nested = Array.isArray(res.data) ? res.data : [];
+
+      setNestedItems(nested);
+      setFlatRows([]);
       setHasMore(false);
       setPage(1);
     } catch (err) {
       if (axios.isCancel?.(err)) return;
       console.error("Error fetching stock search:", err);
-      setFlatRows([]);
+      setNestedItems([]);
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -385,12 +347,12 @@ const StockTab = forwardRef(function StockTab(
   }, [
     dimsChip,
     isActive,
+    isPlainNumber,
+    looksLikeDims,
     modalOpen,
     nameChip,
     normalizeArabic,
     normalizeDigits,
-    normalizeEnvelope,
-    flattenVariants,
   ]);
 
   const clearEverything = useCallback(() => {
@@ -628,12 +590,12 @@ const StockTab = forwardRef(function StockTab(
         length: Math.floor(Number(r.length || 0)),
         width: Math.floor(Number(r.width || 0)),
         sheetsPerBox: Number(r.sheetsPerBox || 0),
-        itemType: r.type,
+        itemType: r.itemType ?? r.type,
         stockMode: r.stockMode ?? "sqm",
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
-        stockQty: r.stockQty ?? "",
+        balanceOFR: r.balanceOFR ?? "",
       };
     });
   }, [flatRows]);
@@ -674,7 +636,7 @@ const StockTab = forwardRef(function StockTab(
   }, [nestedItems]);
 
   const inSearchMode = Boolean(nameChip || dimsChip);
-  const unfilteredRows = rowsFromFlat;
+  const unfilteredRows = inSearchMode ? rowsFromNested : rowsFromFlat;
   
   const rows = useMemo(() => {
     let filtered = unfilteredRows;
@@ -948,8 +910,8 @@ const StockTab = forwardRef(function StockTab(
               }
             }
             
-            const stockBox = isBox ? (r.stockQty ?? "") : "";
-            const stockSheet = isSheet ? (r.stockQty ?? "") : "";
+            const stockBox = isBox ? (r.balanceOFR ?? "") : "";
+            const stockSheet = isSheet ? (r.balanceOFR ?? "") : "";
 
             return (
               <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""}>
