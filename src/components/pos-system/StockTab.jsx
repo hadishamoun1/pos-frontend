@@ -276,8 +276,35 @@ const StockTab = forwardRef(function StockTab(
       origin: row.origin || "",
       condition: row.condition ?? "",
       dateReceived: row.dateReceived ?? "",
-      balanceOFR: row.balanceOFR ?? "",
+      stockQty: row.stockQty ?? "",
     };
+  }, []);
+
+  const flattenVariants = useCallback((variants) => {
+    const out = [];
+    for (const v of (variants || [])) {
+      const stockQty = Number(v.ones?.balance ?? 0);
+      if (!(stockQty > 0)) continue;
+
+      for (const b of (v.batches || [])) {
+        out.push({
+          variantId: v.variantId,
+          batchId: b.id,
+          itemName: v.itemName,
+          type: v.type,
+          thickness: v.thickness,
+          length: v.length,
+          width: v.width,
+          sheetsPerBox: v.sheetsPerBox,
+          origin: v.origin,
+          stockMode: v.stockMode,
+          condition: b.condition,
+          dateReceived: b.dateReceived,
+          stockQty,
+        });
+      }
+    }
+    return out;
   }, []);
 
   const fetchDefaultPage = useCallback(
@@ -286,15 +313,15 @@ const StockTab = forwardRef(function StockTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
+        const res = await axiosClient.get("/items/v1/real-variant-ledger", {
+          params: { page: targetPage, limit },
+          signal,
+        });
+        const { data: variants, hasMore: hm } = normalizeEnvelope(res.data);
+        const flat = flattenVariants(variants);
 
-        const url = `/items/v2/filtered-items`;
-        const params = { page: targetPage, limit };
-
-        const res = await axiosClient.get(url, { params, signal });
-        const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
-
-        if (targetPage === 1) setFlatRows(flat || []);
-        else setFlatRows((prev) => [...prev, ...(flat || [])]);
+        if (targetPage === 1) setFlatRows(flat);
+        else setFlatRows((prev) => [...prev, ...flat]);
 
         setNestedItems([]);
         setPage(targetPage);
@@ -307,7 +334,7 @@ const StockTab = forwardRef(function StockTab(
         setLoading(false);
       }
     },
-    [isActive, limit, modalOpen, normalizeEnvelope]
+    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -317,29 +344,25 @@ const StockTab = forwardRef(function StockTab(
     setLoading(true);
     try {
       const signal = cancelInFlight();
-
-      const url = `/items/pos/search-modal-instock`;
       const params = { page: 1, limit: 200 };
 
-      if (nameChip) params.q = normalizeArabic(nameChip);
+      const qParts = [];
+      if (nameChip) qParts.push(normalizeArabic(nameChip));
+      if (dimsChip) qParts.push(normalizeDigits(dimsChip.trim()));
+      if (qParts.length) params.q = qParts.join(" ");
 
-      const raw = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
-      if (raw) {
-        if (looksLikeDims(raw)) params.dims = raw;
-        else if (isPlainNumber(raw)) params.length = Number(raw);
-      }
+      const res = await axiosClient.get("/items/v1/real-variant-ledger", { params, signal });
+      const { data: variants } = normalizeEnvelope(res.data);
+      const flat = flattenVariants(variants);
 
-      const res = await axiosClient.get(url, { params, signal });
-      const nested = Array.isArray(res.data) ? res.data : [];
-
-      setNestedItems(nested);
-      setFlatRows([]);
+      setFlatRows(flat);
+      setNestedItems([]);
       setHasMore(false);
       setPage(1);
     } catch (err) {
       if (axios.isCancel?.(err)) return;
       console.error("Error fetching stock search:", err);
-      setNestedItems([]);
+      setFlatRows([]);
       setHasMore(false);
     } finally {
       setLoading(false);
@@ -347,12 +370,12 @@ const StockTab = forwardRef(function StockTab(
   }, [
     dimsChip,
     isActive,
-    isPlainNumber,
-    looksLikeDims,
     modalOpen,
     nameChip,
     normalizeArabic,
     normalizeDigits,
+    normalizeEnvelope,
+    flattenVariants,
   ]);
 
   const clearEverything = useCallback(() => {
@@ -595,7 +618,7 @@ const StockTab = forwardRef(function StockTab(
         origin: r.origin || "",
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
-        balanceOFR: r.balanceOFR ?? "",
+        stockQty: r.stockQty ?? "",
       };
     });
   }, [flatRows]);
@@ -636,7 +659,7 @@ const StockTab = forwardRef(function StockTab(
   }, [nestedItems]);
 
   const inSearchMode = Boolean(nameChip || dimsChip);
-  const unfilteredRows = inSearchMode ? rowsFromNested : rowsFromFlat;
+  const unfilteredRows = rowsFromFlat;
   
   const rows = useMemo(() => {
     let filtered = unfilteredRows;
@@ -910,8 +933,8 @@ const StockTab = forwardRef(function StockTab(
               }
             }
             
-            const stockBox = isBox ? (r.balanceOFR ?? "") : "";
-            const stockSheet = isSheet ? (r.balanceOFR ?? "") : "";
+            const stockBox = isBox ? (r.stockQty ?? "") : "";
+            const stockSheet = isSheet ? (r.stockQty ?? "") : "";
 
             return (
               <tr key={r.uniqueId} className={!r.selectable ? "row-disabled" : ""}>
