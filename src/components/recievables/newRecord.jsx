@@ -439,28 +439,35 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
     );
   };
 
-  const handleQuickAmount = (invoiceId, quickAmt) => {
+  const handleQuickAmount = (invoiceId, quickAmt, currencyOverride = null) => {
     setSelections((prev) =>
       prev.map((s) => {
         if (s.invoiceId !== invoiceId) return s;
         const budget = remaining + s.amount;
-        return { ...s, amount: parseFloat(Math.min(quickAmt, budget).toFixed(2)) };
+        return { ...s, amount: parseFloat(Math.min(quickAmt, budget).toFixed(2)), currencyOverride };
       })
     );
   };
 
-  const buildSplitRow = (amt, invoiceId) => {
-    const cashNumber = fmtComma(amt);
+  const buildSplitRow = (amt, invoiceId, currencyOverride = null) => {
+    const currency = currencyOverride || baseRow.currency;
+    // If forcing LL on a USD-denominated amount, convert to LBP first
+    let finalAmt = amt;
+    if (currencyOverride === "LL" && baseRow.currency !== "LL") {
+      const rate = parseNum(baseRow.exchangeRate);
+      if (rate) finalAmt = parseFloat((amt * rate).toFixed(2));
+    }
+    const cashNumber = fmtComma(finalAmt);
     const amountExchanged = computeAmountExchanged({
-      currency: baseRow.currency,
-      cashNumber: amt,
+      currency,
+      cashNumber: finalAmt,
       exchangeRate: baseRow.exchangeRate,
     });
-    return { ...baseRow, invoiceId, cashNumber, amountExchanged, invoiceOptions: baseRow.invoiceOptions, invoiceLoading: false };
+    return { ...baseRow, currency, invoiceId, cashNumber, amountExchanged, invoiceOptions: baseRow.invoiceOptions, invoiceLoading: false };
   };
 
   const handleConfirm = () => {
-    const out = selections.map((sel) => buildSplitRow(sel.amount, sel.invoiceId));
+    const out = selections.map((sel) => buildSplitRow(sel.amount, sel.invoiceId, sel.currencyOverride));
     if (remaining > 0.005) out.push(buildSplitRow(remaining, ""));
     onConfirm(out);
   };
@@ -526,23 +533,32 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
                       <td onClick={(e) => e.stopPropagation()}>
                         {isSelected ? (
                           <div className="inv-splitter-allocate-cell" onClick={(e) => e.stopPropagation()}>
+                            {sel.currencyOverride === "LL" && (() => {
+                              const rate = parseNum(baseRow.exchangeRate);
+                              const llAmt = rate ? parseFloat((sel.amount * rate).toFixed(0)) : null;
+                              return llAmt ? (
+                                <div className="inv-splitter-ll-preview">
+                                  LL {llAmt.toLocaleString("en-US")}
+                                </div>
+                              ) : null;
+                            })()}
                             <div className="inv-splitter-quick-btns">
                               {inv.totalWithoutVAT > 0 && (
-                                <button type="button" className="inv-splitter-quick excl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT)}>
+                                <button type="button" className="inv-splitter-quick excl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT, null)}>
                                   Excl. VAT
                                 </button>
                               )}
                               {inv.totalVAT > 0 && (
-                                <button type="button" className="inv-splitter-quick vat" onClick={() => handleQuickAmount(inv.id, inv.totalVAT)}>
-                                  VAT
+                                <button type="button" className="inv-splitter-quick vat" onClick={() => handleQuickAmount(inv.id, inv.totalVAT, "LL")}>
+                                  VAT (LL)
                                 </button>
                               )}
                               {inv.totalWithoutVAT > 0 && (
-                                <button type="button" className="inv-splitter-quick totalexcl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT)}>
+                                <button type="button" className="inv-splitter-quick totalexcl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT, null)}>
                                   Total excl. VAT
                                 </button>
                               )}
-                              <button type="button" className="inv-splitter-quick total" onClick={() => handleQuickAmount(inv.id, inv.grandTotal)}>
+                              <button type="button" className="inv-splitter-quick total" onClick={() => handleQuickAmount(inv.id, inv.grandTotal, null)}>
                                 Grand Total
                               </button>
                             </div>
