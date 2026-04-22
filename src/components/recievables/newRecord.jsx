@@ -390,6 +390,166 @@ function RowContextMenu({ open, x, y, onDelete, onClose, disabled }) {
   );
 }
 
+// ✅ Invoice Splitter Modal
+function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, currency, invoices, invoiceLoading, baseRow }) {
+  const [selections, setSelections] = useState([]);
+
+  useEffect(() => {
+    if (open) setSelections([]);
+  }, [open]);
+
+  const normalized = useMemo(() => {
+    const list = Array.isArray(invoices) ? invoices : [];
+    return list
+      .map((inv) => {
+        const id = inv.id ?? inv.invoiceId ?? inv.invoice_id;
+        const invoiceNumber = inv.invoiceNumber ?? inv.invoice_number ?? "";
+        const date = inv.date ? String(inv.date).slice(0, 10) : "";
+        const grandTotal = Number(inv.grandTotal ?? inv.grand_total ?? 0);
+        return { id: id != null ? String(id) : "", invoiceNumber: String(invoiceNumber), date, grandTotal };
+      })
+      .filter((x) => x.id);
+  }, [invoices]);
+
+  const totalSelected = selections.reduce((s, x) => s + x.amount, 0);
+  const remaining = Math.max(0, originalAmount - totalSelected);
+
+  const fmtAmt = (n) =>
+    Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleInvoiceClick = (inv) => {
+    const id = String(inv.id);
+    const alreadySel = selections.find((s) => s.invoiceId === id);
+    if (alreadySel) {
+      setSelections((prev) => prev.filter((s) => s.invoiceId !== id));
+      return;
+    }
+    if (remaining <= 0) return;
+    const amount = parseFloat(Math.min(inv.grandTotal, remaining).toFixed(2));
+    setSelections((prev) => [...prev, { invoiceId: id, invoiceNumber: inv.invoiceNumber, amount, grandTotal: inv.grandTotal }]);
+  };
+
+  const handleAmountChange = (invoiceId, rawVal) => {
+    const val = parseNum(rawVal);
+    if (!Number.isFinite(val) || val < 0) return;
+    setSelections((prev) =>
+      prev.map((s) => (s.invoiceId === invoiceId ? { ...s, amount: val } : s))
+    );
+  };
+
+  const buildSplitRow = (amt, invoiceId) => {
+    const cashNumber = fmtComma(amt);
+    const amountExchanged = computeAmountExchanged({
+      currency: baseRow.currency,
+      cashNumber: amt,
+      exchangeRate: baseRow.exchangeRate,
+    });
+    return { ...baseRow, invoiceId, cashNumber, amountExchanged, invoiceOptions: baseRow.invoiceOptions, invoiceLoading: false };
+  };
+
+  const handleConfirm = () => {
+    const out = selections.map((sel) => buildSplitRow(sel.amount, sel.invoiceId));
+    if (remaining > 0.005) out.push(buildSplitRow(remaining, ""));
+    onConfirm(out);
+  };
+
+  if (!open) return null;
+
+  return ReactDOM.createPortal(
+    <div className="inv-splitter-overlay" onMouseDown={onClose}>
+      <div className="inv-splitter-modal" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="inv-splitter-header">
+          <div className="inv-splitter-title">Split Payment</div>
+          <button className="inv-splitter-close" type="button" onClick={onClose}>×</button>
+        </div>
+
+        <div className="inv-splitter-balance">
+          <div className="inv-splitter-balance-item">
+            <span className="lbl">Original</span>
+            <span className="val">{currency} {fmtAmt(originalAmount)}</span>
+          </div>
+          <div className="inv-splitter-balance-item">
+            <span className="lbl">Allocated</span>
+            <span className="val alloc">{currency} {fmtAmt(totalSelected)}</span>
+          </div>
+          <div className="inv-splitter-balance-item">
+            <span className="lbl">Remaining</span>
+            <span className={`val ${remaining <= 0.005 ? "zero" : "rem"}`}>{currency} {fmtAmt(remaining)}</span>
+          </div>
+        </div>
+
+        <div className="inv-splitter-body">
+          {invoiceLoading ? (
+            <div className="inv-splitter-empty">Loading invoices…</div>
+          ) : normalized.length === 0 ? (
+            <div className="inv-splitter-empty">No open invoices for this customer.</div>
+          ) : (
+            <table className="inv-splitter-table">
+              <thead>
+                <tr>
+                  <th className="inv-splitter-th-nbr">Invoice #</th>
+                  <th>Date</th>
+                  <th>Total ({currency})</th>
+                  <th>Allocate ({currency})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {normalized.map((inv) => {
+                  const sel = selections.find((s) => s.invoiceId === inv.id);
+                  const isSelected = !!sel;
+                  const canSelect = !isSelected && remaining > 0;
+                  return (
+                    <tr
+                      key={inv.id}
+                      className={isSelected ? "sel" : canSelect ? "" : "dim"}
+                      onClick={() => handleInvoiceClick(inv)}
+                    >
+                      <td className="inv-splitter-nbr">{inv.invoiceNumber}</td>
+                      <td>{inv.date}</td>
+                      <td className="inv-splitter-num">{fmtAmt(inv.grandTotal)}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        {isSelected ? (
+                          <input
+                            className="inv-splitter-amt-input"
+                            type="text"
+                            value={sel.amount}
+                            onChange={(e) => handleAmountChange(inv.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span className="inv-splitter-dash">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="inv-splitter-footer">
+          <div className="inv-splitter-info">
+            {selections.length > 0 && (
+              <span>
+                {selections.length} invoice{selections.length > 1 ? "s" : ""} selected
+                {remaining > 0.005 ? ` · ${currency} ${fmtAmt(remaining)} unallocated` : " · fully allocated"}
+              </span>
+            )}
+          </div>
+          <div className="inv-splitter-footer-btns">
+            <button type="button" className="inv-splitter-btn cancel" onClick={onClose}>Cancel</button>
+            <button type="button" className="inv-splitter-btn confirm" disabled={selections.length === 0} onClick={handleConfirm}>
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ✅ Main NewRecordModal Component (UPDATED)
 const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
   const { t } = useTranslation(); // ✅
@@ -416,6 +576,14 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
 
   const deleteRowAt = (idx) => {
     setRows((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const [splitter, setSplitter] = useState({ open: false, rowIndex: null });
+
+  const handleSplitConfirm = (splitRows) => {
+    const idx = splitter.rowIndex;
+    setRows((prev) => [...prev.slice(0, idx), ...splitRows, ...prev.slice(idx + 1)]);
+    setSplitter({ open: false, rowIndex: null });
   };
 
   const fetchCustomerInvoices = async (customerId) => {
@@ -775,6 +943,7 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
                 <th>{t("receivables.newRecord.headers.date")}</th>
                 <th>{t("receivables.newRecord.headers.invoiceNumber")}</th>
                 <th>{t("receivables.newRecord.headers.comments")}</th>
+                <th>Split</th>
               </tr>
             </thead>
 
@@ -917,6 +1086,20 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
                       onChange={(e) => handleInputChange(idx, "comments", e.target.value)}
                     />
                   </td>
+
+                  <td>
+                    {row.customerId && parseNum(row.cashNumber) > 0 && (
+                      <button
+                        type="button"
+                        className="inv-splitter-trigger"
+                        disabled={saving}
+                        title="Split this payment across invoices"
+                        onClick={() => setSplitter({ open: true, rowIndex: idx })}
+                      >
+                        Split
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -956,6 +1139,19 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
           deleteRowAt(rowMenu.rowIndex);
         }}
       />
+
+      {splitter.open && splitter.rowIndex != null && rows[splitter.rowIndex] && (
+        <InvoiceSplitterModal
+          open={splitter.open}
+          onClose={() => setSplitter({ open: false, rowIndex: null })}
+          onConfirm={handleSplitConfirm}
+          originalAmount={parseNum(rows[splitter.rowIndex].cashNumber)}
+          currency={rows[splitter.rowIndex].currency || "USD"}
+          invoices={rows[splitter.rowIndex].invoiceOptions || []}
+          invoiceLoading={rows[splitter.rowIndex].invoiceLoading || false}
+          baseRow={rows[splitter.rowIndex]}
+        />
+      )}
     </div>
   );
 };
