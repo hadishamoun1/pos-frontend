@@ -431,7 +431,7 @@
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  width: 780px;
+  width: 1100px;
   max-width: 95vw;
   max-height: 85vh;
   display: flex;
@@ -523,6 +523,7 @@
   top: 0;
   z-index: 1;
 }
+.inv-splitter-table thead th:last-child { width: 220px; }
 .inv-splitter-th-nbr { text-align: left !important; }
 .inv-splitter-table tbody tr {
   border-bottom: 1px solid #f1f5f9;
@@ -537,8 +538,34 @@
 .inv-splitter-num { text-align: right; font-variant-numeric: tabular-nums; }
 .inv-splitter-dash { color: #9ca3af; }
 
+.inv-splitter-allocate-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.inv-splitter-quick-btns {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.inv-splitter-quick {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.1s;
+  white-space: nowrap;
+}
+.inv-splitter-quick:hover { opacity: 0.8; }
+.inv-splitter-quick.excl     { background: #dbeafe; color: #1d4ed8; }
+.inv-splitter-quick.vat      { background: #fef3c7; color: #92400e; }
+.inv-splitter-quick.totalexcl{ background: #ede9fe; color: #5b21b6; }
+.inv-splitter-quick.total    { background: #d1fae5; color: #065f46; }
+
 .inv-splitter-amt-input {
-  width: 100%;
+  width: 90%;
   padding: 5px 8px;
   border: 1.5px solid #6366f1;
   border-radius: 6px;

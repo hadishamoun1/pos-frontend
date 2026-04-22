@@ -406,7 +406,9 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
         const invoiceNumber = inv.invoiceNumber ?? inv.invoice_number ?? "";
         const date = inv.date ? String(inv.date).slice(0, 10) : "";
         const grandTotal = Number(inv.grandTotal ?? inv.grand_total ?? 0);
-        return { id: id != null ? String(id) : "", invoiceNumber: String(invoiceNumber), date, grandTotal };
+        const totalWithoutVAT = Number(inv.totalWithoutVAT ?? inv.total_without_vat ?? 0);
+        const totalVAT = Number(inv.totalVAT ?? inv.total_vat ?? 0);
+        return { id: id != null ? String(id) : "", invoiceNumber: String(invoiceNumber), date, grandTotal, totalWithoutVAT, totalVAT };
       })
       .filter((x) => x.id);
   }, [invoices]);
@@ -434,6 +436,16 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
     if (!Number.isFinite(val) || val < 0) return;
     setSelections((prev) =>
       prev.map((s) => (s.invoiceId === invoiceId ? { ...s, amount: val } : s))
+    );
+  };
+
+  const handleQuickAmount = (invoiceId, quickAmt) => {
+    setSelections((prev) =>
+      prev.map((s) => {
+        if (s.invoiceId !== invoiceId) return s;
+        const budget = remaining + s.amount;
+        return { ...s, amount: parseFloat(Math.min(quickAmt, budget).toFixed(2)) };
+      })
     );
   };
 
@@ -489,7 +501,9 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
                 <tr>
                   <th className="inv-splitter-th-nbr">Invoice #</th>
                   <th>Date</th>
-                  <th>Total ({currency})</th>
+                  <th>Excl. VAT</th>
+                  <th>VAT</th>
+                  <th>Grand Total</th>
                   <th>Allocate ({currency})</th>
                 </tr>
               </thead>
@@ -506,16 +520,40 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
                     >
                       <td className="inv-splitter-nbr">{inv.invoiceNumber}</td>
                       <td>{inv.date}</td>
+                      <td className="inv-splitter-num">{fmtAmt(inv.totalWithoutVAT)}</td>
+                      <td className="inv-splitter-num">{fmtAmt(inv.totalVAT)}</td>
                       <td className="inv-splitter-num">{fmtAmt(inv.grandTotal)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {isSelected ? (
-                          <input
-                            className="inv-splitter-amt-input"
-                            type="text"
-                            value={sel.amount}
-                            onChange={(e) => handleAmountChange(inv.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          <div className="inv-splitter-allocate-cell" onClick={(e) => e.stopPropagation()}>
+                            <div className="inv-splitter-quick-btns">
+                              {inv.totalWithoutVAT > 0 && (
+                                <button type="button" className="inv-splitter-quick excl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT)}>
+                                  Excl. VAT
+                                </button>
+                              )}
+                              {inv.totalVAT > 0 && (
+                                <button type="button" className="inv-splitter-quick vat" onClick={() => handleQuickAmount(inv.id, inv.totalVAT)}>
+                                  VAT
+                                </button>
+                              )}
+                              {inv.totalWithoutVAT > 0 && (
+                                <button type="button" className="inv-splitter-quick totalexcl" onClick={() => handleQuickAmount(inv.id, inv.totalWithoutVAT)}>
+                                  Total excl. VAT
+                                </button>
+                              )}
+                              <button type="button" className="inv-splitter-quick total" onClick={() => handleQuickAmount(inv.id, inv.grandTotal)}>
+                                Grand Total
+                              </button>
+                            </div>
+                            <input
+                              className="inv-splitter-amt-input"
+                              type="text"
+                              value={sel.amount}
+                              onChange={(e) => handleAmountChange(inv.id, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
                         ) : (
                           <span className="inv-splitter-dash">—</span>
                         )}
