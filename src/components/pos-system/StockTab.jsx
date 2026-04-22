@@ -347,10 +347,16 @@ const StockTab = forwardRef(function StockTab(
       const signal = cancelInFlight();
       const params = { page: 1, limit: 200 };
 
-      const qParts = [];
-      if (nameChip) qParts.push(normalizeArabic(nameChip));
-      if (dimsChip) qParts.push(normalizeDigits(dimsChip.trim()));
-      if (qParts.length) params.q = qParts.join(" ");
+      if (nameChip) params.q = normalizeArabic(nameChip);
+
+      const raw = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
+      if (raw) {
+        if (looksLikeDims(raw)) {
+          params.q = [params.q, raw].filter(Boolean).join(" ");
+        } else if (isPlainNumber(raw)) {
+          params.length = Number(raw);
+        }
+      }
 
       const res = await axiosClient.get("/items/v1/real-variant-ledger", { params, signal });
       const { data: variants } = normalizeEnvelope(res.data);
@@ -371,6 +377,8 @@ const StockTab = forwardRef(function StockTab(
   }, [
     dimsChip,
     isActive,
+    isPlainNumber,
+    looksLikeDims,
     modalOpen,
     nameChip,
     normalizeArabic,
