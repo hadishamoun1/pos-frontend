@@ -4,6 +4,7 @@ import html2pdf from "html2pdf.js"; // (kept if you use it elsewhere)
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { axiosClient } from "../api/axiosClient";
+import { hasPerm } from "../auth/authz";
 import revoLogoSrc from "../revo-logo/revo.png";
 
 async function toBase64(url) {
@@ -135,7 +136,9 @@ const MODAL_CSS = `
   border: 1px solid #f59e0b; font-size: 11px; font-weight: 600;
   color: #92400e;
 }
-.invoice-modal-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.invoice-modal-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.invoice-modal-vat-toggle { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; user-select: none; }
+.invoice-modal-vat-toggle input { cursor: pointer; width: 15px; height: 15px; }
 .btn {
   border: 1px solid transparent; background: #fff; padding: 10px 14px;
   border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700;
@@ -421,7 +424,7 @@ export const INLINE_INVOICE_CSS = `
    ========================= */
 export function buildInvoiceHtml(
   invoiceData = {},
-  { inlineCss, baseHref = "/", editMode = false, isRevo = false, logoBase64 = "", forceHeaderOnG = false, shamounSigBase64 = "" } = {}
+  { inlineCss, baseHref = "/", editMode = false, isRevo = false, logoBase64 = "", forceHeaderOnG = false, shamounSigBase64 = "", forceShowVat = false } = {}
 ) {
   const {
     invoiceNumber = "",
@@ -703,7 +706,7 @@ ${styleTag}
     <div class="invoice-footer" id="source-footer" data-grandtotal="${grandTotal}" data-currency="${currencyCode}" data-vat="${vatPercentage}">
       <div class="footer-right">
         ${
-          Number(vatPercentage) > 0
+          (Number(vatPercentage) > 0 || forceShowVat)
             ? `
         <div class="footer-row">
           <span class="footer-label">${isLLCurrency ? "VAT" : "VAT LBP"}</span>
@@ -719,7 +722,7 @@ ${styleTag}
             : ""
         }
         <div class="footer-total-line" style="${
-          Number(vatPercentage) === 0 ? "padding-top: 80px;" : ""
+          Number(vatPercentage) === 0 && !forceShowVat ? "padding-top: 80px;" : ""
         }">
           <strong class="footer-total-label">${
             invoiceType === "G" ? "المجموع" : "المجموع الصافي"
@@ -1000,6 +1003,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
 
   const [isRevo, setIsRevo] = useState(false);
   const [logoBase64, setLogoBase64] = useState("");
+  const [showVatAtZero, setShowVatAtZero] = useState(false);
 
   useEffect(() => {
     axiosClient.get("/company").then(({ data }) => {
@@ -1054,9 +1058,10 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
       editMode: editMode && !savedEditedData,
       isRevo,
       logoBase64,
+      forceShowVat: showVatAtZero,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceData, editMode, savedEditedData, renderVersion, isRevo, logoBase64]);
+  }, [invoiceData, editMode, savedEditedData, renderVersion, isRevo, logoBase64, showVatAtZero]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -1569,6 +1574,17 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
             </div>
 
             <div className="invoice-modal-controls">
+              {Number(invoiceData?.vatPercentage ?? 11) === 0 && hasPerm("invoice.showVatZero") && (
+                <label className="invoice-modal-vat-toggle" title="Show VAT row even at 0%">
+                  <input
+                    type="checkbox"
+                    checked={showVatAtZero}
+                    onChange={(e) => setShowVatAtZero(e.target.checked)}
+                  />
+                  Show VAT
+                </label>
+              )}
+
               <button
                 onClick={() => {
                   if (savedEditedData) {
