@@ -1,48 +1,46 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-import LoginPage from "./components/login/login";
-import SignupPage from "./components/signup/signup";
-import DashboardPage from "./components/dashboard/dashboard";
-import POSSystemPage from "./components/pos-system/pos";
-import AccountingPage from "./components/recievables/recievables";
-import PurchasesInvoicePage from "./components/purchases-invoice/purchases-invoice";
-import InventoryPage from "./components/inventory/inventory";
-import SuppliersPage from "./components/suppliers/suppliers";
-import ItemCreationPage from "./components/items/items";
-import PricingPage from "./components/cost-estimator/pricingPage";
-import CreatePreviewCustomers from "./components/customers/customers";
-import AccountsPage from "./components/accounts/accounts";
-import PaymentVoucherTable from "./components/payments/payments";
-import JournalVoucherPage from "./components/vouchers/vouchers";
-import InventoryActivityPage from "./components/inventory-activity/inventory-activity";
-import ReportsPage from "./components/pos-system/Reports";
-import SqmPiecesPage from "./components/sqmPiece/sqmPiece";
 import { BlinkingItemsProvider } from "./components/blink/blink-cards";
-import SettingsPage from "./components/settings/settings";
-import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
-import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
-import UsersPage from "./components/users/users";
-import FaceEnrollPage from "./components/face-enroll/FaceEnrollPage";
-import RecordingPage from "./components/recording/RecordingPage";
-
+import { LanguageProvider } from "./components/contexts/LanguageContext";
+import { hasPerm } from "./components/auth/authz";
 import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import { hasPerm } from "./components/auth/authz";
-
-import MaintenanceModePage from "./components/settings/MaintenanceModePage";
 import MaintenanceGate from "./components/settings/MaintenanceGate";
-import SecurityGate from "./components/alerts/Securitygate"
-import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
-import EmployeeDocManager from "./components/Employees/EmployeeDocManager";
-import ActivityMonitor, { useHeartbeat } from "./components/activity-monitor/ActivityMonitor";
+import SecurityGate from "./components/alerts/Securitygate";
+import { useHeartbeat } from "./components/activity-monitor/useHeartbeat";
 
-import { LanguageProvider } from "./components/contexts/LanguageContext";
+// Lazy-loaded pages — only downloaded when the user navigates to them
+const LoginPage               = lazy(() => import("./components/login/login"));
+const SignupPage               = lazy(() => import("./components/signup/signup"));
+const DashboardPage            = lazy(() => import("./components/dashboard/dashboard"));
+const POSSystemPage            = lazy(() => import("./components/pos-system/pos"));
+const AccountingPage           = lazy(() => import("./components/recievables/recievables"));
+const PurchasesInvoicePage     = lazy(() => import("./components/purchases-invoice/purchases-invoice"));
+const InventoryPage            = lazy(() => import("./components/inventory/inventory"));
+const SuppliersPage            = lazy(() => import("./components/suppliers/suppliers"));
+const ItemCreationPage         = lazy(() => import("./components/items/items"));
+const PricingPage              = lazy(() => import("./components/cost-estimator/pricingPage"));
+const CreatePreviewCustomers   = lazy(() => import("./components/customers/customers"));
+const AccountsPage             = lazy(() => import("./components/accounts/accounts"));
+const PaymentVoucherTable      = lazy(() => import("./components/payments/payments"));
+const JournalVoucherPage       = lazy(() => import("./components/vouchers/vouchers"));
+const InventoryActivityPage    = lazy(() => import("./components/inventory-activity/inventory-activity"));
+const ReportsPage              = lazy(() => import("./components/pos-system/Reports"));
+const SqmPiecesPage            = lazy(() => import("./components/sqmPiece/sqmPiece"));
+const SettingsPage             = lazy(() => import("./components/settings/settings"));
+const CutsQueuePage            = lazy(() => import("./components/cuts-control/CutsQueuePage"));
+const InvoiceDetailsPage       = lazy(() => import("./components/Viewing/InvoiceDetailsPage"));
+const UsersPage                = lazy(() => import("./components/users/users"));
+const FaceEnrollPage           = lazy(() => import("./components/face-enroll/FaceEnrollPage"));
+const RecordingPage            = lazy(() => import("./components/recording/RecordingPage"));
+const MaintenanceModePage      = lazy(() => import("./components/settings/MaintenanceModePage"));
+const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
+const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
+const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
 
 const queryClient = new QueryClient();
 
-// Emits a heartbeat every 60 s for any logged-in user on any page
 function HeartbeatEmitter() {
   useHeartbeat();
   return null;
@@ -54,61 +52,61 @@ function App() {
       <LanguageProvider>
         <BlinkingItemsProvider>
           <Router>
-            {/* ✅ Global gates */}
             <MaintenanceGate />
             <SecurityGate />
             <HeartbeatEmitter />
 
-            <Routes>
-              {/* ✅ Public */}
-              <Route path="/" element={<LoginPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/maintenance" element={<MaintenanceModePage />} />
+            <Suspense fallback={null}>
+              <Routes>
+                {/* Public */}
+                <Route path="/" element={<LoginPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/maintenance" element={<MaintenanceModePage />} />
 
-              {/* ✅ Protected */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/pos-system" element={<POSSystemPage />} />
-                <Route path="/recivables" element={<AccountingPage />} />
-                <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
-                <Route path="/inventory" element={<InventoryPage />} />
-                <Route path="/suppliers" element={<SuppliersPage />} />
-                <Route path="/items" element={<ItemCreationPage />} />
-                <Route path="/cost-estimator" element={<PricingPage />} />
-                <Route path="/customers" element={<CreatePreviewCustomers />} />
-                <Route path="/accounts" element={<AccountsPage />} />
-                <Route path="/payments" element={<PaymentVoucherTable />} />
-                <Route path="/transactions" element={<JournalVoucherPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/sqm" element={<SqmPiecesPage />} />
-                <Route path="/inventory-activity" element={<InventoryActivityPage />} />
-                <Route path="/cuts-control" element={<CutsQueuePage />} />
-                <Route path="/viewing" element={<InvoiceDetailsPage />} />
-                <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
-                <Route path="/cash-collections" element={<CashCollectionsPage />} />
-                <Route path="/employee-files" element={<EmployeeDocManager />} />
-                <Route path="/activity-monitor" element={<ActivityMonitor />} />
+                {/* Protected */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/pos-system" element={<POSSystemPage />} />
+                  <Route path="/recivables" element={<AccountingPage />} />
+                  <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
+                  <Route path="/inventory" element={<InventoryPage />} />
+                  <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/items" element={<ItemCreationPage />} />
+                  <Route path="/cost-estimator" element={<PricingPage />} />
+                  <Route path="/customers" element={<CreatePreviewCustomers />} />
+                  <Route path="/accounts" element={<AccountsPage />} />
+                  <Route path="/payments" element={<PaymentVoucherTable />} />
+                  <Route path="/transactions" element={<JournalVoucherPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/sqm" element={<SqmPiecesPage />} />
+                  <Route path="/inventory-activity" element={<InventoryActivityPage />} />
+                  <Route path="/cuts-control" element={<CutsQueuePage />} />
+                  <Route path="/viewing" element={<InvoiceDetailsPage />} />
+                  <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
+                  <Route path="/cash-collections" element={<CashCollectionsPage />} />
+                  <Route path="/employee-files" element={<EmployeeDocManager />} />
+                  <Route path="/activity-monitor" element={<ActivityMonitor />} />
+                  <Route path="/face-enroll" element={<FaceEnrollPage />} />
 
-                <Route path="/face-enroll" element={<FaceEnrollPage />} />
+                  {/* Recording — permission-gated */}
+                  <Route
+                    path="/recording"
+                    element={
+                      hasPerm("recording.view")
+                        ? <RecordingPage />
+                        : <Navigate to="/dashboard" replace />
+                    }
+                  />
 
-                {/* ✅ Admin-only */}
-                <Route element={<AdminRoute />}>
-                  <Route path="/users" element={<UsersPage />} />
+                  {/* Admin-only */}
+                  <Route element={<AdminRoute />}>
+                    <Route path="/users" element={<UsersPage />} />
+                  </Route>
                 </Route>
-
-                {/* ✅ Recording — permission-gated */}
-                <Route
-                  path="/recording"
-                  element={
-                    hasPerm("recording.view")
-                      ? <RecordingPage />
-                      : <Navigate to="/dashboard" replace />
-                  }
-                />
-              </Route>
-            </Routes>
+              </Routes>
+            </Suspense>
           </Router>
         </BlinkingItemsProvider>
       </LanguageProvider>

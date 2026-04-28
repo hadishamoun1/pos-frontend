@@ -53,19 +53,6 @@ function alertIcon(type) {
 }
 
 // ─── Heartbeat: pings every 60 s while logged in ──────────────────────────
-export function useHeartbeat() {
-  useEffect(() => {
-    const ping = () => {
-      if (!sessionStorage.getItem("token")) return;
-      axiosClient.post("/activity-log/heartbeat").catch(() => {});
-    };
-    ping();
-    const id = setInterval(ping, 60_000);
-    return () => clearInterval(id);
-  }, []);
-}
-
-// ══════════════════════════════════════════════════════════════════════════
 export default function ActivityMonitor() {
   const navigate = useNavigate();
 
