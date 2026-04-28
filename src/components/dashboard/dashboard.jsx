@@ -37,6 +37,7 @@ const sections = [
   { key: "viewing", path: "/viewing", image: "/assets/payment-voucher.webp", perm: "viewing.view" },
   { key: "cashCollections", path: "/cash-collections", image: "/assets/settings.png", perm: "cashFlow.view" },
   { key: "employeeFiles", path: "/employee-files", image: "/assets/settings.png", perm: "employeeFiles.view" },
+  { key: "activityMonitor", path: "/activity-monitor", image: "/assets/settings.png", perm: "activity.view" },
   { key: "users", path: "/users", image: "/assets/settings.png", perm: "users.manage" },
 ];
 

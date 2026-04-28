@@ -192,6 +192,7 @@ export const en = {
       viewing: "Viewing",
       cashCollections: "Cash Collections",
       employeeFiles: "Employee Files",
+      activityMonitor: "Activity Monitor",
       users: "Users",
     },
   },

@@ -1,6 +1,7 @@
 // src/pages/Reports/ReportsPage.jsx
 import React, { useState } from "react";
 import "./Reports.css";
+import { logActivity } from "../api/logActivity";
 import TrialBalance from "./TrialBalance";
 import AccountStatement from "./AccountStatement";
 import CostAnalysis from "./CostAnalysis";
@@ -77,6 +78,13 @@ export default function ReportsPage() {
   const handleSetActive = (key) => {
     sessionStorage.setItem("reports_active_tab", key);
     setActive(key);
+    const tab = TABS.find((t) => t.key === key);
+    logActivity({
+      action: 'REPORT_OPENED',
+      entityType: 'Report',
+      description: `Opened report: ${tab?.label || key}`,
+      metadata: { reportKey: key },
+    });
   };
 
   const noAccess =

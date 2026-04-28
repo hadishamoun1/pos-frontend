@@ -1,7 +1,8 @@
 // src/pages/Reports/TrialBalance.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./TrialBalance.css";
-import { axiosClient } from "../api/axiosClient"; 
+import { axiosClient } from "../api/axiosClient";
+import { logActivity } from "../api/logActivity";
 
 const ENDPOINTS = {
   arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
@@ -324,6 +325,15 @@ export default function TrialBalance() {
   const fetchTB = async () => {
     setLoading(true);
     setErr("");
+    const accountRange = prefixes.length
+      ? `prefixes: ${mainPrefixes}`
+      : `${mainFrom || '—'} → ${mainTo || '—'}`;
+    logActivity({
+      action: 'REPORT_RUN',
+      entityType: 'Report',
+      description: `Ran Trial Balance (${reportType}) — accounts ${accountRange}, ${from} to ${to}, currency: ${currency || 'all'}, type: ${invoiceType}`,
+      metadata: { reportType, mainFrom, mainTo, mainPrefixes, from, to, currency, invoiceType, level },
+    });
     try {
       const endpoint =
         reportType === "STANDARD"
@@ -503,6 +513,13 @@ export default function TrialBalance() {
   };
 
   const exportCSV = () => {
+    const accountRange = prefixes.length ? `prefixes: ${mainPrefixes}` : `${mainFrom || '—'} → ${mainTo || '—'}`;
+    logActivity({
+      action: 'REPORT_EXPORTED',
+      entityType: 'Report',
+      description: `Exported Trial Balance CSV — accounts ${accountRange}, ${from} to ${to}`,
+      metadata: { reportType, mainFrom, mainTo, mainPrefixes, from, to, currency, invoiceType },
+    });
     const displayCode = (r) =>
       r?.parentCode ? `${r.parentCode}-${r.accountCode}` : r.accountCode;
 
@@ -595,6 +612,13 @@ export default function TrialBalance() {
 
   // ---------- Print (A4 iframe technique) ----------
   const handlePrint = () => {
+    const accountRange = prefixes.length ? `prefixes: ${mainPrefixes}` : `${mainFrom || '—'} → ${mainTo || '—'}`;
+    logActivity({
+      action: 'REPORT_PRINTED',
+      entityType: 'Report',
+      description: `Printed Trial Balance — accounts ${accountRange}, ${from} to ${to}, currency: ${currency || 'all'}`,
+      metadata: { reportType, mainFrom, mainTo, mainPrefixes, from, to, currency, invoiceType },
+    });
     const root = printRef.current;
     if (!root) return;
 

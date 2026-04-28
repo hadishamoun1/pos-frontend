@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { axiosClient } from "../api/axiosClient";
+import { logActivity } from "../api/logActivity";
 import "./Customeractivityreport.css";
 
 const fmt = (v) => {
@@ -32,6 +33,12 @@ export default function CustomerActivityReport() {
     setLoading(true);
     setError("");
     setData(null);
+    logActivity({
+      action: 'REPORT_RUN',
+      entityType: 'Report',
+      description: `Ran Customer Activity — ${from} to ${to}, type: ${type}${minInvoices ? `, min invoices: ${minInvoices}` : ''}${minPaid ? `, min paid: ${minPaid}` : ''}`,
+      metadata: { from, to, type, minInvoices, minPaid },
+    });
     try {
       const params = { from, to };
       if (type !== "ALL") params.type = type;
@@ -58,6 +65,12 @@ export default function CustomerActivityReport() {
 
   const handlePrint = () => {
     if (!data) return;
+    logActivity({
+      action: 'REPORT_PRINTED',
+      entityType: 'Report',
+      description: `Printed Customer Activity — ${from} to ${to}, type: ${type}`,
+      metadata: { from, to, type },
+    });
     const printDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const copiedStyles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
       .map((n) => n.outerHTML).join("");

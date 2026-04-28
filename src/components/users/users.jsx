@@ -32,6 +32,7 @@ const PERMISSION_GROUPS = [
       "viewing.view",
       "employeeFiles.view",
       "cashFlow.view",
+      "activity.view",
     ],
   },
   {
@@ -152,6 +153,16 @@ const PERMISSION_GROUPS = [
     "payments.create",
     "payments.update",
     "payments.delete",
+    ],
+  },
+  {
+    title: "Activity Monitor Permissions",
+    description: "Controls access to the Activity Monitor page and its individual tabs.",
+    perms: [
+      "activity.view",
+      "activity.liveStatus",
+      "activity.log",
+      "activity.fraudAlerts",
     ],
   },
   {

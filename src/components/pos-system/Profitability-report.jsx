@@ -1,6 +1,7 @@
 // src/components/reports/ProfitabilityReport.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { axiosClient } from '../api/axiosClient';
+import { logActivity } from '../api/logActivity';
 import './Profitability-report.css';
 
 const ProfitabilityReport = () => {
@@ -48,6 +49,12 @@ const ProfitabilityReport = () => {
 
   const loadReport = async () => {
     setLoading(true);
+    logActivity({
+      action: 'REPORT_RUN',
+      entityType: 'Report',
+      description: `Ran Profitability Report — ${filters.from} to ${filters.to}${filters.customerId ? `, customer: ${filters.customerId}` : ''}${filters.invoiceType ? `, type: ${filters.invoiceType}` : ''}`,
+      metadata: { ...filters, viewMode },
+    });
     try {
       const res = await axiosClient.get(`/reports/profitability?${buildParams()}`);
       setData(res?.data || null);
@@ -110,6 +117,12 @@ const ProfitabilityReport = () => {
     const customerName = filters.customerId
       ? customers.find((c) => String(c.id) === String(filters.customerId))?.customerName || 'All Customers'
       : 'All Customers';
+    logActivity({
+      action: 'REPORT_PRINTED',
+      entityType: 'Report',
+      description: `Printed Profitability Report — ${filters.from} to ${filters.to}, customer: ${customerName}`,
+      metadata: { ...filters, customerName, viewMode },
+    });
 
     const viewLabels = {
       'detailed':    'Detailed View',

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Reports.css";
 import { axiosClient } from "../api/axiosClient";
+import { logActivity } from "../api/logActivity";
 import revoLogoSrc from "../revo-logo/revo.png"; // ✅ same level as this file
 
 const ENDPOINTS = {
@@ -138,6 +139,12 @@ export default function AccountStatement() {
     setAccountId(a.id);
     setAccSearch("");
     setAccOpen(false);
+    logActivity({
+      action: 'REPORT_ACCOUNT_SELECTED',
+      entityType: 'Report',
+      description: `Account Statement — selected account ${a.code || ''} ${a.name || ''}`.trim(),
+      metadata: { accountId: a.id, accountCode: a.code, accountName: a.name },
+    });
   };
 
   function flattenTree(nodes) {
@@ -174,6 +181,12 @@ export default function AccountStatement() {
     setErr("");
     setItems([]);
     setMeta(null);
+    logActivity({
+      action: 'REPORT_RUN',
+      entityType: 'Report',
+      description: `Ran Account Statement — account ${accountNo || accountId}, ${from} to ${to}, type: ${type}, currency: ${currency}`,
+      metadata: { accountId, accountCode: accountNo, from, to, type, currency },
+    });
     try {
       const sel = parseSelected(accountId);
       const params = sanitizeParams({
@@ -235,6 +248,12 @@ export default function AccountStatement() {
   };
 
   const exportCSV = () => {
+    logActivity({
+      action: 'REPORT_EXPORTED',
+      entityType: 'Report',
+      description: `Exported Account Statement CSV — account ${accountNo}, ${from} to ${to}`,
+      metadata: { accountCode: accountNo, accountName: clientName, from, to, currency },
+    });
     const header = ["Date","JV Number","Doc No.","Kind","Description","Debit","Credit","Balance After"].join(",");
     const lines = items.map((r) => [
       r.date ?? "", r.jvNumber ?? "", r.docNbr ?? "", r.kind ?? "",
@@ -257,6 +276,12 @@ export default function AccountStatement() {
   const currencyCode = meta?.currency || "-";
 
   const handlePrint = () => {
+    logActivity({
+      action: 'REPORT_PRINTED',
+      entityType: 'Report',
+      description: `Printed Account Statement — account ${accountNo} ${clientName}, ${from} to ${to}`,
+      metadata: { accountCode: accountNo, accountName: clientName, from, to, currency },
+    });
     const printableRoot = printRef.current;
     if (!printableRoot) return;
 

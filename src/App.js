@@ -33,10 +33,17 @@ import MaintenanceGate from "./components/settings/MaintenanceGate";
 import SecurityGate from "./components/alerts/Securitygate"
 import CashCollectionsPage from "./components/cash-collection/CashCollectionsPage";
 import EmployeeDocManager from "./components/Employees/EmployeeDocManager";
+import ActivityMonitor, { useHeartbeat } from "./components/activity-monitor/ActivityMonitor";
 
 import { LanguageProvider } from "./components/contexts/LanguageContext";
 
 const queryClient = new QueryClient();
+
+// Emits a heartbeat every 60 s for any logged-in user on any page
+function HeartbeatEmitter() {
+  useHeartbeat();
+  return null;
+}
 
 function App() {
   return (
@@ -46,7 +53,8 @@ function App() {
           <Router>
             {/* ✅ Global gates */}
             <MaintenanceGate />
-            <SecurityGate /> 
+            <SecurityGate />
+            <HeartbeatEmitter />
 
             <Routes>
               {/* ✅ Public */}
@@ -78,6 +86,7 @@ function App() {
                 <Route path="/journal-voucher/:id?" element={<JournalVoucherPage />} />
                 <Route path="/cash-collections" element={<CashCollectionsPage />} />
                 <Route path="/employee-files" element={<EmployeeDocManager />} />
+                <Route path="/activity-monitor" element={<ActivityMonitor />} />
 
                 {/* ✅ Admin-only */}
                 <Route element={<AdminRoute />}>

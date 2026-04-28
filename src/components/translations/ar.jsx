@@ -192,6 +192,7 @@ export const ar = {
       viewing: "عرض الفواتير",
       cashCollections: "تحصيلات النقد",
       employeeFiles: "ملفات الموظفين",
+      activityMonitor: "مراقبة النشاط",
       users: "المستخدمون",
     },
   },

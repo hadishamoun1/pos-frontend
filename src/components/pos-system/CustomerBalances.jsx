@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { axiosClient } from "../api/axiosClient";
+import { logActivity } from "../api/logActivity";
 import "./CustomerBalances.css"; 
 
 export default function CustomerBalances() {
@@ -18,7 +19,12 @@ export default function CustomerBalances() {
     setLoading(true);
     setError("");
     setData(null);
-
+    logActivity({
+      action: 'REPORT_RUN',
+      entityType: 'Report',
+      description: `Ran Customer Balances — as of ${toDate}, type: ${type}${minBalance ? `, min balance: ${minBalance}` : ''}`,
+      metadata: { toDate, type, minBalance },
+    });
     try {
       const params = { to: toDate };
       if (type !== "ALL") params.type = type;
@@ -43,6 +49,12 @@ export default function CustomerBalances() {
   };
 
   const handlePrint = () => {
+    logActivity({
+      action: 'REPORT_PRINTED',
+      entityType: 'Report',
+      description: `Printed Customer Balances — as of ${toDate}, type: ${type}`,
+      metadata: { toDate, type, minBalance },
+    });
     const printableRoot = printRef.current;
     if (!printableRoot) return;
 
