@@ -211,14 +211,14 @@ const LoginPage = () => {
       let tries = 0;
 
       // Get baseline face position
-      while (!baseline && tries < 20) {
+      while (!baseline && tries < 10) {
         tries++;
         const d = await faceapi
           .detectSingleFace(
             videoRef.current,
             new faceapi.TinyFaceDetectorOptions({
-              inputSize: 320,
-              scoreThreshold: 0.5,
+              inputSize: 224,
+              scoreThreshold: 0.45,
             })
           )
           .withFaceLandmarks();
@@ -231,7 +231,7 @@ const LoginPage = () => {
           };
         } else {
           setLivenessStatus("No face detected. Look straight at the camera...");
-          await wait(120);
+          await wait(80);
         }
       }
 
@@ -245,19 +245,19 @@ const LoginPage = () => {
       const startedAt = Date.now();
 
       // Detect horizontal movement
-      while (Date.now() - startedAt < 4000) {
+      while (Date.now() - startedAt < 2500) {
         const d = await faceapi
           .detectSingleFace(
             videoRef.current,
             new faceapi.TinyFaceDetectorOptions({
-              inputSize: 320,
-              scoreThreshold: 0.5,
+              inputSize: 224,
+              scoreThreshold: 0.45,
             })
           )
           .withFaceLandmarks();
 
         if (!d?.detection?.box) {
-          await wait(80);
+          await wait(50);
           continue;
         }
 
@@ -271,7 +271,7 @@ const LoginPage = () => {
           break;
         }
 
-        await wait(80);
+        await wait(50);
       }
 
       if (!passed) {
@@ -314,8 +314,8 @@ const LoginPage = () => {
         .detectSingleFace(
           videoRef.current,
           new faceapi.TinyFaceDetectorOptions({
-            inputSize: 320,
-            scoreThreshold: 0.5,
+            inputSize: 224,
+            scoreThreshold: 0.45,
           })
         )
         .withFaceLandmarks()
