@@ -99,6 +99,10 @@ export default function FaceEnrollPage() {
 
   async function startCamera() {
     setErr(""); setLastResult(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErr("Camera access requires HTTPS. Please open this page over https://");
+      return;
+    }
     try {
       if (!modelsReady) await loadModels();
       stopCamera();

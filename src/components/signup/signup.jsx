@@ -153,6 +153,10 @@ const SignupPage = () => {
 
   const startCamera = async () => {
     setErr("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErr("Camera access requires HTTPS. Please open this page over https://");
+      return;
+    }
     try {
       if (!modelsReady) {
         await loadFaceModels();
