@@ -40,7 +40,7 @@ const sections = [
   { key: "activityMonitor", path: "/activity-monitor", image: "/assets/settings.png", perm: "activity.view" },
   { key: "users", path: "/users", image: "/assets/settings.png", perm: "users.manage" },
   { key: "faceEnroll", path: "/face-enroll", image: "/assets/settings.png", perm: "faceEnroll.view" },
-  { key: "recording", path: "/recording", image: "/assets/settings.png", perm: "users.manage" },
+  { key: "recording", path: "/recording", image: "/assets/settings.png", perm: "recording.view" },
 ];
 
 const DashboardPage = () => {

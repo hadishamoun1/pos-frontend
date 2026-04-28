@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import LoginPage from "./components/login/login";
@@ -29,6 +29,7 @@ import RecordingPage from "./components/recording/RecordingPage";
 
 import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { hasPerm } from "./components/auth/authz";
 
 import MaintenanceModePage from "./components/settings/MaintenanceModePage";
 import MaintenanceGate from "./components/settings/MaintenanceGate";
@@ -95,8 +96,17 @@ function App() {
                 {/* ✅ Admin-only */}
                 <Route element={<AdminRoute />}>
                   <Route path="/users" element={<UsersPage />} />
-                  <Route path="/recording" element={<RecordingPage />} />
                 </Route>
+
+                {/* ✅ Recording — permission-gated */}
+                <Route
+                  path="/recording"
+                  element={
+                    hasPerm("recording.view")
+                      ? <RecordingPage />
+                      : <Navigate to="/dashboard" replace />
+                  }
+                />
               </Route>
             </Routes>
           </Router>

@@ -160,7 +160,7 @@ const PERMISSION_GROUPS = [
   {
     title: "Admin Permissions",
     description: "Only admins should have these.",
-    perms: ["users.manage", "faceEnroll.view"],
+    perms: ["users.manage", "faceEnroll.view", "recording.view"],
   },
 ];
 
