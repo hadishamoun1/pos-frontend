@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PayeeModal from "./PayeeModal";
 import NotificationModal from "../recievables/NotificationModal";
 import "./newPaymentModal.css";
@@ -39,6 +39,7 @@ const PaymentsModal = ({ onClose }) => {
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [activeRowIndex, setActiveRowIndex] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [isNotificationVisible, setIsNotificationVisible] = useState(false);
   const [notificationData, setNotificationData] = useState({
     type: "",
@@ -170,7 +171,8 @@ const PaymentsModal = ({ onClose }) => {
   };
 
   const handleSubmit = async () => {
-    if (isSaving) return;
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       const payload = rows.map((row) => ({
@@ -220,6 +222,7 @@ const PaymentsModal = ({ onClose }) => {
       });
       setIsNotificationVisible(true);
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./payments.css";
 import PaymentsModal from "./newPaymentModal";
 import EditPaymentModal from "./editPaymentModal";
@@ -16,6 +16,8 @@ const PaymentsPage = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [rowToEdit, setRowToEdit] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [isEditSaving, setIsEditSaving] = useState(false);
+  const isEditSavingRef = useRef(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
@@ -133,6 +135,9 @@ const PaymentsPage = () => {
   };
 
   const handleSaveEdit = async (updatedRow) => {
+    if (isEditSavingRef.current) return;
+    isEditSavingRef.current = true;
+    setIsEditSaving(true);
     try {
       const res = await axiosClient.patch(
         `/payment-vouchers/${updatedRow.id}`,
@@ -168,6 +173,9 @@ const PaymentsPage = () => {
         type: "error",
         message: String(msg),
       });
+    } finally {
+      isEditSavingRef.current = false;
+      setIsEditSaving(false);
     }
   };
 
@@ -514,6 +522,7 @@ const PaymentsPage = () => {
           row={rowToEdit}
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveEdit}
+          isSaving={isEditSaving}
         />
       )}
 

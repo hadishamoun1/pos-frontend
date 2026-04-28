@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PayeeModal from "./PayeeModal";
 import "./editPaymentModal.css";
 
-const EditPaymentModal = ({ onClose, row, onSave }) => {
+const EditPaymentModal = ({ onClose, row, onSave, isSaving }) => {
   const [rowData, setRowData] = useState({
     payee: "",
     payeeType: "",
@@ -157,8 +157,8 @@ const EditPaymentModal = ({ onClose, row, onSave }) => {
         <div className="edit-payment-modal-header">
           <h1>Edit Payment Voucher</h1>
           <div className="edit-payment-modal-actions">
-            <button onClick={handleSave} className="edit-payment-modal-save">Save</button>
-            <button onClick={onClose} className="edit-payment-modal-cancel">Cancel</button>
+            <button onClick={handleSave} className="edit-payment-modal-save" disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</button>
+            <button onClick={onClose} className="edit-payment-modal-cancel" disabled={isSaving}>Cancel</button>
           </div>
         </div>
 

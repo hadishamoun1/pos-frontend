@@ -195,6 +195,7 @@ export const en = {
       activityMonitor: "Activity Monitor",
       users: "Users",
       faceEnroll: "Face Login Enrollment",
+      recording: "Recording Control",
     },
   },
 

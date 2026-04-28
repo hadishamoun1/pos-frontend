@@ -103,10 +103,6 @@ const LoginPage = () => {
 
   const startCamera = async () => {
     setErr("");
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setErr("Camera access requires HTTPS. Please open this page over https://");
-      return;
-    }
     try {
       stopCamera();
 
@@ -281,27 +277,20 @@ const LoginPage = () => {
     try {
       await runTurnHeadLeftChallenge();
 
-      // Give the user time to re-center after the head-turn challenge
-      setFaceStatus("✅ Liveness passed — now look straight at the camera...");
-      await wait(1800);
-
-      // Retry face detection up to 5 times so a brief delay doesn't fail the whole scan
       setFaceStatus("Detecting face...");
-      let detection = null;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        detection = await faceapi
-          .detectSingleFace(
-            videoRef.current,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
-          )
-          .withFaceLandmarks()
-          .withFaceDescriptor();
-        if (detection?.descriptor) break;
-        await wait(400);
-      }
+      const detection = await faceapi
+        .detectSingleFace(
+          videoRef.current,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 320,
+            scoreThreshold: 0.5,
+          })
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptor();
 
       if (!detection || !detection.descriptor) {
-        throw new Error("No face detected. Please look straight at the camera in good light.");
+        throw new Error("No face detected. Please look at the camera in good light.");
       }
 
       const embedding = Array.from(detection.descriptor);
@@ -395,16 +384,6 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetFaceFlow = () => {
-    setErr("");
-    setFaceStatus("");
-    setFaceEmbedding(null);
-    setIdentifiedUser(null);
-    setFacePassword("");
-    setLivenessPassed(false);
-    setLivenessStatus("");
   };
 
   return (
@@ -510,6 +489,13 @@ const LoginPage = () => {
 
         <div style={uiMsgStyles.tip}>
           Look at the camera and click Scan Face. Turn your head left when asked, then enter your password.
+        </div>
+
+        <div className="create-acc">
+          Don't have an account?{" "}
+          <a className="link-login-signup" href="/Signup">
+            Sign up
+          </a>
         </div>
       </div>
     </div>

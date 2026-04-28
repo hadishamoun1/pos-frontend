@@ -195,6 +195,7 @@ export const ar = {
       activityMonitor: "مراقبة النشاط",
       users: "المستخدمون",
       faceEnroll: "تسجيل بصمة الوجه",
+      recording: "التحكم بالتسجيل",
     },
   },
 

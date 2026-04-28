@@ -25,6 +25,7 @@ import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
 import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
 import UsersPage from "./components/users/users";
 import FaceEnrollPage from "./components/face-enroll/FaceEnrollPage";
+import RecordingPage from "./components/recording/RecordingPage";
 
 import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -94,6 +95,7 @@ function App() {
                 {/* ✅ Admin-only */}
                 <Route element={<AdminRoute />}>
                   <Route path="/users" element={<UsersPage />} />
+                  <Route path="/recording" element={<RecordingPage />} />
                 </Route>
               </Route>
             </Routes>
