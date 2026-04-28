@@ -10,9 +10,6 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const LoginPage = () => {
   const { setLanguage } = useLanguage();
 
-  const [mode, setMode] = useState("password"); // "password" | "face"
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [facePassword, setFacePassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -153,8 +150,6 @@ const LoginPage = () => {
   };
 
   useEffect(() => {
-    if (mode !== "face") return;
-
     let mounted = true;
     (async () => {
       try {
@@ -170,46 +165,7 @@ const LoginPage = () => {
       stopCamera();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
-
-  const handleNormalLogin = async (e) => {
-    e.preventDefault();
-    if (loading) return;
-
-    setErr("");
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const msg =
-          (Array.isArray(data?.message) ? data.message.join(", ") : data?.message) ||
-          "Login failed";
-        throw new Error(msg);
-      }
-
-      if (!data?.access_token) throw new Error("No token returned from server");
-
-      sessionStorage.setItem("token", data.access_token);
-
-      if (data?.user?.language) {
-        setLanguage(data.user.language);
-      }
-
-      window.location.href = "/dashboard";
-    } catch (e2) {
-      setErr(e2?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   // ✅ Liveness check: ask user to turn head left
   const runTurnHeadLeftChallenge = async () => {
@@ -457,183 +413,103 @@ const LoginPage = () => {
         <div className="welcome-text">Welcome to Shamoun Co.</div>
         <h2>Login</h2>
 
-        {/* Mode switch */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div
+          style={{
+            marginBottom: 10,
+            borderRadius: 10,
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.2)",
+            background: "#111",
+          }}
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              width: "100%",
+              maxHeight: 260,
+              objectFit: "cover",
+              display: "block",
+              background: "#111",
+            }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button
             type="button"
-            onClick={() => {
-              setMode("password");
-              resetFaceFlow();
-              stopCamera();
-            }}
-            style={{
-              flex: 1,
-              opacity: mode === "password" ? 1 : 0.75,
-              border: mode === "password" ? "2px solid #fff" : undefined,
-            }}
+            onClick={startCamera}
+            disabled={faceBusy || livenessBusy || loading}
+            style={{ flex: 1 }}
           >
-            Username / Password
+            {cameraReady ? "Restart Camera" : "Start Camera"}
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              setMode("face");
-              resetFaceFlow();
-            }}
-            style={{
-              flex: 1,
-              opacity: mode === "face" ? 1 : 0.75,
-              border: mode === "face" ? "2px solid #fff" : undefined,
-            }}
+            onClick={detectAndIdentifyFace}
+            disabled={!cameraReady || faceBusy || livenessBusy || loading || !modelsReady}
+            style={{ flex: 1 }}
           >
-            Face Login
+            {faceBusy || livenessBusy ? "Scanning..." : "Scan Face"}
           </button>
         </div>
 
-        {mode === "password" ? (
-          <form onSubmit={handleNormalLogin}>
-            <input
-              type="text"
-              placeholder="Username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-            />
+        {livenessStatus ? (
+          <div style={{ ...uiMsgStyles.liveness, marginBottom: 8, marginTop: 0 }}>
+            {livenessStatus}
+          </div>
+        ) : null}
 
-            <input
-              type="password"
-              placeholder="Password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
+        {faceStatus ? (
+          <div style={{ ...uiMsgStyles.faceInfo, marginBottom: 10, marginTop: 0, fontSize: 14 }}>
+            {faceStatus}
+          </div>
+        ) : null}
 
-            {err ? <div style={uiMsgStyles.error}>{err}</div> : null}
-
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
-        ) : (
-          <div>
-            <div
-              style={{
-                marginBottom: 10,
-                borderRadius: 10,
-                overflow: "hidden",
-                border: "1px solid rgba(255,255,255,0.2)",
-                background: "#111",
-              }}
-            >
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                style={{
-                  width: "100%",
-                  maxHeight: 260,
-                  objectFit: "cover",
-                  display: "block",
-                  background: "#111",
-                }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <button
-                type="button"
-                onClick={startCamera}
-                disabled={faceBusy || livenessBusy || loading}
-                style={{ flex: 1 }}
-              >
-                {cameraReady ? "Restart Camera" : "Start Camera"}
-              </button>
-
-              <button
-                type="button"
-                onClick={detectAndIdentifyFace}
-                disabled={!cameraReady || faceBusy || livenessBusy || loading || !modelsReady}
-                style={{ flex: 1 }}
-              >
-                {faceBusy || livenessBusy ? "Scanning..." : "Scan Face"}
-              </button>
-            </div>
-
-            {livenessStatus ? (
-              <div style={{ ...uiMsgStyles.liveness, marginBottom: 8, marginTop: 0 }}>
-                {livenessStatus}
-              </div>
-            ) : null}
-
-            {faceStatus ? (
-              <div
-                style={{
-                  ...uiMsgStyles.faceInfo,
-                  marginBottom: 10,
-                  marginTop: 0,
-                  fontSize: 14,
-                }}
-              >
-                {faceStatus}
-              </div>
-            ) : null}
-
-            {identifiedUser ? (
-              <div
-                style={{
-                  marginBottom: 10,
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  textAlign: "left",
-                }}
-              >
-                <div style={{ fontSize: 14, marginBottom: 6 }}>Continue as:</div>
-                <div style={{ fontWeight: 700 }}>
-                  {identifiedUser.username}{" "}
-                  <span style={{ opacity: 0.75, fontWeight: 400 }}>
-                    ({identifiedUser.role})
-                  </span>
-                </div>
-              </div>
-            ) : null}
-
-            <form onSubmit={handleFaceLogin}>
-              <input
-                type="password"
-                placeholder="Enter your password to confirm"
-                value={facePassword}
-                onChange={(e) => setFacePassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-
-              {err ? <div style={uiMsgStyles.error}>{err}</div> : null}
-
-              <button
-                type="submit"
-                disabled={loading || !identifiedUser || !faceEmbedding || !livenessPassed}
-              >
-                {loading ? "Logging in..." : "Login with Face + Password"}
-              </button>
-            </form>
-
-            <div style={uiMsgStyles.tip}>
-              Tip: Use good lighting and look directly at the camera. When asked, turn your head left.
+        {identifiedUser ? (
+          <div
+            style={{
+              marginBottom: 10,
+              padding: "10px 12px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontSize: 14, marginBottom: 6 }}>Continue as:</div>
+            <div style={{ fontWeight: 700 }}>
+              {identifiedUser.username}{" "}
+              <span style={{ opacity: 0.75, fontWeight: 400 }}>({identifiedUser.role})</span>
             </div>
           </div>
-        )}
+        ) : null}
 
-        <div className="create-acc">
-          Don't have an account?{" "}
-          <a className="link-login-signup" href="/Signup">
-            Sign up
-          </a>
+        <form onSubmit={handleFaceLogin}>
+          <input
+            type="password"
+            placeholder="Enter your password to confirm"
+            value={facePassword}
+            onChange={(e) => setFacePassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+
+          {err ? <div style={uiMsgStyles.error}>{err}</div> : null}
+
+          <button
+            type="submit"
+            disabled={loading || !identifiedUser || !faceEmbedding || !livenessPassed}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        <div style={uiMsgStyles.tip}>
+          Look at the camera and click Scan Face. Turn your head left when asked, then enter your password.
         </div>
       </div>
     </div>
