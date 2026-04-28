@@ -10,9 +10,11 @@ export async function preloadFaceModels() {
 
   loadingPromise = (async () => {
     if (!faceapi) faceapi = await import("face-api.js");
-    await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL);
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL),
+    ]);
     modelsLoaded = true;
   })();
 
