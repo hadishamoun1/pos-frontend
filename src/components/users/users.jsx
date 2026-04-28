@@ -77,19 +77,12 @@ const PERMISSION_GROUPS = [
       "inventoryTx.view",
       "inventoryTx.create",
       "inventoryTx.delete",
-      "invoices.view",
-      "invoices.create",
-      "invoices.update",
       "invoices.return",
       "itemsDesc.view",
       "itemsDesc.manage",
       "realDesc.view",
       "realDesc.manage",
       "items.view",
-      "items.create",
-      "items.update",
-      "items.delete",
-      "inventory.update",
       "journal.view",
       "journal.create",
       "journal.update",
@@ -100,7 +93,6 @@ const PERMISSION_GROUPS = [
       "purchaseSettings.view",
       "purchaseSettings.update",
       "recompute.run",
-      "reports.view",
       "requests.view",
       "requests.create",
       "requests.update",
@@ -132,7 +124,7 @@ const PERMISSION_GROUPS = [
       "settings.inventoryAudit",
       "settings.logoutUsers",
       "settings.invoiceAudit",
-      "settings.company", // ✅ NEW
+      "settings.company",
       "pos.search.stockTab",
       "pos.search.allTab",
       "pos.search.sqmTab",
@@ -150,9 +142,9 @@ const PERMISSION_GROUPS = [
       "cashFlow.viewAny",
       "users.list",
       "payments.view",
-    "payments.create",
-    "payments.update",
-    "payments.delete",
+      "payments.create",
+      "payments.update",
+      "payments.delete",
     ],
   },
   {
@@ -168,7 +160,7 @@ const PERMISSION_GROUPS = [
   {
     title: "Admin Permissions",
     description: "Only admins should have these.",
-    perms: ["users.manage"],
+    perms: ["users.manage", "faceEnroll.view"],
   },
 ];
 
@@ -186,6 +178,16 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+
+  // Password reset
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState(null); // { type: "success"|"error", text }
+
+  // Delete
+  const [deleting, setDeleting] = useState(false);
 
   const selectedUser = useMemo(
     () => users.find((u) => u.id === selectedId) || null,
@@ -237,6 +239,9 @@ export default function UsersPage() {
     if (!selectedUser) return;
     setRole(selectedUser.role || "USER");
     setPerms(Array.isArray(selectedUser.permissions) ? selectedUser.permissions : []);
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordMsg(null);
   }, [selectedUser]);
 
   function togglePerm(p) {
@@ -249,6 +254,58 @@ export default function UsersPage() {
 
   function selectAllGroup(groupPerms) {
     setPerms((prev) => uniqueSorted([...prev, ...groupPerms]));
+  }
+
+  async function loginAsUser() {
+    if (!selectedUser) return;
+    if (!window.confirm(`Log in as "${selectedUser.username}"? Your current session will be replaced.`)) return;
+    try {
+      const data = await api(`/auth/impersonate/${selectedUser.id}`, { method: "GET" });
+      if (!data?.access_token) throw new Error("No token returned");
+      sessionStorage.setItem("token", data.access_token);
+      window.location.href = "/dashboard";
+    } catch (e) {
+      setErr(e?.message || "Failed to impersonate user");
+    }
+  }
+
+  async function deleteUser() {
+    if (!selectedUser) return;
+    if (!window.confirm(`Delete user "${selectedUser.username}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    setErr("");
+    try {
+      await api(`/users/${selectedUser.id}`, { method: "DELETE" });
+      const remaining = users.filter((u) => u.id !== selectedUser.id);
+      setUsers(remaining);
+      setSelectedId(remaining.length ? remaining[0].id : null);
+    } catch (e) {
+      setErr(e?.message || "Failed to delete user");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function savePassword() {
+    if (!selectedUser) return;
+    if (!newPassword) { setPasswordMsg({ type: "error", text: "Enter a new password" }); return; }
+    if (newPassword !== confirmPassword) { setPasswordMsg({ type: "error", text: "Passwords do not match" }); return; }
+    if (newPassword.length < 4) { setPasswordMsg({ type: "error", text: "Password must be at least 4 characters" }); return; }
+    setSavingPassword(true);
+    setPasswordMsg(null);
+    try {
+      await api(`/users/${selectedUser.id}/password`, {
+        method: "PATCH",
+        body: JSON.stringify({ password: newPassword }),
+      });
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMsg({ type: "success", text: `Password updated for ${selectedUser.username}` });
+    } catch (e) {
+      setPasswordMsg({ type: "error", text: e?.message || "Failed to update password" });
+    } finally {
+      setSavingPassword(false);
+    }
   }
 
   async function save() {
@@ -376,6 +433,68 @@ export default function UsersPage() {
                 <button onClick={save} disabled={saving}>
                   {saving ? "Saving..." : "Save"}
                 </button>
+                <button
+                  className="users-impersonate-btn"
+                  onClick={loginAsUser}
+                  disabled={deleting || saving}
+                >
+                  Login as this User
+                </button>
+                <button
+                  className="users-delete-btn"
+                  onClick={deleteUser}
+                  disabled={deleting || saving}
+                >
+                  {deleting ? "Deleting..." : "Delete User"}
+                </button>
+              </div>
+
+              {/* Password reset */}
+              <div className="users-password-section">
+                <div className="users-password-title">Reset Password</div>
+                <div className="users-password-fields">
+                  <div className="users-password-field">
+                    <label>New Password</label>
+                    <div className="users-password-input-wrap">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="New password"
+                        value={newPassword}
+                        onChange={(e) => { setNewPassword(e.target.value); setPasswordMsg(null); }}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="users-password-toggle"
+                        onClick={() => setShowPassword((v) => !v)}
+                      >
+                        {showPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="users-password-field">
+                    <label>Confirm Password</label>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Confirm password"
+                      value={confirmPassword}
+                      onChange={(e) => { setConfirmPassword(e.target.value); setPasswordMsg(null); }}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+                <button
+                  className="users-password-save-btn"
+                  onClick={savePassword}
+                  disabled={savingPassword}
+                >
+                  {savingPassword ? "Saving..." : "Update Password"}
+                </button>
+                {passwordMsg && (
+                  <div className={`users-password-msg ${passwordMsg.type}`}>
+                    {passwordMsg.text}
+                  </div>
+                )}
               </div>
 
               <div className="users-note">

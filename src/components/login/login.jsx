@@ -321,20 +321,27 @@ const LoginPage = () => {
     try {
       await runTurnHeadLeftChallenge();
 
+      // Give the user time to re-center after the head-turn challenge
+      setFaceStatus("✅ Liveness passed — now look straight at the camera...");
+      await wait(1800);
+
+      // Retry face detection up to 5 times so a brief delay doesn't fail the whole scan
       setFaceStatus("Detecting face...");
-      const detection = await faceapi
-        .detectSingleFace(
-          videoRef.current,
-          new faceapi.TinyFaceDetectorOptions({
-            inputSize: 320,
-            scoreThreshold: 0.5,
-          })
-        )
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      let detection = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        detection = await faceapi
+          .detectSingleFace(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+          )
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        if (detection?.descriptor) break;
+        await wait(400);
+      }
 
       if (!detection || !detection.descriptor) {
-        throw new Error("No face detected. Please look at the camera in good light.");
+        throw new Error("No face detected. Please look straight at the camera in good light.");
       }
 
       const embedding = Array.from(detection.descriptor);

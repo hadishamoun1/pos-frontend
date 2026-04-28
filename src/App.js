@@ -24,6 +24,7 @@ import SettingsPage from "./components/settings/settings";
 import CutsQueuePage from "./components/cuts-control/CutsQueuePage";
 import InvoiceDetailsPage from "./components/Viewing/InvoiceDetailsPage";
 import UsersPage from "./components/users/users";
+import FaceEnrollPage from "./components/face-enroll/FaceEnrollPage";
 
 import AdminRoute from "./components/auth/AdminRoute";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -87,6 +88,8 @@ function App() {
                 <Route path="/cash-collections" element={<CashCollectionsPage />} />
                 <Route path="/employee-files" element={<EmployeeDocManager />} />
                 <Route path="/activity-monitor" element={<ActivityMonitor />} />
+
+                <Route path="/face-enroll" element={<FaceEnrollPage />} />
 
                 {/* ✅ Admin-only */}
                 <Route element={<AdminRoute />}>

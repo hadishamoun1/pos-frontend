@@ -319,22 +319,29 @@ const SignupPage = () => {
       // ✅ liveness before enrollment scan
       await runTurnHeadLeftChallenge();
 
+      // Give user time to re-center after head-turn liveness challenge
+      setFaceStatus("✅ Liveness passed — now look straight at the camera...");
+      await wait(1800);
+
+      // Retry up to 5 times so a brief delay doesn't fail enrollment
       setFaceStatus("Scanning face...");
-      const detection = await faceapi
-        .detectSingleFace(
-          videoRef.current,
-          new faceapi.TinyFaceDetectorOptions({
-            inputSize: 320,
-            scoreThreshold: 0.5,
-          })
-        )
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      let detection = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        detection = await faceapi
+          .detectSingleFace(
+            videoRef.current,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+          )
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        if (detection?.descriptor) break;
+        await wait(400);
+      }
 
       console.log("[Face] detection result:", detection);
 
       if (!detection?.descriptor) {
-        throw new Error("No face detected. Look at the camera in good lighting.");
+        throw new Error("No face detected. Look straight at the camera in good lighting.");
       }
 
       const embedding = Array.from(detection.descriptor);

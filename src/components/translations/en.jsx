@@ -194,6 +194,7 @@ export const en = {
       employeeFiles: "Employee Files",
       activityMonitor: "Activity Monitor",
       users: "Users",
+      faceEnroll: "Face Login Enrollment",
     },
   },
 

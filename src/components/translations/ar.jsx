@@ -194,6 +194,7 @@ export const ar = {
       employeeFiles: "ملفات الموظفين",
       activityMonitor: "مراقبة النشاط",
       users: "المستخدمون",
+      faceEnroll: "تسجيل بصمة الوجه",
     },
   },
 

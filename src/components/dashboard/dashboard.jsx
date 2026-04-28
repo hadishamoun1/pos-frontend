@@ -39,6 +39,7 @@ const sections = [
   { key: "employeeFiles", path: "/employee-files", image: "/assets/settings.png", perm: "employeeFiles.view" },
   { key: "activityMonitor", path: "/activity-monitor", image: "/assets/settings.png", perm: "activity.view" },
   { key: "users", path: "/users", image: "/assets/settings.png", perm: "users.manage" },
+  { key: "faceEnroll", path: "/face-enroll", image: "/assets/settings.png", perm: "faceEnroll.view" },
 ];
 
 const DashboardPage = () => {
