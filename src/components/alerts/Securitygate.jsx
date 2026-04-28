@@ -4,7 +4,7 @@ import { hasPerm, getPayload } from "../auth/authz";
 import { axiosClient } from "../api/axiosClient";
 import SecurityLockdown from "./Securitylockdown";
 
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 15000;
 const LOGIN_PATHS = ["/", "/login"];
 
 const SecurityGate = () => {

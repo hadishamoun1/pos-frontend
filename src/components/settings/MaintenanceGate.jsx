@@ -77,7 +77,7 @@ export default function MaintenanceGate() {
     }
 
     check();
-    const t = setInterval(check, 2500);
+    const t = setInterval(check, 15000);
     return () => {
       alive = false;
       clearInterval(t);
