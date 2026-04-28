@@ -1,5 +1,6 @@
-import React, { lazy, Suspense, useState } from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { preloadFaceModels } from "./faceApiCache";
 import "./login.css";
 
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
@@ -20,6 +21,11 @@ const LoginPage = () => {
     border: "1px solid rgba(248,113,113,0.35)", padding: "8px 10px",
     borderRadius: 8, fontSize: 13, lineHeight: 1.35, textAlign: "left",
   };
+
+  // Silently preload face models in the background while user fills password form
+  useEffect(() => {
+    preloadFaceModels().catch(() => {});
+  }, []);
 
   const handleNormalLogin = async (e) => {
     e.preventDefault();

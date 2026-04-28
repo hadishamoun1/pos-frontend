@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { preloadFaceModels, getFaceApi, areFaceModelsLoaded } from "./faceApiCache";
 
 const API_BASE = (process.env.REACT_APP_API_BASE_URL || "").replace(/\/+$/, "");
-const FACE_MODELS_URL = "/models";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -33,7 +33,7 @@ const FaceLoginSection = ({ onLogin }) => {
   const streamRef = useRef(null);
   const faceapiRef = useRef(null);
 
-  const [modelsReady, setModelsReady] = useState(false);
+  const [modelsReady, setModelsReady] = useState(areFaceModelsLoaded);
   const [cameraReady, setCameraReady] = useState(false);
   const [faceBusy, setFaceBusy] = useState(false);
   const [faceStatus, setFaceStatus] = useState("");
@@ -76,11 +76,8 @@ const FaceLoginSection = ({ onLogin }) => {
     if (modelsReady) return;
     setFaceStatus("Loading face models...");
     try {
-      if (!faceapiRef.current) faceapiRef.current = await import("face-api.js");
-      const faceapi = faceapiRef.current;
-      await faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODELS_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODELS_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODELS_URL);
+      await preloadFaceModels();
+      faceapiRef.current = getFaceApi();
       setModelsReady(true);
       setFaceStatus("Face models loaded");
     } catch (e) {
@@ -93,7 +90,11 @@ const FaceLoginSection = ({ onLogin }) => {
     let mounted = true;
     (async () => {
       try {
-        await loadFaceModels();
+        if (areFaceModelsLoaded()) {
+          faceapiRef.current = getFaceApi();
+        } else {
+          await loadFaceModels();
+        }
         if (mounted) await startCamera();
       } catch (e) {}
     })();
@@ -103,7 +104,7 @@ const FaceLoginSection = ({ onLogin }) => {
 
   const runLiveness = async () => {
     if (!videoRef.current || !cameraReady || !modelsReady) throw new Error("Camera or models not ready");
-    const faceapi = faceapiRef.current;
+    const faceapi = faceapiRef.current || getFaceApi();
     setLivenessBusy(true);
     setLivenessPassed(false);
     setLivenessStatus("Look straight at the camera...");
@@ -146,7 +147,7 @@ const FaceLoginSection = ({ onLogin }) => {
 
   const detectAndIdentifyFace = async () => {
     if (faceBusy || loading || livenessBusy || !modelsReady || !cameraReady) return;
-    const faceapi = faceapiRef.current;
+    const faceapi = faceapiRef.current || getFaceApi();
     setErr(""); setFaceBusy(true);
     setFaceStatus("Starting liveness check...");
     setIdentifiedUser(null); setFaceEmbedding(null); setLivenessPassed(false);
