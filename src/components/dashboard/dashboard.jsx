@@ -73,6 +73,7 @@ const DashboardPage = () => {
                     src={section.image}
                     alt={section.label}
                     className="dashboard-card-image"
+                    onLoad={(e) => e.target.classList.add('dashboard-card-image-loaded')}
                   />
                 </div>
                 <div className="dashboard-card-content">
