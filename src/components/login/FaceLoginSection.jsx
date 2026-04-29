@@ -30,6 +30,8 @@ const uiMsgStyles = {
 
 const FaceLoginSection = ({ onLogin }) => {
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const animFrameRef = useRef(null);
   const streamRef = useRef(null);
   const faceapiRef = useRef(null);
 
@@ -47,10 +49,27 @@ const FaceLoginSection = ({ onLogin }) => {
   const [err, setErr] = useState("");
 
   const stopCamera = () => {
+    cancelAnimationFrame(animFrameRef.current);
     try { if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop()); } catch {}
     streamRef.current = null;
     setCameraReady(false);
   };
+
+  useEffect(() => {
+    if (!cameraReady) return;
+    const draw = () => {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video && canvas && video.readyState >= 2) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+      }
+      animFrameRef.current = requestAnimationFrame(draw);
+    };
+    animFrameRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [cameraReady]);
 
   const startCamera = async () => {
     setErr("");
@@ -210,7 +229,8 @@ const FaceLoginSection = ({ onLogin }) => {
   return (
     <>
       <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)", background: "#111" }}>
-        <video ref={videoRef} autoPlay muted playsInline disablePictureInPicture style={{ width: "100%", maxHeight: 260, objectFit: "fill", display: "block", background: "#111", transform: "translateZ(0)", willChange: "auto" }} />
+        <video ref={videoRef} autoPlay muted playsInline style={{ display: "none" }} />
+        <canvas ref={canvasRef} style={{ width: "100%", maxHeight: 260, display: "block", background: "#111" }} />
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
