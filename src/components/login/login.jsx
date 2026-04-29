@@ -70,7 +70,7 @@ const LoginPage = () => {
         </Suspense>
 
         {/* Username / Password form */}
-        <form onSubmit={handleNormalLogin} style={{ marginTop: 16 }}>
+        <form onSubmit={handleNormalLogin} style={{ marginTop: 16, display: "none" }}>
           <input
             type="text"
             placeholder="Username"
