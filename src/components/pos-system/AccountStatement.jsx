@@ -320,10 +320,11 @@ export default function AccountStatement() {
       .statement-report-modal-table thead th { position: static !important; background: #f3f4f6; }
       .statement-report-modal-table tr { break-inside: avoid; page-break-inside: avoid; }
       @media print {
-        .statement-report-modal-table thead { display: table-header-group; }
+        .statement-report-modal-table thead { display: table-row-group; }
         .statement-report-modal-table tbody { display: table-row-group; }
         .statement-report-modal-table tfoot { display: table-row-group; }
       }
+      .print-page { overflow: hidden; }
       .statement-report-modal-footer-row td { font-weight: 700; }
       .statement-report-modal-footer-row td.footer-spacer { border: none !important; background: transparent !important; }
       .statement-report-modal-footer-row td.footer-label { border-left: none !important; }
