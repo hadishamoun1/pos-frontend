@@ -1,53 +1,13 @@
 const FACE_MODELS_URL = "/models";
-const DB_NAME = "face-models-v1";
-const STORE = "files";
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE);
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = reject;
-  });
-}
-
-function dbGet(db, key) {
-  return new Promise((resolve) => {
-    const req = db.transaction(STORE).objectStore(STORE).get(key);
-    req.onsuccess = (e) => resolve(e.target.result ?? null);
-    req.onerror = () => resolve(null);
-  });
-}
-
-function dbPut(db, key, val) {
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put(val, key);
-    tx.oncomplete = resolve;
-    tx.onerror = resolve;
-  });
-}
-
-let dbPromise = null;
-
-function getDB() {
-  if (!dbPromise) dbPromise = openDB().catch(() => null);
-  return dbPromise;
-}
+const CACHE_NAME = "face-models-v1";
 
 async function cachedFetch(url, options) {
   try {
-    const db = await getDB();
-    if (db) {
-      const cached = await dbGet(db, url);
-      if (cached) return new Response(cached);
-    }
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(url);
+    if (cached) return cached;
     const res = await fetch(url, options);
-    if (res.ok && db) {
-      const buffer = await res.arrayBuffer();
-      dbPut(db, url, buffer);
-      return new Response(buffer);
-    }
+    if (res.ok) cache.put(url, res.clone());
     return res;
   } catch {
     return fetch(url, options);
