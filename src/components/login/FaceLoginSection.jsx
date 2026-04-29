@@ -109,6 +109,25 @@ const FaceLoginSection = ({ onLogin }) => {
         await videoRef.current.play();
       }
       setCameraReady(true);
+
+      // Diagnostics: log camera info and center pixel color
+      try {
+        const track = stream.getVideoTracks()[0];
+        const s = track.getSettings();
+        console.log("[CAM] Label:", track.label);
+        console.log("[CAM] Format:", s.width + "x" + s.height + " @ " + s.frameRate + "fps");
+        const cap = new ImageCapture(track);
+        await new Promise(r => setTimeout(r, 500)); // let camera warm up
+        const bmp = await cap.grabFrame();
+        const off = new OffscreenCanvas(bmp.width, bmp.height);
+        const ctx = off.getContext("2d");
+        ctx.drawImage(bmp, 0, 0);
+        const px = ctx.getImageData(Math.floor(bmp.width / 2), Math.floor(bmp.height / 2), 1, 1).data;
+        console.log("[CAM] Center pixel R/G/B:", px[0], px[1], px[2], px[3]);
+        bmp.close();
+      } catch (diagErr) {
+        console.log("[CAM] Diagnostic error:", diagErr?.message);
+      }
     } catch (e) {
       setErr(e?.message || "Could not access camera");
     }
