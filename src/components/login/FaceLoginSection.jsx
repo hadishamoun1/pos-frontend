@@ -57,18 +57,41 @@ const FaceLoginSection = ({ onLogin }) => {
 
   useEffect(() => {
     if (!cameraReady) return;
-    const draw = () => {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (video && canvas && video.readyState >= 2) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext("2d").drawImage(video, 0, 0);
-      }
-      animFrameRef.current = requestAnimationFrame(draw);
+    let running = true;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    let cap = null;
+    if (track && typeof ImageCapture !== "undefined") {
+      try { cap = new ImageCapture(track); } catch {}
+    }
+
+    const draw = async () => {
+      if (!running) return;
+      try {
+        if (cap) {
+          const bmp = await cap.grabFrame();
+          if (canvas && running) {
+            canvas.width = bmp.width;
+            canvas.height = bmp.height;
+            canvas.getContext("2d").drawImage(bmp, 0, 0);
+            bmp.close();
+          }
+        } else if (video && canvas && video.readyState >= 2) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext("2d").drawImage(video, 0, 0);
+        }
+      } catch {}
+      if (running) animFrameRef.current = requestAnimationFrame(draw);
     };
+
     animFrameRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animFrameRef.current);
+    return () => {
+      running = false;
+      cancelAnimationFrame(animFrameRef.current);
+    };
   }, [cameraReady]);
 
   const startCamera = async () => {
