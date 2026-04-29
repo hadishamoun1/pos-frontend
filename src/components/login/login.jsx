@@ -64,38 +64,34 @@ const LoginPage = () => {
         <h2>Login</h2>
 
 
-        {/* Username / Password form */}
-        {mode === "password" && (
-          <form onSubmit={handleNormalLogin}>
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-            {err ? <div style={errorStyle}>{err}</div> : null}
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
-        )}
+        {/* Face login */}
+        <Suspense fallback={<p style={{ color: "white", textAlign: "center" }}>Loading face login...</p>}>
+          <FaceLoginSection onLogin={handleFaceSuccess} />
+        </Suspense>
 
-        {/* Face login — only loaded when user clicks Face Login */}
-        {mode === "face" && (
-          <Suspense fallback={<p style={{ color: "white", textAlign: "center" }}>Loading face login...</p>}>
-            <FaceLoginSection onLogin={handleFaceSuccess} />
-          </Suspense>
-        )}
+        {/* Username / Password form */}
+        <form onSubmit={handleNormalLogin} style={{ marginTop: 16 }}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          {err ? <div style={errorStyle}>{err}</div> : null}
+          <button type="submit" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
 
       </div>
     </div>
