@@ -210,7 +210,7 @@ const FaceLoginSection = ({ onLogin }) => {
   return (
     <>
       <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,0.2)", background: "#111" }}>
-        <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block", background: "#111" }} />
+        <video ref={videoRef} autoPlay muted playsInline disablePictureInPicture style={{ width: "100%", maxHeight: 260, objectFit: "fill", display: "block", background: "#111", transform: "translateZ(0)", willChange: "auto" }} />
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
