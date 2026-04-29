@@ -10,7 +10,7 @@ const FaceLoginSection = lazy(() => import("./FaceLoginSection"));
 const LoginPage = () => {
   const { setLanguage } = useLanguage();
 
-  const [mode, setMode] = useState("password");
+  const [mode, setMode] = useState("face");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,34 +63,6 @@ const LoginPage = () => {
         <div className="welcome-text">Welcome to Shamoun Co.</div>
         <h2>Login</h2>
 
-        {/* Mode toggle */}
-        <div style={{ display: "flex", marginBottom: 16, borderRadius: 8, overflow: "hidden", border: "1px solid rgba(255,255,255,0.15)" }}>
-          <button
-            type="button"
-            onClick={() => { setErr(""); setMode("password"); }}
-            style={{
-              flex: 1, padding: "8px 0",
-              background: mode === "password" ? "rgba(255,255,255,0.18)" : "transparent",
-              color: "white", border: "none", cursor: "pointer",
-              fontWeight: mode === "password" ? 700 : 400,
-              borderRight: "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
-            Username / Password
-          </button>
-          <button
-            type="button"
-            onClick={() => { setErr(""); setMode("face"); }}
-            style={{
-              flex: 1, padding: "8px 0",
-              background: mode === "face" ? "rgba(255,255,255,0.18)" : "transparent",
-              color: "white", border: "none", cursor: "pointer",
-              fontWeight: mode === "face" ? 700 : 400,
-            }}
-          >
-            Face Login
-          </button>
-        </div>
 
         {/* Username / Password form */}
         {mode === "password" && (
@@ -125,12 +97,6 @@ const LoginPage = () => {
           </Suspense>
         )}
 
-        <div className="create-acc">
-          Don't have an account?{" "}
-          <a className="link-login-signup" href="/Signup">
-            Sign up
-          </a>
-        </div>
       </div>
     </div>
   );
