@@ -43,7 +43,6 @@ const SettingsPage = () => {
       { key: "logout-users", label: "Users Logout", perm: "settings.logoutUsers", component: <LogoutAllUsersPage /> },
       { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
 
-      // ✅ NEW TAB
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
     ],
     []
