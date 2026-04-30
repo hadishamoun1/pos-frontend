@@ -34,14 +34,19 @@
   color: #374151;
 }
 
-.tcr-filters input[type="date"] {
+.tcr-filters input[type="date"],
+.tcr-filters input[type="number"],
+.tcr-filters select {
   padding: 7px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.875rem;
   outline: none;
+  background: #fff;
 }
-.tcr-filters input[type="date"]:focus {
+.tcr-filters input[type="date"]:focus,
+.tcr-filters input[type="number"]:focus,
+.tcr-filters select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59,130,246,.2);
 }
