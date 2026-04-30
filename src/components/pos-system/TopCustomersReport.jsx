@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from "react"; // eslint-disable-line
+import React, { useCallback, useState } from "react";
+import * as XLSX from "xlsx";
 import { axiosClient } from "../api/axiosClient";
 import "./TopCustomersReport.css";
 
@@ -41,6 +42,33 @@ export default function TopCustomersReport() {
   const today = new Date().toLocaleDateString("en-GB");
   const typeLabel = TYPE_LABELS[invoiceType] || invoiceType;
 
+  const exportExcel = useCallback(() => {
+    const sheetData = [
+      ["#", "Customer Name", "Financial Account", "Grand Total"],
+      ...rows.map((r, i) => [i + 1, r.customerName, r.financialNumber, Number(r.grandTotal)]),
+      ["", "", "Total", Number(total)],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // Column widths
+    ws["!cols"] = [{ wch: 5 }, { wch: 40 }, { wch: 22 }, { wch: 18 }];
+
+    // Number format for Grand Total column (D) and Total row
+    const numFmt = "#,##0.00";
+    for (let i = 1; i < sheetData.length; i++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: i, c: 3 })];
+      if (cell) { cell.t = "n"; cell.z = numFmt; }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Top Customers");
+
+    const period = from || to ? `_${from || ""}__${to || ""}` : "";
+    const filename = `top_customers${topN ? `_top${topN}` : ""}_${invoiceType}${period}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }, [rows, total, from, to, topN, invoiceType]);
+
   return (
     <div className="tcr-wrap">
       {/* ── Controls (hidden on print) ── */}
@@ -80,9 +108,14 @@ export default function TopCustomersReport() {
             {loading ? "Loading…" : "Load Report"}
           </button>
           {fetched && rows.length > 0 && (
-            <button className="tcr-btn tcr-btn-print" onClick={() => window.print()}>
-              Print
-            </button>
+            <>
+              <button className="tcr-btn tcr-btn-print" onClick={() => window.print()}>
+                Print
+              </button>
+              <button className="tcr-btn tcr-btn-excel" onClick={exportExcel}>
+                Export to Excel
+              </button>
+            </>
           )}
         </div>
 
