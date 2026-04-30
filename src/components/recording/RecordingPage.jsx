@@ -217,9 +217,11 @@ export default function RecordingPage() {
             <button className="rp-player-close" onClick={() => { setPlayingFile(null); setBlobUrl(null); }}>✕</button>
           </div>
           {blobUrl ? (
-            <video className="rp-video" controls autoPlay src={blobUrl} />
+            playingFile?.filename?.endsWith('.wav') || playingFile?.filename?.endsWith('.mp3')
+              ? <audio className="rp-audio" controls autoPlay src={blobUrl} style={{ width: "100%", marginTop: 16 }} />
+              : <video className="rp-video" controls autoPlay src={blobUrl} />
           ) : (
-            <div className="rp-video-loading">Loading video…</div>
+            <div className="rp-video-loading">Loading…</div>
           )}
         </div>
       )}
