@@ -17,7 +17,8 @@ import InventoryAuditPage from "./Inventory-Audit";
 import InvoiceAuditPage from "./InvoiceAuditPage";
 import AccountingRoleSettings from "./AccountingRoleSettings";
 import CompanySettings from "./CompanySettings";
-import SecurityLockdownSettings from "./Securitylockdownsettings"; // ✅ NEW
+import SecurityLockdownSettings from "./Securitylockdownsettings";
+import FileBrowser from "./FileBrowser";
 import { hasPerm } from "../auth/authz";
 import "./settings.css";
 
@@ -44,6 +45,7 @@ const SettingsPage = () => {
       { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
 
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
+      { key: "file-browser", label: "File Browser", perm: "users.manage", component: <FileBrowser /> },
     ],
     []
   );
