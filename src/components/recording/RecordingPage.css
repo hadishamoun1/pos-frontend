@@ -95,6 +95,7 @@
 }
 .badge-online { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .badge-rec { background: #fff0f0; color: #b91c1c; border: 1px solid #fca5a5; animation: pulse 1.2s infinite; }
+.badge-audio { background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; animation: pulse 1.2s infinite; }
 .badge-offline { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
 
 @keyframes pulse {
@@ -120,6 +121,9 @@
 
 .rp-btn-record { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
 .rp-btn-record:hover:not(:disabled) { background: #dcfce7; }
+
+.rp-btn-audio { background: #fdf4ff; border-color: #e9d5ff; color: #7e22ce; }
+.rp-btn-audio:hover:not(:disabled) { background: #f3e8ff; }
 
 .rp-btn-stop { background: #fff0f0; border-color: #ffd1d1; color: #c00; }
 .rp-btn-stop:hover:not(:disabled) { background: #ffe0e0; }

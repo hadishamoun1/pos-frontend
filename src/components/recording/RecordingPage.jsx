@@ -177,8 +177,8 @@ export default function RecordingPage() {
                   <div className="rp-device-name">{d.pcName}</div>
                   <div className="rp-device-id">{d.pcId}</div>
                 </div>
-                <div className={`rp-device-badge ${d.online ? (d.status === "recording" ? "badge-rec" : "badge-online") : "badge-offline"}`}>
-                  {d.online ? (d.status === "recording" ? "● Recording" : "● Online") : "○ Offline"}
+                <div className={`rp-device-badge ${d.online ? (d.status === "recording" ? "badge-rec" : d.status === "audio_only" ? "badge-audio" : "badge-online") : "badge-offline"}`}>
+                  {d.online ? (d.status === "recording" ? "● Recording" : d.status === "audio_only" ? "● Audio Only" : "● Online") : "○ Offline"}
                 </div>
               </div>
               <div className="rp-device-meta">Last seen: {timeAgo(d.lastSeen)}</div>
@@ -189,6 +189,13 @@ export default function RecordingPage() {
                   onClick={() => sendCommand(d.pcId, "recording")}
                 >
                   ▶ Start Recording
+                </button>
+                <button
+                  className="rp-btn rp-btn-audio"
+                  disabled={cmdBusy[d.pcId] || d.command === "audio_only"}
+                  onClick={() => sendCommand(d.pcId, "audio_only")}
+                >
+                  🎙 Audio Only
                 </button>
                 <button
                   className="rp-btn rp-btn-stop"

@@ -19,6 +19,7 @@ import AccountingRoleSettings from "./AccountingRoleSettings";
 import CompanySettings from "./CompanySettings";
 import SecurityLockdownSettings from "./Securitylockdownsettings";
 import FileBrowser from "./FileBrowser";
+import ApiDelaySettings from "./ApiDelaySettings";
 import { hasPerm } from "../auth/authz";
 import "./settings.css";
 
@@ -46,6 +47,7 @@ const SettingsPage = () => {
 
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
       { key: "file-browser", label: "File Browser", perm: "users.manage", component: <FileBrowser /> },
+      { key: "api-delay", label: "API Delay", perm: "settings.delay", component: <ApiDelaySettings /> },
     ],
     []
   );

@@ -126,6 +126,7 @@ const PERMISSION_GROUPS = [
       "settings.logoutUsers",
       "settings.invoiceAudit",
       "settings.company",
+      "settings.delay",
       "pos.search.stockTab",
       "pos.search.allTab",
       "pos.search.sqmTab",
