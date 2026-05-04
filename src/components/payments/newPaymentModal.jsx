@@ -60,7 +60,13 @@ const PaymentsModal = ({ onClose }) => {
 
   const formatNumber = (value) => {
     if (value === null || value === undefined || value === "") return "";
-    const num = Number(String(value).replace(/,/g, ""));
+    const str = String(value).replace(/,/g, "");
+    const dotIdx = str.indexOf(".");
+    if (dotIdx !== -1) {
+      const intNum = Number(str.slice(0, dotIdx));
+      return (Number.isFinite(intNum) ? intNum.toLocaleString("en-US") : str.slice(0, dotIdx)) + str.slice(dotIdx);
+    }
+    const num = Number(str);
     if (!Number.isFinite(num)) return value;
     return num.toLocaleString("en-US");
   };

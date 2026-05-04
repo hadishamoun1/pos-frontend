@@ -117,7 +117,13 @@ const EditPaymentModal = ({ onClose, row, onSave, isSaving }) => {
 
   const formatNumber = (value) => {
     if (value === "" || value === null || value === undefined) return "";
-    const num = parseFloat(String(value).replace(/,/g, ""));
+    const str = String(value).replace(/,/g, "");
+    const dotIdx = str.indexOf(".");
+    if (dotIdx !== -1) {
+      const intNum = Number(str.slice(0, dotIdx));
+      return (Number.isFinite(intNum) ? intNum.toLocaleString("en-US") : str.slice(0, dotIdx)) + str.slice(dotIdx);
+    }
+    const num = parseFloat(str);
     if (isNaN(num)) return "";
     return new Intl.NumberFormat("en-US").format(num);
   };
