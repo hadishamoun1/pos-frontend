@@ -300,16 +300,14 @@ export default function AccountStatement() {
       footerRow = allRows.pop();
     }
 
-    const iframe = document.createElement("iframe");
-    Object.assign(iframe.style, { position: "fixed", right: 0, bottom: 0, width: 0, height: 0, border: 0 });
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
+    const win = window.open("", "_blank");
+    const doc = win.document;
     doc.open();
     doc.write(`<!doctype html>
 <html>
   <head>
     <meta charset="utf-8"/>
+    <base href="${window.location.origin}/">
     ${copiedStyles}
     <style>
       @page { size: A4 portrait; margin: 10mm; }
@@ -346,7 +344,6 @@ export default function AccountStatement() {
 </html>`);
     doc.close();
 
-    const win = iframe.contentWindow;
     const idoc = win.document;
 
     const waitForReady = async () => {
@@ -436,7 +433,7 @@ export default function AccountStatement() {
       await new Promise((r) => idoc.defaultView.requestAnimationFrame(r));
       win.focus();
       win.print();
-      setTimeout(() => document.body.removeChild(iframe), 200);
+      win.onafterprint = () => win.close();
     };
 
     build();

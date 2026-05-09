@@ -768,23 +768,12 @@ export default function TrialBalance() {
       </style>
     `;
 
-    const iframe = document.createElement("iframe");
-    Object.assign(iframe.style, {
-      position: "fixed",
-      right: "0",
-      bottom: "0",
-      width: "0",
-      height: "0",
-      border: "0",
-    });
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!doctype html>
+    const win = window.open("", "_blank");
+    win.document.write(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
+  <base href="${window.location.origin}/">
   ${copiedStyles}
   ${isCurrencies ? styleCurrencies : styleStandard}
   <title>Trial Balance</title>
@@ -793,13 +782,10 @@ export default function TrialBalance() {
   ${printBody}
 </body>
 </html>`);
-    doc.close();
-
-    iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => iframe.remove(), 200);
-    };
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => win.close();
   };
 
   const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;
