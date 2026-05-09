@@ -77,7 +77,7 @@ export default function CustomerActivityReport() {
       <style>
         @page { size: A4 portrait; margin: 15mm; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        #__revo_print__ { font-family: 'Segoe UI', sans-serif; color: #000; background: #fff; font-size: 9pt; }
+        body { font-family: 'Segoe UI', sans-serif; color: #000; background: #fff; font-size: 9pt; }
         .p-header { text-align: center; border-bottom: 2px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 14px; }
         .p-header h1 { margin: 0; font-size: 17pt; font-weight: 800; letter-spacing: 1px; color: #1a1a2e; }
         .p-header .sub { font-size: 11pt; color: #555; margin-top: 3px; }
@@ -91,12 +91,12 @@ export default function CustomerActivityReport() {
         .p-summary-card div { font-size: 11pt; font-weight: 700; }
         .p-section { page-break-inside: avoid; margin-bottom: 20px; }
         .p-section-title { background: #1a1a2e; color: #fff; padding: 7px 12px; font-size: 10pt; font-weight: 700; display: flex; justify-content: space-between; }
-        #__revo_print__ table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-        #__revo_print__ th { background: #2d2d44; color: #fff; padding: 6px 8px; text-align: left; font-size: 7.5pt; text-transform: uppercase; }
-        #__revo_print__ th.num, #__revo_print__ td.num { text-align: right; font-family: 'Courier New', monospace; }
-        #__revo_print__ td { padding: 5px 8px; border-bottom: 1px solid #eee; }
-        #__revo_print__ tr:nth-child(even) td { background: #f9f9fb; }
-        #__revo_print__ tfoot td { background: #e8e8f0; font-weight: 700; font-size: 9pt; border-top: 2px solid #1a1a2e; }
+        table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+        th { background: #2d2d44; color: #fff; padding: 6px 8px; text-align: left; font-size: 7.5pt; text-transform: uppercase; }
+        th.num, td.num { text-align: right; font-family: 'Courier New', monospace; }
+        td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) td { background: #f9f9fb; }
+        tfoot td { background: #e8e8f0; font-weight: 700; font-size: 9pt; border-top: 2px solid #1a1a2e; }
         .neg { color: #c0392b; font-weight: 700; }
         .pos { color: #1a7a4a; }
       </style>

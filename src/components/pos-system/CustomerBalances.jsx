@@ -77,7 +77,7 @@ export default function CustomerBalances() {
         print-color-adjust: exact;
       }
 
-      #__revo_print__ {
+      body {
         background: white;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: #000;
