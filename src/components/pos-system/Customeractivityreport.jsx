@@ -74,7 +74,7 @@ export default function CustomerActivityReport() {
     const printDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     const win = window.open("", "_blank");
     win.document.write(`<!doctype html><html><head><meta charset="utf-8"/>
-      <title>Customer Activity Report</title>${copiedStyles}
+      <title>Customer Activity Report</title>
       <style>
         @page { size: A4 portrait; margin: 15mm; }
         * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
