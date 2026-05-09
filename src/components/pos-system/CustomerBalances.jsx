@@ -64,35 +64,12 @@ export default function CustomerBalances() {
       day: 'numeric'
     });
 
-    const copiedStyles = Array.from(
-      document.querySelectorAll('style, link[rel="stylesheet"]')
-    ).map((node) => node.outerHTML).join("");
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 2000);
-      }, 300);
-    };
-
-    document.body.appendChild(iframe);
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`<!doctype html>
+    const win = window.open("", "_blank");
+    win.document.write(`<!doctype html>
 <html>
   <head>
     <meta charset="utf-8"/>
     <title>Customer Balances Report - ${data.reportDate}</title>
-    ${copiedStyles}
     <style>
       @page { 
         size: A4 portrait; 
@@ -395,7 +372,10 @@ export default function CustomerBalances() {
     </div>
   </body>
 </html>`);
-    doc.close();
+    win.document.close();
+    win.focus();
+    win.print();
+    win.onafterprint = () => win.close();
   };
 
   const fmt = (v) => {
