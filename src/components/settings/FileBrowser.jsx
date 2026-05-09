@@ -189,7 +189,7 @@ export default function FileBrowser() {
       // Poll until download_ready
       const start = Date.now();
       const timer = setInterval(async () => {
-        if (Date.now() - start > 60000) {
+        if (Date.now() - start > 600000) {
           clearInterval(timer);
           setDlLoading(null);
           setErr("Download timeout");
