@@ -77,8 +77,16 @@ export default function CustomerActivityReport() {
 
     const iframe = document.createElement("iframe");
     Object.assign(iframe.style, { position: "fixed", right: 0, bottom: 0, width: 0, height: 0, border: 0 });
-    document.body.appendChild(iframe);
 
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 2000);
+      }, 300);
+    };
+
+    document.body.appendChild(iframe);
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`<!doctype html><html><head><meta charset="utf-8"/>
@@ -159,11 +167,6 @@ export default function CustomerActivityReport() {
       }).join("")}
     </body></html>`);
     doc.close();
-    iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => document.body.removeChild(iframe), 200);
-    };
   };
 
   return (

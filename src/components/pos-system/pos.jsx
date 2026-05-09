@@ -927,8 +927,8 @@ const POSSystemPage = () => {
     event.preventDefault();
     setSelectedRowIndex(index);
     setContextMenu({
-      x: event.pageX,
-      y: event.pageY,
+      x: event.clientX,
+      y: event.clientY,
     });
   };
 

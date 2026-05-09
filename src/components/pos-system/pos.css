@@ -997,6 +997,39 @@ input:disabled {
   gap: 10px;
 }
 
+/* ========== ROW CONTEXT MENU ========== */
+
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 130px;
+}
+
+.delete-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.delete-button:hover {
+  background: #fee2e2;
+}
+
 /* make buttons wrap and fill when needed */
 @media (max-width: 991px) {
   .pos-page-toolbar-button {

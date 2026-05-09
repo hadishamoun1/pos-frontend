@@ -75,8 +75,16 @@ export default function CustomerBalances() {
     iframe.style.width = "0";
     iframe.style.height = "0";
     iframe.style.border = "0";
-    document.body.appendChild(iframe);
 
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 2000);
+      }, 300);
+    };
+
+    document.body.appendChild(iframe);
     const doc = iframe.contentWindow.document;
     doc.open();
     doc.write(`<!doctype html>
@@ -388,12 +396,6 @@ export default function CustomerBalances() {
   </body>
 </html>`);
     doc.close();
-
-    iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => document.body.removeChild(iframe), 200);
-    };
   };
 
   const fmt = (v) => {
