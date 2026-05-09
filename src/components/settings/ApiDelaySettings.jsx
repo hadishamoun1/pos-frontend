@@ -134,8 +134,7 @@ export default function ApiDelaySettings() {
       </div>
 
       <div style={{ marginTop: 32, fontSize: 13, color: "#888" }}>
-        <strong>Note:</strong> This delay is stored in memory and resets to 0
-        when the server restarts.
+        <strong>Note:</strong> PCs with the management agent installed bypass this delay automatically.
       </div>
     </div>
   );
