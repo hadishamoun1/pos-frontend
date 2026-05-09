@@ -104,6 +104,17 @@ export default function RecordingPage() {
     }
   }
 
+  async function deleteDevice(pcId) {
+    if (!window.confirm("Remove this offline device?")) return;
+    try {
+      await apiFetch(`/recording/devices/${encodeURIComponent(pcId)}`, { method: "DELETE" });
+      setDevices((prev) => prev.filter((d) => d.pcId !== pcId));
+      if (selectedPcId === pcId) setSelectedPcId(null);
+    } catch (e) {
+      setErr(e?.message || "Delete failed");
+    }
+  }
+
   async function deleteRecording(id) {
     if (!window.confirm("Delete this recording?")) return;
     try {
@@ -210,6 +221,14 @@ export default function RecordingPage() {
                 >
                   {selectedPcId === d.pcId ? "All PCs" : "View Recordings"}
                 </button>
+                {!d.online && (
+                  <button
+                    className="rp-btn rp-btn-del"
+                    onClick={() => deleteDevice(d.pcId)}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -54,6 +54,15 @@ export default function FileBrowser() {
   const [truncated, setTruncated]     = useState(false);
 
   const [loading, setLoading]         = useState(false);
+
+  async function deleteDevice(pcId) {
+    if (!window.confirm("Remove this offline device?")) return;
+    try {
+      await axiosClient.delete(`/recording/devices/${encodeURIComponent(pcId)}`);
+      setDevices((prev) => prev.filter((d) => d.pcId !== pcId));
+      if (selectedPc === pcId) setSelectedPc(null);
+    } catch {}
+  }
   const [dlLoading, setDlLoading]     = useState(null); // path being downloaded
   const [err, setErr]                 = useState("");
 
@@ -241,20 +250,24 @@ export default function FileBrowser() {
         <div className="fb-pc-list">
           {devices.length === 0 && <span className="fb-muted">No PCs registered</span>}
           {devices.map((d) => (
-            <button
-              key={d.pcId}
-              className={`fb-pc-btn ${selectedPc === d.pcId ? "active" : ""} ${!d.online ? "offline" : ""}`}
-              onClick={() => {
-                stopPolling();
-                setSelectedPc(d.pcId);
-                setEntries([]);
-                setSearchResults([]);
-                setErr("");
-              }}
-            >
-              <span className={`fb-dot ${d.online ? "online" : "offline"}`} />
-              {d.pcName}
-            </button>
+            <div key={d.pcId} className="fb-pc-item">
+              <button
+                className={`fb-pc-btn ${selectedPc === d.pcId ? "active" : ""} ${!d.online ? "offline" : ""}`}
+                onClick={() => {
+                  stopPolling();
+                  setSelectedPc(d.pcId);
+                  setEntries([]);
+                  setSearchResults([]);
+                  setErr("");
+                }}
+              >
+                <span className={`fb-dot ${d.online ? "online" : "offline"}`} />
+                {d.pcName}
+              </button>
+              {!d.online && (
+                <button className="fb-remove-btn" onClick={() => deleteDevice(d.pcId)} title="Remove device">✕</button>
+              )}
+            </div>
           ))}
         </div>
       </div>

@@ -12,6 +12,9 @@
 .fb-label    { font-size: 0.78rem; font-weight: 700; color: #374151; display: block; margin-bottom: 8px; }
 .fb-pc-list  { display: flex; gap: 10px; flex-wrap: wrap; }
 .fb-muted    { color: #9ca3af; font-size: 0.85rem; }
+.fb-pc-item  { display: flex; align-items: center; gap: 4px; }
+.fb-remove-btn { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 0.8rem; padding: 2px 4px; line-height: 1; border-radius: 4px; }
+.fb-remove-btn:hover { color: #ef4444; background: #fee2e2; }
 
 .fb-pc-btn {
   display: flex; align-items: center; gap: 7px;
