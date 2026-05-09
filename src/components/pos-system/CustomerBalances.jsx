@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { printHtml } from "./printHelper";
 import { axiosClient } from "../api/axiosClient";
 import { logActivity } from "../api/logActivity";
 import "./CustomerBalances.css"; 
@@ -64,26 +65,19 @@ export default function CustomerBalances() {
       day: 'numeric'
     });
 
-    const win = window.open("", "_blank");
-    win.document.write(`<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <title>Customer Balances Report - ${data.reportDate}</title>
+    printHtml(`
     <style>
-      @page { 
-        size: A4 portrait; 
+      @page {
+        size: A4 portrait;
         margin: 20mm 15mm;
       }
-      
+
       * {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      
-      body { 
-        margin: 0;
-        padding: 0;
+
+      #__revo_print__ {
         background: white;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         color: #000;
@@ -273,8 +267,6 @@ export default function CustomerBalances() {
         }
       }
     </style>
-  </head>
-  <body>
     <div class="print-container">
       <div class="print-header">
         <h1>Customer Balances Report</h1>
@@ -370,12 +362,7 @@ export default function CustomerBalances() {
         Generated on ${printDate} | Customer Balances Report
       </div>
     </div>
-  </body>
-</html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.onafterprint = () => win.close();
+    `);
   };
 
   const fmt = (v) => {

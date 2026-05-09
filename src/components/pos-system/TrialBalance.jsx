@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./TrialBalance.css";
 import { axiosClient } from "../api/axiosClient";
 import { logActivity } from "../api/logActivity";
+import { printHtml } from "./printHelper";
 
 const ENDPOINTS = {
   arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
@@ -721,10 +722,6 @@ export default function TrialBalance() {
       ? root.innerHTML
       : `<div class="tb-a4">${metaHTML}${buildCurrenciesPrintTable()}</div>`;
 
-    const copiedStyles = Array.from(
-      document.querySelectorAll('style, link[rel="stylesheet"]')
-    ).map((n) => n.outerHTML).join("");
-
     const styleStandard = `
       <style>
         @page { size: A4 landscape; margin: 10mm; }
@@ -768,24 +765,7 @@ export default function TrialBalance() {
       </style>
     `;
 
-    const win = window.open("", "_blank");
-    win.document.write(`<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <base href="${window.location.origin}/">
-  ${copiedStyles}
-  ${isCurrencies ? styleCurrencies : styleStandard}
-  <title>Trial Balance</title>
-</head>
-<body>
-  ${printBody}
-</body>
-</html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.onafterprint = () => win.close();
+    printHtml(`${isCurrencies ? styleCurrencies : styleStandard}${printBody}`);
   };
 
   const mainDisabled = !!mainPrefixes.trim() || !mainOptions.length || accLoading;

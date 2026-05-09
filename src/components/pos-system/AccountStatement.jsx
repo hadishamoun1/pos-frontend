@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./Reports.css";
 import { axiosClient } from "../api/axiosClient";
 import { logActivity } from "../api/logActivity";
+import { printWithDomBuilder } from "./printHelper";
 import revoLogoSrc from "../revo-logo/revo.png"; // ✅ same level as this file
 
 const ENDPOINTS = {
@@ -285,9 +286,6 @@ export default function AccountStatement() {
     const printableRoot = printRef.current;
     if (!printableRoot) return;
 
-    const copiedStyles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-      .map((node) => node.outerHTML).join("");
-
     const srcHeader = printableRoot.querySelector(".statement-report-modal-header, .srm-revo-header");
     const srcTitle = printableRoot.querySelector(".statement-report-modal-titlebar");
     const srcClientLine = printableRoot.querySelector(".statement-report-modal-clientline");
@@ -300,68 +298,9 @@ export default function AccountStatement() {
       footerRow = allRows.pop();
     }
 
-    const win = window.open("", "_blank");
-    const doc = win.document;
-    doc.open();
-    doc.write(`<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <base href="${window.location.origin}/">
-    ${copiedStyles}
-    <style>
-      @page { size: A4 portrait; margin: 10mm; }
-      html, body { margin: 0; padding: 0; }
-      .statement-report-modal-a4 { width: 190mm; margin: 0; padding: 0; box-shadow: none; border: 0; }
-      .statement-report-modal-table { width: 100%; border-collapse: collapse; table-layout: fixed; border-spacing: 0; }
-      .statement-report-modal-table th, .statement-report-modal-table td { border: 1px solid #000; padding: 6px 8px; font-size: 13px; line-height: 1.2; }
-      .statement-report-modal-table thead th { position: static !important; background: #f3f4f6; }
-      .statement-report-modal-table tr { break-inside: avoid; page-break-inside: avoid; }
-      @media print {
-        .statement-report-modal-table thead { display: table-row-group; }
-        .statement-report-modal-table tbody { display: table-row-group; }
-        .statement-report-modal-table tfoot { display: table-row-group; }
-      }
-      .print-page { overflow: hidden; }
-      .statement-report-modal-footer-row td { font-weight: 700; }
-      .statement-report-modal-footer-row td.footer-spacer { border: none !important; background: transparent !important; }
-      .statement-report-modal-footer-row td.footer-label { border-left: none !important; }
-      .statement-report-modal-footer-row td.footer-label,
-      .statement-report-modal-footer-row td.footer-amount { font-size: 16px; line-height: 1.25; font-weight: 700; }
-      .print-page { position: relative; width: 190mm; height: 277mm; display: flex; flex-direction: column; box-sizing: border-box; page-break-after: always; }
-      .print-page:last-child { page-break-after: auto; }
-      .page-header { flex: 0 0 auto; }
-      .page-body { flex: 1 1 auto; display: flex; flex-direction: column; }
-      .page-body .statement-report-modal-table { width: 100%; }
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      h1,h2,p { margin: 0; }
-    </style>
-    <title>Account Statement</title>
-  </head>
-  <body>
-    <div class="statement-report-modal-a4" id="pages"></div>
-  </body>
-</html>`);
-    doc.close();
-
-    const idoc = win.document;
-
-    const waitForReady = async () => {
-      if (idoc.readyState !== "complete") {
-        await new Promise((res) => idoc.defaultView.addEventListener("load", res, { once: true }));
-      }
-      await new Promise((r) => idoc.defaultView.requestAnimationFrame(() => idoc.defaultView.requestAnimationFrame(r)));
-      try { if (idoc.fonts?.ready) await idoc.fonts.ready; } catch {}
-      await new Promise((r) => idoc.defaultView.requestAnimationFrame(r));
-    };
-
-    const build = async () => {
-      await waitForReady();
-      const pagesHost = idoc.getElementById("pages");
-      const cloneInto = (el) => idoc.importNode(el, true);
-
+    printWithDomBuilder(async (container) => {
       const buildInfoTable = (pageNumText) => {
-        const wrap = idoc.createElement("div");
+        const wrap = document.createElement("div");
         wrap.className = "statement-report-modal-info";
         wrap.innerHTML = `
           <table class="statement-report-modal-info-table" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -372,36 +311,36 @@ export default function AccountStatement() {
       };
 
       const buildTableSkeleton = () => {
-        const table = idoc.createElement("table");
+        const table = document.createElement("table");
         table.className = "statement-report-modal-table";
         table.style.cssText = "width:100%;border-collapse:collapse;font-size:12px";
-        const colgroup = idoc.createElement("colgroup");
+        const colgroup = document.createElement("colgroup");
         colgroup.innerHTML = `<col style="width:15%"/><col style="width:17%"/><col style="width:25%"/><col style="width:12%"/><col style="width:12%"/><col style="width:19%"/>`;
-        const thead = idoc.createElement("thead");
+        const thead = document.createElement("thead");
         thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الشرح</th><th>DR ${currency}</th><th>CR ${currency}</th><th>الرصيد</th></tr>`;
-        const tbody = idoc.createElement("tbody");
+        const tbody = document.createElement("tbody");
         table.appendChild(colgroup); table.appendChild(thead); table.appendChild(tbody);
         return { table, tbody };
       };
 
       const createPage = (pageIndex, mode) => {
-        const page = idoc.createElement("section");
+        const page = document.createElement("section");
         page.className = "print-page";
-        const headerBox = idoc.createElement("div");
+        const headerBox = document.createElement("div");
         headerBox.className = "page-header";
         if (mode === "full") {
-          headerBox.appendChild(cloneInto(srcHeader));
-          headerBox.appendChild(cloneInto(srcTitle));
-          headerBox.appendChild(cloneInto(srcClientLine));
+          headerBox.appendChild(srcHeader.cloneNode(true));
+          headerBox.appendChild(srcTitle.cloneNode(true));
+          headerBox.appendChild(srcClientLine.cloneNode(true));
           headerBox.appendChild(buildInfoTable(""));
         }
-        const bodyBox = idoc.createElement("div");
+        const bodyBox = document.createElement("div");
         bodyBox.className = "page-body";
         const { table, tbody } = buildTableSkeleton();
         bodyBox.appendChild(table);
         if (mode === "full") page.appendChild(headerBox);
         page.appendChild(bodyBox);
-        pagesHost.appendChild(page);
+        container.appendChild(page);
         return { page, headerBox, bodyBox, tbody };
       };
 
@@ -421,22 +360,15 @@ export default function AccountStatement() {
         }
       };
 
-      for (const row of allRows) appendRowWithPagination(idoc.importNode(row, true));
-      if (footerRow) appendRowWithPagination(idoc.importNode(footerRow, true));
+      for (const row of allRows) appendRowWithPagination(row);
+      if (footerRow) appendRowWithPagination(footerRow);
 
       const totalPages = pages.length;
       if (pages[0]) {
         const infoCell = pages[0].headerBox?.querySelector(".statement-report-modal-info tbody td:last-child");
         if (infoCell) infoCell.textContent = `1/${totalPages}`;
       }
-
-      await new Promise((r) => idoc.defaultView.requestAnimationFrame(r));
-      win.focus();
-      win.print();
-      win.onafterprint = () => win.close();
-    };
-
-    build();
+    });
   };
 
   return (
@@ -454,6 +386,7 @@ export default function AccountStatement() {
                 value={accOpen ? accSearch : (selectedAccount?.label ?? "")}
                 onChange={(e) => { setAccSearch(e.target.value); setAccOpen(true); }}
                 onFocus={() => { setAccSearch(""); setAccOpen(true); }}
+                onClick={() => { setAccSearch(""); setAccOpen(true); }}
                 style={{ width: "100%", boxSizing: "border-box" }}
               />
               {accOpen && filteredAccounts.length > 0 && (
