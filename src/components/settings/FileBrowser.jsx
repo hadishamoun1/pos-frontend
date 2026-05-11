@@ -64,6 +64,7 @@ export default function FileBrowser() {
     } catch {}
   }
   const [dlLoading, setDlLoading]     = useState(null); // path being downloaded
+  const [dlProgress, setDlProgress]   = useState(null); // { phase, pct, loaded, total, filename }
   const [err, setErr]                 = useState("");
 
   const pollTimerRef = useRef(null);
@@ -179,6 +180,7 @@ export default function FileBrowser() {
 
   const download = useCallback(async (filePath, filename) => {
     setDlLoading(filePath);
+    setDlProgress({ phase: "preparing", pct: null, loaded: 0, total: null, filename });
     setErr("");
     try {
       const { data } = await axiosClient.post(API(`/command/${selectedPc}`), {
@@ -192,6 +194,7 @@ export default function FileBrowser() {
         if (Date.now() - start > 600000) {
           clearInterval(timer);
           setDlLoading(null);
+          setDlProgress(null);
           setErr("Download timeout");
           return;
         }
@@ -202,33 +205,50 @@ export default function FileBrowser() {
             if (res.data.type === "download_error") {
               setErr(res.data.error || "Download failed");
               setDlLoading(null);
+              setDlProgress(null);
               return;
             }
             if (res.data.type === "download_ready") {
-              // Trigger browser download
+              setDlProgress({ phase: "downloading", pct: 0, loaded: 0, total: null, filename });
               const token = sessionStorage.getItem("token");
-              const a = document.createElement("a");
-              a.href = `/api/file-browser/download/${selectedPc}`;
-              // Use fetch to include auth header
-              fetch(`/api/file-browser/download/${selectedPc}`, {
-                headers: { Authorization: `Bearer ${token}` },
-              })
-                .then((r) => r.blob())
-                .then((blob) => {
-                  const url = URL.createObjectURL(blob);
-                  a.href = url;
-                  a.download = filename;
-                  a.click();
-                  setTimeout(() => URL.revokeObjectURL(url), 5000);
-                })
-                .catch(() => setErr("Failed to download file"));
+              try {
+                const response = await fetch(`/api/file-browser/download/${selectedPc}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                const contentLength = response.headers.get("Content-Length");
+                const total = contentLength ? parseInt(contentLength, 10) : null;
+                const reader = response.body.getReader();
+                const chunks = [];
+                let loaded = 0;
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  chunks.push(value);
+                  loaded += value.length;
+                  const pct = total ? Math.round((loaded / total) * 100) : null;
+                  setDlProgress({ phase: "downloading", pct, loaded, total, filename });
+                }
+
+                const blob = new Blob(chunks);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+              } catch {
+                setErr("Failed to download file");
+              }
               setDlLoading(null);
+              setDlProgress(null);
             }
           }
         } catch {}
       }, 1500);
     } catch (e) {
       setDlLoading(null);
+      setDlProgress(null);
       setErr(e?.response?.data?.message || "Failed to start download");
     }
   }, [selectedPc]);
@@ -287,6 +307,34 @@ export default function FileBrowser() {
           </div>
 
           {err && <div className="fb-error">{err}</div>}
+
+          {dlProgress && (
+            <div className="fb-dl-progress-wrap">
+              <div className="fb-dl-progress-top">
+                <span className="fb-dl-progress-label">
+                  {dlProgress.phase === "preparing"
+                    ? `⏳ Preparing — ${dlProgress.filename}`
+                    : `⬇ Downloading — ${dlProgress.filename}`}
+                </span>
+                <span className="fb-dl-progress-pct">
+                  {dlProgress.phase === "downloading" && dlProgress.pct !== null
+                    ? `${dlProgress.pct}%`
+                    : dlProgress.phase === "downloading" ? "…" : ""}
+                </span>
+              </div>
+              <div className="fb-dl-progress-bar">
+                <div
+                  className={`fb-dl-progress-fill ${dlProgress.phase === "preparing" ? "fb-dl-progress-indeterminate" : ""}`}
+                  style={{ width: dlProgress.phase === "preparing" ? "100%" : `${dlProgress.pct ?? 0}%` }}
+                />
+              </div>
+              {dlProgress.phase === "downloading" && dlProgress.loaded > 0 && (
+                <div className="fb-dl-progress-size">
+                  {formatSize(dlProgress.loaded)}{dlProgress.total ? ` / ${formatSize(dlProgress.total)}` : ""}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Browse mode ── */}
           {mode === "browse" && (
