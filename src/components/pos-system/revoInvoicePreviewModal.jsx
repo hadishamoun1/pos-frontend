@@ -439,7 +439,7 @@ function buildRevoInvoiceHtml(
         ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">الرقم الضريبي</span><span class="meta-colon">:</span><span class="meta-value">${customerTaxNumber || "-"}</span></div>`}
       </div>
       <div class="meta-left">
-        <div class="meta-line"><span class="meta-label">${invoiceType === "G" ? "Proforma #" : "رقم الفاتورة"}</span><span class="meta-colon">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">${invoiceType === "G" ? "Proforma #" : (invoiceType === "RTN" || invoiceType === "RRVR") ? "مرتجع رقم الفاتورة" : "رقم الفاتورة"}</span><span class="meta-colon">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
         <div class="meta-line"><span class="meta-label">التاريخ</span><span class="meta-colon">:</span><span class="meta-value date-ltr">${fmtDate(date)}</span></div>
         <div class="meta-line"><span class="meta-label">العملة</span><span class="meta-colon">:</span><span class="meta-value">${currencyCode}</span></div>
       </div>
