@@ -132,6 +132,8 @@ const PERMISSION_GROUPS = [
       "pos.search.sqmTab",
       "pos.rvr",
       "pos.return",
+      "pos.rrvr",
+      "pos.freereturn",
       "invoice.showVatZero",
       "recievables.create",
       "recievables.update",

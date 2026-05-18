@@ -8,6 +8,8 @@ const Toolbar = ({
   handleEditRequest,
   handleCreateRequest,
   handleCreateInvoice,
+  handleCreateRRVR = () => {},
+  handleOpenFreeReturnModal = () => {},
   loading,
   selectedInvoiceId,
   selectedRequestId,
@@ -36,6 +38,8 @@ const Toolbar = ({
 
   // ✅ permissions
   const canRvr = hasPerm("pos.rvr");
+  const canRrvr = hasPerm("pos.rrvr");
+  const canFreeReturn = hasPerm("pos.freereturn");
   const canReturn = hasPerm("pos.return");
 
   return (
@@ -150,6 +154,28 @@ const Toolbar = ({
               title={t("posToolbar.rvrTitle")}
             >
               {loading ? t("common.processing") : t("posToolbar.rvr")}
+            </button>
+          )}
+
+          {canRrvr && (
+            <button
+              className="pos-page-toolbar-button pos-page-purple-button"
+              onClick={handleCreateRRVR}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
+              title={t("posToolbar.rrvrTitle")}
+            >
+              {loading ? t("common.processing") : t("posToolbar.rrvr")}
+            </button>
+          )}
+
+          {canFreeReturn && (
+            <button
+              className="pos-page-toolbar-button pos-page-orange-button"
+              onClick={handleOpenFreeReturnModal}
+              disabled={loading || (selectedRequestId !== null && isEditable)}
+              title={t("posToolbar.freeReturnTitle")}
+            >
+              {loading ? t("common.processing") : t("posToolbar.freeReturn")}
             </button>
           )}
         </>

@@ -51,6 +51,7 @@ const POSSystemPage = () => {
   const [cutMode, setCutMode] = useState(false);
   const [showDeliveryNotePreview, setShowDeliveryNotePreview] = useState(false);
   const [returnMode, setReturnMode] = useState(false);
+  const [showFreeReturnModal, setShowFreeReturnModal] = useState(false);
   const [activeCompany, setActiveCompany] = useState(null);
 
   // invoiceItemId -> qty
@@ -286,6 +287,168 @@ const POSSystemPage = () => {
 
     confirmAction(`Are you sure you want to make this an ${label}?`, () => {
       handleCreateInvoice(type);
+    });
+  };
+
+  const handleCreateFreeReturn = async (baseType) => {
+    if (!selectedCustomerId || tableData.length === 0) {
+      setError("Customer and items are required.");
+      return;
+    }
+
+    setShowFreeReturnModal(false);
+    setLoading(true);
+    setError("");
+
+    const vatPercentageValue = Number(vat);
+    const vatRate = vatPercentageValue / 100;
+    const round2 = (n) => Number(Number(n || 0).toFixed(2));
+
+    const items = tableData.map((row) => {
+      const unitPrice = Number(row.price) || 0;
+      const itemType = String(row.itemType ?? row.type ?? "").toLowerCase();
+      const length = row.length !== "" && row.length != null ? Number(row.length) : null;
+      const width = row.width !== "" && row.width != null ? Number(row.width) : null;
+      const sheetsPerBox = itemType === "box" ? Number(row.sheet) || null : null;
+      const quantity =
+        itemType === "box"
+          ? Number(row.box) || 0
+          : itemType === "sheet" || itemType === "sqm" || itemType === "unit"
+          ? Number(row.sheet) || 0
+          : 0;
+      const sqm = Number(row.sqm) || 0;
+      const baseForTotal = itemType === "unit" ? quantity : sqm;
+      const totalAmount = round2(baseForTotal * unitPrice);
+      const vatAmount = round2(totalAmount * vatRate);
+
+      return {
+        itemVariantId: row.itemVariantId,
+        itemBatchId: row.batchId,
+        itemType,
+        stockMode: row.stockMode ?? null,
+        length,
+        width,
+        sheetsPerBox,
+        sqm,
+        unitPrice,
+        totalAmount,
+        vat: vatAmount,
+        quantity,
+        sqmPieceId: row.sqmPieceId ?? null,
+      };
+    });
+
+    const totalWithoutVAT = items.reduce((acc, item) => acc + item.totalAmount, 0);
+    const totalVAT = items.reduce((acc, item) => acc + item.vat, 0);
+    const grandTotal = totalWithoutVAT + totalVAT;
+
+    const payload = {
+      customerId: selectedCustomerId,
+      date,
+      baseType,
+      currencyCode: customerPreview.currencyCode,
+      totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
+      totalVAT: Number(totalVAT.toFixed(2)),
+      grandTotal: Number(grandTotal.toFixed(2)),
+      currencyRate: parseFloat(currencyRate) || 1,
+      vatPercentage: vatPercentageValue,
+      items,
+    };
+
+    try {
+      const response = await axiosClient.post("/invoices/free-return", payload);
+      console.log("✅ Free Return Invoice Created:", response.data);
+      showNotification("success", `Free Return (${baseType}) invoice created successfully!`);
+      setTableData([]);
+    } catch (err) {
+      console.error("❌ Error creating free return invoice:", err);
+      showNotification(
+        "error",
+        `Failed to create free return invoice. ${err.response?.data?.message || err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateRRVR = async () => {
+    if (!selectedCustomerId || tableData.length === 0) {
+      setError("Customer and items are required.");
+      return;
+    }
+
+    confirmAction("Are you sure you want to make this an RRVR?", async () => {
+      setLoading(true);
+      setError("");
+
+      const vatPercentageValue = Number(vat);
+      const vatRate = vatPercentageValue / 100;
+      const round2 = (n) => Number(Number(n || 0).toFixed(2));
+
+      const items = tableData.map((row) => {
+        const unitPrice = Number(row.price) || 0;
+        const itemType = String(row.itemType ?? row.type ?? "").toLowerCase();
+        const length = row.length !== "" && row.length != null ? Number(row.length) : null;
+        const width = row.width !== "" && row.width != null ? Number(row.width) : null;
+        const sheetsPerBox = itemType === "box" ? Number(row.sheet) || null : null;
+        const quantity =
+          itemType === "box"
+            ? Number(row.box) || 0
+            : itemType === "sheet" || itemType === "sqm" || itemType === "unit"
+            ? Number(row.sheet) || 0
+            : 0;
+        const sqm = Number(row.sqm) || 0;
+        const baseForTotal = itemType === "unit" ? quantity : sqm;
+        const totalAmount = round2(baseForTotal * unitPrice);
+        const vatAmount = round2(totalAmount * vatRate);
+
+        return {
+          itemVariantId: row.itemVariantId,
+          itemBatchId: row.batchId,
+          itemType,
+          stockMode: row.stockMode ?? null,
+          length,
+          width,
+          sheetsPerBox,
+          sqm,
+          unitPrice,
+          totalAmount,
+          vat: vatAmount,
+          quantity,
+          sqmPieceId: row.sqmPieceId ?? null,
+        };
+      });
+
+      const totalWithoutVAT = items.reduce((acc, item) => acc + item.totalAmount, 0);
+      const totalVAT = items.reduce((acc, item) => acc + item.vat, 0);
+      const grandTotal = totalWithoutVAT + totalVAT;
+
+      const payload = {
+        customerId: selectedCustomerId,
+        date,
+        currencyCode: customerPreview.currencyCode,
+        totalWithoutVAT: Number(totalWithoutVAT.toFixed(2)),
+        totalVAT: Number(totalVAT.toFixed(2)),
+        grandTotal: Number(grandTotal.toFixed(2)),
+        currencyRate: parseFloat(currencyRate) || 1,
+        vatPercentage: vatPercentageValue,
+        items,
+      };
+
+      try {
+        const response = await axiosClient.post("/invoices/rrvr", payload);
+        console.log("✅ RRVR Invoice Created:", response.data);
+        showNotification("success", "RRVR invoice created successfully!");
+        setTableData([]);
+      } catch (err) {
+        console.error("❌ Error creating RRVR invoice:", err);
+        showNotification(
+          "error",
+          `Failed to create RRVR invoice. ${err.response?.data?.message || err.message}`
+        );
+      } finally {
+        setLoading(false);
+      }
     });
   };
 
@@ -1590,6 +1753,8 @@ const POSSystemPage = () => {
             handleEditRequest={handleEditRequestConfirmed}
             handleCreateRequest={handleCreateRequestConfirmed}
             handleCreateInvoice={handleCreateInvoiceConfirmed}
+            handleCreateRRVR={handleCreateRRVR}
+            handleOpenFreeReturnModal={() => setShowFreeReturnModal(true)}
             loading={loading}
             selectedInvoiceId={selectedInvoiceId}
             selectedRequestId={selectedRequestId}
@@ -1639,6 +1804,39 @@ const POSSystemPage = () => {
                 invoiceType: invoiceData?.invoiceType ?? selectedInvoiceType ?? "S",
               }}
             />
+          )}
+
+          {showFreeReturnModal && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
+              <div style={{ background:"#fff", borderRadius:12, padding:32, maxWidth:360, width:"100%", textAlign:"center", boxShadow:"0 8px 32px rgba(0,0,0,.18)" }}>
+                <h3 style={{ margin:"0 0 8px", fontSize:18, fontWeight:700 }}>Free Return</h3>
+                <p style={{ margin:"0 0 24px", color:"#64748b", fontSize:14 }}>
+                  Select the base type for this return:
+                </p>
+                <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:16 }}>
+                  <button
+                    onClick={() => handleCreateFreeReturn("S")}
+                    disabled={loading}
+                    style={{ flex:1, padding:"12px 0", background:"#dc2626", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:15, cursor:"pointer" }}
+                  >
+                    S — Sales
+                  </button>
+                  <button
+                    onClick={() => handleCreateFreeReturn("G")}
+                    disabled={loading}
+                    style={{ flex:1, padding:"12px 0", background:"#ca8a04", color:"#fff", border:"none", borderRadius:8, fontWeight:700, fontSize:15, cursor:"pointer" }}
+                  >
+                    G — Offer
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowFreeReturnModal(false)}
+                  style={{ padding:"8px 24px", background:"#e2e8f0", color:"#334155", border:"none", borderRadius:8, fontWeight:600, cursor:"pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
 
           {showPreview && !isShamounActive && !isRevoActive && (
