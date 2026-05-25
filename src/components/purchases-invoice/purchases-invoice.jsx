@@ -71,6 +71,8 @@ const PurchasesInvoicePage = () => {
   const [invoiceType, setInvoiceType] = useState("S");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
   const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
+  const [isPurchaseReturn, setIsPurchaseReturn] = useState(false);
+  const [returnBaseType, setReturnBaseType] = useState("S");
   const saveLockRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -120,6 +122,8 @@ const PurchasesInvoicePage = () => {
     setTotalChargesOFR(0);
 
     setShowTypePopup(false);
+    setIsPurchaseReturn(false);
+    setReturnBaseType("S");
   };
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
@@ -266,9 +270,9 @@ const handleViewJournalVoucher = async () => {
   };
 
   const getCorrectShippingCost = () => {
-    if (invoiceType === "S") return shippingCostComputed; // from normal (value)
-    if (invoiceType === "G" || invoiceType === "SR" || invoiceType === "RVR")
-      return shippingCostOFR; // from OFR (valueOFR)
+    const et = (invoiceType === "PR" || isPurchaseReturn) ? returnBaseType : invoiceType;
+    if (et === "S") return shippingCostComputed;
+    if (et === "G" || et === "SR" || et === "RVR") return shippingCostOFR;
     return 0;
   };
 
@@ -411,6 +415,12 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
           `Invoice updated successfully: ${res.data.invoiceNumber}`
         );
         setIsEditMode(false);
+      } else if (isPurchaseReturn) {
+        res = await axiosClient.post(`/purchase-invoices/return`, {
+          ...invoiceData,
+          baseType: returnBaseType,
+        });
+        openNotif("success", `Purchase return saved: ${res.data.invoiceNumber}`);
       } else {
         res = await axiosClient.post(`/purchase-invoices`, invoiceData);
         openNotif("success", `Invoice saved successfully: ${res.data.invoiceNumber}`);
@@ -542,6 +552,13 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
     setShippingCostInput(Number(fullInvoice.shippingCost));
     setFinalCost(Number(fullInvoice.finalCost));
     setInvoiceType(fullInvoice.type);
+    if (fullInvoice.type === "PR") {
+      setIsPurchaseReturn(true);
+      setReturnBaseType(fullInvoice.returnBaseType || "S");
+    } else {
+      setIsPurchaseReturn(false);
+      setReturnBaseType("S");
+    }
     setPoDate(fullInvoice.poDate?.slice(0, 10) || "");
 
     // 4) items
@@ -654,6 +671,13 @@ setUnitPriceRows(
     setShippingCostInput(Number(inv.shippingCost));
     setFinalCost(Number(inv.finalCost));
     setInvoiceType(inv.type);
+    if (inv.type === "PR") {
+      setIsPurchaseReturn(true);
+      setReturnBaseType(inv.returnBaseType || "S");
+    } else {
+      setIsPurchaseReturn(false);
+      setReturnBaseType("S");
+    }
     const mapped = (inv.items ?? []).map((i) => {
       const v = i.itemVariant;
       const t = v?.thickness;
@@ -867,12 +891,14 @@ setUnitPriceRows(
   const computedCostPercentageForDisplay = React.useMemo(() => {
     if (status !== "Recieved") return null;
 
-    const ratio = invoiceType === "G" ? getCostPercentageOFR() : getCostPercentage();
+    const et = (invoiceType === "PR" || isPurchaseReturn) ? returnBaseType : invoiceType;
+    const ratio = et === "G" ? getCostPercentageOFR() : getCostPercentage();
     if (!isFinite(ratio)) return 0;
     return +(ratio * 100).toFixed(2);
   }, [
     status,
     invoiceType,
+    returnBaseType,
     totalCharges,
     itemsTotalAmount,
     totalChargesOFR,
@@ -885,27 +911,25 @@ setUnitPriceRows(
   let ofrCfrFn = calculatePriceCFROFR;
   let ofrFinalFn = calculateFinalCostOFR;
 
+  const effectiveType = (invoiceType === "PR" || isPurchaseReturn) ? returnBaseType : invoiceType;
+
   if (status === "Recieved") {
-    if (invoiceType === "S") {
-      // Services only
+    if (effectiveType === "S") {
       normalCfrFn = realCalculatePriceCFR;
       normalFinalFn = realFinalCost;
       ofrCfrFn = realCalculatePriceCFR;
       ofrFinalFn = realFinalCost;
-    } else if (invoiceType === "G") {
+    } else if (effectiveType === "G") {
       normalCfrFn = () => 0;
       normalFinalFn = () => 0;
-      // Goods only
       ofrCfrFn = realCalculatePriceCFROFR;
       ofrFinalFn = realFinalCostOFR;
-    } else if (invoiceType === "SR") {
-      // Both
+    } else if (effectiveType === "SR") {
       normalCfrFn = realCalculatePriceCFR;
       normalFinalFn = realFinalCost;
       ofrCfrFn = realCalculatePriceCFROFR;
       ofrFinalFn = realFinalCostOFR;
-    } else if (invoiceType === "RVR") {
-      // Both
+    } else if (effectiveType === "RVR") {
       normalCfrFn = realCalculatePriceCFR;
       normalFinalFn = realFinalCost;
       ofrCfrFn = () => 0;
@@ -920,8 +944,10 @@ return (
         <h2>
           {isInvoiceSelected
             ? isEditMode
-              ? "Edit Purchase Invoice"
-              : "View Purchase Invoice"
+              ? invoiceType === "PR" ? "Edit Purchase Return" : "Edit Purchase Invoice"
+              : invoiceType === "PR" ? "View Purchase Return" : "View Purchase Invoice"
+            : isPurchaseReturn
+            ? "Create Purchase Return (مرتجع فاتورة شراء)"
             : "Create Purchase Invoice"}
         </h2>
         <div className="button-container">
@@ -933,14 +959,13 @@ return (
                   onClick={() => saveInvoice(invoiceType)}
                   disabled={isSaving}
                 >
-                  {isSaving ? `Saving...` : `Save Invoice (${invoiceType})`}
+                  {isSaving ? `Saving...` : `Save (${invoiceType})`}
                 </button>
                 <button className="cancel-button" onClick={handleCancelEdit}>
                   Cancel
                 </button>
               </>
             ) : (
-              // ✅ Wrap multiple buttons in a fragment
               <>
                 <button
                   className="edit-purch-button"
@@ -961,8 +986,9 @@ return (
             <button
               className="save-button"
               onClick={() => saveInvoice(invoiceType)}
+              disabled={isSaving}
             >
-              Save Invoice
+              {isSaving ? "Saving..." : isPurchaseReturn ? "Save Return" : "Save Invoice"}
             </button>
           )}
 
@@ -979,6 +1005,27 @@ return (
           >
             New
           </button>
+
+          {!isInvoiceSelected && (
+            <button
+              className="new-button"
+              style={{ backgroundColor: "#b85c00", color: "#fff" }}
+              onClick={() => {
+                resetFields();
+                setSelectedInvoiceId(null);
+                setIsEditMode(false);
+                setUnitPriceRows([]);
+                setShowUnitPriceModal(false);
+                setActiveSummary("main");
+                setIsPurchaseReturn(true);
+                setReturnBaseType("S");
+                setInvoiceType("PR");
+                setStatus("Recieved");
+              }}
+            >
+              New Purchase Return
+            </button>
+          )}
         </div>
       </div>
 
@@ -1095,14 +1142,31 @@ return (
                 value={invoiceType}
                 onChange={(e) => setInvoiceType(e.target.value)}
                 className="field-compact field-type"
-                disabled={!canEdit || isInvoiceSelected}
+                disabled={!canEdit || isInvoiceSelected || isPurchaseReturn}
               >
                 <option value="S">S</option>
                 <option value="G">G</option>
                 <option value="SR">SR</option>
                 <option value="RVR">RVR</option>
+                <option value="PR">PR</option>
               </select>
             </label>
+
+            {(isPurchaseReturn || invoiceType === "PR") && (
+              <label>
+                Return Base Type
+                <select
+                  value={returnBaseType}
+                  onChange={(e) => setReturnBaseType(e.target.value)}
+                  className="field-compact field-type"
+                  disabled={!canEdit}
+                >
+                  <option value="S">S</option>
+                  <option value="G">G</option>
+                  <option value="SR">SR</option>
+                </select>
+              </label>
+            )}
 
             <label>
               VAT Percentage
@@ -1125,7 +1189,7 @@ return (
           currency={currency}
           exchangeRate={exchangeRate}
           isEditable={canEdit}
-          invoiceType={invoiceType}
+          invoiceType={effectiveType}
         />
 
         {showItemModal && (
@@ -1205,7 +1269,7 @@ return (
             calculatePriceCFROFR={ofrCfrFn}
             calculateFinalCostOFR={ofrFinalFn}
             selectedItems={items}
-            invoiceType={invoiceType}
+            invoiceType={effectiveType}
             status={status}
             shippingCostComputed={getCorrectShippingCost()}
             computedCostPercentageForDisplay={computedCostPercentageForDisplay}
