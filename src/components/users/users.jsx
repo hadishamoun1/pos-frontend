@@ -149,6 +149,7 @@ const PERMISSION_GROUPS = [
       "payments.create",
       "payments.update",
       "payments.delete",
+      "purchases.createReturn",
     ],
   },
   {

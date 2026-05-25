@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 // ✅ use axiosClient (auto token)
 import { axiosClient } from "../api/axiosClient";
+import PermGate from "../auth/PermGate";
 
 const fetchSuppliersByQuery = async (query) => {
   const { data } = await axiosClient.get(`/suppliers/v1/search`, {
@@ -1007,24 +1008,26 @@ return (
           </button>
 
           {!isInvoiceSelected && (
-            <button
-              className="new-button"
-              style={{ backgroundColor: "#b85c00", color: "#fff" }}
-              onClick={() => {
-                resetFields();
-                setSelectedInvoiceId(null);
-                setIsEditMode(false);
-                setUnitPriceRows([]);
-                setShowUnitPriceModal(false);
-                setActiveSummary("main");
-                setIsPurchaseReturn(true);
-                setReturnBaseType("S");
-                setInvoiceType("PR");
-                setStatus("Recieved");
-              }}
-            >
-              New Purchase Return
-            </button>
+            <PermGate perm="purchases.createReturn">
+              <button
+                className="new-button"
+                style={{ backgroundColor: "#b85c00", color: "#fff" }}
+                onClick={() => {
+                  resetFields();
+                  setSelectedInvoiceId(null);
+                  setIsEditMode(false);
+                  setUnitPriceRows([]);
+                  setShowUnitPriceModal(false);
+                  setActiveSummary("main");
+                  setIsPurchaseReturn(true);
+                  setReturnBaseType("S");
+                  setInvoiceType("PR");
+                  setStatus("Recieved");
+                }}
+              >
+                New Purchase Return
+              </button>
+            </PermGate>
           )}
         </div>
       </div>
