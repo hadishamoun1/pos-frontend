@@ -15,8 +15,8 @@ const JournalVoucherPage = () => {
 
   const [date, setDate] = useState("");
   const [type, setType] = useState("");
-  const isOFRType = (t) => ["G", "RG"].includes(String(t || "").toUpperCase());
-  const isBaseType = (t) => ["S", "R", "RVR"].includes(String(t || "").toUpperCase());
+  const isOFRType = (t) => ["G", "RG", "PRG"].includes(String(t || "").toUpperCase());
+  const isBaseType = (t) => ["S", "R", "RVR", "PR"].includes(String(t || "").toUpperCase());
 
   const [summarySeq, setSummarySeq] = useState("");
   const searchDebounceRef = useRef();
@@ -135,6 +135,17 @@ const JournalVoucherPage = () => {
       );
       if (hasOFR && !hasBase) return "RG";
       return "R";
+    }
+    if (t === "PR") {
+      const details = jv?.details || [];
+      const hasBase = details.some(
+        (d) => parseNumber(d?.dr) !== 0 || parseNumber(d?.cr) !== 0
+      );
+      const hasOFR = details.some(
+        (d) => parseNumber(d?.drOFR) !== 0 || parseNumber(d?.crOFR) !== 0
+      );
+      if (hasOFR && !hasBase) return "PRG";
+      return "PR";
     }
     return t;
   };
@@ -1871,6 +1882,8 @@ const handleRightClick = (event, rowIndex, rowRid) => {
                   <option value="RVR">RVR – Reverse OFR</option>
                   <option value="R">R – Return</option>
                   <option value="RG">RG – Return OFR</option>
+                  <option value="PR">PR – Purchase Return</option>
+                  <option value="PRG">PRG – Purchase Return OFR</option>
                 </select>
               </label>
             </div>

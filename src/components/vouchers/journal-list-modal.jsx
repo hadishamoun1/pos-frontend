@@ -7,6 +7,7 @@ const kindLabel = (k) => {
   if (x === "INVOICE") return "فاتورة";
   if (x === "RECEIVABLE") return "دفعة";
   if (x === "PURCHASE") return "فاتورة شراء";
+  if (x === "PURCHASE_RETURN") return "مرتجع شراء";
   return "JV";
 };
 
@@ -16,6 +17,7 @@ const kindOptionLabel = (k) => {
   if (x === "RECEIVABLE") return "دفعة";
   if (x === "JV") return "قيد يومي";
   if (x === "PURCHASE") return "فاتورة شراء";
+  if (x === "PURCHASE_RETURN") return "مرتجع شراء";
   return x || "الكل";
 };
 
@@ -96,7 +98,8 @@ const JournalListsModal = ({
                 <option value="INVOICE">{kindOptionLabel("INVOICE")}</option>
                 <option value="RECEIVABLE">{kindOptionLabel("RECEIVABLE")}</option>
                 <option value="JV">{kindOptionLabel("JV")}</option>
-                {/* <option value="PURCHASE">{kindOptionLabel("PURCHASE")}</option> */}
+                <option value="PURCHASE">{kindOptionLabel("PURCHASE")}</option>
+                <option value="PURCHASE_RETURN">{kindOptionLabel("PURCHASE_RETURN")}</option>
               </select>
             </div>
           </div>

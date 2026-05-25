@@ -22,6 +22,7 @@ const DEFAULT_ROLE_KEYS = [
   "PURCHASE_EXPENSE",
   "PURCHASE_DISCOUNT",
   "PURCHASE_VAT_INPUT",
+  "PurchasesReturn_USD",
   "INVENTORY",
   "COGS",
   "CASH",
