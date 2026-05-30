@@ -315,7 +315,7 @@ const StockTab = forwardRef(function StockTab(
       try {
         const signal = cancelInFlight();
         const res = await axiosClient.get("/items/v1/real-variant-ledger", {
-          params: { page: targetPage, limit },
+          params: { page: targetPage, limit, includeSqm: true },
           signal,
         });
         const { data: variants, hasMore: hm } = normalizeEnvelope(res.data);
@@ -358,7 +358,7 @@ const StockTab = forwardRef(function StockTab(
         }
       }
 
-      const res = await axiosClient.get("/items/v1/real-variant-ledger", { params, signal });
+      const res = await axiosClient.get("/items/v1/real-variant-ledger", { params: { ...params, includeSqm: true }, signal });
       const { data: variants } = normalizeEnvelope(res.data);
       const flat = flattenVariants(variants);
 
