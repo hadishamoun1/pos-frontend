@@ -11,8 +11,10 @@ const LoginPage = () => {
   const { setLanguage } = useLanguage();
 
   const [mode, setMode] = useState("face");
+  const [screen, setScreen] = useState("login"); // "login" | "signup"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -51,6 +53,33 @@ const LoginPage = () => {
     }
   };
 
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    setErr("");
+    if (password !== confirmPassword) { setErr("Passwords do not match"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((Array.isArray(data?.message) ? data.message.join(", ") : data?.message) || "Sign up failed");
+      if (!data?.access_token) throw new Error("No token returned from server");
+      sessionStorage.setItem("token", data.access_token);
+      if (data?.user?.language) setLanguage(data.user.language);
+      window.location.href = "/dashboard";
+    } catch (e) {
+      setErr(e?.message || "Sign up failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchScreen = (s) => { setErr(""); setUsername(""); setPassword(""); setConfirmPassword(""); setScreen(s); };
+
   const handleFaceSuccess = (data) => {
     sessionStorage.setItem("token", data.access_token);
     if (data?.user?.language) setLanguage(data.user.language);
@@ -61,37 +90,87 @@ const LoginPage = () => {
     <div className="auth-container" style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/background.png)` }}>
       <div className="auth-form">
         <div className="welcome-text">Welcome to Shamoun Co.</div>
-        <h2>Login</h2>
+        <h2>{screen === "login" ? "Login" : "Sign Up"}</h2>
 
+        {screen === "login" && (
+          <>
+            {/* Face login */}
+            <Suspense fallback={<p style={{ color: "white", textAlign: "center" }}>Loading face login...</p>}>
+              <FaceLoginSection onLogin={handleFaceSuccess} />
+            </Suspense>
 
-        {/* Face login */}
-        <Suspense fallback={<p style={{ color: "white", textAlign: "center" }}>Loading face login...</p>}>
-          <FaceLoginSection onLogin={handleFaceSuccess} />
-        </Suspense>
+            {/* Username / Password form */}
+            <form onSubmit={handleNormalLogin} style={{ marginTop: 16 }}>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+              {err ? <div style={errorStyle}>{err}</div> : null}
+              <button type="submit" disabled={loading}>
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
 
-        {/* Username / Password form */}
-        <form onSubmit={handleNormalLogin} style={{ marginTop: 16 }}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          {err ? <div style={errorStyle}>{err}</div> : null}
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+            <div className="create-acc">
+              Don't have an account?{" "}
+              <span className="link-login-signup" style={{ cursor: "pointer" }} onClick={() => switchScreen("signup")}>
+                Sign Up
+              </span>
+            </div>
+          </>
+        )}
+
+        {screen === "signup" && (
+          <form onSubmit={handleSignup} style={{ marginTop: 16 }}>
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+            />
+            {err ? <div style={errorStyle}>{err}</div> : null}
+            <button type="submit" disabled={loading}>
+              {loading ? "Creating account..." : "Sign Up"}
+            </button>
+
+            <div className="create-acc">
+              Already have an account?{" "}
+              <span className="link-login-signup" style={{ cursor: "pointer" }} onClick={() => switchScreen("login")}>
+                Login
+              </span>
+            </div>
+          </form>
+        )}
 
       </div>
     </div>
