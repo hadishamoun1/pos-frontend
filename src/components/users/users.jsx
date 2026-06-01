@@ -109,6 +109,7 @@ const PERMISSION_GROUPS = [
       "cuts.view",
       "inventory.view",
       "settings.accountRoles",
+      "settings.linkedParties",
       "settings.general",
       "settings.invoice",
       "settings.permissions",

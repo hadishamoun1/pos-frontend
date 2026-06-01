@@ -16,6 +16,7 @@ import LogoutAllUsersPage from "./LogoutAllUsersPage";
 import InventoryAuditPage from "./Inventory-Audit";
 import InvoiceAuditPage from "./InvoiceAuditPage";
 import AccountingRoleSettings from "./AccountingRoleSettings";
+import LinkedPartySettings from "./LinkedPartySettings";
 import CompanySettings from "./CompanySettings";
 import SecurityLockdownSettings from "./Securitylockdownsettings";
 import FileBrowser from "./FileBrowser";
@@ -38,6 +39,7 @@ const SettingsPage = () => {
       { key: "year-settings", label: "Fiscal Year", perm: "settings.fiscalYear", component: <YearSettings /> },
       { key: "currency-settings", label: "Currency", perm: "settings.currency", component: <CurrencySettings /> },
       { key: "account-roles", label: "Account Roles", perm: "settings.accountRoles", component: <AccountingRoleSettings /> },
+      { key: "linked-parties", label: "Linked Parties", perm: "settings.linkedParties", component: <LinkedPartySettings /> },
       { key: "invoice-display-name-settings", label: "Invoice display", perm: "settings.invoiceDisplay", component: <InvoiceDisplayNamesPanel /> },
       { key: "stock-totals-audit", label: "Stock Totals / Audit", perm: "settings.stockTotalsAudit", component: <StockTotalsAudit /> },
       { key: "inventory-audit", label: "Inventory Audit", perm: "settings.inventoryAudit", component: <InventoryAuditPage /> },

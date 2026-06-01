@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Reports.css";
+import "./Components/StatementReportModal.css";
 import { axiosClient } from "../api/axiosClient";
 import { logActivity } from "../api/logActivity";
 import { printWithDomBuilder } from "./printHelper";
@@ -59,6 +60,9 @@ export default function AccountStatement() {
   const [err, setErr] = useState("");
   const [meta, setMeta] = useState(saved?.meta ?? null);
   const [items, setItems] = useState(saved?.items ?? []);
+  const [netView, setNetView] = useState(false);
+  const [netMeta, setNetMeta] = useState(null);
+  const [netItems, setNetItems] = useState([]);
 
   // Persist filters + results so navigating away and back restores everything
   useEffect(() => {
@@ -95,6 +99,7 @@ export default function AccountStatement() {
   const isRevo = companyKey === "revo";
 
   const printRef = useRef(null);
+  const netPrintRef = useRef(null);
 
   const looksLikeOpening = (txt = "") =>
     /opening\s*balance/i.test(txt) || /رصيد\s*سابق/.test(txt);
@@ -177,11 +182,54 @@ export default function AccountStatement() {
     return { kind, idNum };
   };
 
+  const fetchNetStatement = async (customerId) => {
+    setLoading(true);
+    setErr("");
+    setNetItems([]);
+    setNetMeta(null);
+    try {
+      const res = await axiosClient.get(`/journal-vouchers/statements/net/${customerId}`, {
+        params: sanitizeParams({ type, from, to }),
+      });
+      const data = res.data || {};
+      setNetMeta({
+        customerName: data.customerName,
+        supplierName: data.supplierName,
+        linkedSupplierId: data.linkedSupplierId,
+        from: data.from,
+        to: data.to,
+        openingBalance: Number(data.openingBalance || 0),
+        closingBalance: Number(data.closingBalance || 0),
+        totalDebit: Number(data?.totals?.totalDebit || 0),
+        totalCredit: Number(data?.totals?.totalCredit || 0),
+      });
+      setNetItems((data.items || []).map((r, i) => ({
+        _ord: i,
+        date: r.date,
+        jvNumber: r.jvNumber,
+        docNbr: r.docNbr ?? "",
+        description: r.description ?? "",
+        side: r.side,
+        debit: Number(r.debit || 0),
+        credit: Number(r.credit || 0),
+        balanceAfter: Number(r.balanceAfter || 0),
+        journalVoucherId: r.journalVoucherId,
+      })));
+    } catch (e) {
+      setErr(e?.response?.data?.message || e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchStatement = async () => {
     setLoading(true);
     setErr("");
     setItems([]);
     setMeta(null);
+    setNetView(false);
+    setNetMeta(null);
+    setNetItems([]);
     logActivity({
       action: 'REPORT_RUN',
       entityType: 'Report',
@@ -238,6 +286,14 @@ export default function AccountStatement() {
     return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  // Print-only formatter: LL removes .00, USD keeps 2 decimal places
+  const fmtPrint = (v) => {
+    const n = Number(typeof v === "string" ? v.replace(/,/g, "") : v ?? 0);
+    if (!isFinite(n)) return currency === "LL" ? "0" : "0.00";
+    if (currency === "LL") return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const downloadCSV = (csv) => {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -290,7 +346,7 @@ export default function AccountStatement() {
     const srcTitle = printableRoot.querySelector(".statement-report-modal-titlebar");
     const srcClientLine = printableRoot.querySelector(".statement-report-modal-clientline");
     const srcTable = printableRoot.querySelector(".statement-report-modal-table");
-    if (!srcHeader || !srcTitle || !srcClientLine || !srcTable) return;
+    if (!srcTitle || !srcClientLine || !srcTable) return;
 
     const allRows = Array.from(srcTable.querySelectorAll("tbody > tr")).map((r) => r.cloneNode(true));
     let footerRow = null;
@@ -329,7 +385,104 @@ export default function AccountStatement() {
         const headerBox = document.createElement("div");
         headerBox.className = "page-header";
         if (mode === "full") {
-          headerBox.appendChild(srcHeader.cloneNode(true));
+          if (srcHeader) headerBox.appendChild(srcHeader.cloneNode(true));
+          headerBox.appendChild(srcTitle.cloneNode(true));
+          headerBox.appendChild(srcClientLine.cloneNode(true));
+          headerBox.appendChild(buildInfoTable(""));
+        }
+        const bodyBox = document.createElement("div");
+        bodyBox.className = "page-body";
+        const { table, tbody } = buildTableSkeleton();
+        bodyBox.appendChild(table);
+        if (mode === "full") page.appendChild(headerBox);
+        page.appendChild(bodyBox);
+        container.appendChild(page);
+        return { page, headerBox, bodyBox, tbody };
+      };
+
+      const pages = [];
+      let current = createPage(1, "full");
+      pages.push(current);
+
+      const appendRowWithPagination = (rowNode) => {
+        current.tbody.appendChild(rowNode);
+        void current.page.offsetHeight;
+        if (current.page.scrollHeight > current.page.clientHeight) {
+          current.tbody.removeChild(rowNode);
+          current = createPage(pages.length + 1, "tableOnly");
+          pages.push(current);
+          current.tbody.appendChild(rowNode);
+          void current.page.offsetHeight;
+        }
+      };
+
+      for (const row of allRows) appendRowWithPagination(row);
+      if (footerRow) appendRowWithPagination(footerRow);
+
+      const totalPages = pages.length;
+      if (pages[0]) {
+        const infoCell = pages[0].headerBox?.querySelector(".statement-report-modal-info tbody td:last-child");
+        if (infoCell) infoCell.textContent = `1/${totalPages}`;
+      }
+    });
+  };
+
+  const handleNetPrint = () => {
+    const printableRoot = netPrintRef.current;
+    if (!printableRoot) return;
+
+    const srcHeader = printableRoot.querySelector(".statement-report-modal-header, .srm-revo-header");
+    const srcTitle  = printableRoot.querySelector(".statement-report-modal-titlebar");
+    const srcClientLine = printableRoot.querySelector(".statement-report-modal-clientline");
+    const srcTable  = printableRoot.querySelector(".statement-report-modal-table");
+    if (!srcTitle || !srcClientLine || !srcTable) return;
+
+    const allRows = Array.from(srcTable.querySelectorAll("tbody > tr")).map(r => r.cloneNode(true));
+    let footerRow = null;
+    if (allRows.length && allRows[allRows.length - 1].classList.contains("statement-report-modal-footer-row")) {
+      footerRow = allRows.pop();
+    }
+
+    const netClientName = netMeta?.customerName || "-";
+    const netStatementDate = new Date().toISOString().split("T")[0];
+
+    printWithDomBuilder(async (container) => {
+      const buildInfoTable = (pageNumText) => {
+        const wrap = document.createElement("div");
+        wrap.className = "statement-report-modal-info";
+        wrap.innerHTML = `
+          <table class="statement-report-modal-info-table" style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr><th>العميل</th><th>المورد المرتبط</th><th>من تاريخ</th><th>الى تاريخ</th><th>تاريخ الكشف</th><th>الصفحة</th></tr></thead>
+            <tbody><tr>
+              <td>${netMeta?.customerName || ""}</td>
+              <td>${netMeta?.supplierName || "—"}</td>
+              <td>${from}</td><td>${to}</td>
+              <td>${netStatementDate}</td><td>${pageNumText || ""}</td>
+            </tr></tbody>
+          </table>`;
+        return wrap;
+      };
+
+      const buildTableSkeleton = () => {
+        const table = document.createElement("table");
+        table.className = "statement-report-modal-table";
+        table.style.cssText = "width:100%;border-collapse:collapse;font-size:12px";
+        const colgroup = document.createElement("colgroup");
+        colgroup.innerHTML = `<col style="width:13%"/><col style="width:15%"/><col style="width:10%"/><col style="width:27%"/><col style="width:11%"/><col style="width:11%"/><col style="width:13%"/>`;
+        const thead = document.createElement("thead");
+        thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الجهة</th><th>الشرح</th><th>DR USD</th><th>CR USD</th><th>الرصيد</th></tr>`;
+        const tbody = document.createElement("tbody");
+        table.appendChild(colgroup); table.appendChild(thead); table.appendChild(tbody);
+        return { table, tbody };
+      };
+
+      const createPage = (pageIndex, mode) => {
+        const page = document.createElement("section");
+        page.className = "print-page";
+        const headerBox = document.createElement("div");
+        headerBox.className = "page-header";
+        if (mode === "full") {
+          if (srcHeader) headerBox.appendChild(srcHeader.cloneNode(true));
           headerBox.appendChild(srcTitle.cloneNode(true));
           headerBox.appendChild(srcClientLine.cloneNode(true));
           headerBox.appendChild(buildInfoTable(""));
@@ -457,8 +610,80 @@ export default function AccountStatement() {
             <div><strong>Total Debit:</strong> {fmt(meta.totalDebit)}</div>
             <div><strong>Total Credit:</strong> {fmt(meta.totalCredit)}</div>
             <div><strong>Closing Balance:</strong> {fmt(meta.closingBalance)}</div>
+            {/* Net Position button — only for customers */}
+            {parseSelected(accountId)?.kind === "customer" && (
+              <button
+                style={{ marginTop: 8, background: netView ? "#1d4ed8" : "#6b7280", color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer" }}
+                onClick={() => {
+                  const cid = parseSelected(accountId)?.idNum;
+                  if (!netView) { setNetView(true); fetchNetStatement(cid); }
+                  else setNetView(false);
+                }}
+              >
+                {netView ? "Hide Net Position" : "Show Net Position"}
+              </button>
+            )}
           </div>
         )}
+
+        {/* Net position view */}
+        {netView && (
+          <div style={{ marginBottom: 16, border: "2px solid #1d4ed8", borderRadius: 8, padding: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <h3 style={{ margin: 0, color: "#1d4ed8" }}>Net Position</h3>
+              <button
+                className="tb-btn tb-btn-primary"
+                disabled={!netItems.length}
+                onClick={handleNetPrint}
+              >
+                Print Net Position
+              </button>
+            </div>
+            {netMeta && (
+              <div style={{ marginBottom: 8, fontSize: 13 }}>
+                <div><strong>Customer:</strong> {netMeta.customerName}</div>
+                {netMeta.supplierName && <div><strong>Linked Supplier:</strong> {netMeta.supplierName}</div>}
+                <div><strong>Opening Balance:</strong> {fmt(netMeta.openingBalance)}</div>
+                <div><strong>Total Debit:</strong> {fmt(netMeta.totalDebit)}</div>
+                <div><strong>Total Credit:</strong> {fmt(netMeta.totalCredit)}</div>
+                <div><strong>Net Closing Balance:</strong> <span style={{ fontWeight: "bold", color: netMeta.closingBalance >= 0 ? "#15803d" : "#dc2626" }}>{fmt(netMeta.closingBalance)}</span></div>
+              </div>
+            )}
+            <table className="tb-table">
+              <thead>
+                <tr>
+                  <th>Date</th><th>JV Number</th><th>Side</th><th>Description</th>
+                  <th>DR USD</th><th>CR USD</th><th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {netItems.map((r, i) => (
+                  <tr key={i} style={{ background: r.side === "supplier" ? "#fef9c3" : undefined }}>
+                    <td>{r.date ?? ""}</td>
+                    <td>
+                      {r.journalVoucherId ? (
+                        <span style={{ color: "#2563eb", cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate(`/journal-voucher/${r.journalVoucherId}`)}>
+                          {r.jvNumber ?? ""}
+                        </span>
+                      ) : (r.jvNumber ?? "")}
+                    </td>
+                    <td style={{ fontSize: 11, color: r.side === "supplier" ? "#92400e" : "#1e40af" }}>
+                      {r.side === "supplier" ? "Supplier" : "Customer"}
+                    </td>
+                    <td>{r.description ?? ""}</td>
+                    <td className="num">{fmt(r.debit)}</td>
+                    <td className="num">{fmt(r.credit)}</td>
+                    <td className="num">{fmt(r.balanceAfter)}</td>
+                  </tr>
+                ))}
+                {!netItems.length && !loading && (
+                  <tr><td colSpan={7} style={{ textAlign: "center" }}>No data — make sure a supplier is linked to this customer</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         <table className="tb-table">
           <thead>
             <tr>
@@ -497,26 +722,118 @@ export default function AccountStatement() {
         </table>
       </div>
 
+      {/* NET POSITION PRINT-ONLY source */}
+      <div className="statement-report-modal-body" ref={netPrintRef} style={{ display: "none" }}>
+        <div className="statement-report-modal-a4">
+          {isRevo ? (
+            <div className="srm-revo-header" style={{ display:"flex", justifyContent:"space-between", padding:"5px", border:"1px solid #000", margin:"7px", height:"150px", alignItems:"center", boxSizing:"border-box" }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", padding:"8px" }}>
+                <img src={revoLogoSrc} alt="Revo Logo" style={{ maxHeight:"120px", maxWidth:"220px", objectFit:"contain", display:"block" }} />
+              </div>
+              <div style={{ textAlign:"right", direction:"rtl", fontSize:"14px", lineHeight:"1.4", fontFamily:"Arial, sans-serif" }}>
+                <h2 style={{ fontFamily:"Arial, sans-serif", fontSize:"25px", margin:0, fontWeight:"bold" }}>REVO GLASS COMPANY</h2>
+                <h2 style={{ fontFamily:"Arial, sans-serif", fontSize:"25px", margin:0, fontWeight:"bold" }}>شــــــركـــة ريـــفـــو جــــلاس</h2>
+                <p style={{ fontWeight:"normal", margin:0 }}>ســـوريـــا – حــلب – الــرامـوســة</p>
+                <div style={{ fontFamily:"Times New Roman, Times, serif", fontSize:"14px", display:"flex", flexDirection:"column", direction:"rtl" }}>
+                  <div style={{ display:"flex", alignItems:"center" }}><span style={{ width:"80px", textAlign:"right" }}>تلفون</span><span style={{ width:"10px", textAlign:"center", display:"inline-block" }}>:</span><span style={{ direction:"ltr" }}>+963 995118111</span></div>
+                  <div style={{ display:"flex", alignItems:"center" }}><span style={{ width:"80px", textAlign:"right" }}>للاستفسار</span><span style={{ width:"10px", textAlign:"center", display:"inline-block" }}>:</span><span style={{ direction:"ltr" }}>+963 995434366</span></div>
+                  <div style={{ display:"flex", alignItems:"center" }}><span style={{ width:"80px", textAlign:"right" }}>البريد الالكتروني</span><span style={{ width:"10px", textAlign:"center", display:"inline-block" }}>:</span><span style={{ flex:1, textAlign:"right" }}>revo.glass.co@gmail.com</span></div>
+                </div>
+              </div>
+            </div>
+          ) : type !== "G" ? (
+            <div className="statement-report-modal-header">
+              <div className="statement-report-modal-header-right">
+                <h2 className="statement-report-modal-company-arabic-title">شركة شمعون</h2>
+                <h2 className="statement-report-modal-company-arabic-subtitle">للزجاج و المرايا</h2>
+                <p className="statement-report-modal-small-subtitle">الحدث / شويفات</p>
+                <div className="statement-report-modal-arabic-contact">
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">تلفون</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">05/814964 05/810888</span></div>
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">خلوي / واتساب</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">79/100068</span></div>
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">فاكس</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">05/814961</span></div>
+                </div>
+              </div>
+              <div className="statement-report-modal-header-left">
+                <h1 className="statement-report-modal-company-title">Shamoun Company</h1>
+                <h2 className="statement-report-modal-company-subtitle">For Glass & Mirrors</h2>
+                <p>Chweifat - Near Spot Mall</p>
+                <p>Tel: 05-810 888 ; 79-1000 68 ; Fax: 05-814 961</p>
+                <p>Email: info@shamoun.com</p>
+                <p>VAT Reg.No 10909-601</p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="statement-report-modal-titlebar" style={{ textAlign:"center", fontWeight:700, fontSize:18, margin:"8px 0" }}>
+            كشف حساب صافي
+          </div>
+
+          <div className="statement-report-modal-clientline" style={{ marginBottom:6 }}>
+            <span className="statement-report-modal-clientline-label">السادة</span>
+            <span className="statement-report-modal-clientline-colon">:</span>
+            <span className="statement-report-modal-clientline-value" style={{ marginInlineStart:6 }}>
+              {netMeta?.customerName || clientName}
+              {netMeta?.supplierName ? ` / ${netMeta.supplierName}` : ""}
+            </span>
+          </div>
+
+          <div className="statement-report-modal-table-wrap" style={{ marginTop:8 }}>
+            <table className="statement-report-modal-table" style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <colgroup>
+                <col style={{ width:"13%" }}/><col style={{ width:"15%" }}/><col style={{ width:"10%" }}/>
+                <col style={{ width:"27%" }}/><col style={{ width:"11%" }}/><col style={{ width:"11%" }}/><col style={{ width:"13%" }}/>
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>تاريخ</th><th>رقم الفاتورة</th><th>الجهة</th><th>الشرح</th>
+                  <th>DR USD</th><th>CR USD</th><th>الرصيد</th>
+                </tr>
+              </thead>
+              <tbody>
+                {netMeta?.openingBalance !== undefined && (
+                  <tr className="statement-report-modal-opening-row">
+                    <td>{from}</td><td>—</td><td>—</td><td>رصيد سابق</td>
+                    <td>{fmtPrint(0)}</td><td>{fmtPrint(0)}</td><td>{fmtPrint(netMeta.openingBalance)}</td>
+                  </tr>
+                )}
+                {netItems.map((r, i) => (
+                  <tr key={`net-print-${i}`}>
+                    <td>{String(r.date ?? "").split("T")[0]}</td>
+                    <td>{r.jvNumber ?? ""}</td>
+                    <td>{r.side === "supplier" ? "مورد" : "عميل"}</td>
+                    <td>{r.description ?? ""}</td>
+                    <td>{fmtPrint(r.debit)}</td>
+                    <td>{fmtPrint(r.credit)}</td>
+                    <td>{fmtPrint(r.balanceAfter)}</td>
+                  </tr>
+                ))}
+                <tr className="statement-report-modal-footer-row">
+                  <td className="footer-spacer">&nbsp;</td>
+                  <td className="footer-spacer">&nbsp;</td>
+                  <td className="footer-spacer">&nbsp;</td>
+                  <td className="footer-spacer">&nbsp;</td>
+                  <td className="footer-spacer">&nbsp;</td>
+                  <td className="footer-label" style={{ textAlign:"center", fontWeight:700, fontSize:"14px" }}>رصيد</td>
+                  <td className="num footer-amount">{fmtPrint(netMeta?.closingBalance ?? 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       {/* PRINT-ONLY source */}
       <div className="statement-report-modal-body" ref={printRef} style={{ display: "none" }}>
         <div className="statement-report-modal-a4">
 
-          {/* ✅ REVO HEADER */}
           {isRevo ? (
             <div
               className="srm-revo-header"
-              style={{
-                display: "flex", justifyContent: "space-between",
-                padding: "5px", border: "1px solid #000",
-                margin: "7px", height: "150px",
-                alignItems: "center", boxSizing: "border-box",
-              }}
+              style={{ display: "flex", justifyContent: "space-between", padding: "5px", border: "1px solid #000", margin: "7px", height: "150px", alignItems: "center", boxSizing: "border-box" }}
             >
-              {/* LEFT: logo */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: "8px" }}>
                 <img src={revoLogoSrc} alt="Revo Logo" style={{ maxHeight: "120px", maxWidth: "220px", objectFit: "contain", display: "block" }} />
               </div>
-              {/* RIGHT: Arabic info */}
               <div style={{ textAlign: "right", direction: "rtl", fontSize: "14px", lineHeight: "1.4", fontFamily: "Arial, sans-serif" }}>
                 <h2 style={{ fontFamily: "Arial, sans-serif", fontSize: "25px", margin: 0, fontWeight: "bold" }}>REVO GLASS COMPANY</h2>
                 <h2 style={{ fontFamily: "Arial, sans-serif", fontSize: "25px", margin: 0, fontWeight: "bold" }}>شــــــركـــة ريـــفـــو جــــلاس</h2>
@@ -535,29 +852,16 @@ export default function AccountStatement() {
                 </div>
               </div>
             </div>
-          ) : (
-            /* ✅ SHAMOUN HEADER */
-            <div className="statement-report-modal-header" style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+          ) : type !== "G" ? (
+            <div className="statement-report-modal-header">
               <div className="statement-report-modal-header-right">
                 <h2 className="statement-report-modal-company-arabic-title">شركة شمعون</h2>
                 <h2 className="statement-report-modal-company-arabic-subtitle">للزجاج و المرايا</h2>
                 <p className="statement-report-modal-small-subtitle">الحدث / شويفات</p>
                 <div className="statement-report-modal-arabic-contact">
-                  <div className="statement-report-modal-arabic-line">
-                    <span className="statement-report-modal-arabic-label">تلفون</span>
-                    <span className="statement-report-modal-arabic-colon">:</span>
-                    <span className="statement-report-modal-arabic-value">05/814964 05/810888</span>
-                  </div>
-                  <div className="statement-report-modal-arabic-line">
-                    <span className="statement-report-modal-arabic-label">خلوي / واتساب</span>
-                    <span className="statement-report-modal-arabic-colon">:</span>
-                    <span className="statement-report-modal-arabic-value">79/100068</span>
-                  </div>
-                  <div className="statement-report-modal-arabic-line">
-                    <span className="statement-report-modal-arabic-label">فاكس</span>
-                    <span className="statement-report-modal-arabic-colon">:</span>
-                    <span className="statement-report-modal-arabic-value">05/814961</span>
-                  </div>
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">تلفون</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">05/814964 05/810888</span></div>
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">خلوي / واتساب</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">79/100068</span></div>
+                  <div className="statement-report-modal-arabic-line"><span className="statement-report-modal-arabic-label">فاكس</span><span className="statement-report-modal-arabic-colon">:</span><span className="statement-report-modal-arabic-value">05/814961</span></div>
                 </div>
               </div>
               <div className="statement-report-modal-header-left">
@@ -569,7 +873,7 @@ export default function AccountStatement() {
                 <p>VAT Reg.No 10909-601</p>
               </div>
             </div>
-          )}
+          ) : null}
 
           <div className="statement-report-modal-titlebar" style={{ textAlign: "center", fontWeight: 700, fontSize: 18, margin: "8px 0" }}>
             كشف حساب
@@ -616,7 +920,7 @@ export default function AccountStatement() {
                 {!(items[0] && looksLikeOpening(items[0].description || "")) && (
                   <tr className="statement-report-modal-opening-row">
                     <td>{from}</td><td>—</td><td>رصيد سابق</td>
-                    <td>{fmt(0)}</td><td>{fmt(0)}</td><td>{fmt(openingBalance)}</td>
+                    <td>{fmtPrint(0)}</td><td>{fmtPrint(0)}</td><td>{fmtPrint(openingBalance)}</td>
                   </tr>
                 )}
                 {items.map((r, i) => (
@@ -624,9 +928,9 @@ export default function AccountStatement() {
                     <td>{String(r.date ?? "").split("T")[0]}</td>
                     <td>{r.docNbr}</td>
                     <td>{displayDesc(r.description)}</td>
-                    <td>{fmt(Number(r.debit || 0).toFixed(2))}</td>
-                    <td>{fmt(Number(r.credit || 0).toFixed(2))}</td>
-                    <td>{fmt(Number(r.balanceAfter || 0).toFixed(2))}</td>
+                    <td>{fmtPrint(r.debit || 0)}</td>
+                    <td>{fmtPrint(r.credit || 0)}</td>
+                    <td>{fmtPrint(r.balanceAfter || 0)}</td>
                   </tr>
                 ))}
                 <tr className="statement-report-modal-footer-row">
@@ -635,7 +939,7 @@ export default function AccountStatement() {
                   <td className="footer-spacer">&nbsp;</td>
                   <td className="footer-spacer">&nbsp;</td>
                   <td className="footer-label" style={{ textAlign: "center", fontWeight: 700, fontSize: "14px" }}>رصيد</td>
-                  <td className="num footer-amount">{fmt(closingBalance)}</td>
+                  <td className="num footer-amount">{fmtPrint(closingBalance)}</td>
                 </tr>
               </tbody>
             </table>
