@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./RequestPreviewModal.css";
 import html2canvas from "html2canvas";
+import AnnotationLayer, { clearAnnotations } from "../shared/AnnotationLayer";
 
 function safeNum(v, fallback = 0) {
   const n = Number(v);
@@ -405,6 +406,7 @@ export default function RequestPreviewModal({
 }) {
   const iframeRef = useRef(null);
   const [zoom, setZoom] = useState(1);
+  const [annotMode, setAnnotMode] = useState(false);
 
   const srcDoc = useMemo(
     () => buildRequestHtml(request || {}, currencyCode, vatPercent, currencyRate, llLabel),
@@ -460,11 +462,44 @@ export default function RequestPreviewModal({
       callIframeZoom(1);
       await new Promise((r) => setTimeout(r, 60));
 
+      // Inject annotation nodes into the target so they appear in the capture
+      const injected = [];
+      const annotNodes = doc.querySelectorAll(".annot-node");
+      if (annotNodes.length) {
+        const pr = target.getBoundingClientRect();
+        const savedPos = target.style.position;
+        const savedOvf = target.style.overflow;
+        target.style.position = "relative";
+        target.style.overflow = "visible";
+        annotNodes.forEach((n) => {
+          const nr = n.getBoundingClientRect();
+          const ac = n.cloneNode(true);
+          ac.querySelector(".annot-controls")?.remove();
+          ac.querySelector(".annot-toolbar")?.remove();
+          Object.assign(ac.style, {
+            left:          (nr.left - pr.left) + "px",
+            top:           (nr.top  - pr.top)  + "px",
+            position:      "absolute",
+            pointerEvents: "none",
+            outline:       "none",
+          });
+          target.appendChild(ac);
+          injected.push({ el: ac, savedPos, savedOvf });
+        });
+      }
+
       const canvas = await html2canvas(target, {
         scale: 3,
         backgroundColor: "#ffffff",
         useCORS: true,
         logging: false,
+      });
+
+      // Remove injected clones and restore styles
+      injected.forEach(({ el, savedPos, savedOvf }) => {
+        el.remove();
+        target.style.position = savedPos;
+        target.style.overflow = savedOvf;
       });
 
       // restore zoom
@@ -517,6 +552,23 @@ export default function RequestPreviewModal({
               Print
             </button>
 
+            {annotMode && (
+              <button
+                className="request-preview-btn request-preview-danger"
+                onClick={() => clearAnnotations(iframeRef)}
+                title="Remove all annotations"
+              >
+                🗑 Clear
+              </button>
+            )}
+            <button
+              className={`request-preview-btn${annotMode ? " request-preview-notes-active" : ""}`}
+              onClick={() => setAnnotMode((v) => !v)}
+              title="Annotate: click anywhere on the request to add a note"
+            >
+              {annotMode ? "✏️ Annotating…" : "✏️ Annotate"}
+            </button>
+
             <button
               className="request-preview-btn request-preview-danger"
               onClick={onClose}
@@ -534,6 +586,7 @@ export default function RequestPreviewModal({
           sandbox="allow-modals allow-same-origin allow-scripts"
           onLoad={() => callIframeZoom(zoom)}
         />
+        <AnnotationLayer iframeRef={iframeRef} active={annotMode} />
       </div>
     </div>
   );

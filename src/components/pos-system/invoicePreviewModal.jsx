@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf";
 import { axiosClient } from "../api/axiosClient";
 import { hasPerm } from "../auth/authz";
 import revoLogoSrc from "../revo-logo/revo.png";
+import AnnotationLayer, { clearAnnotations } from "../shared/AnnotationLayer";
 
 async function toBase64(url) {
   try {
@@ -987,6 +988,35 @@ ${styleTag}
 }
 
 /* =========================
+   Inject annotation nodes into a cloned page element before capture.
+   Positions each clone relative to the page's top-left using viewport coords.
+   ========================= */
+function injectAnnotsIntoClone(iframeWin, origPage, clonedPage) {
+  const doc = iframeWin.document;
+  const nodes = doc.querySelectorAll(".annot-node");
+  if (!nodes.length) return;
+  const pr = origPage.getBoundingClientRect();
+  clonedPage.style.position = "relative";
+  clonedPage.style.overflow = "visible";
+  nodes.forEach((n) => {
+    const nr = n.getBoundingClientRect();
+    if (nr.bottom < pr.top || nr.top > pr.bottom) return; // not on this page
+    const ac = n.cloneNode(true);
+    ac.querySelector(".annot-controls")?.remove();
+    ac.querySelector(".annot-toolbar")?.remove();
+    ac.querySelector("#annot-hint")?.remove();
+    Object.assign(ac.style, {
+      left:          (nr.left  - pr.left) + "px",
+      top:           (nr.top   - pr.top)  + "px",
+      position:      "absolute",
+      pointerEvents: "none",
+      outline:       "none",
+    });
+    clonedPage.appendChild(ac);
+  });
+}
+
+/* =========================
    Popup component
    - keeps "لوح" and "صندوق" independent
    - does not reload iframe on each blur (prevents jump)
@@ -1004,6 +1034,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
   const [isRevo, setIsRevo] = useState(false);
   const [logoBase64, setLogoBase64] = useState("");
   const [showVatAtZero, setShowVatAtZero] = useState(false);
+  const [annotMode, setAnnotMode] = useState(false);
 
   useEffect(() => {
     axiosClient.get("/company").then(({ data }) => {
@@ -1296,6 +1327,9 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
         wrapper.appendChild(clone);
         stage.appendChild(wrapper);
 
+        // Overlay any annotations that fall on this page
+        injectAnnotsIntoClone(win, orig, clone);
+
         stage.style.width = `${Math.ceil(r.width)}px`;
         stage.style.height = `${Math.ceil(r.height)}px`;
 
@@ -1528,6 +1562,9 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
         wrapper.appendChild(clone);
         stage.appendChild(wrapper);
 
+        // Overlay any annotations that fall on this page
+        injectAnnotsIntoClone(win, orig, clone);
+
         stage.style.width = `${Math.ceil(r.width)}px`;
         stage.style.height = `${Math.ceil(r.height)}px`;
 
@@ -1627,6 +1664,23 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
               <button onClick={handleScreenshot} className="btn btn-tertiary" title="Save PNG">
                 📸 Screenshot
               </button>
+              {annotMode && (
+                <button
+                  onClick={() => clearAnnotations(iframeRef)}
+                  className="btn btn-danger"
+                  title="Remove all annotations"
+                >
+                  🗑 Clear Notes
+                </button>
+              )}
+              <button
+                onClick={() => setAnnotMode((v) => !v)}
+                className={`btn ${annotMode ? "btn-warning" : "btn-outline"}`}
+                title="Annotate: click anywhere on the invoice to add a note"
+              >
+                {annotMode ? "✏️ Annotating…" : "✏️ Annotate"}
+              </button>
+
               <button onClick={onClose} className="btn btn-outline" title="Close">
                 ✕ Close
               </button>
@@ -1647,6 +1701,7 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
                   win?.applyPreviewZoom?.(zoom);
                 }}
               />
+              <AnnotationLayer iframeRef={iframeRef} active={annotMode} />
             </div>
           </div>
         </div>
