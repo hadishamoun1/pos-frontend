@@ -155,6 +155,11 @@ export default function UnitPriceModal({
     return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("53"));
   }, [accounts, flattenAccounts]);
 
+  const taxAccounts221 = useMemo(() => {
+    const flat = flattenAccounts(accounts || []);
+    return flat.filter((a) => normalizeAccNo(a.accountNumber).startsWith("221"));
+  }, [accounts, flattenAccounts]);
+
   const loadDefaults = useCallback(async () => {
     try {
       const { data } = await axiosClient.get(`/purchase-invoice-setting`);
@@ -368,12 +373,12 @@ export default function UnitPriceModal({
         copy[i].supplierOfTax = sup?.supplierName || "";
         copy[i].accNbOfSupplier = sup?.supplierAccountNumber || "";
       } else if (kind === "acc") {
-        // ✅ Handles 4619 + 2233 + 181 accounts — search all lists
         const acc =
           taxAccounts4619.find((a) => Number(a.id) === Number(id)) ??
           taxAccounts2233.find((a) => Number(a.id) === Number(id)) ??
           taxAccounts181.find((a) => Number(a.id) === Number(id)) ??
-          taxAccounts53.find((a) => Number(a.id) === Number(id));
+          taxAccounts53.find((a) => Number(a.id) === Number(id)) ??
+          taxAccounts221.find((a) => Number(a.id) === Number(id));
 
         copy[i].supplierOfTaxType = "account";
         copy[i].taxAccountId = Number.isFinite(id) ? id : null;
@@ -394,7 +399,7 @@ export default function UnitPriceModal({
   const handleAccNbInput = useCallback((i, typed) => {
     const normalized = normalizeAccNo(typed);
 
-    const allTaxAccounts = [...taxAccounts4619, ...taxAccounts2233, ...taxAccounts181, ...taxAccounts53];
+    const allTaxAccounts = [...taxAccounts4619, ...taxAccounts2233, ...taxAccounts181, ...taxAccounts53, ...taxAccounts221];
     const matched = normalized
       ? allTaxAccounts.find((a) => normalizeAccNo(a.accountNumber) === normalized)
       : null;
@@ -731,6 +736,14 @@ export default function UnitPriceModal({
 
                       <optgroup label="53 Accounts">
                         {taxAccounts53.map((a) => (
+                          <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
+                            {a.accountNumber} – {a.accountName}
+                          </option>
+                        ))}
+                      </optgroup>
+
+                      <optgroup label="221 Accounts">
+                        {taxAccounts221.map((a) => (
                           <option key={`acc:${a.id}`} value={`acc:${a.id}`}>
                             {a.accountNumber} – {a.accountName}
                           </option>
