@@ -10,7 +10,6 @@ const FaceLoginSection = lazy(() => import("./FaceLoginSection"));
 const LoginPage = () => {
   const { setLanguage } = useLanguage();
 
-  const [mode, setMode] = useState("face");
   const [screen, setScreen] = useState("login"); // "login" | "signup"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,30 +27,6 @@ const LoginPage = () => {
   useEffect(() => {
     preloadFaceModels().catch(() => {});
   }, []);
-
-  const handleNormalLogin = async (e) => {
-    e.preventDefault();
-    if (loading) return;
-    setErr("");
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((Array.isArray(data?.message) ? data.message.join(", ") : data?.message) || "Login failed");
-      if (!data?.access_token) throw new Error("No token returned from server");
-      sessionStorage.setItem("token", data.access_token);
-      if (data?.user?.language) setLanguage(data.user.language);
-      window.location.href = "/dashboard";
-    } catch (e) {
-      setErr(e?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -98,30 +73,6 @@ const LoginPage = () => {
             <Suspense fallback={<p style={{ color: "white", textAlign: "center" }}>Loading face login...</p>}>
               <FaceLoginSection onLogin={handleFaceSuccess} />
             </Suspense>
-
-            {/* Username / Password form */}
-            <form onSubmit={handleNormalLogin} style={{ marginTop: 16 }}>
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-              {err ? <div style={errorStyle}>{err}</div> : null}
-              <button type="submit" disabled={loading}>
-                {loading ? "Logging in..." : "Login"}
-              </button>
-            </form>
 
             <div className="create-acc">
               Don't have an account?{" "}
