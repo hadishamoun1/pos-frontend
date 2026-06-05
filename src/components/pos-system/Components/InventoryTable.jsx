@@ -501,12 +501,8 @@ const InventoryTable = ({
                   <input
                     type="number"
                     value={row.sqm ?? ""}
-                    readOnly={
-                      !(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"
-                    }
-                    disabled={
-                      !(isEditable && isLLCurrency) || String(row.type ?? "").toLowerCase() === "unit"
-                    }
+                    readOnly={!isEditable || String(row.type ?? "").toLowerCase() === "unit"}
+                    disabled={!isEditable || String(row.type ?? "").toLowerCase() === "unit"}
                     onChange={(e) => handleInputChange(index, "sqm", e.target.value)}
                     onWheelCapture={handleWheelNoStep}
                   />

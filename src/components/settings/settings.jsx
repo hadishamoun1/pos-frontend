@@ -21,6 +21,7 @@ import CompanySettings from "./CompanySettings";
 import SecurityLockdownSettings from "./Securitylockdownsettings";
 import FileBrowser from "./FileBrowser";
 import ApiDelaySettings from "./ApiDelaySettings";
+import PosControlsSettings from "./PosControlsSettings";
 import { hasPerm } from "../auth/authz";
 import "./settings.css";
 
@@ -48,6 +49,7 @@ const SettingsPage = () => {
       { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
 
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
+      { key: "pos-controls", label: "POS Controls", perm: "settings.posControls", component: <PosControlsSettings /> },
       { key: "file-browser", label: "File Browser", perm: "users.manage", component: <FileBrowser /> },
       { key: "api-delay", label: "API Delay", perm: "settings.delay", component: <ApiDelaySettings /> },
     ],

@@ -25,6 +25,7 @@ const JournalListsModal = ({
   isOpen,
   onClose,
   journalData,
+
   onView,
   onDelete,
 

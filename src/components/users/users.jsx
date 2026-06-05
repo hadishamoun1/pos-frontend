@@ -128,6 +128,7 @@ const PERMISSION_GROUPS = [
       "settings.invoiceAudit",
       "settings.company",
       "settings.delay",
+      "settings.posControls",
       "pos.search.stockTab",
       "pos.search.allTab",
       "pos.search.sqmTab",

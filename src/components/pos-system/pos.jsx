@@ -40,6 +40,7 @@ const POSSystemPage = () => {
   const [isEditable, setIsEditable] = useState(true);
   const [invoiceData, setInvoiceData] = useState(null);
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
+  const [posControls, setPosControls] = useState({ blockCreation: false, blockViewing: false });
   const [showPreview, setShowPreview] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
@@ -184,6 +185,20 @@ const POSSystemPage = () => {
         setActiveCompany(companies.find((c) => c.isActive) || null);
       })
       .catch(() => setActiveCompany(null));
+  }, []);
+
+  // Fetch POS access controls (block creation / block viewing)
+  useEffect(() => {
+    axiosClient.get("/pos-controls")
+      .then((res) => { if (res.data) setPosControls(res.data); })
+      .catch(() => {});
+    // Re-check every 10 seconds so changes by admins apply live
+    const interval = setInterval(() => {
+      axiosClient.get("/pos-controls")
+        .then((res) => { if (res.data) setPosControls(res.data); })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const isShamounActive = useMemo(() => {
@@ -1211,6 +1226,10 @@ const POSSystemPage = () => {
   };
 
   const handleCreateInvoice = async (invoiceType = "S") => {
+    if (posControls.blockCreation) {
+      showNotification("error", "Failed to create invoice.");
+      return;
+    }
     if (!selectedCustomerId || tableData.length === 0) {
       setError("Customer and items are required.");
       return;
@@ -1665,6 +1684,10 @@ const POSSystemPage = () => {
   };
 
   const handleCreateRequest = async () => {
+    if (posControls.blockCreation) {
+      showNotification("error", "Failed to create request.");
+      return;
+    }
     if (!selectedCustomerId || tableData.length === 0) {
       showNotification("error", "Customer and items are required.");
       return;
@@ -1733,7 +1756,9 @@ const POSSystemPage = () => {
             onChange={(e) => setRequestSearch(e.target.value)}
           />
 
-          <RequestCard onSelectRequest={handleSelectRequest} searchTerm={requestSearch} />
+          {posControls.blockViewing
+            ? <p style={{ padding: "12px 8px", color: "#dc2626", fontSize: 13 }}>Failed to load</p>
+            : <RequestCard onSelectRequest={handleSelectRequest} searchTerm={requestSearch} />}
         </div>
       )}
 
@@ -1948,7 +1973,9 @@ const POSSystemPage = () => {
             onChange={(e) => setInvoiceSearch(e.target.value)}
           />
 
-          <InvoicesList onSelectInvoice={handleSelectInvoice} searchTerm={invoiceSearch} />
+          {posControls.blockViewing
+            ? <p style={{ padding: "12px 8px", color: "#dc2626", fontSize: 13 }}>Failed to load</p>
+            : <InvoicesList onSelectInvoice={handleSelectInvoice} searchTerm={invoiceSearch} />}
         </div>
       )}
 
