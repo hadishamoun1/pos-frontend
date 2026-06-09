@@ -157,22 +157,34 @@ export default function FaceEnrollPage() {
       setStatus("✅ Liveness passed — look straight at the camera…");
       await wait(1800);
 
-      setStatus("Scanning face…");
-      let detection = null;
-      for (let i = 0; i < 5; i++) {
-        detection = await fa
-          .detectSingleFace(videoRef.current, new fa.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+      setStatus("Scanning face (hold still)…");
+      const detectorOpts = new fa.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 });
+      const samples = [];
+      let attempts = 0;
+      while (samples.length < 7 && attempts < 20) {
+        attempts++;
+        const d = await fa
+          .detectSingleFace(videoRef.current, detectorOpts)
           .withFaceLandmarks()
           .withFaceDescriptor();
-        if (detection?.descriptor) break;
-        await wait(400);
+        if (d?.descriptor) {
+          samples.push(Array.from(d.descriptor));
+        } else {
+          await wait(200);
+        }
       }
-      if (!detection?.descriptor) throw new Error("No face detected. Ensure good lighting and look at the camera.");
+      if (samples.length < 3) throw new Error("No face detected. Ensure good lighting and look at the camera.");
+
+      // Average all captured descriptors for a more representative enrollment embedding
+      const len = samples[0].length;
+      const avgEmbedding = Array.from({ length: len }, (_, i) =>
+        samples.reduce((sum, s) => sum + s[i], 0) / samples.length
+      );
 
       setStatus("Saving face profile…");
       await apiFetch("/auth/face/enroll", {
         method: "POST",
-        body: JSON.stringify({ userId: selectedUser.id, embedding: Array.from(detection.descriptor) }),
+        body: JSON.stringify({ userId: selectedUser.id, embedding: avgEmbedding }),
       });
 
       setStatus("");

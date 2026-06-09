@@ -140,6 +140,7 @@ const PERMISSION_GROUPS = [
       "recievables.create",
       "recievables.update",
       "recievables.delete",
+      "recievables.rvr",
       "customers.update",
       "sqm.update",
       "cashFlow.create",

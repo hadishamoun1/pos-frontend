@@ -7,6 +7,7 @@ import "./newRecord.css";
 import NotificationModal from "./NotificationModal";
 import { axiosClient } from "../api/axiosClient";
 import { useTranslation } from "../hooks/useTranslation"; // ✅ add
+import { hasPerm } from "../auth/authz";
 
 const DRAFT_KEY = "__receivables_create_draft__";
 
@@ -1050,7 +1051,9 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
                     >
                       <option value="G">{t("receivables.types.G")}</option>
                       <option value="S">{t("receivables.types.S")}</option>
-                      <option value="RVR">{t("receivables.types.RVR")}</option>
+                      {hasPerm("recievables.rvr") && (
+                        <option value="RVR">{t("receivables.types.RVR")}</option>
+                      )}
                     </select>
                   </td>
 

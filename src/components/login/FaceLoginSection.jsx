@@ -215,19 +215,41 @@ const FaceLoginSection = ({ onLogin }) => {
 
     try {
       await runLiveness();
-      setFaceStatus("Detecting face...");
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 }))
-        .withFaceLandmarks().withFaceDescriptor();
-      if (!detection?.descriptor) throw new Error("No face detected. Please look at the camera in good light.");
 
-      const embedding = Array.from(detection.descriptor);
-      setFaceEmbedding(embedding);
+      // Let the user's head settle back to front-facing after the liveness head-turn
+      setFaceStatus("Hold still, look straight at the camera...");
+      await wait(600);
+
+      setFaceStatus("Capturing face...");
+      const detectorOpts = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 });
+      const samples = [];
+      let attempts = 0;
+      while (samples.length < 5 && attempts < 15) {
+        attempts++;
+        const d = await faceapi
+          .detectSingleFace(videoRef.current, detectorOpts)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+        if (d?.descriptor) {
+          samples.push(Array.from(d.descriptor));
+        } else {
+          await wait(100);
+        }
+      }
+      if (samples.length < 3) throw new Error("No face detected. Please look at the camera in good light.");
+
+      // Average all captured descriptors to reduce per-frame noise
+      const len = samples[0].length;
+      const avgEmbedding = Array.from({ length: len }, (_, i) =>
+        samples.reduce((sum, s) => sum + s[i], 0) / samples.length
+      );
+
+      setFaceEmbedding(avgEmbedding);
       setFaceStatus("Face detected. Identifying...");
 
       const res = await fetch(`${API_BASE}/auth/face/identify`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ embedding }),
+        body: JSON.stringify({ embedding: avgEmbedding }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((Array.isArray(data?.message) ? data.message.join(", ") : data?.message) || "Face not recognized");
