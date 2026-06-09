@@ -49,6 +49,7 @@ const AccountingPage = () => {
   // ✅ Daily Receivables Modal
   const [isDailyReceivablesOpen, setIsDailyReceivablesOpen] = useState(false);
 
+
   // ✅ incoming draft from CashCollections preview
   const [incomingDraft, setIncomingDraft] = useState(null);
 
@@ -533,6 +534,7 @@ const AccountingPage = () => {
               >
                 {t("receivables.page.buttons.dailyReport")}
               </button>
+
             </div>
           </div>
 
@@ -664,6 +666,8 @@ const AccountingPage = () => {
         isOpen={isDailyReceivablesOpen}
         onClose={() => setIsDailyReceivablesOpen(false)}
       />
+
+
     </>
   );
 };

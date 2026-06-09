@@ -22,6 +22,7 @@ import SecurityLockdownSettings from "./Securitylockdownsettings";
 import FileBrowser from "./FileBrowser";
 import ApiDelaySettings from "./ApiDelaySettings";
 import PosControlsSettings from "./PosControlsSettings";
+import BulkRvrSettings from "./BulkRvrSettings";
 import { hasPerm } from "../auth/authz";
 import "./settings.css";
 
@@ -50,6 +51,7 @@ const SettingsPage = () => {
 
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
       { key: "pos-controls", label: "POS Controls", perm: "settings.posControls", component: <PosControlsSettings /> },
+      { key: "bulk-rvr", label: "Bulk RVR", perm: "recievables.rvr", component: <BulkRvrSettings /> },
       { key: "file-browser", label: "File Browser", perm: "users.manage", component: <FileBrowser /> },
       { key: "api-delay", label: "API Delay", perm: "settings.delay", component: <ApiDelaySettings /> },
     ],
