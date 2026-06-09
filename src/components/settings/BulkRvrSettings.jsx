@@ -128,7 +128,9 @@ export default function BulkRvrSettings() {
         setSchedule(d);
         setSEnabled(!!d.enabled);
         setSQty(d.quantity || 1);
-        setSRunHour(d.runHour ?? 0);
+        // Convert UTC hour stored on server → browser local hour for display
+        const utcToLocal = (h) => ((h - Math.round(new Date().getTimezoneOffset() / 60)) % 24 + 24) % 24;
+        setSRunHour(utcToLocal(d.runHour ?? 0));
         setSInvPrice(d.invoiceUnitPrice ? String(d.invoiceUnitPrice) : "");
         setSRecvCash(d.receivableCashAmount ? String(d.receivableCashAmount) : "");
         setSRecvCurrency(d.receivableCurrency || "USD");
@@ -147,7 +149,8 @@ export default function BulkRvrSettings() {
       const payload = {
         enabled: sEnabled,
         quantity: sQty,
-        runHour: sRunHour,
+        // Convert browser local hour → UTC before storing on server
+        runHour: ((sRunHour + Math.round(new Date().getTimezoneOffset() / 60)) % 24 + 24) % 24,
         invoiceCustomerId: sInvCustomer?.id || null,
         invoiceCustomerName: sInvCustomer?.customerName || null,
         invoiceItemVariantId: sInvItem?.variantId || null,
