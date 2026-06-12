@@ -240,6 +240,8 @@ export const en = {
       none: "— None —",
       loadingInvoices: "Loading invoices...",
       noInvoicesForCustomer: "No invoices for this customer.",
+      loadMore: "Load more",
+      loadingMore: "Loading...",
     },
 
     types: { G: "G", S: "S", RVR: "RVR" },

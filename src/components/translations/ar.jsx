@@ -231,6 +231,8 @@ export const ar = {
     none: "— بدون —",
     loadingInvoices: "جاري تحميل الفواتير...",
     noInvoicesForCustomer: "لا توجد فواتير لهذا العميل.",
+    loadMore: "تحميل المزيد",
+    loadingMore: "جاري التحميل...",
   },
 
   types: { G: "G", S: "S", RVR: "RVR" },

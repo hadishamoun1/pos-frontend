@@ -331,6 +331,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+.inv-picker__load-more {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #2563eb;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s ease;
+}
+.inv-picker__load-more:hover:not(:disabled) {
+  background: #eff6ff;
+}
+.inv-picker__load-more:disabled {
+  color: #9ca3af;
+  cursor: default;
+}
+
 /* Optional: nicer horizontal scrollbar */
 .payments-modal-table-scroll::-webkit-scrollbar { height: 10px; }
 .payments-modal-table-scroll::-webkit-scrollbar-track {

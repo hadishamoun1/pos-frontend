@@ -130,6 +130,9 @@ function InvoicePicker({
   options,
   onChange,
   placeholder = "— None —",
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }) {
   const { t } = useTranslation(); // ✅
 
@@ -323,6 +326,21 @@ function InvoicePicker({
                     <div className="inv-picker__cell inv-num">{fmtMoney(inv.grandTotal)}</div>
                   </button>
                 ))
+              )}
+              {hasMore && (
+                <button
+                  type="button"
+                  className="inv-picker__load-more"
+                  disabled={loadingMore}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLoadMore?.();
+                  }}
+                >
+                  {loadingMore
+                    ? t("receivables.invoicePicker.loadingMore")
+                    : t("receivables.invoicePicker.loadMore")}
+                </button>
               )}
             </div>
           </div>,
@@ -641,20 +659,27 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
     setSplitter({ open: false, rowIndex: null });
   };
 
-  const fetchCustomerInvoices = async (customerId) => {
+  const fetchCustomerInvoices = async (customerId, page = 1) => {
     const key = String(customerId || "").trim();
-    if (!key) return [];
+    if (!key) return { list: [], hasMore: false };
 
-    if (invoiceCacheRef.current.has(key)) {
-      return invoiceCacheRef.current.get(key) || [];
+    if (page === 1 && invoiceCacheRef.current.has(key)) {
+      return invoiceCacheRef.current.get(key);
     }
 
     const url = `/recievables/v1/customers/${key}/invoices`;
-    const resp = await axiosClient.get(url);
+    const resp = await axiosClient.get(url, { params: { page, limit: 50 } });
 
     const list = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
-    invoiceCacheRef.current.set(key, list);
-    return list;
+    const meta = resp.data?.meta;
+    const hasMore = meta ? meta.page < meta.pages : false;
+    const result = { list, hasMore };
+
+    if (page === 1) {
+      invoiceCacheRef.current.set(key, result);
+    }
+
+    return result;
   };
 
   const handleAddRow = () => {
@@ -677,6 +702,9 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
         invoiceId: "",
         invoiceOptions: [],
         invoiceLoading: false,
+        invoicePage: 1,
+        invoiceHasMore: false,
+        invoiceLoadingMore: false,
         comments: "",
         sourceCashCollectionIds: [],
       },
@@ -731,14 +759,16 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
     setCustomerModalOpen(false);
 
     try {
-      const invoices = await fetchCustomerInvoices(customer.id);
+      const { list, hasMore } = await fetchCustomerInvoices(customer.id, 1);
       setRows((prev) =>
         prev.map((row, i) =>
           i === rowIndex
             ? {
                 ...row,
-                invoiceOptions: invoices,
+                invoiceOptions: list,
                 invoiceLoading: false,
+                invoicePage: 1,
+                invoiceHasMore: hasMore,
               }
             : row
         )
@@ -751,6 +781,8 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
                 ...row,
                 invoiceOptions: [],
                 invoiceLoading: false,
+                invoicePage: 1,
+                invoiceHasMore: false,
               }
             : row
         )
@@ -763,6 +795,53 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
           e?.message ||
           t("receivables.errors.failedLoadInvoices"),
       });
+    }
+  };
+
+  const handleLoadMoreInvoices = async (rowIndex) => {
+    const row = rows[rowIndex];
+    if (!row || !row.customerId || row.invoiceLoadingMore || !row.invoiceHasMore) return;
+
+    const nextPage = (row.invoicePage || 1) + 1;
+    const key = String(row.customerId).trim();
+
+    setRows((prev) =>
+      prev.map((r, i) => (i === rowIndex ? { ...r, invoiceLoadingMore: true } : r))
+    );
+
+    try {
+      const url = `/recievables/v1/customers/${key}/invoices`;
+      const resp = await axiosClient.get(url, { params: { page: nextPage, limit: 50 } });
+
+      const newList = Array.isArray(resp.data) ? resp.data : resp.data?.data || [];
+      const meta = resp.data?.meta;
+      const hasMore = meta ? meta.page < meta.pages : false;
+
+      setRows((prev) =>
+        prev.map((r, i) =>
+          i === rowIndex
+            ? {
+                ...r,
+                invoiceOptions: [...r.invoiceOptions, ...newList],
+                invoicePage: nextPage,
+                invoiceHasMore: hasMore,
+                invoiceLoadingMore: false,
+              }
+            : r
+        )
+      );
+
+      const cached = invoiceCacheRef.current.get(key);
+      if (cached) {
+        invoiceCacheRef.current.set(key, {
+          list: [...(cached.list || []), ...newList],
+          hasMore,
+        });
+      }
+    } catch {
+      setRows((prev) =>
+        prev.map((r, i) => (i === rowIndex ? { ...r, invoiceLoadingMore: false } : r))
+      );
     }
   };
 
@@ -1130,6 +1209,9 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
                       options={row.invoiceOptions}
                       onChange={(newId) => handleInputChange(idx, "invoiceId", newId)}
                       placeholder={t("receivables.invoicePicker.none")}
+                      hasMore={row.invoiceHasMore}
+                      loadingMore={row.invoiceLoadingMore}
+                      onLoadMore={() => handleLoadMoreInvoices(idx)}
                     />
                   </td>
 
