@@ -94,6 +94,9 @@ function normalizeDraftItemToRow(item) {
     invoiceId: item?.invoiceId == null ? "" : safeString(item.invoiceId),
     invoiceOptions: [],
     invoiceLoading: false,
+    invoicePage: 1,
+    invoiceHasMore: false,
+    invoiceLoadingMore: false,
 
     // ✅ FIX: keep incoming comments instead of forcing ""
     comments: safeString(item?.comments ?? ""),
@@ -923,7 +926,7 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
           );
 
           const pairs = await Promise.all(
-            customerIds.map(async (cid) => [cid, await fetchCustomerInvoices(cid)])
+            customerIds.map(async (cid) => [cid, await fetchCustomerInvoices(cid, 1)])
           );
           const map = new Map(pairs);
 
@@ -931,10 +934,13 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
             prev.map((r) => {
               const cid = String(r.customerId || "").trim();
               if (!cid) return r;
+              const { list = [], hasMore = false } = map.get(cid) || {};
               return {
                 ...r,
-                invoiceOptions: map.get(cid) || [],
+                invoiceOptions: list,
                 invoiceLoading: false,
+                invoicePage: 1,
+                invoiceHasMore: hasMore,
               };
             })
           );
