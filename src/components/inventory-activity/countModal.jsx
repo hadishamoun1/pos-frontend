@@ -2,24 +2,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { axiosClient } from "../api/axiosClient";
 
-import SearchBatchModal from "./searchInventoryCheck"; // SOURCE picker
+import SearchBatchModal from "./searchInventoryCheck";
 import PreviewTable from "./previewTable";
 import NotificationModal from "../recievables/NotificationModal";
-import DateCountInput from "./inventoryDataEntry";
 import OpeningCountModal from "./openingCountModal";
 import "./countModal.css";
 
 const CountModal = ({ isOpen, onClose }) => {
   const [rows, setRows] = useState([]);
-
   const [batchSearchOpen, setBatchSearchOpen] = useState(false);
-  const [dateCountOpen, setDateCountOpen] = useState(false);
-
   const [saving, setSaving] = useState(false);
   const [notif, setNotif] = useState({ open: false, type: "", message: "" });
   const [view, setView] = useState("create");
-
-  const [selectedSource, setSelectedSource] = useState(null);
 
   const saveLockRef = useRef(false);
   const rebuildLockRef = useRef(false);
@@ -45,8 +39,6 @@ const CountModal = ({ isOpen, onClose }) => {
   const resetAll = () => {
     setView("create");
     setRows([]);
-    setSelectedSource(null);
-    setDateCountOpen(false);
     setBatchSearchOpen(false);
     setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
   };
@@ -55,47 +47,40 @@ const CountModal = ({ isOpen, onClose }) => {
     if (saveLockRef.current || saving) return;
     if (!rows.length) return onClose();
 
-    // backend works per ONE source batch
-    const distinctSources = new Set(rows.map((r) => Number(r.itemBatchId)));
-    if (distinctSources.size > 1) {
-      return setNotif({
-        open: true,
-        type: "error",
-        message:
-          "❌ You selected rows from multiple source batches. Save works per ONE source batch only.",
-      });
+    // Group rows by source batch — one API call per batch
+    const byBatch = new Map();
+    for (const r of rows) {
+      const key = Number(r.itemBatchId);
+      if (!byBatch.has(key)) byBatch.set(key, []);
+      byBatch.get(key).push(r);
     }
 
     saveLockRef.current = true;
     setSaving(true);
 
     try {
-      const firstRow = rows[0];
-
-      const payload = {
-        itemBatchId: Number(firstRow.itemBatchId),
-        itemType: String(firstRow.unit || "").toLowerCase(), // box|sheet|sqm
-        length: Number(firstRow.length),
-        width: Number(firstRow.width),
-        sheetsPerBox: Number(firstRow.sheetsPerBox),
-        records: rows.map((r) => ({
-          count: Number(r.count),
-          status: r.status,
-
-          // ✅ KEEP these (backend uses them in findOrCreateTargetByCondDate)
-          receivedDate: r.receivedDate || null, // expects YYYY-MM from UI (backend normalizes)
-          condition: r.condition || null,
-
-          // ✅ optional targetBatchId (backend uses directly when present)
-          targetBatchId:
-            r.status === "adj+" && r.targetBatchId
-              ? Number(r.targetBatchId)
-              : null,
-        })),
-      };
-
-      console.log("✅ Inventory-check payload:", payload);
-      await axiosClient.post("/inventory-count/v1/inventory-check", payload);
+      for (const [batchId, batchRows] of byBatch.entries()) {
+        const firstRow = batchRows[0];
+        const payload = {
+          itemBatchId: batchId,
+          itemType: String(firstRow.unit || "").toLowerCase(),
+          length: Number(firstRow.length),
+          width: Number(firstRow.width),
+          sheetsPerBox: Number(firstRow.sheetsPerBox),
+          records: batchRows.map((r) => ({
+            count: Number(r.count),
+            status: r.status,
+            receivedDate: r.receivedDate || null,
+            condition: r.condition || null,
+            targetBatchId:
+              r.status === "adj+" && r.targetBatchId
+                ? Number(r.targetBatchId)
+                : null,
+          })),
+        };
+        console.log("✅ Inventory-check payload:", payload);
+        await axiosClient.post("/inventory-count/v1/inventory-check", payload);
+      }
 
       setNotif({
         open: true,
@@ -158,68 +143,47 @@ const CountModal = ({ isOpen, onClose }) => {
     });
   };
 
-  // ✅ SOURCE picked (single) -> open data entry directly
-  const handlePickSourceFromModal = (row) => {
-    if (!row) return;
+  // Convert "MM/YYYY" stored format → "YYYY-MM" required by <input type="month">
+  const toMonthInput = (dateStr) => {
+    if (!dateStr) return "";
+    const s = String(dateStr).trim();
+    if (/^\d{4}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{1,2})\/(\d{4})$/);
+    if (m) return `${m[2]}-${m[1].padStart(2, "0")}`;
+    return s;
+  };
 
-    const picked = {
-      batchId: Number(row.batchId),
-      itemName: row.itemName,
-      thickness: row.thickness,
-      type: row.type,
+  // All selected items added directly as rows — no intermediate data entry modal
+  const handlePickSourcesFromModal = (selected) => {
+    const list = (selected || []).filter(Boolean);
+    if (!list.length) return;
+
+    const newRows = list.map((row, index) => ({
+      key: `${row.batchId}-${Date.now()}-${index}`,
+      itemBatchId: Number(row.batchId),
+      itemVariantId: row.variantId,
+      targetBatchId: null,
+      name: row.itemName,
+      dimension: `${Math.floor(Number(row.length || 0))}×${Math.floor(
+        Number(row.width || 0)
+      )}${
+        String(row.type || "").toLowerCase() === "box"
+          ? `-${String(row.sheetsPerBox || 0).padStart(3, "0")}`
+          : ""
+      }`,
+      unit: row.type,
       length: row.length,
       width: row.width,
       sheetsPerBox: row.sheetsPerBox,
-      balanceOFR: row.balanceOFR, // QTY
-      condition: row.condition ?? "",
-      dateReceived: row.dateReceived ?? "",
-      variantId: row.variantId,
-    };
-
-    setSelectedSource(picked);
-    setBatchSearchOpen(false);
-    setDateCountOpen(true);
-  };
-
-  // ✅ DataEntry returns records (rows) already cleaned
-  const handleDataEntryConfirm = (records) => {
-    if (!selectedSource) return;
-
-    const newRows = (records || []).map((rec, index) => ({
-      key: `${selectedSource.batchId}-${Date.now()}-${index}`,
-      itemBatchId: selectedSource.batchId,
-      itemVariantId: selectedSource.variantId,
-
-      // optional
-      targetBatchId: rec.targetBatchId ?? null,
-
-      name: selectedSource.itemName,
-      dimension: `${Math.floor(Number(selectedSource.length || 0))}×${Math.floor(
-        Number(selectedSource.width || 0)
-      )}${
-        String(selectedSource.type || "").toLowerCase() === "box"
-          ? `-${String(selectedSource.sheetsPerBox || 0).padStart(3, "0")}`
-          : ""
-      }`,
-      unit: selectedSource.type,
-      length: selectedSource.length,
-      width: selectedSource.width,
-      sheetsPerBox: selectedSource.sheetsPerBox,
-
-      // keep these
-      receivedDate: rec.receivedDate || "",
-      condition: rec.condition || "",
-
-      // main values
-      count: rec.count,
-      status: rec.status,
-
-      date: "", // optional UI field
+      receivedDate: toMonthInput(row.dateReceived),
+      condition: row.condition || "",
+      count: "",
+      status: "adj+",
+      date: "",
     }));
 
     setRows((prev) => [...prev, ...newRows]);
-    setDateCountOpen(false);
-    setSelectedSource(null);
+    setBatchSearchOpen(false);
   };
 
   const onRowContextMenu = (e, i) => {
@@ -322,7 +286,6 @@ const CountModal = ({ isOpen, onClose }) => {
                       <th>Item Name</th>
                       <th>Dimension</th>
                       <th>Unit</th>
-                      <th>Date</th>
                       <th>Date Received</th>
                       <th className="count-col">Count</th>
                       <th>Status</th>
@@ -333,7 +296,7 @@ const CountModal = ({ isOpen, onClose }) => {
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: "center" }}>
+                        <td colSpan={7} style={{ textAlign: "center" }}>
                           No items added
                         </td>
                       </tr>
@@ -366,20 +329,13 @@ const CountModal = ({ isOpen, onClose }) => {
                           </td>
                           <td>
                             <input
-                              type="date"
-                              className="count-input"
-                              value={r.date}
-                              onChange={(e) =>
-                                updateCell(i, "date", e.target.value)
-                              }
-                              disabled={saving}
-                            />
-                          </td>
-                          <td>
-                            <input
+                              type="month"
                               className="count-input"
                               value={r.receivedDate || ""}
-                              readOnly
+                              onChange={(e) =>
+                                updateCell(i, "receivedDate", e.target.value)
+                              }
+                              disabled={saving}
                             />
                           </td>
                           <td>
@@ -411,7 +367,10 @@ const CountModal = ({ isOpen, onClose }) => {
                             <input
                               className="count-input"
                               value={r.condition || ""}
-                              readOnly
+                              onChange={(e) =>
+                                updateCell(i, "condition", e.target.value)
+                              }
+                              disabled={saving}
                             />
                           </td>
                         </tr>
@@ -467,44 +426,11 @@ const CountModal = ({ isOpen, onClose }) => {
         </div>
       </div>
 
-      {/* SOURCE picker (single select) */}
- <SearchBatchModal
-  isOpen={batchSearchOpen}
-  onClose={() => setBatchSearchOpen(false)}
-  onSelect={(selected) => handlePickSourceFromModal((selected || [])[0])}
-/>
-
-      {/* Data entry (same modal, no target picker modal) */}
-      {dateCountOpen && selectedSource && (
-        <div
-          className="date-count-overlay"
-          onClick={() => {
-            setDateCountOpen(false);
-            setSelectedSource(null);
-          }}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <DateCountInput
-              sourceBatchId={selectedSource.batchId}
-              itemVariantId={selectedSource.variantId}
-              onSave={handleDataEntryConfirm}
-              onCancel={() => {
-                setDateCountOpen(false);
-                setSelectedSource(null);
-              }}
-              unit={selectedSource.type}
-              length={selectedSource.length}
-              width={selectedSource.width}
-              sheetsPerBox={selectedSource.sheetsPerBox}
-              originalBalance={selectedSource.balanceOFR}
-              thickness={selectedSource.thickness}
-              itemName={selectedSource.itemName}
-              defaultCondition={selectedSource.condition}
-              defaultReceivedDate={selectedSource.dateReceived}
-            />
-          </div>
-        </div>
-      )}
+      <SearchBatchModal
+        isOpen={batchSearchOpen}
+        onClose={() => setBatchSearchOpen(false)}
+        onSelect={handlePickSourcesFromModal}
+      />
 
       {notif.open && (
         <NotificationModal

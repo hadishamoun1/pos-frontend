@@ -10,7 +10,7 @@ const ENDPOINTS = {
   currencies: `/currency`,
   trialBalance: `/reports/trial-balance`,
   standardTrialBalance: `/reports/trial-balance/standard`,
-  trialBalanceCurrencies: `/reports/trial-balance/currencies`, // NEW
+  trialBalanceCurrencies: `/reports/trial-balance/currencies`, 
 };
 
 function LoadingScreen({ show, text = "Generating report…" }) {

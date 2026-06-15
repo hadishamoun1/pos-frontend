@@ -288,6 +288,9 @@ const StockTab = forwardRef(function StockTab(
       if (!isService && !(stockQty > 0)) continue;
 
       for (const b of (v.batches || [])) {
+        const batchBal = Number(b.balanceOFR ?? 0);
+        if (!isService && !(batchBal > 0)) continue;
+
         out.push({
           variantId: v.variantId,
           batchId: b.id,
@@ -301,7 +304,7 @@ const StockTab = forwardRef(function StockTab(
           stockMode: v.stockMode,
           condition: b.condition,
           dateReceived: b.dateReceived,
-          stockQty: isService ? "" : stockQty,
+          stockQty: isService ? "" : Number(b.balanceOFR ?? 0),
         });
       }
     }

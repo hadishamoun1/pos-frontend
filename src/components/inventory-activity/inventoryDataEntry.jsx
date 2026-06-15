@@ -135,11 +135,8 @@ const DateCountInput = ({
     };
   }, [entries, len, wid, sheets, lowerUnit, originalQty, originalBalanceSQM]);
 
-  // ✅ NEW RULE: only block save if no rows OR exceeds original
   const disableSave = useMemo(() => {
-    if (computed.validRows.length === 0) return true;
-    if (computed.exceeds) return true;
-    return false;
+    return computed.validRows.length === 0;
   }, [computed]);
 
   const handleChange = (index, field, value) => {
