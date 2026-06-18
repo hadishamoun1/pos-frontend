@@ -296,8 +296,28 @@ export default function ItemsTable({
                   <td style={{ direction: "rtl", textAlign: "right" }}>{displayItemName(item)}</td>
                   <td>{item.type}</td>
                   <td>{item.origin}</td>
-                  <td>{item.length || 0}</td>
-                  <td>{item.width || 0}</td>
+                  <td>
+                    {isEditable && item.type === "sqm" ? (
+                      <input
+                        type="number"
+                        value={formatVal(item.length)}
+                        onChange={(e) => handleItemChange(index, "length", e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onWheel={handleWheel}
+                      />
+                    ) : (item.length || 0)}
+                  </td>
+                  <td>
+                    {isEditable && item.type === "sqm" ? (
+                      <input
+                        type="number"
+                        value={formatVal(item.width)}
+                        onChange={(e) => handleItemChange(index, "width", e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onWheel={handleWheel}
+                      />
+                    ) : (item.width || 0)}
+                  </td>
                   <td>
                     <input
                       type="number"
@@ -308,7 +328,17 @@ export default function ItemsTable({
                       disabled={!isEditable}
                     />
                   </td>
-                  <td>{item.type === "box" ? item.sheetsPerBox || 0 : ""}</td>
+                  <td>
+                    {isEditable && item.type === "sqm" ? (
+                      <input
+                        type="number"
+                        value={formatVal(item.sheetsPerBox)}
+                        onChange={(e) => handleItemChange(index, "sheetsPerBox", e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onWheel={handleWheel}
+                      />
+                    ) : item.type === "box" ? (item.sheetsPerBox || 0) : ""}
+                  </td>
                   {showSqm && (
                     <td>
                       {invoiceType === "SR" ? (
