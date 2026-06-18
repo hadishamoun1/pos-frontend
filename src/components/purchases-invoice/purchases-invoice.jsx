@@ -328,9 +328,11 @@ const handleViewJournalVoucher = async () => {
 
     try {
       const supplierId = selectedSupplierId;
-      const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-      const calculatedVatAmount = totalAmount * (vatRate / 100);
-      const grandTotal = totalAmount + calculatedVatAmount;
+      const totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
+      const totalOfferAmount = items.reduce((sum, item) => sum + (item.totalOFR || 0), 0);
+      const vatBase = totalAmount + totalOfferAmount;
+      const calculatedVatAmount = vatBase * (vatRate / 100);
+      const grandTotal = vatBase + calculatedVatAmount;
 
       const enrichedItems = items.map((item) => ({
         itemVariantId: item.dimensionId,
