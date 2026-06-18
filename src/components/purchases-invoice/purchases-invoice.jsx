@@ -1259,6 +1259,7 @@ return (
           <SummarySection
             totalAmount={itemsTotalAmount}
             totalOfferAmount={totalOfferAmount}
+            vatRate={vatRate}
             potentialCost={potentialCost}
             setPotentialCost={setPotentialCost}
             finalCost={finalCost}

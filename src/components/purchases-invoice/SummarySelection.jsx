@@ -4,6 +4,7 @@ import "./styles/summary.css";
 const SummarySection = ({
   totalAmount,
   totalOfferAmount,
+  vatRate = 0,
   potentialCost,
   setPotentialCost,
   finalCost,
@@ -224,8 +225,8 @@ const SummarySection = ({
 
           {/* ───────── RIGHT: TOTALS ───────── */}
           <div className="totals">
-            <p>Total Amount: ${safeMoney(totalAmount)}</p>
-            <p>Offer Amount: ${safeMoney(totalOfferAmount)}</p>
+            <p>Total Amount: ${safeMoney(invoiceType !== 'G' ? totalAmount * (1 + vatRate / 100) : totalAmount)}</p>
+            <p>Offer Amount: ${safeMoney(invoiceType !== 'S' ? totalOfferAmount * (1 + vatRate / 100) : totalOfferAmount)}</p>
           </div>
         </div>
       </div>
