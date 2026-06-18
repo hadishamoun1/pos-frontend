@@ -10,7 +10,7 @@ const FaceLoginSection = lazy(() => import("./FaceLoginSection"));
 const LoginPage = () => {
   const { setLanguage } = useLanguage();
 
-  const [screen, setScreen] = useState("login"); // "login" | "signup"
+  const [screen, setScreen] = useState("login"); // "login" | "password-login" | "signup"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,6 +27,39 @@ const LoginPage = () => {
   useEffect(() => {
     preloadFaceModels().catch(() => {});
   }, []);
+
+  // Shift+L → show username/password login
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.shiftKey && e.key === "L") switchScreen("password-login");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    setErr("");
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((Array.isArray(data?.message) ? data.message.join(", ") : data?.message) || "Login failed");
+      if (!data?.access_token) throw new Error("No token returned from server");
+      sessionStorage.setItem("token", data.access_token);
+      if (data?.user?.language) setLanguage(data.user.language);
+      window.location.href = "/dashboard";
+    } catch (e) {
+      setErr(e?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -81,6 +114,37 @@ const LoginPage = () => {
               </span>
             </div>
           </>
+        )}
+
+        {screen === "password-login" && (
+          <form onSubmit={handleLogin} style={{ marginTop: 16 }}>
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoFocus
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            {err ? <div style={errorStyle}>{err}</div> : null}
+            <button type="submit" disabled={loading}>
+              {loading ? "Logging in..." : "Login"}
+            </button>
+            <div className="create-acc">
+              <span className="link-login-signup" style={{ cursor: "pointer" }} onClick={() => switchScreen("login")}>
+                Back to face login
+              </span>
+            </div>
+          </form>
         )}
 
         {screen === "signup" && (
