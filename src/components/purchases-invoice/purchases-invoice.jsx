@@ -50,6 +50,7 @@ const PurchasesInvoicePage = () => {
   const [showUnitPriceModal, setShowUnitPriceModal] = useState(false);
   const [status, setStatus] = useState("Pending");
   const [showItemModal, setShowItemModal] = useState(false);
+  const [sqmRepeatModal, setSqmRepeatModal] = useState({ open: false, sqmItems: [], nonSqmItems: [], value: "1" });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
   const [showTypePopup, setShowTypePopup] = useState(false);
@@ -251,23 +252,48 @@ const handleViewJournalVoucher = async () => {
     setShowUnitPriceModal(false);
   };
 
+  const buildItemRow = (item) => ({
+    id: Date.now() + Math.random(),
+    ...item,
+    quantity: item.quantity || 1,
+    sqm:
+      ((item.length || 0) *
+        (item.width || 0) *
+        (item.quantity || 1) *
+        (item.sheetsPerBox || 1)) /
+      10000,
+    unitPrice: item.unitPrice || 0,
+    total: 0,
+  });
+
   const closeItemModal = () => {
-    const newSelectedItems = selectedItems.map((item) => ({
-      id: Date.now() + Math.random(),
-      ...item,
-      quantity: item.quantity || 1,
-      sqm:
-        ((item.length || 0) *
-          (item.width || 0) *
-          (item.quantity || 1) *
-          (item.sheetsPerBox || 1)) /
-        10000, // Avoid NaN
-      unitPrice: item.unitPrice || 0,
-      total: 0,
-    }));
-    setItems((prevItems) => [...prevItems, ...newSelectedItems]);
+    const sqmItems = selectedItems.filter((i) => String(i.type || "").toLowerCase() === "sqm");
+    const nonSqmItems = selectedItems.filter((i) => String(i.type || "").toLowerCase() !== "sqm");
+
+    // Add non-sqm items immediately
+    if (nonSqmItems.length > 0) {
+      setItems((prev) => [...prev, ...nonSqmItems.map(buildItemRow)]);
+    }
+
+    if (sqmItems.length > 0) {
+      // Show repeat modal for sqm items
+      setSqmRepeatModal({ open: true, sqmItems, nonSqmItems: [], value: "1" });
+    }
+
     setSelectedItems([]);
     setShowItemModal(false);
+  };
+
+  const confirmSqmRepeat = () => {
+    const repeat = Math.max(1, Math.floor(Number(sqmRepeatModal.value) || 1));
+    const expanded = [];
+    for (const item of sqmRepeatModal.sqmItems) {
+      for (let i = 0; i < repeat; i++) {
+        expanded.push(buildItemRow(item));
+      }
+    }
+    setItems((prev) => [...prev, ...expanded]);
+    setSqmRepeatModal({ open: false, sqmItems: [], nonSqmItems: [], value: "1" });
   };
 
   const getCorrectShippingCost = () => {
@@ -1206,6 +1232,41 @@ return (
             closeItemModal={closeItemModal}
             isEditable={canEdit}
           />
+        )}
+
+        {sqmRepeatModal.open && (
+          <div className="sqm-repeat-overlay">
+            <div className="sqm-repeat-modal">
+              <h3 className="sqm-repeat-title">SQM Repetitions</h3>
+              <p className="sqm-repeat-desc">
+                {sqmRepeatModal.sqmItems.length === 1
+                  ? sqmRepeatModal.sqmItems[0].itemNameCombined || sqmRepeatModal.sqmItems[0].itemName
+                  : `${sqmRepeatModal.sqmItems.length} SQM items selected`}
+              </p>
+              <p className="sqm-repeat-label">How many times?</p>
+              <input
+                type="number"
+                className="sqm-repeat-input"
+                min={1}
+                step={1}
+                value={sqmRepeatModal.value}
+                onChange={(e) => setSqmRepeatModal((m) => ({ ...m, value: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") confirmSqmRepeat(); }}
+                autoFocus
+              />
+              <div className="sqm-repeat-actions">
+                <button
+                  className="sqm-repeat-btn sqm-repeat-btn--cancel"
+                  onClick={() => setSqmRepeatModal({ open: false, sqmItems: [], nonSqmItems: [], value: "1" })}
+                >
+                  Cancel
+                </button>
+                <button className="sqm-repeat-btn sqm-repeat-btn--confirm" onClick={confirmSqmRepeat}>
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {showTypePopup && (
