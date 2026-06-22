@@ -1,3 +1,44 @@
+/* ── Allowed-days picker ── */
+.brs-days-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.brs-day-btn {
+  padding: 6px 13px;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.brs-day-btn-on {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.brs-day-btn-off {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+.brs-day-btn-off:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+.brs-days-warn {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .brs-page {
   display: flex;
   flex-direction: column;

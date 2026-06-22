@@ -110,6 +110,7 @@ export default function BulkRvrSettings() {
   const [sEnabled, setSEnabled] = useState(false);
   const [sQty, setSQty] = useState(1);
   const [sRunHour, setSRunHour] = useState(0);
+  const [sAllowedDays, setSAllowedDays] = useState([0, 1, 2, 3, 4, 5, 6]); // all days by default
   const [sInvCustomer, setSInvCustomer] = useState(null);
   const [sInvItem, setSInvItem] = useState(null);
   const [sInvPrice, setSInvPrice] = useState("");
@@ -138,6 +139,12 @@ export default function BulkRvrSettings() {
         if (d.invoiceCustomerId) setSInvCustomer({ id: d.invoiceCustomerId, customerName: d.invoiceCustomerName });
         if (d.invoiceItemVariantId) setSInvItem({ variantId: d.invoiceItemVariantId, batchId: d.invoiceItemBatchId, itemName: d.invoiceItemName, type: d.invoiceItemType, stockMode: d.invoiceItemStockMode });
         if (d.receivableCustomerId) setSRecvCustomer({ id: d.receivableCustomerId, customerName: d.receivableCustomerName });
+        if (d.allowedDays) {
+          const parsed = d.allowedDays.split(",").map(Number).filter((n) => !isNaN(n) && n >= 0 && n <= 6);
+          setSAllowedDays(parsed.length ? parsed : [0, 1, 2, 3, 4, 5, 6]);
+        } else {
+          setSAllowedDays([0, 1, 2, 3, 4, 5, 6]);
+        }
       })
       .catch(() => setSchedErr("Failed to load schedule config."))
       .finally(() => setSchedLoading(false));
@@ -164,6 +171,7 @@ export default function BulkRvrSettings() {
         receivableCashAmount: parseFloat(sRecvCash) || 0,
         receivableCurrency: sRecvCurrency,
         receivableExchangeRate: parseFloat(String(sRecvExRate).replace(/,/g, "")) || 89500,
+        allowedDays: sAllowedDays.length === 7 ? null : sAllowedDays.join(","),
       };
       const res = await axiosClient.patch("/bulk-rvr-schedule", payload);
       setSchedule(res.data);
@@ -358,7 +366,10 @@ export default function BulkRvrSettings() {
                     <div className="brs-sched-status-label">{sEnabled ? "Schedule Active" : "Schedule Disabled"}</div>
                     <div className="brs-sched-status-desc">
                       {sEnabled
-                        ? `Runs daily at ${HOURS[sRunHour]?.label} · Last run: ${fmtDateTime(schedule?.lastRunAt)}`
+                        ? `Runs at ${HOURS[sRunHour]?.label} · ${(() => {
+                            const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+                            return sAllowedDays.length === 7 ? "Every day" : sAllowedDays.length === 0 ? "No days selected!" : sAllowedDays.map((d) => DAY_NAMES[d]).join(", ");
+                          })()} · Last run: ${fmtDateTime(schedule?.lastRunAt)}`
                         : "Enable the schedule and save to activate automatic daily creation."}
                     </div>
                   </div>
@@ -387,6 +398,43 @@ export default function BulkRvrSettings() {
                 <select className="brs-select brs-hour-select" value={sRunHour} onChange={(e) => setSRunHour(Number(e.target.value))}>
                   {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
+              </div>
+
+              {/* Allowed days */}
+              <div className="brs-sched-card">
+                <div className="brs-sched-card-title">Allowed Days</div>
+                <div className="brs-sched-card-desc">
+                  The schedule will only run on selected days.
+                  {sAllowedDays.length === 0 && <span className="brs-days-warn"> At least one day must be selected.</span>}
+                </div>
+                <div className="brs-days-row">
+                  {[
+                    { n: 0, label: "Sun" },
+                    { n: 1, label: "Mon" },
+                    { n: 2, label: "Tue" },
+                    { n: 3, label: "Wed" },
+                    { n: 4, label: "Thu" },
+                    { n: 5, label: "Fri" },
+                    { n: 6, label: "Sat" },
+                  ].map(({ n, label }) => {
+                    const active = sAllowedDays.includes(n);
+                    return (
+                      <button
+                        key={n}
+                        className={`brs-day-btn ${active ? "brs-day-btn-on" : "brs-day-btn-off"}`}
+                        onClick={() =>
+                          setSAllowedDays((prev) =>
+                            active
+                              ? prev.filter((d) => d !== n)
+                              : [...prev, n].sort((a, b) => a - b)
+                          )
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Quantity */}
