@@ -22,11 +22,26 @@
   gap: 0.6rem;
 }
 
+.sqm-repeat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .sqm-repeat-title {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
   color: #1e40af;
+}
+
+.sqm-repeat-counter {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: #3b82f6;
+  padding: 0.15rem 0.55rem;
+  border-radius: 20px;
 }
 
 .sqm-repeat-desc {

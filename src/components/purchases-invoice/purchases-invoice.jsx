@@ -270,14 +270,13 @@ const handleViewJournalVoucher = async () => {
     const sqmItems = selectedItems.filter((i) => String(i.type || "").toLowerCase() === "sqm");
     const nonSqmItems = selectedItems.filter((i) => String(i.type || "").toLowerCase() !== "sqm");
 
-    // Add non-sqm items immediately
     if (nonSqmItems.length > 0) {
       setItems((prev) => [...prev, ...nonSqmItems.map(buildItemRow)]);
     }
 
     if (sqmItems.length > 0) {
-      // Show repeat modal for sqm items
-      setSqmRepeatModal({ open: true, sqmItems, nonSqmItems: [], value: "1" });
+      // Queue: show modal one item at a time
+      setSqmRepeatModal({ open: true, queue: sqmItems, value: "1", _total: sqmItems.length });
     }
 
     setSelectedItems([]);
@@ -286,14 +285,16 @@ const handleViewJournalVoucher = async () => {
 
   const confirmSqmRepeat = () => {
     const repeat = Math.max(1, Math.floor(Number(sqmRepeatModal.value) || 1));
-    const expanded = [];
-    for (const item of sqmRepeatModal.sqmItems) {
-      for (let i = 0; i < repeat; i++) {
-        expanded.push(buildItemRow(item));
-      }
+    const current = sqmRepeatModal.queue[0];
+    const newRows = Array.from({ length: repeat }, () => buildItemRow(current));
+    setItems((prev) => [...prev, ...newRows]);
+
+    const remaining = sqmRepeatModal.queue.slice(1);
+    if (remaining.length > 0) {
+      setSqmRepeatModal({ open: true, queue: remaining, value: "1", _total: sqmRepeatModal._total });
+    } else {
+      setSqmRepeatModal({ open: false, queue: [], value: "1", _total: 0 });
     }
-    setItems((prev) => [...prev, ...expanded]);
-    setSqmRepeatModal({ open: false, sqmItems: [], nonSqmItems: [], value: "1" });
   };
 
   const getCorrectShippingCost = () => {
@@ -1234,40 +1235,49 @@ return (
           />
         )}
 
-        {sqmRepeatModal.open && (
-          <div className="sqm-repeat-overlay">
-            <div className="sqm-repeat-modal">
-              <h3 className="sqm-repeat-title">SQM Repetitions</h3>
-              <p className="sqm-repeat-desc">
-                {sqmRepeatModal.sqmItems.length === 1
-                  ? sqmRepeatModal.sqmItems[0].itemNameCombined || sqmRepeatModal.sqmItems[0].itemName
-                  : `${sqmRepeatModal.sqmItems.length} SQM items selected`}
-              </p>
-              <p className="sqm-repeat-label">How many times?</p>
-              <input
-                type="number"
-                className="sqm-repeat-input"
-                min={1}
-                step={1}
-                value={sqmRepeatModal.value}
-                onChange={(e) => setSqmRepeatModal((m) => ({ ...m, value: e.target.value }))}
-                onKeyDown={(e) => { if (e.key === "Enter") confirmSqmRepeat(); }}
-                autoFocus
-              />
-              <div className="sqm-repeat-actions">
-                <button
-                  className="sqm-repeat-btn sqm-repeat-btn--cancel"
-                  onClick={() => setSqmRepeatModal({ open: false, sqmItems: [], nonSqmItems: [], value: "1" })}
-                >
-                  Cancel
-                </button>
-                <button className="sqm-repeat-btn sqm-repeat-btn--confirm" onClick={confirmSqmRepeat}>
-                  Add
-                </button>
+        {sqmRepeatModal.open && sqmRepeatModal.queue?.length > 0 && (() => {
+          const current = sqmRepeatModal.queue[0];
+          const total = sqmRepeatModal.queue.length;
+          const done = (sqmRepeatModal._total || total) - total;
+          const grandTotal = sqmRepeatModal._total || total;
+          return (
+            <div className="sqm-repeat-overlay">
+              <div className="sqm-repeat-modal">
+                <div className="sqm-repeat-header">
+                  <h3 className="sqm-repeat-title">SQM Repetitions</h3>
+                  {grandTotal > 1 && (
+                    <span className="sqm-repeat-counter">{done + 1} / {grandTotal}</span>
+                  )}
+                </div>
+                <p className="sqm-repeat-desc" dir="rtl">
+                  {current.itemNameCombined || current.itemName}
+                </p>
+                <p className="sqm-repeat-label">How many times?</p>
+                <input
+                  type="number"
+                  className="sqm-repeat-input"
+                  min={1}
+                  step={1}
+                  value={sqmRepeatModal.value}
+                  onChange={(e) => setSqmRepeatModal((m) => ({ ...m, value: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") confirmSqmRepeat(); }}
+                  autoFocus
+                />
+                <div className="sqm-repeat-actions">
+                  <button
+                    className="sqm-repeat-btn sqm-repeat-btn--cancel"
+                    onClick={() => setSqmRepeatModal({ open: false, queue: [], value: "1" })}
+                  >
+                    Cancel All
+                  </button>
+                  <button className="sqm-repeat-btn sqm-repeat-btn--confirm" onClick={confirmSqmRepeat}>
+                    {total > 1 ? "Next →" : "Add"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {showTypePopup && (
           <div className="invoice-type-modal-overlay">
