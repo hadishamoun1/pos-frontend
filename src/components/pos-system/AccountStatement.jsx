@@ -695,6 +695,18 @@ export default function AccountStatement() {
             </tr>
           </thead>
           <tbody>
+            {openingBalance !== 0 && (
+              <tr style={{ background: "#f0f9ff", fontWeight: 600 }}>
+                <td>{meta?.from ?? "—"}</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>رصيد سابق</td>
+                <td className="num">—</td>
+                <td className="num">—</td>
+                <td className="num">{fmt(openingBalance)}</td>
+              </tr>
+            )}
             {items.map((r, i) => (
               <tr key={r._ord ?? i}>
                 <td>{r.date ?? ""}</td>
