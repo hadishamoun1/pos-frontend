@@ -1,64 +1,76 @@
-// src/components/transfers/transferModal.jsx
 import React, { useRef, useEffect, useMemo, useState } from "react";
 import TransferSearchModal from "./transferSearchModal";
 import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
-import { axiosClient } from "../api/axiosClient"; 
+import { axiosClient } from "../api/axiosClient";
 
-const TYPE_OPTIONS = ["G"];
 const LOCATION_OPTIONS = [
-  "JF",
-  "FJ",
-  "BOSTS",
-  "STBOS",
-  "Breakage",
-  "Adjustment +",
-  "Adjustment -",
-  "Defects",
+  "BS", "SB", "SQM", "SQM Return", "Breakage",
+  "Adjustment +", "Adjustment -", "Defects",
 ];
+
+// Display label → backend value sent to API
+const LOCATION_TO_BACKEND = {
+  "BS":         "JF",
+  "SB":         "FJ",
+  "SQM":        "BOSTS",
+  "SQM Return": "STBOS",
+};
+const toBackendLocation = (loc) => LOCATION_TO_BACKEND[loc] ?? loc;
+
+// Backend value → display label (for loading existing transfers)
+const BACKEND_TO_LOCATION = Object.fromEntries(
+  Object.entries(LOCATION_TO_BACKEND).map(([display, backend]) => [backend, display])
+);
+const toDisplayLocation = (loc) => BACKEND_TO_LOCATION[loc] ?? loc;
+
+const LOCATION_COLORS = {
+  "BS":         { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
+  "SB":         { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
+  "SQM":        { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
+  "SQM Return": { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
+  "Breakage":     { bg: "#fdecea", border: "#f44336", text: "#b71c1c" },
+  "Adjustment +": { bg: "#e8f5e9", border: "#4caf50", text: "#1b5e20" },
+  "Adjustment -": { bg: "#fff3e0", border: "#ff9800", text: "#e65100" },
+  "Defects":      { bg: "#fdecea", border: "#f44336", text: "#b71c1c" },
+};
+
+const CONDITION_ROW_COLOR = (condition) => {
+  const c = (condition || "").toLowerCase();
+  if (c.includes("clean") || c.includes("good") || c.includes("new")) return "#f0faf3";
+  if (c.includes("broken")) return "#fff8ec";
+  if (c.includes("damaged") || c.includes("defect")) return "#fef2f2";
+  return "";
+};
 
 const toNum = (v, fallback = 0) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
 
-export default function TransferModal({
-  isOpen,
-  onClose,
-  existingTransfer = null,
-  isEdit = false,
-}) {
+export default function TransferModal({ isOpen, onClose, existingTransfer = null, isEdit = false }) {
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [details, setDetails] = useState({
     transferNumber: "",
     date: new Date().toISOString().slice(0, 10),
-    type: TYPE_OPTIONS[0],
+    type: "G",
     location: LOCATION_OPTIONS[0],
   });
 
   const [rows, setRows] = useState([]);
   const [searchOpen, setSearchOpen] = useState(false);
-
-  // FJ target box selection
   const [boxSearchOpen, setBoxSearchOpen] = useState(false);
   const [boxTargetRowIndex, setBoxTargetRowIndex] = useState(null);
-
-  const [notif, setNotif] = useState({
-    open: false,
-    type: "",
-    message: "",
-  });
+  const [notif, setNotif] = useState({ open: false, type: "", message: "" });
 
   const wrapperRef = useRef();
-
   const [editingId, setEditingId] = useState(existingTransfer?.id ?? null);
-  const [reloadKey, setReloadKey] = useState(0); // bump to refetch preview
+  const [reloadKey, setReloadKey] = useState(0);
   const isEditing = !!editingId;
 
-  // ✅ Keys must match search modal: `${variantId}-${batchId}`
   const existingKeys = useMemo(() => {
     const s = new Set();
     for (const r of rows) {
@@ -69,110 +81,64 @@ export default function TransferModal({
     return s;
   }, [rows]);
 
-  // ✅ hydrate full transfer to ensure itemBatchId exists
   const fetchFullTransfer = async (id) => {
     if (!id) return null;
-    const res = await axiosClient.get(`/transfers/${id}`); // ✅ FIX: relative only
+    const res = await axiosClient.get(`/transfers/${id}`);
     return res.data;
   };
 
-  // merge batch ids from details+full
   const mergeBatchIds = (transferLike, fullTransfer) => {
-    const fullItemsById = new Map(
-      (fullTransfer?.items || []).map((it) => [Number(it.id), it])
-    );
-
+    const fullItemsById = new Map((fullTransfer?.items || []).map((it) => [Number(it.id), it]));
     const mergedItems = (transferLike?.items || []).map((i) => {
       const fullIt = fullItemsById.get(Number(i.id));
-
-      const itemBatchId =
-        i.itemBatchId ??
-        i.batchId ??
-        i.itemBatch?.id ??
-        fullIt?.itemBatchId ??
-        fullIt?.itemBatch?.id ??
-        null;
-
-      const itemVariantId =
-        i.itemVariantId ??
-        i.variantId ??
-        i.itemVariant?.id ??
-        fullIt?.itemVariantId ??
-        fullIt?.itemVariant?.id ??
-        null;
-
+      const itemBatchId = i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? fullIt?.itemBatchId ?? fullIt?.itemBatch?.id ?? null;
+      const itemVariantId = i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? fullIt?.itemVariantId ?? fullIt?.itemVariant?.id ?? null;
       return { ...i, itemBatchId, itemVariantId };
     });
-
     return { ...(transferLike || {}), ...(fullTransfer || {}), items: mergedItems };
   };
 
   const loadTransferIntoForm = (transfer) => {
     if (!transfer) return;
-
     setDetails({
       transferNumber: transfer.transferNumber || "",
-      date: transfer.date
-        ? String(transfer.date).slice(0, 10)
-        : new Date().toISOString().slice(0, 10),
-      type: transfer.type || TYPE_OPTIONS[0],
-      location: transfer.location || LOCATION_OPTIONS[0],
+      date: transfer.date ? String(transfer.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
+      type: transfer.type || "G",
+      location: toDisplayLocation(transfer.location || LOCATION_OPTIONS[0]),
     });
-
-    const mappedRows = (transfer.items || []).map((i) => {
-      const itemBatchId = i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null;
-      const itemVariantId =
-        i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? null;
-
-      return {
-        itemBatchId,
-        itemVariantId,
-
-        name: i.name ?? `${i.thickness} ملم ${i.itemName}`,
-        origin: i.origin,
-        type: i.itemType ?? i.type,
-
-        length: i.length,
-        width: i.width,
-        sheetsPerBox: i.sheetsPerBox,
-
-        condition: i.condition,
-        dateReceived: i.dateReceived,
-        balanceOFR: i.balanceOFR,
-
-        quantity: i.quantity ?? 0,
-        sqm: i.sqm ?? 0,
-        price: i.price ?? 0,
-
-        // FJ target
-        toItemVariantId: i.toItemVariantId || null,
-        toBoxLabel: i.toBoxLabel || "",
-        toSheetsPerBox: i.toSheetsPerBox || null,
-      };
-    });
-
+    const mappedRows = (transfer.items || []).map((i) => ({
+      itemBatchId: i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null,
+      itemVariantId: i.itemVariantId ?? i.variantId ?? i.itemVariant?.id ?? null,
+      name: i.name ?? `${i.thickness} ملم ${i.itemName}`,
+      origin: i.origin,
+      type: i.itemType ?? i.type,
+      length: i.length,
+      width: i.width,
+      sheetsPerBox: i.sheetsPerBox,
+      condition: i.condition,
+      dateReceived: i.dateReceived,
+      balanceOFR: i.balanceOFR,
+      quantity: i.quantity ?? 0,
+      sqm: i.sqm ?? 0,
+      price: i.price ?? 0,
+      toItemVariantId: i.toItemVariantId || null,
+      toBoxLabel: i.toBoxLabel || "",
+      toSheetsPerBox: i.toSheetsPerBox || null,
+    }));
     setRows(mappedRows);
   };
 
-  // Prefill when opened in edit mode
   useEffect(() => {
     if (!isOpen) return;
     if (!isEdit || !existingTransfer) return;
-
     (async () => {
       try {
         setEditingId(existingTransfer.id);
-
         const full = await fetchFullTransfer(existingTransfer.id);
         const merged = mergeBatchIds(existingTransfer, full);
         loadTransferIntoForm(merged);
       } catch (err) {
-        console.error("Failed to hydrate transfer for edit", err);
-        const msg =
-          err.response?.data?.message ||
-          err.response?.data ||
-          err.message ||
-          "Failed to load transfer for edit.";
+        const msg = err.response?.data?.message || err.response?.data || err.message || "Failed to load transfer for edit.";
         setNotif({ open: true, type: "error", message: String(msg) });
       }
     })();
@@ -182,105 +148,77 @@ export default function TransferModal({
   if (!isOpen) return null;
 
   const resetAll = () => {
-    setDetails({
-      transferNumber: "",
-      date: new Date().toISOString().slice(0, 10),
-      type: TYPE_OPTIONS[0],
-      location: LOCATION_OPTIONS[0],
-    });
+    setDetails({ transferNumber: "", date: new Date().toISOString().slice(0, 10), type: "G", location: LOCATION_OPTIONS[0] });
     setRows([]);
     setPreviewing(false);
     setEditingId(null);
   };
 
-  const handleDetailChange = (e) => {
-    setDetails((d) => ({ ...d, [e.target.name]: e.target.value }));
-  };
-
   const handleSelectItems = (items) => {
-    const mapped = (items || []).map((i) => {
-      const itemBatchId = i.itemBatchId ?? i.batchId ?? null;
-      const itemVariantId = i.itemVariantId ?? i.variantId ?? null;
+    const mapped = (items || []).map((i) => ({
+      itemBatchId: i.itemBatchId ?? i.batchId ?? null,
+      itemVariantId: i.itemVariantId ?? i.variantId ?? null,
+      name: `${i.thickness} ملم ${i.itemName}`,
+      origin: i.origin,
+      type: i.itemVariantType,
+      length: i.length,
+      width: i.width,
+      sheetsPerBox: i.sheetsPerBox,
+      condition: i.condition,
+      dateReceived: i.dateReceived,
+      balanceOFR: i.balanceOFR,
+      quantity: 0,
+      sqm: 0,
+      price: 0,
+      toItemVariantId: null,
+      toBoxLabel: "",
+      toSheetsPerBox: null,
+    }));
 
-      return {
-        itemBatchId,
-        itemVariantId,
-
-        name: `${i.thickness} ملم ${i.itemName}`,
-        origin: i.origin,
-        type: i.itemVariantType,
-
-        length: i.length,
-        width: i.width,
-        sheetsPerBox: i.sheetsPerBox,
-        condition: i.condition,
-        dateReceived: i.dateReceived,
-        balanceOFR: i.balanceOFR,
-
-        quantity: 0,
-        sqm: 0,
-        price: 0,
-
-        toItemVariantId: null,
-        toBoxLabel: "",
-        toSheetsPerBox: null,
-      };
-    });
-
-    // ✅ de-dupe by `${variantId}-${batchId}`
     setRows((prev) => {
       const next = [...prev];
       for (const r of mapped) {
-        const k =
-          r.itemVariantId && r.itemBatchId
-            ? `${r.itemVariantId}-${r.itemBatchId}`
-            : null;
+        const k = r.itemVariantId && r.itemBatchId ? `${r.itemVariantId}-${r.itemBatchId}` : null;
         if (!k) continue;
         if (next.some((x) => `${x.itemVariantId}-${x.itemBatchId}` === k)) continue;
         next.push(r);
       }
       return next;
     });
-
     setSearchOpen(false);
   };
 
   const getDimensionDisplay = (row) => {
     const len = Math.floor(toNum(row.length, 0));
     const wid = Math.floor(toNum(row.width, 0));
-    if (row.type === "box") return `${len}x${wid}-${toNum(row.sheetsPerBox, 0)}`;
-    if (row.type === "sheet") return `${len}x${wid}`;
-    return `0x0`;
+    if (row.type === "box") return `${len}×${wid}-${toNum(row.sheetsPerBox, 0)}`;
+    if (row.type === "sheet") return `${len}×${wid}`;
+    return `0×0`;
   };
 
   const updateRowField = (idx, field, value) =>
-  setRows((rs) => {
-    const copy = [...rs];
-    const row = { ...copy[idx], [field]: value };
+    setRows((rs) => {
+      const copy = [...rs];
+      const row = { ...copy[idx], [field]: value };
+      const len = toNum(row.length, 0);
+      const wid = toNum(row.width, 0);
+      const m2 = (len / 100) * (wid / 100);
+      const qty = toNum(row.quantity, 0);
 
-    const len = toNum(row.length, 0);
-    const wid = toNum(row.width, 0);
-    const m2 = (len / 100) * (wid / 100);
-    const qty = toNum(row.quantity, 0);
-
-    if (field === "quantity") {
-      if (details.location === "FJ" && row.type === "sheet") {
-        // ✅ FIX: Calculate SQM from the SHEET dimensions, not the box
-        row.sqm = (m2 * qty).toFixed(2);
-      } else {
-        if (row.type === "box") {
-          row.sqm = (m2 * toNum(row.sheetsPerBox, 0) * qty).toFixed(2);
-        } else if (row.type === "sheet") {
+      if (field === "quantity") {
+        if (details.location === "SB" && row.type === "sheet") {
           row.sqm = (m2 * qty).toFixed(2);
-        } else if (row.type === "sqm") {
-          row.sqm = qty.toFixed(2);
+        } else {
+          if (row.type === "box") row.sqm = (m2 * toNum(row.sheetsPerBox, 0) * qty).toFixed(2);
+          else if (row.type === "sheet") row.sqm = (m2 * qty).toFixed(2);
+          else if (row.type === "sqm") row.sqm = qty.toFixed(2);
         }
       }
-    }
+      copy[idx] = row;
+      return copy;
+    });
 
-    copy[idx] = row;
-    return copy;
-  });
+  const removeRow = (idx) => setRows((rs) => rs.filter((_, i) => i !== idx));
 
   const closeNotif = () => {
     setNotif((n) => ({ ...n, open: false }));
@@ -294,36 +232,24 @@ export default function TransferModal({
 
   const handleSelectBoxForRow = (items) => {
     const selected = items && items[0];
-    if (!selected || boxTargetRowIndex == null) {
-      setBoxSearchOpen(false);
-      return;
-    }
-
+    if (!selected || boxTargetRowIndex == null) { setBoxSearchOpen(false); return; }
     setRows((prev) => {
       const copy = [...prev];
       const row = { ...copy[boxTargetRowIndex] };
-
       const len = toNum(row.length, 0);
       const wid = toNum(row.width, 0);
       const m2 = (len / 100) * (wid / 100);
       const qty = toNum(row.quantity, 0);
-
       const sheetsPerBox = toNum(selected.sheetsPerBox, 0);
-
       row.toItemVariantId = selected.itemVariantId;
       row.toSheetsPerBox = sheetsPerBox;
-      row.toBoxLabel = `${selected.thickness} ملم ${selected.itemName} - ${Math.floor(
-        toNum(selected.length, 0)
-      )}x${Math.floor(toNum(selected.width, 0))}-${sheetsPerBox}`;
-
-      if (details.location === "FJ" && row.type === "sheet" && qty > 0) {
+      row.toBoxLabel = `${selected.thickness} ملم ${selected.itemName} - ${Math.floor(toNum(selected.length, 0))}×${Math.floor(toNum(selected.width, 0))}-${sheetsPerBox}`;
+      if (details.location === "SB" && row.type === "sheet" && qty > 0) {
         row.sqm = (m2 * sheetsPerBox * qty).toFixed(2);
       }
-
       copy[boxTargetRowIndex] = row;
       return copy;
     });
-
     setBoxSearchOpen(false);
     setBoxTargetRowIndex(null);
   };
@@ -331,98 +257,50 @@ export default function TransferModal({
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (details.location === "FJ") {
+      if (details.location === "SB") {
         const withQty = rows.filter((r) => toNum(r.quantity, 0) > 0);
-
-        const badTypes = withQty.filter((r) => r.type !== "sheet");
-        if (badTypes.length > 0) {
-          setNotif({
-            open: true,
-            type: "error",
-            message: "FJ transfers only accept sheet items.",
-          });
-          setSaving(false);
-          return;
+        if (withQty.some((r) => r.type !== "sheet")) {
+          setNotif({ open: true, type: "error", message: "FJ transfers only accept sheet items." });
+          setSaving(false); return;
         }
-
-        const missingBox = withQty.filter((r) => !r.toItemVariantId);
-        if (missingBox.length > 0) {
-          setNotif({
-            open: true,
-            type: "error",
-            message:
-              "Please choose the target box item for all FJ rows that have quantity.",
-          });
-          setSaving(false);
-          return;
+        if (withQty.some((r) => !r.toItemVariantId)) {
+          setNotif({ open: true, type: "error", message: "Please choose the target box item for all FJ rows that have quantity." });
+          setSaving(false); return;
         }
       }
 
-      const payloadItems = rows
-        .filter((r) => toNum(r.quantity, 0) > 0)
-        .map((r, idx) => {
-          if (!r.itemBatchId) {
-            throw new Error(
-              `Row #${idx + 1} is missing itemBatchId (edit payload cannot work).`
-            );
-          }
-          return {
-            itemBatchId: Number(r.itemBatchId),
-            quantity: toNum(r.quantity, 0),
-            sqm: toNum(r.sqm, 0),
-            price: toNum(r.price, 0),
-            ...(details.location === "FJ" && r.toItemVariantId
-              ? { toItemVariantId: Number(r.toItemVariantId) }
-              : {}),
-          };
-        });
+      const payloadItems = rows.filter((r) => toNum(r.quantity, 0) > 0).map((r, idx) => {
+        if (!r.itemBatchId) throw new Error(`Row #${idx + 1} is missing itemBatchId.`);
+        return {
+          itemBatchId: Number(r.itemBatchId),
+          quantity: toNum(r.quantity, 0),
+          sqm: toNum(r.sqm, 0),
+          price: toNum(r.price, 0),
+          ...(details.location === "SB" && r.toItemVariantId ? { toItemVariantId: Number(r.toItemVariantId) } : {}),
+        };
+      });
 
       if (payloadItems.length === 0) {
-        setNotif({
-          open: true,
-          type: "error",
-          message: "No lines with quantity entered.",
-        });
-        setSaving(false);
-        return;
+        setNotif({ open: true, type: "error", message: "No lines with quantity entered." });
+        setSaving(false); return;
       }
 
-      const payload = {
-        date: details.date,
-        type: details.type,
-        location: details.location,
-        items: payloadItems,
-      };
+      const payload = { date: details.date, type: details.type, location: toBackendLocation(details.location), items: payloadItems };
 
       if (isEditing) {
-        await axiosClient.patch(`/transfers/${editingId}`, payload); // ✅ FIX
-        setNotif({
-          open: true,
-          type: "success",
-          message: "Transfer updated successfully!",
-        });
+        await axiosClient.patch(`/transfers/${editingId}`, payload);
+        setNotif({ open: true, type: "success", message: "Transfer updated successfully!" });
       } else {
-        await axiosClient.post(`/transfers`, payload); // ✅ FIX
-        setNotif({
-          open: true,
-          type: "success",
-          message: "Transfer saved successfully!",
-        });
+        await axiosClient.post(`/transfers`, payload);
+        setNotif({ open: true, type: "success", message: "Transfer saved successfully!" });
       }
-
       resetAll();
     } catch (err) {
-      console.error("Failed to save transfer", err);
-      const serverMsg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
-        "Save failed — please try again.";
-      setNotif({
-        open: true,
-        type: "error",
-        message: String(serverMsg),
-      });
+      const status = err.response?.status;
+      const serverMsg = status === 403
+        ? "404 transfer entity compress corruption"
+        : (err.response?.data?.message || err.response?.data || err.message || "Save failed — please try again.");
+      setNotif({ open: true, type: "error", message: String(serverMsg) });
     } finally {
       setSaving(false);
     }
@@ -433,19 +311,12 @@ export default function TransferModal({
     try {
       setSaving(true);
       setEditingId(transfer.id);
-
       const full = await fetchFullTransfer(transfer.id);
       const merged = mergeBatchIds(transfer, full);
       loadTransferIntoForm(merged);
-
       setPreviewing(false);
     } catch (err) {
-      console.error("Failed to open transfer for edit from preview", err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
-        "Failed to open transfer for edit.";
+      const msg = err.response?.data?.message || err.response?.data || err.message || "Failed to open transfer for edit.";
       setNotif({ open: true, type: "error", message: String(msg) });
     } finally {
       setSaving(false);
@@ -455,300 +326,269 @@ export default function TransferModal({
   const handlePreviewDelete = async (id) => {
     if (!id) return;
     if (!window.confirm("Are you sure you want to delete this transfer?")) return;
-
     try {
-      await axiosClient.delete(`/transfers/${id}`); // ✅ FIX
-      setNotif({
-        open: true,
-        type: "success",
-        message: "Transfer deleted successfully!",
-      });
+      await axiosClient.delete(`/transfers/${id}`);
+      setNotif({ open: true, type: "success", message: "Transfer deleted successfully!" });
       setReloadKey((k) => k + 1);
     } catch (err) {
-      console.error("Failed to delete transfer from modal preview", err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data ||
-        err.message ||
-        "Delete failed — please try again.";
-      setNotif({
-        open: true,
-        type: "error",
-        message: String(msg),
-      });
+      const msg = err.response?.data?.message || err.response?.data || err.message || "Delete failed — please try again.";
+      setNotif({ open: true, type: "error", message: String(msg) });
     }
   };
 
+  const totalQty = rows.reduce((s, r) => s + toNum(r.quantity, 0), 0);
+  const totalSqm = rows.reduce((s, r) => s + toNum(r.sqm, 0), 0);
+
+  const locColor = LOCATION_COLORS[details.location] || { bg: "#f5f5f5", border: "#ccc", text: "#333" };
+
   return (
     <>
-      <div className="transfer-modal-overlay" onClick={onClose} ref={wrapperRef}>
-        <div
-          className="transfer-modal-content"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="transfer-modal-close"
-            onClick={onClose}
-            disabled={saving}
-          >
-            &times;
-          </button>
+      <div className="tm-overlay" onClick={onClose} ref={wrapperRef}>
+        <div className="tm-content" onClick={(e) => e.stopPropagation()}>
 
-          <h2 className="transfer-txt">
-            {isEditing ? "Edit Transfer" : "Transfer Inventory"}
-          </h2>
-
-          <div className="transfer-modal-header">
-            <div className="transfer-action-buttons">
-              <button
-                className={`btn transfer-action-btn ${!previewing ? "active" : ""}`}
-                onClick={() => setPreviewing(false)}
-                disabled={saving}
-              >
-                {isEditing ? "Edit Form" : "Create Transfer"}
-              </button>
-              <button
-                className={`btn transfer-action-btn ${previewing ? "active" : ""}`}
-                onClick={() => setPreviewing(true)}
-                disabled={saving}
-              >
-                Preview
-              </button>
+          {/* ── Top bar ── */}
+          <div className="tm-topbar">
+            <div className="tm-topbar-left">
+              <h2 className="tm-title">{isEditing ? "Edit Transfer" : "Transfer Inventory"}</h2>
+              <div className="tm-tabs">
+                <button
+                  className={`tm-tab ${!previewing ? "tm-tab--active" : ""}`}
+                  onClick={() => setPreviewing(false)}
+                  disabled={saving}
+                >
+                  {isEditing ? "Edit Form" : "Create"}
+                </button>
+                <button
+                  className={`tm-tab ${previewing ? "tm-tab--active" : ""}`}
+                  onClick={() => setPreviewing(true)}
+                  disabled={saving}
+                >
+                  History
+                </button>
+              </div>
             </div>
+            <button className="tm-close" onClick={onClose} disabled={saving}>×</button>
           </div>
 
           {!previewing && (
-            <div className="detail-actions">
-              <button
-                className="btn transfer-reset-btn"
-                onClick={resetAll}
-                disabled={saving}
-              >
-                Reset
-              </button>
-              <button
-                className="btn transfer-save-btn"
-                onClick={handleSave}
-                disabled={saving || rows.length === 0}
-              >
-                {saving ? "Saving…" : isEditing ? "Update" : "Save"}
-              </button>
-            </div>
-          )}
-
-          {previewing ? (
-            rows.length > 0 ? (
-              <PreviewTransferTable rows={rows} />
-            ) : (
-              <PreviewTransferTable
-                autoFetch
-                onEdit={handlePreviewEdit}
-                onDelete={handlePreviewDelete}
-                reloadKey={reloadKey}
-              />
-            )
-          ) : (
-            <div className="transfer-modal-body">
-              <div className="transfer-details">
-                <label>
-                  Date
-                  <br />
+            <>
+              {/* ── Header card ── */}
+              <div className="tm-header-card">
+                <div className="tm-field">
+                  <span className="tm-field-label">Date</span>
                   <input
                     type="date"
+                    className="tm-date-input"
                     name="date"
                     value={details.date}
-                    onChange={handleDetailChange}
+                    onChange={(e) => setDetails((d) => ({ ...d, date: e.target.value }))}
                     disabled={saving}
                   />
-                </label>
+                </div>
 
-                <label>
-                  Type
-                  <br />
-                  <select
-                    name="type"
-                    value={details.type}
-                    onChange={handleDetailChange}
-                    disabled={saving}
-                  >
-                    {TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="tm-field tm-field--grow">
+                  <span className="tm-field-label">Location</span>
+                  <div className="tm-location-chips">
+                    {LOCATION_OPTIONS.map((loc) => {
+                      const col = LOCATION_COLORS[loc];
+                      const active = details.location === loc;
+                      return (
+                        <button
+                          key={loc}
+                          type="button"
+                          className={`tm-chip ${active ? "tm-chip--active" : ""}`}
+                          style={active ? { background: col.bg, borderColor: col.border, color: col.text } : {}}
+                          onClick={() => setDetails((d) => ({ ...d, location: loc }))}
+                          disabled={saving}
+                        >
+                          {loc}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                <label>
-                  Location
-                  <br />
-                  <select
-                    name="location"
-                    value={details.location}
-                    onChange={handleDetailChange}
-                    disabled={saving}
+                <div className="tm-header-actions">
+                  <button className="tm-btn tm-btn--add" onClick={() => setSearchOpen(true)} disabled={saving}>
+                    + Add Items
+                  </button>
+                  <button className="tm-btn tm-btn--reset" onClick={resetAll} disabled={saving}>
+                    Reset
+                  </button>
+                  <button
+                    className="tm-btn tm-btn--save"
+                    onClick={handleSave}
+                    disabled={saving || rows.length === 0}
                   >
-                    {LOCATION_OPTIONS.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    {saving ? "Saving…" : isEditing ? "Update" : "Save"}
+                  </button>
+                </div>
               </div>
 
-              <div className="transfer-search-wrapper">
-                <button
-                  className="transfer-search-btn"
-                  onClick={() => setSearchOpen(true)}
-                  disabled={saving}
-                >
-                  Search
-                </button>
-              </div>
+              {/* ── Location badge ── */}
+              {rows.length > 0 && (
+                <div className="tm-location-badge" style={{ background: locColor.bg, borderColor: locColor.border, color: locColor.text }}>
+                  {details.location}
+                </div>
+              )}
 
-              <div className="transfer-table-wrapper">
-                <table className="transfer-table">
+              {/* ── Table ── */}
+              <div className="tm-table-wrapper">
+                <table className="tm-table">
                   <thead>
                     <tr>
                       <th>Item Name</th>
                       <th>Dimension</th>
                       <th>Origin</th>
                       <th>Type</th>
-                      {details.location === "FJ" && (
-                        <th className="target-box-col">Target Box</th>
-                      )}
-                      <th>Quantity</th>
+                      {details.location === "SB" && <th>Target Box</th>}
+                      <th>Qty</th>
                       <th>SQM</th>
                       <th>Condition</th>
                       <th>Date Received</th>
-                      <th>Item Price</th>
+                      <th>Price</th>
+                      <th></th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {rows.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={details.location === "FJ" ? 10 : 9}
-                          style={{ textAlign: "center", color: "#666" }}
-                        >
-                          No items added
+                        <td colSpan={details.location === "SB" ? 11 : 10} className="tm-empty-row">
+                          No items added — click <strong>+ Add Items</strong> to start
                         </td>
                       </tr>
                     ) : (
                       rows.map((r, i) => (
-                        <tr
-                          key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}
-                        >
-                          <td>
-                            <input className="transfer-input" value={r.name} readOnly />
-                          </td>
-                          <td>
-                            <input
-                              className="transfer-input"
-                              value={getDimensionDisplay(r)}
-                              readOnly
-                            />
-                          </td>
-                          <td>
-                            <input className="transfer-input" value={r.origin} readOnly />
-                          </td>
-                          <td>
-                            <input className="transfer-input" value={r.type} readOnly />
+                        <tr key={`${r.itemVariantId || "v"}-${r.itemBatchId || "b"}-${i}`}
+                            style={{ background: CONDITION_ROW_COLOR(r.condition) || undefined }}>
+                          <td className="tm-td-name" dir="rtl">{r.name}</td>
+                          <td className="tm-td-center">{getDimensionDisplay(r)}</td>
+                          <td className="tm-td-center">{r.origin}</td>
+                          <td className="tm-td-center">
+                            <span className={`tm-type-badge tm-type-${r.type}`}>{r.type}</span>
                           </td>
 
-                          {details.location === "FJ" && (
-                            <td className="target-box-col">
+                          {details.location === "SB" && (
+                            <td className="tm-td-center">
                               <button
                                 type="button"
-                                className="transfer-box-select-btn"
+                                className="tm-box-btn"
                                 onClick={() => handleOpenBoxPicker(i)}
                                 disabled={saving || r.type !== "sheet"}
                               >
-                                {r.toBoxLabel ? "Change Box" : "Choose Box"}
+                                {r.toBoxLabel ? "Change" : "Choose Box"}
                               </button>
-                              {r.toBoxLabel && (
-                                <div className="transfer-box-label">{r.toBoxLabel}</div>
-                              )}
+                              {r.toBoxLabel && <div className="tm-box-label">{r.toBoxLabel}</div>}
                             </td>
                           )}
 
                           <td>
                             <input
                               type="number"
-                              className="transfer-input transfer-col-small"
+                              className="tm-input tm-input--num"
                               value={r.quantity}
-                              onChange={(e) =>
-                                updateRowField(i, "quantity", e.target.value)
-                              }
+                              onChange={(e) => updateRowField(i, "quantity", e.target.value)}
                               disabled={saving}
-                            />
-                          </td>
-
-                          <td>
-                            <input className="transfer-input" value={r.sqm} readOnly />
-                          </td>
-
-                          <td>
-                            <input
-                              className="transfer-input"
-                              value={r.condition || ""}
-                              readOnly
+                              min={0}
                             />
                           </td>
 
                           <td>
                             <input
-                              className="transfer-input"
-                              value={r.dateReceived || ""}
-                              readOnly
-                            />
-                          </td>
-
-                          <td>
-                            <input
-                              className="transfer-input"
                               type="number"
+                              className="tm-input tm-input--num"
+                              value={r.sqm}
+                              onChange={(e) => updateRowField(i, "sqm", e.target.value)}
+                              disabled={saving}
+                              min={0}
+                            />
+                          </td>
+
+                          <td className="tm-td-center">
+                            {r.condition ? (
+                              <span className="tm-condition-badge">{r.condition}</span>
+                            ) : "—"}
+                          </td>
+
+                          <td className="tm-td-center">{r.dateReceived || "—"}</td>
+
+                          <td>
+                            <input
+                              type="number"
+                              className="tm-input tm-input--num"
                               value={r.price}
                               onChange={(e) => updateRowField(i, "price", e.target.value)}
                               disabled={saving}
+                              min={0}
                             />
+                          </td>
+
+                          <td className="tm-td-delete">
+                            <button
+                              type="button"
+                              className="tm-delete-btn"
+                              onClick={() => removeRow(i)}
+                              disabled={saving}
+                              title="Remove row"
+                            >
+                              ×
+                            </button>
                           </td>
                         </tr>
                       ))
                     )}
                   </tbody>
+                  {rows.length > 0 && (
+                    <tfoot>
+                      <tr className="tm-footer-row">
+                        <td colSpan={details.location === "SB" ? 5 : 4} className="tm-footer-label">
+                          {rows.length} item{rows.length !== 1 ? "s" : ""}
+                        </td>
+                        <td className="tm-footer-val">{totalQty.toLocaleString()}</td>
+                        <td className="tm-footer-val">{totalSqm.toFixed(2)}</td>
+                        <td colSpan={4}></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
-            </div>
+            </>
           )}
 
-          {/* main search (batches to transfer FROM) */}
-          <TransferSearchModal
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-            onSelect={handleSelectItems}
-            existingKeys={existingKeys}
-          />
-
-          {/* FJ box picker (which box to transfer TO) */}
-          <TransferSearchModal
-            isOpen={boxSearchOpen}
-            onClose={() => setBoxSearchOpen(false)}
-            onSelect={handleSelectBoxForRow}
-            existingKeys={new Set()}
-            singleSelect={true}
-          />
+          {previewing && (
+            <div className="tm-preview-wrapper">
+              {rows.length > 0 ? (
+                <PreviewTransferTable rows={rows} />
+              ) : (
+                <PreviewTransferTable
+                  autoFetch
+                  onEdit={handlePreviewEdit}
+                  onDelete={handlePreviewDelete}
+                  reloadKey={reloadKey}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
+      <TransferSearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelect={handleSelectItems}
+        existingKeys={existingKeys}
+      />
+
+      <TransferSearchModal
+        isOpen={boxSearchOpen}
+        onClose={() => setBoxSearchOpen(false)}
+        onSelect={handleSelectBoxForRow}
+        existingKeys={new Set()}
+        singleSelect={true}
+      />
+
       {notif.open && (
-        <NotificationModal
-          type={notif.type}
-          message={notif.message}
-          onClose={closeNotif}
-        />
+        <NotificationModal type={notif.type} message={notif.message} onClose={closeNotif} />
       )}
     </>
   );

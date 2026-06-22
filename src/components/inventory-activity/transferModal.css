@@ -1,369 +1,391 @@
-/* Overlay */
-.transfer-modal-overlay {
+/* ── Overlay ── */
+.tm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1100;
+  padding: 1rem;
 }
 
-/* Content */
-.transfer-modal-content {
+/* ── Modal shell ── */
+.tm-content {
   position: relative;
-  background: #fff;
-  width: 90%;
+  background: #f8fafc;
+  width: 96vw;
   max-width: 1600px;
-  height: 90vh;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  height: 92vh;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Close button */
-.transfer-modal-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: #eee;
+/* ── Top bar ── */
+.tm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.tm-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.tm-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1e40af;
+  white-space: nowrap;
+}
+
+.tm-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.tm-tab {
+  padding: 0.35rem 1rem;
   border: none;
-  border-radius: 50%;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tm-tab:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.tm-tab--active {
+  background: #fff !important;
+  color: #1e40af !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.tm-close {
   width: 2rem;
   height: 2rem;
-  font-size: 1.25rem;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  font-size: 1.3rem;
+  line-height: 1;
   cursor: pointer;
-}
-.transfer-modal-close:hover {
-  background: #ddd;
-}
-
-/* Header */
-.transfer-modal-header {
+  color: #64748b;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  justify-content: center;
+  transition: background 0.15s;
 }
-.transfer-txt {
-  margin: 0.5rem;
-  margin-bottom: 0rem;
-  margin-top: 1.5rem;
-  font-size: 1.5rem;
-  color: #007bff;
-}
+.tm-close:hover { background: #e2e8f0; color: #1e293b; }
 
-/* Reuse your action-buttons */
-.transfer-action-buttons {
-  width: 100%;
-  text-align: center;
-}
-.btn.transfer-action-btn {
-  padding: 0.6rem 1.2rem;
-  margin: 0.5rem;
-  font-size: 0.95rem;
-  border: 2px solid #ccc;
+/* ── Header card ── */
+.tm-header-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.85rem 1.25rem;
   background: #fff;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-.btn.transfer-action-btn.active {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: #fff;
-  border-color: #004080;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-/* Body */
-.transfer-modal-body {
-  padding: 1rem;
-  overflow-y: auto;
+.tm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tm-field--grow {
   flex: 1;
 }
 
-/* Example form */
-.transfer-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.transfer-form label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.95rem;
-}
-.transfer-form input {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-.transfer-submit-btn {
-  align-self: flex-end;
-  padding: 0.6rem 1.2rem;
-  background: linear-gradient(135deg, #28a745, #1e7e34);
-  border: none;
-  border-radius: 6px;
-  color: #fff;
-  cursor: pointer;
-}
-.transfer-submit-btn:hover {
-  background: linear-gradient(135deg, #1e7e34, #155724);
+.tm-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-/* Details row */
-.transfer-details {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  padding: 1rem;
+.tm-date-input {
+  padding: 0.42rem 0.7rem;
+  font-size: 0.95rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #1e293b;
+  cursor: pointer;
+  transition: border-color 0.15s;
 }
-.transfer-details label {
+.tm-date-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Location chips ── */
+.tm-location-chips {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tm-chip {
+  padding: 0.3rem 0.75rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tm-chip:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+.tm-chip--active {
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Header action buttons ── */
+.tm-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tm-btn {
+  padding: 0.42rem 1rem;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.tm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.tm-btn:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); }
+
+.tm-btn--add  { background: #22c55e; color: #fff; }
+.tm-btn--reset { background: #ef4444; color: #fff; }
+.tm-btn--save  { background: #3b82f6; color: #fff; min-width: 5rem; }
+
+/* ── Location badge ── */
+.tm-location-badge {
+  display: inline-block;
+  margin: 0.5rem 1.25rem 0;
+  padding: 0.2rem 0.85rem;
+  border-radius: 20px;
+  border: 1.5px solid;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* ── Table wrapper ── */
+.tm-table-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0.5rem 1rem 1rem;
+}
+
+/* ── Table ── */
+.tm-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.9rem;
 }
-.transfer-details .arrow {
-  align-self: center;
-  margin: 0 0.5rem;
-  font-weight: bold;
-}
 
-/* table wrapper */
-.transfer-table-wrapper {
-  overflow-x: auto;
-  padding: 0 1rem 1rem;
-}
-.transfer-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.transfer-table th {
-  padding: 0.6rem 1rem;
-  border: 1px solid #ddd;
-  font-size: 1rem;
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
+.tm-table thead tr th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  text-align: center;
-}
-.transfer-table td {
-  border: 1px solid #ddd;
-  padding: 0.6rem;
-  text-align: center;
-}
-.transfer-table thead {
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  z-index: 2;
+  background: #1e40af;
   color: #fff;
+  padding: 0.6rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-align: center;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.tm-table thead tr th:first-child { border-radius: 6px 0 0 0; text-align: left; }
+.tm-table thead tr th:last-child  { border-radius: 0 6px 0 0; border-right: none; }
+
+.tm-table tbody tr {
+  transition: filter 0.1s;
+}
+.tm-table tbody tr:hover { filter: brightness(0.96); }
+
+.tm-table tbody td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.tm-table tbody td:last-child { border-right: none; }
+
+.tm-empty-row {
+  text-align: center;
+  color: #94a3b8;
+  padding: 3rem !important;
+  font-size: 0.95rem;
 }
 
-/* input styling inside details */
-.transfer-details label input,
-.transfer-details label select {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  margin-top: 0.25rem;
-  box-sizing: border-box;
+/* ── Table cell helpers ── */
+.tm-td-name {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #1e293b;
 }
 
-.transfer-details label input[type="date"] {
-  height: 2.2rem;
+.tm-td-center {
+  text-align: center;
+  color: #475569;
 }
 
-.transfer-details label input:focus,
-.transfer-details label select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+.tm-td-delete {
+  text-align: center;
+  width: 2.5rem;
 }
 
-/* right-aligned “Search” button below details */
-.transfer-search-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.transfer-search-btn {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #28a745, #1e7e34);
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-.transfer-search-btn:hover {
-  background: linear-gradient(135deg, #1e7e34, #155d27);
-  transform: translateY(-2px);
-}
-
-/* Inputs inside the transfer table */
-.transfer-table-wrapper .transfer-input {
+/* ── Inline inputs ── */
+.tm-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.5rem;
-  font-size: 1.1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.15s;
+  text-align: center;
 }
-
-.transfer-table-wrapper .transfer-input:focus {
+.tm-input:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
 }
+.tm-input--num { width: 5.5rem; }
 
-/* Column widths */
-.transfer-table th:nth-child(1),
-.transfer-table td:nth-child(1) {
-  width: 15rem;
-  max-width: 15rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-table th:nth-child(2),
-.transfer-table td:nth-child(2) {
-  width: 12rem;
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-table th:nth-child(3),
-.transfer-table td:nth-child(3) {
-  width: 10rem;
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.transfer-table th:nth-child(4),
-.transfer-table td:nth-child(4) {
-  width: 5rem;
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-table th:nth-child(5),
-.transfer-table td:nth-child(5) {
-  width: 5rem;
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-table th:nth-child(6),
-.transfer-table td:nth-child(6) {
-  width: 5rem;
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.transfer-table th:nth-child(7),
-.transfer-table td:nth-child(7) {
-  width: 5rem;
-  max-width: 5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transfer-table td:nth-child(1) {
-  direction: rtl;
-}
-
-/* small quantity column */
-.transfer-col-small {
-  width: 4rem;
-}
-
-/* Save / Reset buttons */
-.transfer-save-btn {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.transfer-save-btn:hover {
-  background: linear-gradient(135deg, #0056b3, #003f7f);
-  transform: translateY(-1px);
-}
-.transfer-reset-btn {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #dc3545, #a71d2a);
-  border: none;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.transfer-reset-btn:hover {
-  background: linear-gradient(135deg, #a71d2a, #79151e);
-  transform: translateY(-1px);
-}
-
-/* Reset/Save row */
-.detail-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-/* ===== FJ Target Box column ===== */
-
-.target-box-col {
-  min-width: 14rem;
-  max-width: 18rem;
-}
-
-.transfer-box-select-btn {
-  padding: 0.25rem 0.75rem;
+/* ── Type badge ── */
+.tm-type-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
   border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.tm-type-box   { background: #dbeafe; color: #1e40af; }
+.tm-type-sheet { background: #dcfce7; color: #166534; }
+.tm-type-sqm   { background: #fef9c3; color: #854d0e; }
+
+/* ── Condition badge ── */
+.tm-condition-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* ── Delete button ── */
+.tm-delete-btn {
+  width: 1.8rem;
+  height: 1.8rem;
   border: none;
-  font-size: 0.8rem;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 1.1rem;
+  line-height: 1;
   cursor: pointer;
-  background: linear-gradient(135deg, #ffc107, #ff9800);
-  color: #222;
-  margin-bottom: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.tm-delete-btn:hover:not(:disabled) { background: #fca5a5; }
+
+/* ── FJ box button ── */
+.tm-box-btn {
+  padding: 0.25rem 0.65rem;
+  border: none;
+  border-radius: 5px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
   white-space: nowrap;
 }
+.tm-box-btn:hover:not(:disabled) { background: #fde68a; }
 
-.transfer-box-select-btn:hover {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
+.tm-box-label {
+  font-size: 0.72rem;
+  color: #475569;
+  margin-top: 0.2rem;
+  line-height: 1.3;
+  max-width: 14rem;
 }
 
-.transfer-box-label {
-  font-size: 0.75rem;
-  color: #333;
-  line-height: 1.2;
-  max-width: 16rem;
-  margin: 0 auto;
+/* ── Footer totals ── */
+.tm-footer-row {
+  background: #f8fafc;
+}
+.tm-footer-label {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-align: right;
+  border-top: 2px solid #e2e8f0;
+}
+.tm-footer-val {
+  padding: 0.55rem 0.6rem;
+  font-weight: 700;
+  color: #1e40af;
+  text-align: center;
+  border-top: 2px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+/* ── Preview wrapper ── */
+.tm-preview-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
 }
