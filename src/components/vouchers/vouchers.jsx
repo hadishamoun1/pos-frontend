@@ -538,6 +538,20 @@ const JournalVoucherPage = () => {
         entry.creditUSDOFR = c / r;
         return;
       }
+      if (entry.currency === "EUR") {
+        const er = Math.max(0.000001, parseNumber(entry.exchangeRateEURtoUSD || 1));
+        entry.debitUSD = d * er;
+        entry.debitEx = d * er * r;
+        entry.debitOFR = String(entry.debit);
+        entry.debitUSDOFR = d * er;
+        entry.debitExOFR = d * er * r;
+        entry.creditUSD = c * er;
+        entry.creditEx = c * er * r;
+        entry.creditOFR = String(entry.credit);
+        entry.creditUSDOFR = c * er;
+        entry.creditExOFR = c * er * r;
+        return;
+      }
     }
 
     if (type === "G" || type === "RG") {
@@ -553,6 +567,12 @@ const JournalVoucherPage = () => {
         entry.creditExOFR = ofrC;
         entry.debitUSDOFR = ofrD / r;
         entry.creditUSDOFR = ofrC / r;
+      } else if (entry.currency === "EUR") {
+        const er = Math.max(0.000001, parseNumber(entry.exchangeRateEURtoUSD || 1));
+        entry.debitUSDOFR = ofrD * er;
+        entry.creditUSDOFR = ofrC * er;
+        entry.debitExOFR = ofrD * er * r;
+        entry.creditExOFR = ofrC * er * r;
       }
       return;
     }
@@ -580,6 +600,16 @@ const JournalVoucherPage = () => {
         entry.creditExOFR = ofrC;
         entry.debitUSDOFR = ofrD / r;
         entry.creditUSDOFR = ofrC / r;
+      } else if (entry.currency === "EUR") {
+        const er = Math.max(0.000001, parseNumber(entry.exchangeRateEURtoUSD || 1));
+        entry.debitUSD = d * er;
+        entry.creditUSD = c * er;
+        entry.debitEx = d * er * r;
+        entry.creditEx = c * er * r;
+        entry.debitUSDOFR = ofrD * er;
+        entry.creditUSDOFR = ofrC * er;
+        entry.debitExOFR = ofrD * er * r;
+        entry.creditExOFR = ofrC * er * r;
       }
       return;
     }
@@ -605,6 +635,18 @@ const JournalVoucherPage = () => {
         entry.debitUSD = d / r;
         entry.creditEx = c;
         entry.creditUSD = c / r;
+        entry.debitOFR = "0";
+        entry.creditOFR = "0";
+        entry.debitUSDOFR = 0;
+        entry.creditUSDOFR = 0;
+        entry.debitExOFR = 0;
+        entry.creditExOFR = 0;
+      } else if (entry.currency === "EUR") {
+        const er = Math.max(0.000001, parseNumber(entry.exchangeRateEURtoUSD || 1));
+        entry.debitUSD = d * er;
+        entry.debitEx = d * er * r;
+        entry.creditUSD = c * er;
+        entry.creditEx = c * er * r;
         entry.debitOFR = "0";
         entry.creditOFR = "0";
         entry.debitUSDOFR = 0;
@@ -1656,6 +1698,9 @@ const handleRightClick = (event, rowIndex, rowRid) => {
             </td>
             <td>
               <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate} placeholder="Rate" onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRate")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")} ref={registerInputRef(index, "exchangeRate")} className="general-vouchers-input column-exchange-rate" readOnly={isTableDisabled} disabled={isTableDisabled} />
+              {entry.currency === "EUR" && (
+                <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRateEURtoUSD) : (entry.exchangeRateEURtoUSD || "")} placeholder="€→$" onChange={(e) => handleInputChange(index, "exchangeRateEURtoUSD", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRateEURtoUSD")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRateEURtoUSD")} ref={registerInputRef(index, "exchangeRateEURtoUSD")} className="general-vouchers-input column-exchange-rate" style={{ marginTop: 2 }} readOnly={isTableDisabled} disabled={isTableDisabled} />
+              )}
             </td>
             <td>
               <input type="text" value={isLocked(entry, "debit") ? "0" : (isTableDisabled ? formatNumber(entry.debit) : entry.debit)} placeholder="Debit" onChange={(e) => handleInputChange(index, "debit", e.target.value)} onBlur={() => handleInputBlur(index, "debit")} onKeyDown={(e) => handleCellKeyDown(e, index, "debit")} ref={registerInputRef(index, "debit")} className="general-vouchers-input column-debit" readOnly={isTableDisabled || isOFRType(type) || isLocked(entry, "debit")} disabled={isTableDisabled || isOFRType(type) || isLocked(entry, "debit")} />
@@ -1729,6 +1774,9 @@ const handleRightClick = (event, rowIndex, rowRid) => {
             </td>
             <td>
               <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate} placeholder="Rate" onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRate")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")} ref={registerInputRef(index, "exchangeRate")} className="general-vouchers-input column-exchange-rate" readOnly={isTableDisabled} disabled={isTableDisabled} />
+              {entry.currency === "EUR" && (
+                <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRateEURtoUSD) : (entry.exchangeRateEURtoUSD || "")} placeholder="€→$" onChange={(e) => handleInputChange(index, "exchangeRateEURtoUSD", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRateEURtoUSD")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRateEURtoUSD")} ref={registerInputRef(index, "exchangeRateEURtoUSD")} className="general-vouchers-input column-exchange-rate" style={{ marginTop: 2 }} readOnly={isTableDisabled} disabled={isTableDisabled} />
+              )}
             </td>
             <td>
               <input type="text" value={isLocked(entry, "debitOFR") ? "0" : (isTableDisabled ? formatNumber(entry.debitOFR) : entry.debitOFR)} placeholder="Dr OFR" onChange={(e) => handleInputChange(index, "debitOFR", e.target.value)} onBlur={() => handleInputBlur(index, "debitOFR")} onKeyDown={(e) => handleCellKeyDown(e, index, "debitOFR")} ref={registerInputRef(index, "debitOFR")} className="general-vouchers-input column-debit-ofr" readOnly={isTableDisabled || isLocked(entry, "debitOFR")} disabled={isTableDisabled || isLocked(entry, "debitOFR")} />
@@ -1808,6 +1856,9 @@ const handleRightClick = (event, rowIndex, rowRid) => {
             </td>
             <td>
               <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRate) : entry.exchangeRate} placeholder="Rate" onChange={(e) => handleInputChange(index, "exchangeRate", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRate")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRate")} ref={registerInputRef(index, "exchangeRate")} className="general-vouchers-input column-exchange-rate" readOnly={isTableDisabled} disabled={isTableDisabled} />
+              {entry.currency === "EUR" && (
+                <input type="text" value={isTableDisabled ? formatNumber(entry.exchangeRateEURtoUSD) : (entry.exchangeRateEURtoUSD || "")} placeholder="€→$" onChange={(e) => handleInputChange(index, "exchangeRateEURtoUSD", e.target.value)} onBlur={() => handleInputBlur(index, "exchangeRateEURtoUSD")} onKeyDown={(e) => handleCellKeyDown(e, index, "exchangeRateEURtoUSD")} ref={registerInputRef(index, "exchangeRateEURtoUSD")} className="general-vouchers-input column-exchange-rate" style={{ marginTop: 2 }} readOnly={isTableDisabled} disabled={isTableDisabled} />
+              )}
             </td>
             <td>
               <input type="text" value={isLocked(entry, "debit") ? "0" : (isTableDisabled ? formatNumber(entry.debit) : entry.debit)} placeholder="Debit" onChange={(e) => handleInputChange(index, "debit", e.target.value)} onBlur={() => handleInputBlur(index, "debit")} onKeyDown={(e) => handleCellKeyDown(e, index, "debit")} ref={registerInputRef(index, "debit")} className="general-vouchers-input column-debit" readOnly={isTableDisabled || isLocked(entry, "debit")} disabled={isTableDisabled || isLocked(entry, "debit")} />
