@@ -1,3 +1,61 @@
+/* ===== Net Position export action bar ===== */
+.net-export-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.net-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  white-space: nowrap;
+  user-select: none;
+}
+.net-export-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.net-export-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.net-export-btn:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  filter: brightness(0.95);
+}
+
+.net-export-btn--print {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+}
+
+.net-export-btn--screenshot {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #fff;
+}
+
+.net-export-btn--pdf {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+}
+
+.net-export-btn svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
 /* ===== Generic Reports page shell + tabs (no :root) ===== */
 
 .reports-page {

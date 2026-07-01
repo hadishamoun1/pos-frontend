@@ -108,6 +108,16 @@
   filter: brightness(0.98);
 }
 
+.tb-btn-secondary {
+  background: #f8fafc;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.tb-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
 /* --- Errors & Empty --- */
 .tb-error {
   background: #fef2f2;

@@ -7,6 +7,8 @@ import { axiosClient } from "../api/axiosClient";
 import { logActivity } from "../api/logActivity";
 import { printWithDomBuilder } from "./printHelper";
 import revoLogoSrc from "../revo-logo/revo.png"; // ✅ same level as this file
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 const ENDPOINTS = {
   arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
@@ -427,6 +429,132 @@ export default function AccountStatement() {
     });
   };
 
+  const handleNetScreenshot = async () => {
+    const el = netPrintRef.current;
+    if (!el) return;
+    const prev = el.style.display;
+    el.style.display = "block";
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#fff" });
+      el.style.display = prev;
+      const link = document.createElement("a");
+      link.download = `net-position-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch {
+      el.style.display = prev;
+    }
+  };
+
+  const handleNetPDF = async () => {
+    const printableRoot = netPrintRef.current;
+    if (!printableRoot || !netItems.length) return;
+
+    const srcHeader = printableRoot.querySelector(".statement-report-modal-header, .srm-revo-header");
+    const srcTitle  = printableRoot.querySelector(".statement-report-modal-titlebar");
+    const srcClientLine = printableRoot.querySelector(".statement-report-modal-clientline");
+    const srcTable  = printableRoot.querySelector(".statement-report-modal-table");
+    if (!srcTitle || !srcClientLine || !srcTable) return;
+
+    const allRows = Array.from(srcTable.querySelectorAll("tbody > tr")).map(r => r.cloneNode(true));
+    let footerRow = null;
+    if (allRows.length && allRows[allRows.length - 1].classList.contains("statement-report-modal-footer-row")) {
+      footerRow = allRows.pop();
+    }
+
+    const netStatementDate = new Date().toISOString().split("T")[0];
+    // A4 at 96 dpi: 794 × 1123 px; 10 mm margin (38 px) each side → content 718 × 1047 px
+    const PAGE_W = 794;
+    const PAGE_H = 1123;
+
+    const buildInfoTable = (pageNumText) => {
+      const wrap = document.createElement("div");
+      wrap.className = "statement-report-modal-info";
+      wrap.innerHTML = `<table class="statement-report-modal-info-table" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>العميل</th><th>المورد المرتبط</th><th>من تاريخ</th><th>الى تاريخ</th><th>تاريخ الكشف</th><th>الصفحة</th></tr></thead><tbody><tr><td>${netMeta?.customerName || ""}</td><td>${netMeta?.supplierName || "—"}</td><td>${from}</td><td>${to}</td><td>${netStatementDate}</td><td>${pageNumText || ""}</td></tr></tbody></table>`;
+      return wrap;
+    };
+
+    const buildTableSkeleton = () => {
+      const table = document.createElement("table");
+      table.className = "statement-report-modal-table";
+      table.style.cssText = "width:100%;border-collapse:collapse;font-size:12px";
+      const colgroup = document.createElement("colgroup");
+      colgroup.innerHTML = `<col style="width:13%"/><col style="width:15%"/><col style="width:10%"/><col style="width:27%"/><col style="width:11%"/><col style="width:11%"/><col style="width:13%"/>`;
+      const thead = document.createElement("thead");
+      thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الجهة</th><th>الشرح</th><th>DR USD</th><th>CR USD</th><th>الرصيد</th></tr>`;
+      const tbody = document.createElement("tbody");
+      table.appendChild(colgroup); table.appendChild(thead); table.appendChild(tbody);
+      return { table, tbody };
+    };
+
+    // Off-screen container
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;`;
+    document.body.appendChild(wrapper);
+
+    const pageEls = [];
+
+    const createPage = (mode) => {
+      const page = document.createElement("div");
+      // Plain block layout — flex would shrink children to fit, hiding overflow from scrollHeight
+      page.style.cssText = `width:${PAGE_W}px;height:${PAGE_H}px;overflow:hidden;background:#fff;box-sizing:border-box;padding:38px;`;
+
+      if (mode === "full") {
+        const headerBox = document.createElement("div");
+        if (srcHeader) headerBox.appendChild(srcHeader.cloneNode(true));
+        headerBox.appendChild(srcTitle.cloneNode(true));
+        headerBox.appendChild(srcClientLine.cloneNode(true));
+        headerBox.appendChild(buildInfoTable(""));
+        page.appendChild(headerBox);
+      }
+
+      const { table, tbody } = buildTableSkeleton();
+      page.appendChild(table);
+      wrapper.appendChild(page);
+      pageEls.push(page);
+      return { page, tbody };
+    };
+
+    let current = createPage("full");
+
+    const appendRowWithPagination = (rowNode) => {
+      current.tbody.appendChild(rowNode);
+      void current.page.offsetHeight;
+      if (current.page.scrollHeight > current.page.clientHeight) {
+        current.tbody.removeChild(rowNode);
+        current = createPage("tableOnly");
+        current.tbody.appendChild(rowNode);
+        void current.page.offsetHeight;
+      }
+    };
+
+    for (const row of allRows) appendRowWithPagination(row);
+    if (footerRow) appendRowWithPagination(footerRow);
+
+    // Update page count in first page header
+    const totalPages = pageEls.length;
+    const infoCell = pageEls[0]?.querySelector(".statement-report-modal-info tbody td:last-child");
+    if (infoCell) infoCell.textContent = `1/${totalPages}`;
+
+    // Let layout settle before capturing
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      for (let i = 0; i < pageEls.length; i++) {
+        const canvas = await html2canvas(pageEls[i], {
+          scale: 2, useCORS: true, backgroundColor: "#fff",
+          width: PAGE_W, height: PAGE_H,
+        });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
+      }
+      pdf.save(`net-position-${Date.now()}.pdf`);
+    } finally {
+      document.body.removeChild(wrapper);
+    }
+  };
+
   const handleNetPrint = () => {
     const printableRoot = netPrintRef.current;
     if (!printableRoot) return;
@@ -631,13 +759,32 @@ export default function AccountStatement() {
           <div style={{ marginBottom: 16, border: "2px solid #1d4ed8", borderRadius: 8, padding: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
               <h3 style={{ margin: 0, color: "#1d4ed8" }}>Net Position</h3>
-              <button
-                className="tb-btn tb-btn-primary"
-                disabled={!netItems.length}
-                onClick={handleNetPrint}
-              >
-                Print Net Position
-              </button>
+              <div className="net-export-bar">
+                <button
+                  className="net-export-btn net-export-btn--print"
+                  disabled={!netItems.length}
+                  onClick={handleNetPrint}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Print
+                </button>
+                <button
+                  className="net-export-btn net-export-btn--screenshot"
+                  disabled={!netItems.length}
+                  onClick={handleNetScreenshot}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  Screenshot
+                </button>
+                <button
+                  className="net-export-btn net-export-btn--pdf"
+                  disabled={!netItems.length}
+                  onClick={handleNetPDF}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+                  PDF
+                </button>
+              </div>
             </div>
             {netMeta && (
               <div style={{ marginBottom: 8, fontSize: 13 }}>
