@@ -344,6 +344,11 @@ export default function CashCollectionsPage() {
 
   const [notif, setNotif] = useState({ open: false, type: "info", message: "" });
 
+  const [duplicateConflict, setDuplicateConflict] = useState(null);
+  const [requestingApproval, setRequestingApproval] = useState(false);
+  const [approvalRequests, setApprovalRequests] = useState(null);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
+
   const suggestBoxRef = useRef(null);
   const printFrameRef = useRef(null);
 
@@ -523,6 +528,20 @@ function buildDraftFromFilteredRows(allRows) {
     return { rows: out };
   }
 
+  function resetForm() {
+    setCustomerId(null);
+    setCustomerInput("");
+    setCustomerPickLabel("");
+    setCustomerSuggestions([]);
+    setShowSuggestions(false);
+    setAmountUSD("");
+    setAmountLL("");
+    setMethod("CASH");
+    setReference("");
+    setNotes("");
+    setDriverName("");
+  }
+
   async function createCollection() {
     if (!customerId) {
       setNotif({ open: true, type: "error", message: "Please select a customer" });
@@ -535,7 +554,6 @@ function buildDraftFromFilteredRows(allRows) {
 
     const usd = Number(amountUSD);
     const ll = Number(amountLL);
-
     const hasUsd = Number.isFinite(usd) && usd > 0;
     const hasLl = Number.isFinite(ll) && ll > 0;
 
@@ -557,61 +575,57 @@ function buildDraftFromFilteredRows(allRows) {
     }
 
     const refFinal = reference.trim() ? reference.trim() : `CC-${Date.now()}`;
+    const basePayload = {
+      date,
+      customerId,
+      method,
+      reference: refFinal,
+      notes: notes.trim() ? notes.trim() : null,
+      driverName: driverName.trim() ? driverName.trim() : null,
+    };
+
+    const allPayloads = [];
+    if (hasUsd) allPayloads.push({ ...basePayload, amount: usd, currencyId: usdId });
+    if (hasLl) allPayloads.push({ ...basePayload, amount: ll, currencyId: llId });
 
     setSaving(true);
+    setDuplicateConflict(null);
     try {
-      const basePayload = {
-        date,
-        customerId,
-        method,
-        reference: refFinal,
-        notes: notes.trim() ? notes.trim() : null,
-        driverName: driverName.trim() ? driverName.trim() : null,
-      };
+      const conflicts = [];
+      let savedCount = 0;
 
-      const requests = [];
-      if (hasUsd) {
-        requests.push(
-          axiosClient.post(`/cash-collections`, {
-            ...basePayload,
-            amount: usd,
-            currencyId: usdId,
-          })
-        );
-      }
-      if (hasLl) {
-        requests.push(
-          axiosClient.post(`/cash-collections`, {
-            ...basePayload,
-            amount: ll,
-            currencyId: llId,
-          })
-        );
+      for (const payload of allPayloads) {
+        try {
+          await axiosClient.post(`/cash-collections`, payload);
+          savedCount++;
+        } catch (err) {
+          if (err?.response?.status === 409) {
+            conflicts.push({
+              payload,
+              conflictingEntry: err?.response?.data?.conflictingEntry ?? null,
+            });
+          } else {
+            throw err;
+          }
+        }
       }
 
-      await Promise.all(requests);
+      if (conflicts.length > 0) {
+        setDuplicateConflict({ conflicts, customerName: customerPickLabel });
+        if (savedCount > 0) {
+          const next = { ...filters, page: 1 };
+          setFilters(next);
+          await loadList(next);
+        }
+        return;
+      }
 
-      // ✅ show modal success
       setNotif({ open: true, type: "success", message: "Saved" });
-
-      setCustomerId(null);
-      setCustomerInput("");
-      setCustomerPickLabel("");
-      setCustomerSuggestions([]);
-      setShowSuggestions(false);
-
-      setAmountUSD("");
-      setAmountLL("");
-      setMethod("CASH");
-      setReference("");
-      setNotes("");
-      setDriverName("");
-
+      resetForm();
       const next = { ...filters, page: 1 };
       setFilters(next);
       await loadList(next);
     } catch (e) {
-      // ✅ show modal error
       setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to save" });
     } finally {
       setSaving(false);
@@ -626,6 +640,71 @@ function buildDraftFromFilteredRows(allRows) {
       setNotif({ open: true, type: "success", message: "Deleted" });
     } catch (e) {
       setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to delete" });
+    }
+  }
+
+  async function requestAdminApproval() {
+    if (!duplicateConflict) return;
+    setRequestingApproval(true);
+    try {
+      for (const { payload, conflictingEntry } of duplicateConflict.conflicts) {
+        await axiosClient.post(`/cash-collections/approval-requests`, {
+          ...payload,
+          conflictingEntryId: conflictingEntry?.id ?? null,
+        });
+      }
+      setNotif({ open: true, type: "success", message: "Approval request sent to admin" });
+      setDuplicateConflict(null);
+      resetForm();
+    } catch (e) {
+      const msg = e?.response?.data?.message;
+      if (msg === "approval_request_already_pending") {
+        setNotif({ open: true, type: "warning", message: "An approval request for this entry is already pending" });
+        setDuplicateConflict(null);
+      } else {
+        setNotif({ open: true, type: "error", message: msg || "Failed to send approval request" });
+      }
+    } finally {
+      setRequestingApproval(false);
+    }
+  }
+
+  async function loadApprovalRequests() {
+    setApprovalsLoading(true);
+    try {
+      const { data } = await axiosClient.get(`/cash-collections/approval-requests`, {
+        params: { status: "PENDING" },
+      });
+      setApprovalRequests(Array.isArray(data) ? data : []);
+    } catch (e) {
+      if (e?.response?.status === 403) {
+        setApprovalRequests(null); // not admin
+      }
+    } finally {
+      setApprovalsLoading(false);
+    }
+  }
+
+  async function handleApproveRequest(id) {
+    try {
+      await axiosClient.post(`/cash-collections/approval-requests/${id}/approve`);
+      setNotif({ open: true, type: "success", message: "Approved — entry created" });
+      await loadApprovalRequests();
+      const next = { ...filters, page: 1 };
+      setFilters(next);
+      await loadList(next);
+    } catch (e) {
+      setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to approve" });
+    }
+  }
+
+  async function handleRejectRequest(id) {
+    try {
+      await axiosClient.post(`/cash-collections/approval-requests/${id}/reject`);
+      setNotif({ open: true, type: "success", message: "Request rejected" });
+      await loadApprovalRequests();
+    } catch (e) {
+      setNotif({ open: true, type: "error", message: e?.response?.data?.message || "Failed to reject" });
     }
   }
 
@@ -733,6 +812,7 @@ function buildDraftFromFilteredRows(allRows) {
     loadCurrencies();
     loadEmployees();
     loadList(filters);
+    loadApprovalRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -780,6 +860,56 @@ function buildDraftFromFilteredRows(allRows) {
           <div className="cc-subtitle">Track who collected money from which customer</div>
         </div>
       </div>
+
+      {/* ================== DUPLICATE WARNING MODAL ================== */}
+      {duplicateConflict && (
+        <div className="cc-dup-overlay">
+          <div className="cc-dup-modal">
+            <div className="cc-dup-modal-icon">⚠</div>
+            <h2 className="cc-dup-modal-title">Duplicate Entry Detected</h2>
+            <div className="cc-dup-modal-body">
+              {duplicateConflict.customerName && (
+                <p className="cc-dup-modal-customer" dir="auto">
+                  <strong>{duplicateConflict.customerName}</strong>
+                </p>
+              )}
+              <p className="cc-dup-modal-amounts">
+                {duplicateConflict.conflicts.map((c, i) => (
+                  <span key={i}>
+                    {Number(c.payload.amount).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                    {" · "}
+                    {c.payload.date}
+                    {i < duplicateConflict.conflicts.length - 1 ? " / " : ""}
+                  </span>
+                ))}
+                {" "}already exists in the system.
+              </p>
+              {duplicateConflict.conflicts[0]?.conflictingEntry && (
+                <p className="cc-dup-modal-ref">
+                  Conflicting entry #{duplicateConflict.conflicts[0].conflictingEntry.id}
+                  {" · "}{duplicateConflict.conflicts[0].conflictingEntry.date}
+                  {" · "}{duplicateConflict.conflicts[0].conflictingEntry.method}
+                </p>
+              )}
+            </div>
+            <div className="notification-modal-buttons">
+              <button
+                className="notification-modal-button notification-modal-cancel-button"
+                onClick={() => setDuplicateConflict(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="notification-modal-button cc-dup-confirm-btn"
+                disabled={requestingApproval}
+                onClick={requestAdminApproval}
+              >
+                {requestingApproval ? "Sending..." : "Request Approval"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================== CREATE CARD ================== */}
       <div className="cc-card">
@@ -1147,6 +1277,78 @@ function buildDraftFromFilteredRows(allRows) {
           </div>
         )}
       </div>
+
+      {/* ================== ADMIN APPROVALS PANEL ================== */}
+      {approvalRequests !== null && (
+        <div className="cc-card cc-approvals-card">
+          <div className="cc-card-head">
+            <div className="cc-card-title">
+              Pending Approval Requests
+              {approvalRequests.length > 0 && (
+                <span className="cc-approvals-badge">{approvalRequests.length}</span>
+              )}
+            </div>
+            <button className="btn" onClick={loadApprovalRequests} disabled={approvalsLoading}>
+              {approvalsLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+
+          {approvalRequests.length === 0 ? (
+            <div className="cc-empty">No pending approval requests</div>
+          ) : (
+            <div className="cc-tableWrap">
+              <table className="cc-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 60 }}>#</th>
+                    <th>Customer</th>
+                    <th style={{ width: 110 }}>Date</th>
+                    <th style={{ width: 130 }} className="num">Amount</th>
+                    <th style={{ width: 110 }}>Method</th>
+                    <th>Requested By</th>
+                    <th style={{ width: 140 }}>Conflicting Entry</th>
+                    <th style={{ width: 160 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approvalRequests.map((r) => (
+                    <tr key={r.id} className="cc-approval-row">
+                      <td>{r.id}</td>
+                      <td dir="auto">{safeName(r.customer, `#${r.customerId}`)}</td>
+                      <td>{r.date}</td>
+                      <td className="num">{fmt(r.amount)}</td>
+                      <td>{r.method}</td>
+                      <td dir="auto">
+                        {r.requestedBy?.name || r.requestedBy?.username || `#${r.requestedByEmployeeId}`}
+                      </td>
+                      <td>
+                        {r.conflictingEntryId
+                          ? `Entry #${r.conflictingEntryId}`
+                          : "—"}
+                      </td>
+                      <td className="actions">
+                        <button
+                          className="btn primary"
+                          style={{ marginRight: 4 }}
+                          onClick={() => handleApproveRequest(r.id)}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn danger"
+                          onClick={() => handleRejectRequest(r.id)}
+                        >
+                          Reject
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -349,3 +349,99 @@
     grid-column: span 2;
   }
 }
+
+/* ===== Duplicate warning modal ===== */
+.cc-dup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.cc-dup-modal {
+  background: #ffffff;
+  border-radius: 15px;
+  padding: 30px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: notification-fadeInModal 0.3s ease-in-out;
+}
+
+.cc-dup-modal-icon {
+  font-size: 64px;
+  color: #f59e0b;
+  margin-bottom: 12px;
+  animation: notification-iconBounce 0.5s ease-in-out;
+}
+
+.cc-dup-modal-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #92400e;
+  margin: 0 0 16px;
+}
+
+.cc-dup-modal-body {
+  margin-bottom: 6px;
+}
+
+.cc-dup-modal-customer {
+  font-size: 16px;
+  color: #374151;
+  margin: 0 0 6px;
+}
+
+.cc-dup-modal-amounts {
+  font-size: 14px;
+  color: #78350f;
+  margin: 0 0 6px;
+}
+
+.cc-dup-modal-ref {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.cc-dup-confirm-btn {
+  background-color: #f59e0b !important;
+}
+.cc-dup-confirm-btn:hover {
+  background-color: #d97706 !important;
+}
+.cc-dup-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Admin approvals panel ===== */
+.cc-approvals-card {
+  border-color: #6366f1;
+}
+
+.cc-approvals-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 8px;
+}
+
+.cc-approval-row {
+  background: #fefce8;
+}
+.cc-approval-row:hover {
+  background: #fef9c3 !important;
+}
