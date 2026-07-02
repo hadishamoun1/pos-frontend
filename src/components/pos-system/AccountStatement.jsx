@@ -10,6 +10,13 @@ import revoLogoSrc from "../revo-logo/revo.png"; // ✅ same level as this file
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
+function hasPerm(perm) {
+  try {
+    const payload = JSON.parse(atob(sessionStorage.getItem("token")?.split(".")[1]));
+    return (payload?.permissions || []).includes(perm);
+  } catch { return false; }
+}
+
 const ENDPOINTS = {
   arrangedAccounts: `/accounts/v1/acc-flat-arranged`,
   accountStatementOFR: `/journal-vouchers/account-statement/ofr`,
@@ -58,6 +65,12 @@ export default function AccountStatement() {
   const [accOpen, setAccOpen] = useState(false);
   const accComboRef = useRef(null);
 
+  // Optional second account for combined statement
+  const [accountId2, setAccountId2] = useState("");
+  const [accSearch2, setAccSearch2] = useState("");
+  const [accOpen2, setAccOpen2] = useState(false);
+  const accComboRef2 = useRef(null);
+
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [meta, setMeta] = useState(saved?.meta ?? null);
@@ -73,12 +86,11 @@ export default function AccountStatement() {
     } catch {}
   }, [from, to, type, currency, accountId, meta, items]);
 
-  // Close account combobox when clicking outside
+  // Close account comboboxes when clicking outside
   useEffect(() => {
     const handler = (e) => {
-      if (accComboRef.current && !accComboRef.current.contains(e.target)) {
-        setAccOpen(false);
-      }
+      if (accComboRef.current && !accComboRef.current.contains(e.target)) setAccOpen(false);
+      if (accComboRef2.current && !accComboRef2.current.contains(e.target)) setAccOpen2(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -99,6 +111,8 @@ export default function AccountStatement() {
   }, []);
 
   const isRevo = companyKey === "revo";
+  const canCombineAccounts = hasPerm("reports.accountStatement.combineAccounts");
+  const canDownloadPdf     = hasPerm("reports.accountStatement.downloadPdf");
 
   const printRef = useRef(null);
   const netPrintRef = useRef(null);
@@ -224,6 +238,32 @@ export default function AccountStatement() {
     }
   };
 
+  const buildParams = (selId) => {
+    const sel = parseSelected(selId);
+    return sanitizeParams({
+      accountId: sel?.kind === "account" ? String(sel.idNum) : undefined,
+      customerId: sel?.kind === "customer" ? String(sel.idNum) : undefined,
+      supplierId: sel?.kind === "supplier" ? String(sel.idNum) : undefined,
+      type, from, to, currency,
+    });
+  };
+
+  const shapeItems = (arr) =>
+    (Array.isArray(arr) ? arr : []).map((r, i) => ({
+      _ord: i,
+      date: r.date,
+      jvNumber: r.jvNumber,
+      docNbr: r.docNbr ?? "",
+      description: r.description ?? "",
+      kind: r.kind,
+      debit: Number(r.debit || 0),
+      credit: Number(r.credit || 0),
+      balanceAfter: Number(r.balanceAfter || 0),
+      journalVoucherId: r.journalVoucherId,
+      exRateUSD: r.exRateUSD,
+      exRateEUROToUSD: r.exRateEUROToUSD,
+    }));
+
   const fetchStatement = async () => {
     setLoading(true);
     setErr("");
@@ -239,42 +279,75 @@ export default function AccountStatement() {
       metadata: { accountId, accountCode: accountNo, from, to, type, currency },
     });
     try {
-      const sel = parseSelected(accountId);
-      const params = sanitizeParams({
-        accountId: sel?.kind === "account" ? String(sel.idNum) : undefined,
-        customerId: sel?.kind === "customer" ? String(sel.idNum) : undefined,
-        supplierId: sel?.kind === "supplier" ? String(sel.idNum) : undefined,
-        type, from, to, currency,
-      });
-      const res = await axiosClient.get(ENDPOINTS.accountStatementOFR, { params });
-      const data = res.data || {};
-      setMeta({
-        accountId: data.targetId ?? data.accountId,
-        accountCode: data.accountCode,
-        accountName: data.accountName,
-        from: data.from ?? null,
-        to: data.to ?? null,
-        openingBalance: Number(data.openingBalance || 0),
-        closingBalance: Number(data.closingBalance || 0),
-        totalDebit: Number(data?.totals?.totalDebit || 0),
-        totalCredit: Number(data?.totals?.totalCredit || 0),
-        currency: data?.basis?.currency || data?.currency || "-",
-      });
-      const arr = Array.isArray(data.items) ? data.items : [];
-      setItems(arr.map((r, i) => ({
-        _ord: i,
-        date: r.date,
-        jvNumber: r.jvNumber,
-        docNbr: r.docNbr ?? "",
-        description: r.description ?? "",
-        kind: r.kind,
-        debit: Number(r.debit || 0),
-        credit: Number(r.credit || 0),
-        balanceAfter: Number(r.balanceAfter || 0),
-        journalVoucherId: r.journalVoucherId,
-        exRateUSD: r.exRateUSD,
-        exRateEUROToUSD: r.exRateEUROToUSD,
-      })));
+      if (accountId2 && accountId2 !== accountId) {
+        // ── Combined statement: fetch both in parallel, merge ──────────
+        const [res1, res2] = await Promise.all([
+          axiosClient.get(ENDPOINTS.accountStatementOFR, { params: buildParams(accountId) }),
+          axiosClient.get(ENDPOINTS.accountStatementOFR, { params: buildParams(accountId2) }),
+        ]);
+        const d1 = res1.data || {};
+        const d2 = res2.data || {};
+
+        const ob1 = Number(d1.openingBalance || 0);
+        const ob2 = Number(d2.openingBalance || 0);
+        const combinedOpening = ob1 + ob2;
+
+        // Merge and sort by date then jvNumber
+        const rawItems = [
+          ...shapeItems(d1.items),
+          ...shapeItems(d2.items),
+        ];
+        rawItems.sort((a, b) => {
+          const dc = (a.date || "9999-99-99").localeCompare(b.date || "9999-99-99");
+          if (dc !== 0) return dc;
+          return String(a.jvNumber || "").localeCompare(String(b.jvNumber || ""));
+        });
+
+        // Recompute running balance over the merged sequence
+        let running = combinedOpening;
+        rawItems.forEach((r) => {
+          running = running + r.debit - r.credit;
+          r.balanceAfter = running;
+        });
+
+        const name1 = d1.accountName || flatAccounts.find(a => String(a.id) === String(accountId))?.name || accountId;
+        const name2 = d2.accountName || flatAccounts.find(a => String(a.id) === String(accountId2))?.name || accountId2;
+        const code1 = d1.accountCode || flatAccounts.find(a => String(a.id) === String(accountId))?.code || "";
+        const code2 = d2.accountCode || flatAccounts.find(a => String(a.id) === String(accountId2))?.code || "";
+
+        setMeta({
+          accountCode: `${code1} / ${code2}`,
+          accountName: `${name1} + ${name2}`,
+          primaryAccountName: name1,
+          primaryAccountCode: code1,
+          from: d1.from ?? null,
+          to: d1.to ?? null,
+          openingBalance: combinedOpening,
+          closingBalance: running,
+          totalDebit: Number(d1?.totals?.totalDebit || 0) + Number(d2?.totals?.totalDebit || 0),
+          totalCredit: Number(d1?.totals?.totalCredit || 0) + Number(d2?.totals?.totalCredit || 0),
+          currency: d1?.basis?.currency || d1?.currency || "-",
+          isCombined: true,
+        });
+        setItems(rawItems);
+      } else {
+        // ── Single account statement (original logic) ──────────────────
+        const res = await axiosClient.get(ENDPOINTS.accountStatementOFR, { params: buildParams(accountId) });
+        const data = res.data || {};
+        setMeta({
+          accountId: data.targetId ?? data.accountId,
+          accountCode: data.accountCode,
+          accountName: data.accountName,
+          from: data.from ?? null,
+          to: data.to ?? null,
+          openingBalance: Number(data.openingBalance || 0),
+          closingBalance: Number(data.closingBalance || 0),
+          totalDebit: Number(data?.totals?.totalDebit || 0),
+          totalCredit: Number(data?.totals?.totalCredit || 0),
+          currency: data?.basis?.currency || data?.currency || "-",
+        });
+        setItems(shapeItems(data.items));
+      }
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
     } finally {
@@ -330,8 +403,8 @@ export default function AccountStatement() {
       : items.length ? Number(items[items.length - 1].balanceAfter || 0) : openingBalance;
 
   const statementDate = new Date().toISOString().split("T")[0];
-  const clientName = meta?.accountName || flatAccounts.find((fa) => String(fa.id) === String(accountId))?.name || "-";
-  const accountNo = meta?.accountCode || flatAccounts.find((fa) => String(fa.id) === String(accountId))?.code || "-";
+  const clientName = (meta?.isCombined ? meta?.primaryAccountName : meta?.accountName) || flatAccounts.find((fa) => String(fa.id) === String(accountId))?.name || "-";
+  const accountNo = (meta?.isCombined ? meta?.primaryAccountCode : meta?.accountCode) || flatAccounts.find((fa) => String(fa.id) === String(accountId))?.code || "-";
   const currencyCode = meta?.currency || "-";
 
   const handlePrint = () => {
@@ -427,6 +500,107 @@ export default function AccountStatement() {
         if (infoCell) infoCell.textContent = `1/${totalPages}`;
       }
     });
+  };
+
+  const handlePDF = async () => {
+    const printableRoot = printRef.current;
+    if (!printableRoot || !items.length) return;
+
+    const srcHeader = printableRoot.querySelector(".statement-report-modal-header, .srm-revo-header");
+    const srcTitle = printableRoot.querySelector(".statement-report-modal-titlebar");
+    const srcClientLine = printableRoot.querySelector(".statement-report-modal-clientline");
+    const srcTable = printableRoot.querySelector(".statement-report-modal-table");
+    if (!srcTitle || !srcClientLine || !srcTable) return;
+
+    const allRows = Array.from(srcTable.querySelectorAll("tbody > tr")).map(r => r.cloneNode(true));
+    let footerRow = null;
+    if (allRows.length && allRows[allRows.length - 1].classList.contains("statement-report-modal-footer-row")) {
+      footerRow = allRows.pop();
+    }
+
+    const PAGE_W = 794;
+    const PAGE_H = 1123;
+
+    const buildInfoTable = (pageNumText) => {
+      const wrap = document.createElement("div");
+      wrap.className = "statement-report-modal-info";
+      wrap.innerHTML = `<table class="statement-report-modal-info-table" style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th>رقم الحساب</th><th>العملة</th><th>من تاريخ</th><th>الى تاريخ</th><th>تاريخ الكشف</th><th>الصفحة</th></tr></thead><tbody><tr><td>${accountNo}</td><td>${currencyCode}</td><td>${from}</td><td>${to}</td><td>${statementDate}</td><td>${pageNumText || ""}</td></tr></tbody></table>`;
+      return wrap;
+    };
+
+    const buildTableSkeleton = () => {
+      const table = document.createElement("table");
+      table.className = "statement-report-modal-table";
+      table.style.cssText = "width:100%;border-collapse:collapse;font-size:12px";
+      const colgroup = document.createElement("colgroup");
+      colgroup.innerHTML = `<col style="width:15%"/><col style="width:17%"/><col style="width:25%"/><col style="width:12%"/><col style="width:12%"/><col style="width:19%"/>`;
+      const thead = document.createElement("thead");
+      thead.innerHTML = `<tr><th>تاريخ</th><th>رقم الفاتورة</th><th>الشرح</th><th>DR ${currency}</th><th>CR ${currency}</th><th>الرصيد</th></tr>`;
+      const tbody = document.createElement("tbody");
+      table.appendChild(colgroup); table.appendChild(thead); table.appendChild(tbody);
+      return { table, tbody };
+    };
+
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${PAGE_W}px;background:#fff;`;
+    document.body.appendChild(wrapper);
+
+    const pageEls = [];
+
+    const createPage = (mode) => {
+      const page = document.createElement("div");
+      page.style.cssText = `width:${PAGE_W}px;height:${PAGE_H}px;overflow:hidden;background:#fff;box-sizing:border-box;padding:38px;`;
+      if (mode === "full") {
+        const headerBox = document.createElement("div");
+        if (srcHeader) headerBox.appendChild(srcHeader.cloneNode(true));
+        headerBox.appendChild(srcTitle.cloneNode(true));
+        headerBox.appendChild(srcClientLine.cloneNode(true));
+        headerBox.appendChild(buildInfoTable(""));
+        page.appendChild(headerBox);
+      }
+      const { table, tbody } = buildTableSkeleton();
+      page.appendChild(table);
+      wrapper.appendChild(page);
+      pageEls.push(page);
+      return { page, tbody };
+    };
+
+    let current = createPage("full");
+
+    const appendRowWithPagination = (rowNode) => {
+      current.tbody.appendChild(rowNode);
+      void current.page.offsetHeight;
+      if (current.page.scrollHeight > current.page.clientHeight) {
+        current.tbody.removeChild(rowNode);
+        current = createPage("tableOnly");
+        current.tbody.appendChild(rowNode);
+        void current.page.offsetHeight;
+      }
+    };
+
+    for (const row of allRows) appendRowWithPagination(row);
+    if (footerRow) appendRowWithPagination(footerRow);
+
+    const totalPages = pageEls.length;
+    const infoCell = pageEls[0]?.querySelector(".statement-report-modal-info tbody td:last-child");
+    if (infoCell) infoCell.textContent = `1/${totalPages}`;
+
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      for (let i = 0; i < pageEls.length; i++) {
+        const canvas = await html2canvas(pageEls[i], {
+          scale: 2, useCORS: true, backgroundColor: "#fff",
+          width: PAGE_W, height: PAGE_H,
+        });
+        if (i > 0) pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
+      }
+      pdf.save(`statement-${accountNo}-${from}-${to}.pdf`);
+    } finally {
+      document.body.removeChild(wrapper);
+    }
   };
 
   const handleNetScreenshot = async () => {
@@ -695,6 +869,61 @@ export default function AccountStatement() {
               )}
             </div>
           </label>
+          {/* ── Optional second account for combined statement ── */}
+          {canCombineAccounts && <label className="tb-field">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              Combine with
+              <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400 }}>(optional)</span>
+              {accountId2 && (
+                <button
+                  type="button"
+                  onClick={() => { setAccountId2(""); setAccSearch2(""); }}
+                  style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 14, lineHeight: 1, padding: "0 2px" }}
+                  title="Clear second account"
+                >✕</button>
+              )}
+            </span>
+            <div ref={accComboRef2} style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search second account…"
+                value={accOpen2 ? accSearch2 : (flatAccounts.find(a => a.id === accountId2)?.label ?? accSearch2)}
+                onChange={(e) => { setAccSearch2(e.target.value); setAccOpen2(true); }}
+                onFocus={() => { setAccSearch2(""); setAccOpen2(true); }}
+                onClick={() => { setAccSearch2(""); setAccOpen2(true); }}
+                style={{ width: "100%", boxSizing: "border-box" }}
+              />
+              {accOpen2 && (
+                <div style={{
+                  position: "absolute", top: "100%", left: 0, right: 0, zIndex: 999,
+                  background: "#fff", border: "1px solid #cbd5e1", borderRadius: 6,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)", maxHeight: 240, overflowY: "auto",
+                }}>
+                  <div
+                    onMouseDown={() => { setAccountId2(""); setAccSearch2(""); setAccOpen2(false); }}
+                    style={{ padding: "7px 12px", cursor: "pointer", fontSize: 12, color: "#6b7280", borderBottom: "1px solid #f1f5f9" }}
+                  >— None (single account) —</div>
+                  {(accSearch2.trim()
+                    ? flatAccounts.filter(a => a.label.toLowerCase().includes(accSearch2.toLowerCase()) || a.code.toLowerCase().includes(accSearch2.toLowerCase()))
+                    : flatAccounts
+                  ).filter(a => a.id !== accountId).map((a) => (
+                    <div
+                      key={a.id}
+                      onMouseDown={() => { setAccountId2(a.id); setAccSearch2(""); setAccOpen2(false); }}
+                      style={{
+                        padding: "7px 12px", cursor: "pointer", fontSize: 13,
+                        background: a.id === accountId2 ? "#eff6ff" : "transparent",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f0f9ff"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = a.id === accountId2 ? "#eff6ff" : "transparent"}
+                    >{a.label}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </label>}
+
           <label className="tb-field">
             From
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -724,6 +953,12 @@ export default function AccountStatement() {
         <div className="tb-actions">
           <button className="tb-btn" onClick={exportCSV} disabled={!items.length}>Export CSV</button>
           <button className="tb-btn tb-btn-primary" onClick={handlePrint} disabled={!items.length}>Print</button>
+          {canDownloadPdf && (
+            <button className="net-export-btn net-export-btn--pdf" onClick={handlePDF} disabled={!items.length}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+              PDF
+            </button>
+          )}
         </div>
       </div>
 
@@ -733,7 +968,14 @@ export default function AccountStatement() {
       <div style={{ marginTop: 8 }}>
         {meta && (
           <div className="tb-meta" style={{ marginBottom: 8 }}>
-            <div><strong>Account:</strong> {meta.accountCode} — {meta.accountName}</div>
+            <div>
+              <strong>Account:</strong> {meta.accountCode} — {meta.accountName}
+              {meta.isCombined && (
+                <span style={{ marginLeft: 10, background: "#dbeafe", color: "#1d4ed8", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                  Combined
+                </span>
+              )}
+            </div>
             <div><strong>Opening Balance:</strong> {fmt(meta.openingBalance)}</div>
             <div><strong>Total Debit:</strong> {fmt(meta.totalDebit)}</div>
             <div><strong>Total Credit:</strong> {fmt(meta.totalCredit)}</div>

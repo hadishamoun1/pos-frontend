@@ -42,6 +42,8 @@ const PERMISSION_GROUPS = [
       "reports.view",
       "reports.trialBalance",
       "reports.accountStatement",
+      "reports.accountStatement.combineAccounts",
+      "reports.accountStatement.downloadPdf",
       "reports.costAnalysis",
       "reports.customerBalances",
       "reports.profitability",
