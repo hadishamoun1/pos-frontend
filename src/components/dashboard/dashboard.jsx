@@ -20,10 +20,10 @@ function hasPerm(perm) {
 const sections = [
   { key: "posSystem",         path: "/pos-system",        image: "/assets/pos.png",             perm: "pos.view" },
   { key: "recievables",       path: "/recivables",         image: "/assets/accounting.png",       perm: "recievables.view" },
-  { key: "inventory",         path: "/inventory",          image: "/assets/inventory.png",        perm: "inventory.view" },
+  { key: "inventory",         path: "/inventory",          image: "/assets/inventory.png?v=2",    perm: "inventory.view" },
   { key: "customers",         path: "/customers",          image: "/assets/customers.png",       perm: "customers.view" },
   { key: "purchasesInvoice",  path: "/purchases-invoice", image: "/assets/purchase.png",         perm: "purchases.view" },
-  { key: "settings",          path: "/settings",           image: "/assets/settings.png",         perm: "settings.view" },
+  { key: "settings",          path: "/settings",           image: "/assets/settings.png?v=2",     perm: "settings.view" },
   { key: "suppliers",         path: "/suppliers",          image: "/assets/suppliers.png",       perm: "suppliers.view" },
   { key: "items",             path: "/items",              image: "/assets/items.png",           perm: "items.view" },
   { key: "costEstimator",     path: "/cost-estimator",     image: "/assets/price.webp",           perm: "cost.view" },
