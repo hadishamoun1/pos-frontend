@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#450a0a"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Camera body -->
+  <rect x="55" y="80" width="210" height="115" rx="14" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+  <!-- Camera lens housing -->
+  <circle cx="155" cy="137" r="45" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+  <circle cx="155" cy="137" r="33" fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+  <circle cx="155" cy="137" r="20" fill="rgba(0,0,0,0.6)" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+  <circle cx="155" cy="137" r="8" fill="rgba(255,255,255,0.6)"/>
+  <!-- Lens shine -->
+  <circle cx="148" cy="130" r="4" fill="rgba(255,255,255,0.5)"/>
+  <!-- Viewfinder bump on top -->
+  <rect x="110" y="68" width="55" height="18" rx="6" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  <!-- Video triangle (play/record) on right side of camera -->
+  <rect x="215" y="110" width="50" height="55" rx="8" fill="rgba(255,255,255,0.1)"/>
+  <polygon points="228,118 257,137 228,156" fill="rgba(255,255,255,0.7)"/>
+  <!-- Record button -->
+  <circle cx="242" cy="175" r="12" fill="rgba(220,38,38,0.8)" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+  <!-- REC indicator -->
+  <circle cx="290" cy="88" r="7" fill="rgba(255,80,80,0.9)"/>
+  <text x="305" y="93" fill="rgba(255,255,255,0.8)" font-size="12" font-family="Arial" font-weight="bold">REC</text>
+  <!-- Sound waves from camera -->
+  <path d="M318,110 Q340,125 318,140" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M326,100 Q358,125 326,150" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <text x="200" y="237" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">RECORDING</text>
+</svg>

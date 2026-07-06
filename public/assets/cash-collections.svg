@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Collection box/safe -->
+  <rect x="230" y="80" width="130" height="120" rx="10" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+  <!-- Safe handle -->
+  <circle cx="295" cy="140" r="22" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+  <circle cx="295" cy="140" r="9" fill="rgba(255,255,255,0.5)"/>
+  <!-- Safe dial lines -->
+  <line x1="295" y1="118" x2="295" y2="112" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+  <line x1="317" y1="140" x2="323" y2="140" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+  <line x1="295" y1="162" x2="295" y2="168" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+  <!-- Coin stack 1 -->
+  <ellipse cx="90" cy="170" rx="40" ry="10" fill="rgba(255,255,255,0.55)"/>
+  <rect x="50" y="135" width="80" height="35" fill="rgba(255,255,255,0.45)"/>
+  <ellipse cx="90" cy="135" rx="40" ry="10" fill="rgba(255,255,255,0.65)"/>
+  <!-- Coin stack 2 (smaller) -->
+  <ellipse cx="165" cy="175" rx="30" ry="8" fill="rgba(255,255,255,0.45)"/>
+  <rect x="135" y="148" width="60" height="27" fill="rgba(255,255,255,0.35)"/>
+  <ellipse cx="165" cy="148" rx="30" ry="8" fill="rgba(255,255,255,0.55)"/>
+  <!-- Dollar signs on coins -->
+  <text x="90" y="157" text-anchor="middle" fill="rgba(100,200,100,0.9)" font-size="16" font-family="Arial" font-weight="bold">$</text>
+  <text x="165" y="162" text-anchor="middle" fill="rgba(100,200,100,0.9)" font-size="13" font-family="Arial" font-weight="bold">$</text>
+  <!-- Arrow going into safe -->
+  <path d="M195,140 L228,140" stroke="white" stroke-width="2.5" stroke-dasharray="5,3"/>
+  <polygon points="228,134 240,140 228,146" fill="white"/>
+  <text x="200" y="235" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">CASH COLLECTIONS</text>
+</svg>

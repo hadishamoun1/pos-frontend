@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#022c22"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Scan frame corners -->
+  <!-- Top-left -->
+  <path d="M80,50 L80,80 M80,50 L110,50" stroke="rgba(255,255,255,0.8)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Top-right -->
+  <path d="M320,50 L320,80 M320,50 L290,50" stroke="rgba(255,255,255,0.8)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Bottom-left -->
+  <path d="M80,200 L80,170 M80,200 L110,200" stroke="rgba(255,255,255,0.8)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Bottom-right -->
+  <path d="M320,200 L320,170 M320,200 L290,200" stroke="rgba(255,255,255,0.8)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Scan line (horizontal animated-like) -->
+  <line x1="85" y1="125" x2="315" y2="125" stroke="rgba(52,211,153,0.7)" stroke-width="2" stroke-dasharray="4,3"/>
+  <rect x="85" y="120" width="230" height="10" rx="2" fill="rgba(52,211,153,0.08)"/>
+  <!-- Face outline -->
+  <ellipse cx="200" cy="118" rx="62" ry="75" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <!-- Face features (simplified) -->
+  <!-- Eyes -->
+  <ellipse cx="176" cy="103" rx="10" ry="7" fill="rgba(255,255,255,0.6)"/>
+  <ellipse cx="224" cy="103" rx="10" ry="7" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="176" cy="103" r="4" fill="rgba(255,255,255,0.9)"/>
+  <circle cx="224" cy="103" r="4" fill="rgba(255,255,255,0.9)"/>
+  <!-- Nose -->
+  <path d="M200,112 L194,132 Q200,136 206,132 Z" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
+  <!-- Mouth -->
+  <path d="M184,148 Q200,160 216,148" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2" stroke-linecap="round"/>
+  <!-- Face point markers -->
+  <circle cx="176" cy="103" r="3" fill="rgba(52,211,153,0.9)"/>
+  <circle cx="224" cy="103" r="3" fill="rgba(52,211,153,0.9)"/>
+  <circle cx="200" cy="132" r="3" fill="rgba(52,211,153,0.9)"/>
+  <circle cx="184" cy="148" r="3" fill="rgba(52,211,153,0.9)"/>
+  <circle cx="216" cy="148" r="3" fill="rgba(52,211,153,0.9)"/>
+  <text x="200" y="237" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">FACE ENROLL</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Open ledger book -->
+  <!-- Book spine -->
+  <rect x="192" y="48" width="16" height="160" rx="4" fill="rgba(255,255,255,0.5)"/>
+  <!-- Left page -->
+  <rect x="55" y="48" width="142" height="160" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <!-- Right page -->
+  <rect x="203" y="48" width="142" height="160" rx="6" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <!-- Left page: DEBIT header -->
+  <rect x="65" y="58" width="120" height="14" rx="3" fill="rgba(255,255,255,0.3)"/>
+  <text x="125" y="69" text-anchor="middle" fill="rgba(0,20,80,0.9)" font-size="10" font-family="Arial" font-weight="bold">DEBIT</text>
+  <!-- Left page rows -->
+  <line x1="65" y1="82" x2="185" y2="82" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="65" y="86" width="75" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="150" y="86" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="65" y1="100" x2="185" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="65" y="104" width="65" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="150" y="104" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="65" y1="118" x2="185" y2="118" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="65" y="122" width="80" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="150" y="122" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="65" y1="136" x2="185" y2="136" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="65" y="140" width="55" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="150" y="140" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <!-- Total line left -->
+  <line x1="65" y1="165" x2="185" y2="165" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+  <rect x="105" y="170" width="80" height="8" rx="2" fill="rgba(255,255,255,0.5)"/>
+  <!-- Right page: CREDIT header -->
+  <rect x="213" y="58" width="120" height="14" rx="3" fill="rgba(255,255,255,0.3)"/>
+  <text x="273" y="69" text-anchor="middle" fill="rgba(0,20,80,0.9)" font-size="10" font-family="Arial" font-weight="bold">CREDIT</text>
+  <!-- Right page rows -->
+  <line x1="213" y1="82" x2="333" y2="82" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="213" y="86" width="75" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="298" y="86" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="213" y1="100" x2="333" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="213" y="104" width="65" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="298" y="104" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="213" y1="118" x2="333" y2="118" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="213" y="122" width="80" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="298" y="122" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <line x1="213" y1="136" x2="333" y2="136" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <rect x="213" y="140" width="55" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="298" y="140" width="35" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <!-- Total line right -->
+  <line x1="213" y1="165" x2="333" y2="165" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+  <rect x="253" y="170" width="80" height="8" rx="2" fill="rgba(255,255,255,0.5)"/>
+  <text x="200" y="235" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">ACCOUNTS</text>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14532d"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Bar chart (left) -->
+  <rect x="35" y="50" width="150" height="155" rx="8" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+  <rect x="52" y="145" width="22" height="50" rx="3" fill="rgba(255,255,255,0.45)"/>
+  <rect x="82" y="118" width="22" height="77" rx="3" fill="rgba(255,255,255,0.6)"/>
+  <rect x="112" y="96" width="22" height="99" rx="3" fill="rgba(255,255,255,0.45)"/>
+  <rect x="142" y="72" width="22" height="123" rx="3" fill="rgba(255,255,255,0.75)"/>
+  <line x1="45" y1="198" x2="175" y2="198" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
+  <!-- Trend line on bar chart -->
+  <polyline points="63,155 93,128 123,106 153,82" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="4,3"/>
+  <!-- Pie chart (right) -->
+  <circle cx="290" cy="128" r="68" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+  <!-- Pie slices -->
+  <path d="M290,128 L290,62 A66,66 0 0,1 347,163 Z" fill="rgba(255,255,255,0.65)"/>
+  <path d="M290,128 L347,163 A66,66 0 0,1 233,163 Z" fill="rgba(255,255,255,0.4)"/>
+  <path d="M290,128 L233,163 A66,66 0 0,1 290,62 Z" fill="rgba(255,255,255,0.25)"/>
+  <!-- Center circle of pie -->
+  <circle cx="290" cy="128" r="28" fill="rgba(255,255,255,0.12)"/>
+  <text x="290" y="134" text-anchor="middle" fill="white" font-size="13" font-family="Arial" font-weight="bold">%</text>
+  <text x="200" y="230" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">REPORTS</text>
+</svg>

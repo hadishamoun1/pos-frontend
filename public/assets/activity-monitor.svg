@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Monitor frame -->
+  <rect x="45" y="42" width="310" height="165" rx="10" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
+  <rect x="55" y="52" width="290" height="145" rx="6" fill="rgba(0,0,0,0.4)"/>
+  <!-- Stand -->
+  <rect x="185" y="207" width="30" height="16" rx="3" fill="rgba(255,255,255,0.3)"/>
+  <rect x="158" y="221" width="84" height="7" rx="3" fill="rgba(255,255,255,0.3)"/>
+  <!-- Activity log lines (left panel) -->
+  <rect x="65" y="63" width="110" height="125" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <rect x="72" y="72" width="90" height="7" rx="2" fill="rgba(255,255,255,0.45)"/>
+  <rect x="72" y="86" width="70" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="72" y="98" width="85" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="72" y="110" width="60" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <rect x="72" y="122" width="80" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="72" y="134" width="75" height="6" rx="2" fill="rgba(255,255,255,0.35)"/>
+  <rect x="72" y="146" width="65" height="6" rx="2" fill="rgba(255,255,255,0.25)"/>
+  <rect x="72" y="158" width="88" height="6" rx="2" fill="rgba(255,255,255,0.45)"/>
+  <!-- Activity chart (right panel) -->
+  <rect x="185" y="63" width="150" height="125" rx="5" fill="rgba(255,255,255,0.06)"/>
+  <!-- Pulse/activity line -->
+  <polyline
+    points="195,125 210,125 218,75 226,165 234,125 248,125 256,95 264,155 272,125 286,125 294,85 302,125 320,125 328,110 336,125"
+    stroke="rgba(100,200,255,0.9)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Axis -->
+  <line x1="195" y1="63" x2="195" y2="188" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <line x1="185" y1="188" x2="335" y2="188" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <text x="200" y="243" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">ACTIVITY MONITOR</text>
+</svg>

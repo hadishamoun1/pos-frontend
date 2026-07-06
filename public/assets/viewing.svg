@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="250" fill="url(#bg)"/>
+  <!-- Monitor frame -->
+  <rect x="55" y="45" width="290" height="165" rx="10" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"/>
+  <rect x="65" y="55" width="270" height="145" rx="6" fill="rgba(0,0,0,0.3)"/>
+  <!-- Stand -->
+  <rect x="185" y="210" width="30" height="18" rx="3" fill="rgba(255,255,255,0.35)"/>
+  <rect x="155" y="226" width="90" height="8" rx="4" fill="rgba(255,255,255,0.35)"/>
+  <!-- Screen content: eye icon -->
+  <!-- Eye outer shape -->
+  <path d="M130,128 Q200,68 270,128 Q200,188 130,128 Z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="2.5"/>
+  <!-- Iris -->
+  <circle cx="200" cy="128" r="30" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+  <!-- Pupil -->
+  <circle cx="200" cy="128" r="16" fill="rgba(255,255,255,0.55)"/>
+  <circle cx="200" cy="128" r="7" fill="rgba(255,255,255,0.9)"/>
+  <!-- Scan lines radiating from eye -->
+  <line x1="200" y1="78" x2="200" y2="68" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <line x1="240" y1="90" x2="248" y2="83" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <line x1="160" y1="90" x2="152" y2="83" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <line x1="240" y1="166" x2="248" y2="173" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <line x1="160" y1="166" x2="152" y2="173" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+  <text x="200" y="245" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="12" font-family="Arial" letter-spacing="2">VIEWING</text>
+</svg>
