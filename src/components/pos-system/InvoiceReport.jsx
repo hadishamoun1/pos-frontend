@@ -360,7 +360,75 @@ export default function InvoiceReport() {
     }
   };
 
+  const [printing, setPrinting] = useState(false);
+  const [rowOrder, setRowOrder] = useState("asc");
+
+  const handlePrintTable = async () => {
+    if (!rows.length) return;
+    setPrinting(true);
+    setErr("");
+    try {
+      const params = { ...buildParams(), all: true };
+      const { data: allData } = await axiosClient.get("/invoices/v1/report", { params });
+      let allRows = allData.data ?? [];
+      if (!allRows.length) return;
+
+      if (rowOrder === "desc") allRows = [...allRows].reverse();
+
+      const grandSum = allRows.reduce((s, r) => s + (Number(r.grandTotal) || 0), 0);
+      const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const typeColors = { S: "#1d4ed8", G: "#854d0e", RTN: "#b91c1c", RVR: "#7c3aed" };
+      const totalCount = allRows.length;
+      const rowsHtml = allRows.map((r, i) => `
+        <tr>
+          <td>${rowOrder === "asc" ? i + 1 : totalCount - i}</td>
+          <td class="mono">${esc(r.invoiceNumber)}</td>
+          <td>${esc(fmtDate(r.date))}</td>
+          <td>${esc(r.customerName ?? "-")}</td>
+          <td style="color:${typeColors[r.invoiceType] ?? "#111"};font-weight:700">${esc(r.invoiceType)}</td>
+          <td class="num">${fmt(r.grandTotal)}</td>
+        </tr>`).join("");
+
+      const printWin = window.open("", "_blank", "width=960,height=720");
+      if (!printWin) return;
+      printWin.document.write(`<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8"/>
+<title>Invoice Report ${from} – ${to}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;margin:20px;color:#111}
+  h2{margin:0 0 4px;font-size:18px}
+  .meta{font-size:12px;color:#555;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid #d1d5db;padding:7px 10px;text-align:left}
+  th{background:#1d4ed8;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.mono{font-family:monospace;font-size:12px}
+  tbody tr:nth-child(even) td{background:#f8fafc}
+  tfoot td{border-top:2px solid #374151;background:#f0f7ff;font-weight:700}
+  .foot-label{text-align:right;color:#374151}
+  @media print{body{margin:10mm}}
+</style>
+</head><body>
+<h2>Invoice Report</h2>
+<div class="meta">${from} – ${to}${type !== "ALL" ? ` &nbsp;·&nbsp; Type: ${type}` : ""} &nbsp;·&nbsp; ${allRows.length} invoices</div>
+<table>
+  <thead><tr><th>#</th><th>Invoice No.</th><th>Date</th><th>Customer</th><th>Type</th><th class="num">Grand Total</th></tr></thead>
+  <tbody>${rowsHtml}</tbody>
+  <tfoot><tr><td colspan="5" class="foot-label">Total</td><td class="num">${fmt(grandSum)}</td></tr></tfoot>
+</table>
+<script>window.onload=function(){window.print();window.addEventListener('afterprint',function(){window.close();});}<\/script>
+</body></html>`);
+      printWin.document.close();
+    } catch {
+      setErr("Failed to fetch data for printing.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   // Totals row
+  const displayRows = rowOrder === "desc" ? [...rows].reverse() : rows;
   const sumTotal = rows.reduce((s, r) => s + (Number(r.grandTotal) || 0), 0);
 
   return (
@@ -430,6 +498,21 @@ export default function InvoiceReport() {
         >
           {includeShamounSig ? "Shamou Sig: ON" : "Shamou Sig: OFF"}
         </button>
+        <button
+          className="inv-report-print-order-btn"
+          onClick={() => setRowOrder((o) => o === "asc" ? "desc" : "asc")}
+          title="Toggle print order"
+        >
+          {rowOrder === "asc" ? "Order: 1 → N" : "Order: N → 1"}
+        </button>
+        <button
+          className="inv-report-print-btn"
+          onClick={handlePrintTable}
+          disabled={!rows.length || loading || printing}
+          title="Print all filtered invoices as a table"
+        >
+          {printing ? "Loading…" : "Print Table"}
+        </button>
       </div>
 
       {err && <div className="inv-report-error">{err}</div>}
@@ -492,20 +575,25 @@ export default function InvoiceReport() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={r.id}>
-                    <td>{(page - 1) * 100 + i + 1}</td>
-                    <td className="inv-report-inv-num">{r.invoiceNumber}</td>
-                    <td>{fmtDate(r.date)}</td>
-                    <td>{r.customerName ?? "-"}</td>
-                    <td>
-                      <span className={`inv-report-type-badge type-${r.invoiceType}`}>
-                        {r.invoiceType}
-                      </span>
-                    </td>
-                    <td className="num">{fmt(r.grandTotal)}</td>
-                  </tr>
-                ))}
+                {displayRows.map((r, i) => {
+                  const rowNum = rowOrder === "asc"
+                    ? (page - 1) * 100 + i + 1
+                    : total - ((page - 1) * 100 + i);
+                  return (
+                    <tr key={r.id}>
+                      <td>{rowNum}</td>
+                      <td className="inv-report-inv-num">{r.invoiceNumber}</td>
+                      <td>{fmtDate(r.date)}</td>
+                      <td>{r.customerName ?? "-"}</td>
+                      <td>
+                        <span className={`inv-report-type-badge type-${r.invoiceType}`}>
+                          {r.invoiceType}
+                        </span>
+                      </td>
+                      <td className="num">{fmt(r.grandTotal)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>

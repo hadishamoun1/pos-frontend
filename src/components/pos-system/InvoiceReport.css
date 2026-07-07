@@ -133,6 +133,52 @@
   background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
 }
 
+.inv-report-print-order-btn {
+  height: 38px;
+  padding: 0 16px;
+  background: #fff;
+  color: #d97706;
+  border: 1.5px solid #d97706;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.inv-report-print-order-btn:hover {
+  background: #fef3c7;
+}
+
+.inv-report-print-btn {
+  height: 38px;
+  padding: 0 20px;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.inv-report-print-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.inv-report-print-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ── PDF Generation Overlay ──────────────────────────────── */
 .inv-report-pdf-overlay {
   position: fixed;
