@@ -629,7 +629,10 @@ function buildPrintHTML({
     }
     return num(r.averageCost) || num(r.averageCostCVM) || num(r.averageCostC) || 0;
   };
-  const sqmAmountOfRow = (r) => num(r.sqmTotal) * costForAmount(r);
+  const sqmAmountOfRow = (r) => {
+    const cost = costForAmount(r);
+    return num(r.sqmTotal) > 0 ? num(r.sqmTotal) * cost : num(r.qtySheet) * cost;
+  };
 
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
@@ -707,7 +710,7 @@ function buildPrintHTML({
               ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
               ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
               <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
-              ${showAmountCol ? `<td class="tr">${r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
+              ${showAmountCol ? `<td class="tr">${(r.sqmTotal || r.qtySheet) ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
             </tr>`;
           }
 
@@ -724,7 +727,7 @@ function buildPrintHTML({
             ${mode === "name" && showAvgCostC   ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
             ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
             ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
-            ${showAmountCol ? `<td class="tr">${r.sqmTotal ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
+            ${showAmountCol ? `<td class="tr">${(r.sqmTotal || r.qtySheet) ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
           </tr>`;
         })
         .join("");
@@ -873,7 +876,10 @@ export default function ReportModal({
     }
     return safeNum(row?.averageCost) || safeNum(row?.averageCostCVM) || safeNum(row?.averageCostC) || 0;
   };
-  const sqmAmountOfRow = (row) => safeNum(row?.sqmTotal) * costForAmount(row);
+  const sqmAmountOfRow = (row) => {
+    const cost = costForAmount(row);
+    return safeNum(row?.sqmTotal) > 0 ? safeNum(row?.sqmTotal) * cost : safeNum(row?.qtySheet) * cost;
+  };
 
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
@@ -1170,7 +1176,7 @@ export default function ReportModal({
                               {mode === "name" && showLastCostC  && <td className="ta-right u-muted">{row.lastCostC      != null ? fmt2(row.lastCostC)      : ""}</td>}
                               {mode === "name" && showLastCostCVM&& <td className="ta-right u-muted">{row.lastCostCVM    != null ? fmt2(row.lastCostCVM)    : ""}</td>}
                               <td className="ta-right u-muted">{row.sqmTotal ? fmt2(row.sqmTotal) : ""}</td>
-                              {showAmountCol && <td className="ta-right u-muted">{row.sqmTotal ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
+                              {showAmountCol && <td className="ta-right u-muted">{(row.sqmTotal || row.qtySheet) ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
                             </tr>
                           ) : (
                             <tr key={row.idKey}>
@@ -1186,7 +1192,7 @@ export default function ReportModal({
                               {mode === "name" && showAvgCostC   && <td className="ta-right u-muted">{row.averageCostC   != null ? fmt2(row.averageCostC)   : ""}</td>}
                               {mode === "name" && showLastCostC  && <td className="ta-right u-muted">{row.lastCostC      != null ? fmt2(row.lastCostC)      : ""}</td>}
                               {mode === "name" && showLastCostCVM&& <td className="ta-right u-muted">{row.lastCostCVM    != null ? fmt2(row.lastCostCVM)    : ""}</td>}
-                              {showAmountCol && <td className="ta-right u-muted">{row.sqmTotal ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
+                              {showAmountCol && <td className="ta-right u-muted">{(row.sqmTotal || row.qtySheet) ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
                             </tr>
                           )
                         )}
