@@ -38,6 +38,7 @@ const MaintenanceModePage      = lazy(() => import("./components/settings/Mainte
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
 const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
+const CostDiagnosticPage       = lazy(() => import("./components/pos-system/CostDiagnostic"));
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ function App() {
                   <Route path="/cash-collections" element={<CashCollectionsPage />} />
                   <Route path="/employee-files" element={<EmployeeDocManager />} />
                   <Route path="/activity-monitor" element={<ActivityMonitor />} />
+                  <Route path="/cost-diagnostic" element={<CostDiagnosticPage />} />
                   <Route path="/face-enroll" element={<FaceEnrollPage />} />
 
                   {/* Recording — permission-gated */}
