@@ -12,11 +12,12 @@ const CAUSE_CONFIG = {
   no_received_purchases: { label: 'Not Received',           color: 'red',    priority: 3 },
   sold_before_purchased: { label: 'Sold Before Purchase',   color: 'orange', priority: 4 },
   transfer_cost_zero:    { label: 'Transfer — Zero Cost',   color: 'orange', priority: 5 },
-  unit_item_cost_zero:   { label: 'Unit Item — Zero Cost',  color: 'amber',  priority: 6 },
-  all_ofr_missing:       { label: 'OFR Price Missing',      color: 'amber',  priority: 7 },
-  partial_ofr_missing:   { label: 'Partial OFR Missing',    color: 'amber',  priority: 8 },
-  no_transactions:       { label: 'No Transactions',        color: 'purple', priority: 9 },
-  unknown:               { label: 'Unexpected',             color: 'purple', priority: 10 },
+  count_cost_zero:       { label: 'Count — Zero Cost',      color: 'amber',  priority: 6 },
+  unit_item_cost_zero:   { label: 'Unit Item — Zero Cost',  color: 'amber',  priority: 7 },
+  all_ofr_missing:       { label: 'OFR Price Missing',      color: 'amber',  priority: 8 },
+  partial_ofr_missing:   { label: 'Partial OFR Missing',    color: 'amber',  priority: 9 },
+  no_transactions:       { label: 'No Transactions',        color: 'purple', priority: 10 },
+  unknown:               { label: 'Unexpected',             color: 'purple', priority: 11 },
 };
 
 const fmt2  = (n) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -200,7 +201,7 @@ export default function CostDiagnostic() {
                                       <>Purchase invoice item #{item.lastEvent.purchaseInvoiceItemId} on {fmtDR(item.lastEvent.date)}</>
                                     )}
                                     {item.lastEvent.type === 'count' && (
-                                      <>Inventory count on {fmtDR(item.lastEvent.date)}</>
+                                      <>Inventory count #{item.lastEvent.inventoryCountId} on {fmtDR(item.lastEvent.date)}</>
                                     )}
                                   </div>
                                 )}
@@ -303,8 +304,49 @@ export default function CostDiagnostic() {
                                   </>
                                 )}
 
-                                {item.purchases.length === 0 && (!item.transfers || item.transfers.length === 0) && (
-                                  <p className="cd-no-purchases">No purchase invoices or transfers found for this item.</p>
+                                {/* Inventory Counts table */}
+                                {item.counts && item.counts.length > 0 && (
+                                  <>
+                                    <div className="cd-section-title">Inventory Counts (Opening Balances)</div>
+                                    <table className="cd-purchases-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Count #</th>
+                                          <th>Date</th>
+                                          <th>Type</th>
+                                          <th className="num">Qty</th>
+                                          <th className="num">SQM OFR</th>
+                                          <th className="num">Cost OFR</th>
+                                          <th className="num">Cost VM</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.counts.map((c) => {
+                                          const hasCost = c.finalCostOfr > 0;
+                                          const isLastEvent = item.lastEvent?.type === 'count' &&
+                                            String(item.lastEvent.inventoryCountId) === String(c.countId);
+                                          return (
+                                            <tr
+                                              key={c.countId}
+                                              className={`cd-purchase-row${!hasCost ? ' cd-purchase-row--no-cost' : ''}${isLastEvent ? ' cd-count-row--last-event' : ''}`}
+                                            >
+                                              <td className="cd-po-num">{c.countId}</td>
+                                              <td>{fmtDR(c.date)}</td>
+                                              <td><span className="cd-type-badge">{c.type ?? '—'}</span></td>
+                                              <td className="num">{c.count}</td>
+                                              <td className="num">{fmt2(c.sqmOfr)}</td>
+                                              <td className={`num${!hasCost ? ' cd-zero' : ' cd-has-cost'}`}>{fmt2(c.finalCostOfr)}</td>
+                                              <td className="num">{fmt2(c.finalCost)}</td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </>
+                                )}
+
+                                {item.purchases.length === 0 && (!item.transfers || item.transfers.length === 0) && (!item.counts || item.counts.length === 0) && (
+                                  <p className="cd-no-purchases">No purchase invoices, transfers, or inventory counts found for this item.</p>
                                 )}
                               </div>
                             </td>
