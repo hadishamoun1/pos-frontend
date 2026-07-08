@@ -11,6 +11,7 @@ const ProfitabilityReport = () => {
   const [monthlyData, setMonthlyData] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [viewMode, setViewMode] = useState('detailed');
+  const [showZeroCostOnly, setShowZeroCostOnly] = useState(false);
   const [expandedCustomers, setExpandedCustomers] = useState(new Set());
   const [expandedItems, setExpandedItems] = useState(new Set());
   const [expandedInvoices, setExpandedInvoices] = useState(new Set());
@@ -310,6 +311,9 @@ const ProfitabilityReport = () => {
   };
   const profitClass = (val) => val < 0 ? 'profitability-report__amount--negative' : 'profitability-report__amount--positive';
   const summarySource = viewMode === 'by-month' ? monthlyData?.grandTotal : data?.totals;
+
+  const zeroCostRows = data?.rows?.filter((r) => Number(r.averageCost) === 0) ?? [];
+  const activeRows   = showZeroCostOnly ? zeroCostRows : (data?.rows ?? []);
 
   // ─── Print-ready renderers (used inside printRef div) ────────────────────
   const renderDetailedPrint = () => (
@@ -671,6 +675,13 @@ const ProfitabilityReport = () => {
             : <button onClick={handleExport} className="profitability-report__btn-export">📊 Export to Excel</button>
           }
           <button onClick={handlePrint} className="profitability-report__btn-print">🖨️ Print</button>
+          <button
+            onClick={() => setShowZeroCostOnly((v) => !v)}
+            className={`profitability-report__btn-zero-cost${showZeroCostOnly ? ' profitability-report__btn-zero-cost--active' : ''}`}
+            title="Show only items with average cost = 0 (missing cost data)"
+          >
+            ⚠️ Zero Cost{zeroCostRows.length > 0 ? ` (${zeroCostRows.length})` : ''}
+          </button>
         </div>
 
         <div className="profitability-report__view-toggle">
@@ -731,6 +742,14 @@ const ProfitabilityReport = () => {
         {viewMode === 'by-month'    && monthlyData && renderMonthPrint()}
       </div>
 
+      {data && !loading && showZeroCostOnly && (
+        <div className="profitability-report__zero-cost-banner">
+          <strong>⚠️ Zero Cost Filter Active</strong> — showing {zeroCostRows.length} invoice line{zeroCostRows.length !== 1 ? 's' : ''} where average cost = 0.
+          These items had no purchase cost recorded at the time of sale, so their profit margin shows as 100% incorrectly.
+          Fix: run the purchase invoice cost recompute, then re-check.
+        </div>
+      )}
+
       {data && !loading && (
         <>
           {/* ── DETAILED VIEW ─────────────────────────────────────────────── */}
@@ -746,8 +765,8 @@ const ProfitabilityReport = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.rows.map((row, idx) => (
-                    <tr key={idx} className={row.invoiceType === 'RTN' ? 'profitability-report__table-row--return' : ''}>
+                  {activeRows.map((row, idx) => (
+                    <tr key={idx} className={`${row.invoiceType === 'RTN' ? 'profitability-report__table-row--return' : ''} ${Number(row.averageCost) === 0 ? 'profitability-report__table-row--zero-cost' : ''}`}>
                       <td>{row.invoiceNumber}</td>
                       <td>{row.invoiceDate}</td>
                       <td><span className={`profitability-report__type-badge profitability-report__type-badge--${row.invoiceType}`}>{row.invoiceType}</span></td>
@@ -1066,8 +1085,10 @@ const ProfitabilityReport = () => {
         </div>
       )}
 
-      {data && !loading && viewMode !== 'by-month' && data.rows.length === 0 && (
-        <div className="profitability-report__no-data">No sales data found for the selected period.</div>
+      {data && !loading && viewMode !== 'by-month' && activeRows.length === 0 && (
+        <div className="profitability-report__no-data">
+          {showZeroCostOnly ? 'No zero-cost items found — all items have a recorded average cost.' : 'No sales data found for the selected period.'}
+        </div>
       )}
       {viewMode === 'by-month' && !monthlyLoading && monthlyData && monthlyData.months.length === 0 && (
         <div className="profitability-report__no-data">No invoices found for the selected period.</div>
