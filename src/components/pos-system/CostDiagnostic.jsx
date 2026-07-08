@@ -7,13 +7,16 @@ const DEFAULT_FROM = `${now.getFullYear()}-01-01`;
 const DEFAULT_TO   = now.toISOString().slice(0, 10);
 
 const CAUSE_CONFIG = {
-  no_purchases:          { label: 'No Purchases',           color: 'red',    priority: 1 },
-  no_received_purchases: { label: 'Not Received',           color: 'red',    priority: 2 },
-  sold_before_purchased: { label: 'Sold Before Purchase',   color: 'orange', priority: 3 },
-  unit_item_cost_zero:   { label: 'Unit Item — Zero Cost',  color: 'amber',  priority: 4 },
-  all_ofr_missing:       { label: 'OFR Price Missing',      color: 'amber',  priority: 5 },
-  partial_ofr_missing:   { label: 'Partial OFR Missing',    color: 'amber',  priority: 6 },
-  unknown:               { label: 'Unexpected',             color: 'purple', priority: 7 },
+  no_stock_events:       { label: 'No Stock Data',          color: 'red',    priority: 1 },
+  no_purchases:          { label: 'No Purchases',           color: 'red',    priority: 2 },
+  no_received_purchases: { label: 'Not Received',           color: 'red',    priority: 3 },
+  sold_before_purchased: { label: 'Sold Before Purchase',   color: 'orange', priority: 4 },
+  transfer_cost_zero:    { label: 'Transfer — Zero Cost',   color: 'orange', priority: 5 },
+  unit_item_cost_zero:   { label: 'Unit Item — Zero Cost',  color: 'amber',  priority: 6 },
+  all_ofr_missing:       { label: 'OFR Price Missing',      color: 'amber',  priority: 7 },
+  partial_ofr_missing:   { label: 'Partial OFR Missing',    color: 'amber',  priority: 8 },
+  no_transactions:       { label: 'No Transactions',        color: 'purple', priority: 9 },
+  unknown:               { label: 'Unexpected',             color: 'purple', priority: 10 },
 };
 
 const fmt2  = (n) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -186,50 +189,122 @@ export default function CostDiagnostic() {
                                   <strong>Root cause:</strong> {item.causeLabel}
                                 </div>
 
-                                {item.purchases.length === 0 ? (
-                                  <p className="cd-no-purchases">No purchase invoices found for this item.</p>
-                                ) : (
-                                  <table className="cd-purchases-table">
-                                    <thead>
-                                      <tr>
-                                        <th>Invoice #</th>
-                                        <th>Date</th>
-                                        <th>Status</th>
-                                        <th className="num">{unit ? 'Qty' : 'SQM OFR'}</th>
-                                        <th className="num">Final OFR</th>
-                                        <th className="num">Total OFR</th>
-                                        <th className="num">Total Amount (VM)</th>
-                                        <th className="num">Avg Cost (after recompute)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {item.purchases.map((p) => {
-                                        const hasCost = p.finalOFR > 0;
-                                        const isReceived = p.status === 'Recieved';
-                                        return (
-                                          <tr
-                                            key={p.invoiceId}
-                                            className={`cd-purchase-row${!hasCost && isReceived ? ' cd-purchase-row--no-cost' : ''}${!isReceived ? ' cd-purchase-row--not-received' : ''}`}
-                                          >
-                                            <td className="cd-po-num">{p.invoiceId}</td>
-                                            <td>{fmtDR(p.date)}</td>
-                                            <td>
-                                              <span className={`cd-status-badge${isReceived ? ' cd-status-badge--received' : ' cd-status-badge--pending'}`}>
-                                                {p.status}
-                                              </span>
-                                            </td>
-                                            <td className="num">{unit ? fmt2(p.quantity) : fmt2(p.sqmOfr)}</td>
-                                            <td className={`num${!hasCost ? ' cd-zero' : ''}`}>{fmt2(p.finalOFR)}</td>
-                                            <td className="num">{fmt2(p.totalOFR)}</td>
-                                            <td className="num">{fmt2(p.totalAmount)}</td>
-                                            <td className={`num${(p.averageCost ?? 0) === 0 ? ' cd-zero' : ' cd-has-cost'}`}>
-                                              {p.averageCost != null ? fmt2(p.averageCost) : '—'}
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
+                                {/* Last event before sale */}
+                                {item.lastEvent && (
+                                  <div className={`cd-last-event cd-last-event--${item.lastEvent.type}`}>
+                                    <strong>Last event before first zero-cost sale ({fmtD(item.firstZeroSaleDate)}):</strong>{' '}
+                                    {item.lastEvent.type === 'transfer' && (
+                                      <>Transfer #{item.lastEvent.transferId} on {fmtDR(item.lastEvent.date)} — <em>the snapshot reads cost from here, not from the purchase</em></>
+                                    )}
+                                    {item.lastEvent.type === 'purchase' && (
+                                      <>Purchase invoice item #{item.lastEvent.purchaseInvoiceItemId} on {fmtDR(item.lastEvent.date)}</>
+                                    )}
+                                    {item.lastEvent.type === 'count' && (
+                                      <>Inventory count on {fmtDR(item.lastEvent.date)}</>
+                                    )}
+                                  </div>
+                                )}
+                                {!item.lastEvent && (
+                                  <div className="cd-last-event cd-last-event--none">
+                                    No inventory transactions found before the sale date — item has no cost history in the system.
+                                  </div>
+                                )}
+
+                                {/* Purchase table */}
+                                {item.purchases.length > 0 && (
+                                  <>
+                                    <div className="cd-section-title">Purchase Invoices</div>
+                                    <table className="cd-purchases-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Invoice #</th>
+                                          <th>Date</th>
+                                          <th>Status</th>
+                                          <th className="num">{unit ? 'Qty' : 'SQM OFR'}</th>
+                                          <th className="num">Final OFR</th>
+                                          <th className="num">Total OFR</th>
+                                          <th className="num">Total Amount (VM)</th>
+                                          <th className="num">Avg Cost (after recompute)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.purchases.map((p) => {
+                                          const hasCost = p.finalOFR > 0;
+                                          const isReceived = p.status === 'Recieved';
+                                          return (
+                                            <tr
+                                              key={p.invoiceId}
+                                              className={`cd-purchase-row${!hasCost && isReceived ? ' cd-purchase-row--no-cost' : ''}${!isReceived ? ' cd-purchase-row--not-received' : ''}`}
+                                            >
+                                              <td className="cd-po-num">{p.invoiceId}</td>
+                                              <td>{fmtDR(p.date)}</td>
+                                              <td>
+                                                <span className={`cd-status-badge${isReceived ? ' cd-status-badge--received' : ' cd-status-badge--pending'}`}>
+                                                  {p.status}
+                                                </span>
+                                              </td>
+                                              <td className="num">{unit ? fmt2(p.quantity) : fmt2(p.sqmOfr)}</td>
+                                              <td className={`num${!hasCost ? ' cd-zero' : ''}`}>{fmt2(p.finalOFR)}</td>
+                                              <td className="num">{fmt2(p.totalOFR)}</td>
+                                              <td className="num">{fmt2(p.totalAmount)}</td>
+                                              <td className={`num${(p.averageCost ?? 0) === 0 ? ' cd-zero' : ' cd-has-cost'}`}>
+                                                {p.averageCost != null ? fmt2(p.averageCost) : '—'}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </>
+                                )}
+
+                                {/* Transfers table */}
+                                {item.transfers && item.transfers.length > 0 && (
+                                  <>
+                                    <div className="cd-section-title">Transfers</div>
+                                    <table className="cd-purchases-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Transfer #</th>
+                                          <th>Date</th>
+                                          <th>Location</th>
+                                          <th>Direction</th>
+                                          <th className="num">Avg Cost (OFR)</th>
+                                          <th className="num">Avg Cost (VM)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.transfers.map((t, idx) => {
+                                          const hasTransferCost = t.averageCost != null && t.averageCost > 0;
+                                          return (
+                                            <tr
+                                              key={idx}
+                                              className={`cd-purchase-row${!hasTransferCost ? ' cd-purchase-row--no-cost' : ''}`}
+                                            >
+                                              <td className="cd-po-num">{t.transferId}</td>
+                                              <td>{fmtDR(t.date)}</td>
+                                              <td>{t.location ?? '—'}</td>
+                                              <td>
+                                                <span className={`cd-type-badge${t.txType === 'MovedFrom' ? ' cd-badge-out' : ' cd-badge-in'}`}>
+                                                  {t.txType === 'MovedFrom' ? 'Out' : 'In'}
+                                                </span>
+                                              </td>
+                                              <td className={`num${!hasTransferCost ? ' cd-zero' : ' cd-has-cost'}`}>
+                                                {t.averageCost != null ? fmt2(t.averageCost) : '—'}
+                                              </td>
+                                              <td className="num">
+                                                {t.averageCostVM != null ? fmt2(t.averageCostVM) : '—'}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </>
+                                )}
+
+                                {item.purchases.length === 0 && (!item.transfers || item.transfers.length === 0) && (
+                                  <p className="cd-no-purchases">No purchase invoices or transfers found for this item.</p>
                                 )}
                               </div>
                             </td>
