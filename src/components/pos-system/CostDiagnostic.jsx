@@ -24,6 +24,16 @@ const fmt2  = (n) => Number(n ?? 0).toLocaleString('en-US', { minimumFractionDig
 const fmtD  = (s) => s ? new Date(s).toLocaleDateString('en-GB') : '—';
 const fmtDR = (s) => s ? s.toString().slice(0, 10) : '—';
 
+const buildItemSub = (item) => {
+  const parts = [];
+  if (item.thickness != null) parts.push(`${item.thickness}mm`);
+  if (item.length    != null) parts.push(`L:${item.length}`);
+  if (item.width     != null) parts.push(`W:${item.width}`);
+  if (item.sheetsPerBox != null && item.itemType === 'box') parts.push(`${item.sheetsPerBox} sht/box`);
+  if (item.origin)             parts.push(item.origin);
+  return parts.join(' · ');
+};
+
 export default function CostDiagnostic() {
   const [from, setFrom]       = useState(DEFAULT_FROM);
   const [to, setTo]           = useState(DEFAULT_TO);
@@ -162,7 +172,12 @@ export default function CostDiagnostic() {
                           <td className="cd-expand-cell">
                             <span className="cd-chevron">{open ? '▼' : '▶'}</span>
                           </td>
-                          <td className="cd-item-name">{item.itemName}</td>
+                          <td className="cd-item-name">
+                            {item.itemName}
+                            {buildItemSub(item) && (
+                              <div className="cd-item-sub">{buildItemSub(item)}</div>
+                            )}
+                          </td>
                           <td>
                             <span className="cd-type-badge">
                               {unit ? 'Unit' : item.stockMode ?? item.itemType ?? '—'}

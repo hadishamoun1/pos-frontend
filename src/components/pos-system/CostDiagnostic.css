@@ -211,7 +211,8 @@
 
 .cd-expand-cell { width: 32px; text-align: center; }
 .cd-chevron { font-size: 10px; color: #6b7280; }
-.cd-item-name { font-weight: 600; color: #1e3a8a; max-width: 280px; white-space: normal; }
+.cd-item-name { font-weight: 600; color: #1e3a8a; max-width: 320px; white-space: normal; }
+.cd-item-sub  { font-size: 11px; font-weight: 400; color: #6b7280; margin-top: 2px; white-space: normal; }
 .cd-unit-label { font-size: 11px; color: #6b7280; }
 .cd-none { color: #ef4444; font-style: italic; font-size: 12px; }
 .cd-zero { color: #dc2626; font-weight: 700; }
