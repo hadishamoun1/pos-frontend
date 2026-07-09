@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { axiosClient } from '../api/axiosClient';
 import './CostDiagnostic.css';
 
@@ -35,30 +36,47 @@ const buildItemSub = (item) => {
 };
 
 export default function CostDiagnostic() {
-  const [from, setFrom]       = useState(DEFAULT_FROM);
-  const [to, setTo]           = useState(DEFAULT_TO);
+  const [searchParams] = useSearchParams();
+  const paramVariantId = searchParams.get('variantId');
+  const paramFrom      = searchParams.get('from');
+  const paramTo        = searchParams.get('to');
+
+  const [from, setFrom]       = useState(paramFrom || DEFAULT_FROM);
+  const [to, setTo]           = useState(paramTo   || DEFAULT_TO);
   const [loading, setLoading] = useState(false);
   const [data, setData]       = useState(null);
   const [error, setError]     = useState('');
-  const [expanded, setExpanded] = useState(new Set());
+  const [expanded, setExpanded] = useState(
+    paramVariantId ? new Set([Number(paramVariantId)]) : new Set()
+  );
   const [filterCause, setFilterCause] = useState('ALL');
+  const resultRef = useRef(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (overrideVariantId) => {
     setLoading(true);
     setError('');
     setData(null);
-    setExpanded(new Set());
+    setExpanded(overrideVariantId ? new Set([Number(overrideVariantId)]) : new Set());
     try {
-      const res = await axiosClient.get(
-        `/reports/cost-diagnostic?from=${from}&to=${to}`
-      );
+      const vid = overrideVariantId ?? paramVariantId;
+      const url = `/reports/cost-diagnostic?from=${from}&to=${to}${vid ? `&variantId=${vid}` : ''}`;
+      const res = await axiosClient.get(url);
       setData(res.data);
+      if (vid) {
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      }
     } catch (e) {
       setError(e?.response?.data?.message ?? 'Failed to load diagnostic data');
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [from, to, paramVariantId]);
+
+  // Auto-run when opened via deep link from profitability report
+  useEffect(() => {
+    if (paramVariantId) load(paramVariantId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleRow = (id) => {
     setExpanded((prev) => {
@@ -96,6 +114,13 @@ export default function CostDiagnostic() {
         </p>
       </div>
 
+      {/* ── Deep-link banner ── */}
+      {paramVariantId && (
+        <div className="cd-deep-link-banner">
+          Showing diagnostic for variant #{paramVariantId} — <button className="cd-link-btn" onClick={() => window.location.href = '/cost-diagnostic'}>View all items</button>
+        </div>
+      )}
+
       {/* ── Filters ── */}
       <div className="cd-filters">
         <div className="cd-filter-group">
@@ -106,7 +131,7 @@ export default function CostDiagnostic() {
           <label>To</label>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
-        <button className="cd-run-btn" onClick={load} disabled={loading}>
+        <button className="cd-run-btn" onClick={() => load(null)} disabled={loading}>
           {loading ? 'Loading...' : 'Run Diagnostic'}
         </button>
       </div>
@@ -115,6 +140,7 @@ export default function CostDiagnostic() {
 
       {data && (
         <>
+          <div ref={resultRef} />
           {/* ── Summary cards ── */}
           <div className="cd-summary">
             <div className="cd-summary-total">

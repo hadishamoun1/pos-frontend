@@ -1,10 +1,12 @@
 // src/components/reports/ProfitabilityReport.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { axiosClient } from '../api/axiosClient';
 import { logActivity } from '../api/logActivity';
 import './Profitability-report.css';
 
 const ProfitabilityReport = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [monthlyLoading, setMonthlyLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -762,6 +764,7 @@ const ProfitabilityReport = () => {
                     <th>Item</th><th>Description</th><th>Thickness</th><th>Dimensions</th>
                     <th>Origin</th><th>Unit Type</th><th>Qty</th><th>SQM</th>
                     <th>Unit Price</th><th>Revenue</th><th>Cost</th><th>Profit</th><th>Margin %</th>
+                    {showZeroCostOnly && <th style={{width:36}}></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -784,6 +787,17 @@ const ProfitabilityReport = () => {
                       <td className="profitability-report__amount">${fmt(row.cost)}</td>
                       <td className={`profitability-report__amount ${profitClass(row.profit)}`}>${fmt(row.profit)}</td>
                       <td className={profitClass(row.margin)}>{row.margin.toFixed(2)}%</td>
+                      {showZeroCostOnly && (
+                        <td style={{textAlign:'center', padding:'4px'}}>
+                          <button
+                            title="Diagnose this item"
+                            onClick={() => navigate(
+                              `/cost-diagnostic?variantId=${row.itemVariantId}&from=${filters.from}&to=${filters.to}`
+                            )}
+                            style={{background:'none',border:'none',cursor:'pointer',fontSize:'15px',padding:'2px 4px',borderRadius:'4px'}}
+                          >🔍</button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
