@@ -36,6 +36,7 @@ const FaceEnrollPage           = lazy(() => import("./components/face-enroll/Fac
 const RecordingPage            = lazy(() => import("./components/recording/RecordingPage"));
 const MaintenanceModePage      = lazy(() => import("./components/settings/MaintenanceModePage"));
 const RVRBulkRandomizer        = lazy(() => import("./components/settings/RVRBulkRandomizer"));
+const InvoiceTypeConverter     = lazy(() => import("./components/settings/InvoiceTypeConverter"));
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
 const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
@@ -92,6 +93,14 @@ function App() {
                   <Route path="/activity-monitor" element={<ActivityMonitor />} />
                   <Route path="/cost-diagnostic" element={<CostDiagnosticPage />} />
                   <Route path="/face-enroll" element={<FaceEnrollPage />} />
+                  <Route
+                    path="/invoice-type-converter"
+                    element={
+                      hasPerm("invoiceTypeConverter.view")
+                        ? <InvoiceTypeConverter />
+                        : <Navigate to="/dashboard" replace />
+                    }
+                  />
                   <Route
                     path="/rvr-randomizer"
                     element={

@@ -205,6 +205,7 @@ export const en = {
       faceEnroll: "Face Login Enrollment",
       recording: "Recording Control",
       rvrRandomizer: "RVR Bulk Randomizer",
+      invoiceTypeConverter: "Invoice Type Converter",
     },
   },
 

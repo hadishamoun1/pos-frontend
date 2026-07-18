@@ -197,6 +197,7 @@ export const ar = {
       faceEnroll: "تسجيل بصمة الوجه",
       recording: "التحكم بالتسجيل",
       rvrRandomizer: "موزع RVR العشوائي",
+      invoiceTypeConverter: "محوّل نوع الفاتورة",
     },
   },
 

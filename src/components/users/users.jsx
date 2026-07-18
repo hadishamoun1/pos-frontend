@@ -34,6 +34,7 @@ const PERMISSION_GROUPS = [
       "cashFlow.view",
       "activity.view",
       "rvrRandomizer.view",
+      "invoiceTypeConverter.view",
     ],
   },
   {
@@ -157,6 +158,7 @@ const PERMISSION_GROUPS = [
       "payments.delete",
       "purchases.createReturn",
       "rvrRandomizer.view",
+      "invoiceTypeConverter.view",
     ],
   },
   {
