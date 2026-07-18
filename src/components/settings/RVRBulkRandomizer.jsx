@@ -743,6 +743,49 @@ export default function RVRBulkRandomizer() {
       .catch(() => {});
   }, []);
 
+  const printRef = useRef(null);
+
+  const handlePrint = () => {
+    const target = parseFloat(targetTotal || 0);
+    const actual = previewGrandTotal;
+    const diff   = Math.abs(actual - target);
+    const header = `
+      <div style="margin-bottom:20px;padding:14px 18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-family:Arial,sans-serif">
+        <h2 style="margin:0 0 8px;font-size:1.1rem">RVR Randomizer — Preview</h2>
+        <div style="display:flex;gap:32px;font-size:0.9rem">
+          <span><b>Invoices:</b> ${preview?.length ?? 0}</span>
+          <span><b>Grand Total:</b> $${fmt(actual)}</span>
+          <span><b>Target:</b> $${fmt(target)}</span>
+          <span><b>Difference:</b> $${fmt(diff)}</span>
+        </div>
+      </div>`;
+    const body = printRef.current ? printRef.current.innerHTML : '';
+    const win = window.open('', '_blank', 'width=1000,height=800');
+    win.document.write(`<!DOCTYPE html><html><head><title>RVR Preview</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;font-size:13px;color:#1e293b;padding:20px}
+      table{width:100%;border-collapse:collapse;margin-bottom:0;font-size:12px}
+      th{text-align:left;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;padding:6px 10px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+      td{padding:6px 10px;border-bottom:1px solid #f1f5f9}
+      .num{text-align:right}
+      .rvr-preview-card{border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;margin-bottom:12px;page-break-inside:avoid}
+      .rvr-preview-card-header{background:#f8fafc;padding:8px 14px;display:flex;gap:14px;align-items:center;font-size:12px;flex-wrap:wrap}
+      .rvr-inv-num{font-weight:700;color:#4f46e5}
+      .rvr-preview-customer{flex:1;font-weight:500}
+      .rvr-preview-target{color:#6366f1;font-weight:600}
+      .rvr-preview-actual{color:#16a34a;font-weight:700}
+      .rvr-subtotal-row td,.rvr-vat-row td{color:#64748b;font-size:11px}
+      .rvr-total-row td{font-weight:700;background:#f8fafc;border-top:2px solid #e2e8f0}
+      .rvr-dims-cell{font-weight:600;color:#0369a1;white-space:nowrap}
+      .rvr-grand-summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px 16px;margin-top:8px}
+      .rvr-grand-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+      .rvr-grand-value{font-weight:600}
+      .rvr-grand-diff{border-top:1px solid #e2e8f0;margin-top:4px;padding-top:8px;font-weight:700}
+      @media print{@page{margin:15mm}body{padding:0}}
+    </style></head><body>${header}${body}<script>window.onload=function(){window.print();window.close();}<\/script></body></html>`);
+    win.document.close();
+  };
+
   // Auto-save pool to DB whenever it changes (debounced 800 ms)
   const poolSaveTimer = useRef(null);
   useEffect(() => {
@@ -1024,8 +1067,12 @@ export default function RVRBulkRandomizer() {
             <span className={`rvr-count-badge ${Math.abs(previewGrandTotal - parseFloat(targetTotal || 0)) < 1 ? 'rvr-badge-green' : 'rvr-badge-amber'}`}>
               Target: ${fmt(parseFloat(targetTotal || 0))} (Δ ${fmt(Math.abs(previewGrandTotal - parseFloat(targetTotal || 0)))})
             </span>
+            <button className="rvr-btn rvr-btn-outline rvr-btn-sm" onClick={handlePrint} style={{ marginLeft: 'auto' }}>
+              🖨 Print
+            </button>
           </div>
 
+          <div ref={printRef}>
           {preview.map((entry, ei) => (
             <div key={ei} className="rvr-preview-card">
               <div className="rvr-preview-card-header">
@@ -1105,6 +1152,7 @@ export default function RVRBulkRandomizer() {
               <span className="rvr-grand-value">${fmt(Math.abs(previewGrandTotal - parseFloat(targetTotal || 0)))}</span>
             </div>
           </div>
+          </div>{/* end printRef */}
 
           {!applyResult && (
             <div className="rvr-apply-row">
