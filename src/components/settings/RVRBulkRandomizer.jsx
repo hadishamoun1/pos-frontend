@@ -63,7 +63,7 @@ function generateLines(itemPool, preVatTarget, maxQty) {
   const estimated = Math.max(1, Math.min(shuffled.length, Math.round(preVatTarget / (avgVal * avgQty))));
   // ±30% randomness so invoices look different from each other
   const lo = Math.max(1, Math.round(estimated * 0.7));
-  const hi = Math.min(shuffled.length, Math.min(15, Math.round(estimated * 1.3)));
+  const hi = Math.min(shuffled.length, Math.round(estimated * 1.3));
   const targetCount = lo + Math.floor(Math.random() * (Math.max(lo, hi) - lo + 1));
 
   const seen = new Set();
