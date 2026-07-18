@@ -56,11 +56,12 @@ function generateLines(itemPool, preVatTarget, maxQty) {
     return sqmPU !== null ? sqmPU * item.price : item.price;
   };
 
-  // Estimate how many distinct items we need so that at qty=1 we're close to the target.
-  // This removes any artificial cap — expensive items → few lines, cheap items → many lines.
+  // Estimate item count assuming items will carry ~55% of maxQty on average,
+  // so invoices have fewer rows with varied (not uniform) quantities.
   const avgVal = shuffled.reduce((s, it) => s + baseValue(it), 0) / shuffled.length || 1;
-  const estimated = Math.max(1, Math.min(shuffled.length, Math.round(preVatTarget / avgVal)));
-  // ±30% randomness around estimated so invoices look different from each other
+  const avgQty  = Math.max(1, Math.ceil(maxQty * 0.55));
+  const estimated = Math.max(1, Math.min(shuffled.length, Math.round(preVatTarget / (avgVal * avgQty))));
+  // ±30% randomness so invoices look different from each other
   const lo = Math.max(1, Math.round(estimated * 0.7));
   const hi = Math.min(shuffled.length, Math.round(estimated * 1.3));
   const targetCount = lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -74,19 +75,27 @@ function generateLines(itemPool, preVatTarget, maxQty) {
     picked.push(item);
   }
 
-  // Give all items the same qty multiplier so the total proportionally hits the target
-  const total1 = picked.reduce((s, item) => s + baseValue(item), 0);
-  const multiplier = total1 > 0
-    ? Math.max(1, Math.min(maxQty, Math.round(preVatTarget / total1)))
-    : 1;
-
-  const lines = picked.map(item => ({ ...item, qty: multiplier }));
+  // Assign each item a random qty in [1, maxQty] — not uniform, so rows have varied quantities
+  const lines = picked.map(item => ({
+    ...item,
+    qty: maxQty > 1 ? (1 + Math.floor(Math.random() * maxQty)) : 1,
+  }));
 
   const lineValue = (l) => {
     const sqmPU = computeSqmPerUnit(l);
     return l.qty * (sqmPU !== null ? sqmPU * l.price : l.price);
   };
   const total = () => lines.reduce((s, l) => s + lineValue(l), 0);
+
+  // Scale all quantities proportionally to bring the random total close to target.
+  // Scaling preserves the relative spread (some items still higher, some lower).
+  const rawTotal = total();
+  if (rawTotal > 0) {
+    const scale = preVatTarget / rawTotal;
+    lines.forEach(l => {
+      l.qty = Math.max(1, Math.min(maxQty, Math.round(l.qty * scale)));
+    });
+  }
 
   // Fine-tune: pick the item whose unit value is closest to the remaining gap.
   // Stop when the best possible step would overshoot the gap by >2× (oscillation guard).
