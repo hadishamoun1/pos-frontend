@@ -33,6 +33,7 @@ const PERMISSION_GROUPS = [
       "employeeFiles.view",
       "cashFlow.view",
       "activity.view",
+      "rvrRandomizer.view",
     ],
   },
   {
@@ -155,6 +156,7 @@ const PERMISSION_GROUPS = [
       "payments.update",
       "payments.delete",
       "purchases.createReturn",
+      "rvrRandomizer.view",
     ],
   },
   {

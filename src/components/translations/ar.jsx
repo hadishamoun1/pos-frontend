@@ -196,6 +196,7 @@ export const ar = {
       users: "المستخدمون",
       faceEnroll: "تسجيل بصمة الوجه",
       recording: "التحكم بالتسجيل",
+      rvrRandomizer: "موزع RVR العشوائي",
     },
   },
 

@@ -41,6 +41,7 @@ const sections = [
   { key: "users",             path: "/users",              image: "/assets/users.png",       perm: "users.manage" },
   { key: "faceEnroll",        path: "/face-enroll",        image: "/assets/faceLogin.png",        perm: "faceEnroll.view" },
   { key: "recording",         path: "/recording",          image: "/assets/recording.png",          perm: "recording.view" },
+  { key: "rvrRandomizer",     path: "/rvr-randomizer",     image: "/assets/rvr.png",                perm: "rvrRandomizer.view" },
 ];
 
 const DashboardPage = () => {

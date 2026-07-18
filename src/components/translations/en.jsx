@@ -204,6 +204,7 @@ export const en = {
       users: "Users",
       faceEnroll: "Face Login Enrollment",
       recording: "Recording Control",
+      rvrRandomizer: "RVR Bulk Randomizer",
     },
   },
 
