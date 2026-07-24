@@ -720,8 +720,8 @@ function buildPrintHTML({
              <th>Origin</th>
              <th class="tc col-ar">Name+Thk (AR)</th>
              <th class="tc" style="width:110px">Dimension</th>
-             <th class="tr">Qty (Box)</th>
              ${showTripoliCol ? `<th class="tr" style="color:#1a237e;width:52px">Qty ${remoteWarehouse.slice(0,3)}</th>` : ""}
+             <th class="tr">Qty (Box)</th>
              <th class="tr">Qty (S/U)</th>
              <th class="tr">SQM (Total)</th>
              ${mode === "real" && showAvgCost    ? `<th class="tr">Avg Cost</th>`     : ""}
@@ -752,8 +752,8 @@ function buildPrintHTML({
             <td>${escape(r.origin || "")}</td>
             <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
             <td class="tc">${escape(r.dim)}</td>
-            <td class="tr">${r.qtyBox   ? fmt2(r.qtyBox)   : ""}</td>
             ${showTripoliCol ? `<td class="tr" style="color:#1a237e">${r.qtyBoxTripoli ? fmt2(r.qtyBoxTripoli) : ""}</td>` : ""}
+            <td class="tr">${r.qtyBox   ? fmt2(r.qtyBox)   : ""}</td>
             <td class="tr">${r.qtySheet ? fmt2(r.qtySheet) : ""}</td>
             <td class="tr">${effectiveSqmP(r) ? fmt2(effectiveSqmP(r)) : ""}</td>
             ${mode === "real" && showAvgCost    ? `<td class="tr">${r.averageCost != null ? fmt2(r.averageCost) : ""}</td>` : ""}
@@ -779,8 +779,8 @@ function buildPrintHTML({
            </tr>`
         : `<tr>
              <td colspan="3" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
-             <td class="tr" style="font-weight:700;background:#fafafa">${totBox   ? fmt2(totBox)   : ""}</td>
              ${showTripoliCol ? `<td class="tr" style="font-weight:700;background:#fafafa;color:#1a237e">${totBoxTripoli ? fmt2(totBoxTripoli) : ""}</td>` : ""}
+             <td class="tr" style="font-weight:700;background:#fafafa">${totBox   ? fmt2(totBox)   : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSheet ? fmt2(totSheet) : ""}</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totSqmEff ? fmt2(totSqmEff) : ""}</td>
              ${(mode === "real" && showAvgCost)    ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvg    != null ? fmt2(pWAvg)    : ""}</td>` : ""}
@@ -1212,8 +1212,8 @@ export default function ReportModal({
                             <th>Origin</th>
                             <th className="ta-center col-ar">Name+Thk (AR)</th>
                             <th className="ta-center">Dimension</th>
-                            <th className="ta-right">Qty (Box)</th>
                             {showTripoliCol && <th className="ta-right" style={{ color: "#1a237e" }}>Qty {remoteWarehouse.slice(0,3)}</th>}
+                            <th className="ta-right">Qty (Box)</th>
                             <th className="ta-right">Qty (S/U)</th>
                             <th className="ta-right">SQM (Total)</th>
                             {mode === "real" && showAvgCost    && <th className="ta-right">Avg Cost</th>}
@@ -1245,8 +1245,8 @@ export default function ReportModal({
                               <td className="truncate">{row.origin || ""}</td>
                               <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
                               <td className="ta-center">{row.dim}</td>
-                              <td className="ta-right">{row.qtyBox   ? fmt2(row.qtyBox)   : ""}</td>
                               {showTripoliCol && <td className="ta-right" style={{ color: "#1a237e" }}>{row.qtyBoxTripoli ? fmt2(row.qtyBoxTripoli) : ""}</td>}
+                              <td className="ta-right">{row.qtyBox   ? fmt2(row.qtyBox)   : ""}</td>
                               <td className="ta-right">{row.qtySheet ? fmt2(row.qtySheet) : ""}</td>
                               <td className="ta-right u-muted">{effectiveSqm(row) ? fmt2(effectiveSqm(row)) : ""}</td>
                               {mode === "real" && showAvgCost    && <td className="ta-right u-muted">{row.averageCost != null ? fmt2(row.averageCost) : ""}</td>}
@@ -1270,8 +1270,8 @@ export default function ReportModal({
                         ) : (
                           <tr>
                             <td colSpan={3} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
-                            <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
                             {showTripoliCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa", color: "#1a237e" }}>{totBoxTripoli ? fmt2(totBoxTripoli) : ""}</td>}
+                            <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSheet ? fmt2(totSheet) : ""}</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSqmEffective ? fmt2(totSqmEffective) : ""}</td>
                             {mode === "real" && showAvgCost    && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvg    != null ? fmt2(wAvg)    : ""}</td>}
