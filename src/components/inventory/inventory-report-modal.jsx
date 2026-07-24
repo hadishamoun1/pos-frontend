@@ -117,7 +117,7 @@ const SQM_DISPLAY_THRESHOLD = 0.1;
 function useGroupedByDescription(
   rows,
   mode,
-  { debug = false, rowsForSpbIndex = null } = {}
+  { debug = false, rowsForSpbIndex = null, companyWarehouse = null, remoteWarehouse = "Tripoli" } = {}
 ) {
   const normThkKey = (t) => {
     const n = Number(t);
@@ -229,6 +229,7 @@ function useGroupedByDescription(
           itemNumber: g.itemNumber || "",
           sheetQty: 0,
           boxQtyPerSpb: new Map(),
+          tripoliBoxQtyPerSpb: new Map(),
           avgCostPerSpb: new Map(),
           lastCostPerSpb: new Map(),
           fallbackAvgCost: null,
@@ -261,7 +262,23 @@ function useGroupedByDescription(
 
       if (t === "box") {
         const spb = Math.max(0, Math.floor(Number(r.sheetsPerBox) || 0));
-        b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + q);
+
+        const homeWh = companyWarehouse ? companyWarehouse.trim() : null;
+        const homeQty = (r.batches || []).length > 0 && homeWh
+          ? (r.batches || [])
+              .filter((bx) => (bx.warehouse ?? null) === homeWh)
+              .reduce((sum, bx) => sum + toNum(bx.balanceOFR), 0)
+          : (r.batches || []).length > 0
+          ? (r.batches || [])
+              .filter((bx) => (bx.warehouse ?? null) !== remoteWarehouse)
+              .reduce((sum, bx) => sum + toNum(bx.balanceOFR), 0)
+          : q;
+        b.boxQtyPerSpb.set(spb, (b.boxQtyPerSpb.get(spb) || 0) + homeQty);
+
+        const tripoliQty = (r.batches || [])
+          .filter((bx) => (bx.warehouse ?? null) === remoteWarehouse)
+          .reduce((sum, bx) => sum + toNum(bx.balanceOFR), 0);
+        b.tripoliBoxQtyPerSpb.set(spb, (b.tripoliBoxQtyPerSpb.get(spb) || 0) + tripoliQty);
 
         const avg = Number(r.averageCost);
         if (Number.isFinite(avg) && spb > 0) b.avgCostPerSpb.set(spb, avg);
@@ -384,6 +401,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox: 0,
+              qtyBoxTripoli: 0,
+              sqmTripoli: 0,
               qtySheet: unitQty,
               sqmTotal: 0,
               averageCost: b.fallbackAvgCost ?? null,
@@ -445,6 +464,7 @@ function useGroupedByDescription(
             if (qtyBox === 0 && qtySheet === 0 && rowSqm < SQM_DISPLAY_THRESHOLD) return;
 
             anyRow = true;
+            const tripoliQtyRow = Number(b.tripoliBoxQtyPerSpb.get(spb) || 0);
             rowsOut.push({
               idKey: `${bucketKey}|spb:${spb}`,
               dim: prettyDimsWithSPB(b.length, b.width, spb),
@@ -452,6 +472,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox,
+              qtyBoxTripoli: tripoliQtyRow,
+              sqmTripoli: tripoliQtyRow * spb * perSheet,
               qtySheet,
               sqmTotal: rowSqm,
               averageCost: b.avgCostPerSpb.get(spb) ?? b.fallbackAvgCost ?? null,
@@ -476,6 +498,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox: 0,
+              qtyBoxTripoli: 0,
+              sqmTripoli: 0,
               qtySheet: fallbackQtySheet,
               sqmTotal: fallbackSqm,
               averageCost: b.avgCostPerSpb.get(attachSpb) ?? b.fallbackAvgCost ?? null,
@@ -498,6 +522,8 @@ function useGroupedByDescription(
               origin: b.origin,
               nameThkAr: buildNameThkAr(b.itemName, b.thicknessNum),
               qtyBox: 0,
+              qtyBoxTripoli: 0,
+              sqmTripoli: 0,
               qtySheet: sheetQty,
               sqmTotal: sheetSqm,
               averageCost: b.fallbackAvgCost ?? null,
@@ -547,7 +573,7 @@ function useGroupedByDescription(
     });
 
     return { groups: filteredGroups };
-  }, [rows, mode, rowsForSpbIndex, debug]);
+  }, [rows, mode, rowsForSpbIndex, debug, companyWarehouse]);
 }
 
 /* --------- Optional view transform: Transfer-to-SQM --------- */
@@ -597,6 +623,8 @@ function buildPrintHTML({
   showSqmAmount = false,
   showSqmAmountTotals = false,
   showGroupHeaders = true,
+  showTripoliCol = false,
+  remoteWarehouse = "Tripoli",
   mode = "real",
   grandTotals = null,
 }) {
@@ -629,9 +657,11 @@ function buildPrintHTML({
     }
     return num(r.averageCost) || num(r.averageCostCVM) || num(r.averageCostC) || 0;
   };
+  const effectiveSqmP = (r) => num(r.sqmTotal) + (showTripoliCol ? num(r.sqmTripoli) : 0);
   const sqmAmountOfRow = (r) => {
     const cost = costForAmount(r);
-    return num(r.sqmTotal) > 0 ? num(r.sqmTotal) * cost : num(r.qtySheet) * cost;
+    const sqm = effectiveSqmP(r);
+    return sqm > 0 ? sqm * cost : num(r.qtySheet) * cost;
   };
 
   const showAmountCol    = !!showSqmAmount;
@@ -644,14 +674,16 @@ function buildPrintHTML({
 
   const groupBlocks = (groups || [])
     .map((g) => {
-      let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
+      let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0;
       let pWAvgNum = 0, pWAvgCVMNum = 0, pWAvgCNum = 0, pWLastCNum = 0, pWLastCVMNum = 0, pWDenom = 0;
       for (const r of g.rows || []) {
-        totBox    += Number(r.qtyBox   || 0);
+        totBox         += Number(r.qtyBox         || 0);
+        totBoxTripoli  += Number(r.qtyBoxTripoli  || 0);
         totSheet  += Number(r.qtySheet || 0);
         totSqm    += Number(r.sqmTotal || 0);
+        totSqmTripoli += Number(r.sqmTripoli || 0);
         totAmount += sqmAmountOfRow(r);
-        const sqm = Number(r.sqmTotal || 0);
+        const sqm = effectiveSqmP(r);
         if (sqm > 0) {
           pWDenom        += sqm;
           if (r.averageCost    != null) pWAvgNum    += sqm * Number(r.averageCost);
@@ -661,6 +693,7 @@ function buildPrintHTML({
           if (r.lastCostCVM    != null) pWLastCVMNum+= sqm * Number(r.lastCostCVM);
         }
       }
+      const totSqmEff = totSqm + (showTripoliCol ? totSqmTripoli : 0);
       const pWAvg    = pWDenom > 0 ? pWAvgNum    / pWDenom : null;
       const pWAvgCVM = pWDenom > 0 ? pWAvgCVMNum / pWDenom : null;
       const pWAvgC   = pWDenom > 0 ? pWAvgCNum   / pWDenom : null;
@@ -681,14 +714,15 @@ function buildPrintHTML({
              ${mode === "name" && showLastCostC  ? `<th class="tr">Last Cost C</th>`  : ""}
              ${mode === "name" && showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: ""}
              <th class="tr">SQM (Total)</th>
-             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
+             ${showAmountCol ? `<th class="tr" style="width:65px">Total Amount</th>` : ""}
            </tr></thead>`
         : `<thead><tr>
              <th>Origin</th>
              <th class="tc col-ar">Name+Thk (AR)</th>
-             <th class="tc">Dimension</th>
+             <th class="tc" style="width:110px">Dimension</th>
              <th class="tr">Qty (Box)</th>
-             <th class="tr">Qty (Sheet/Unit)</th>
+             ${showTripoliCol ? `<th class="tr" style="color:#1a237e;width:52px">Qty ${remoteWarehouse.slice(0,3)}</th>` : ""}
+             <th class="tr">Qty (S/U)</th>
              <th class="tr">SQM (Total)</th>
              ${mode === "real" && showAvgCost    ? `<th class="tr">Avg Cost</th>`     : ""}
              ${mode === "real" && showLastCost   ? `<th class="tr">Last Cost</th>`    : ""}
@@ -696,7 +730,7 @@ function buildPrintHTML({
              ${mode === "name" && showAvgCostC   ? `<th class="tr">Avg Cost C</th>`   : ""}
              ${mode === "name" && showLastCostC  ? `<th class="tr">Last Cost C</th>`  : ""}
              ${mode === "name" && showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: ""}
-             ${showAmountCol ? `<th class="tr">Total Amount</th>` : ""}
+             ${showAmountCol ? `<th class="tr" style="width:65px">Total Amount</th>` : ""}
            </tr></thead>`;
 
       const rowsHtml = (g.rows || [])
@@ -719,34 +753,36 @@ function buildPrintHTML({
             <td class="tc col-ar">${escape(r.nameThkAr || "")}</td>
             <td class="tc">${escape(r.dim)}</td>
             <td class="tr">${r.qtyBox   ? fmt2(r.qtyBox)   : ""}</td>
+            ${showTripoliCol ? `<td class="tr" style="color:#1a237e">${r.qtyBoxTripoli ? fmt2(r.qtyBoxTripoli) : ""}</td>` : ""}
             <td class="tr">${r.qtySheet ? fmt2(r.qtySheet) : ""}</td>
-            <td class="tr">${r.sqmTotal ? fmt2(r.sqmTotal) : ""}</td>
+            <td class="tr">${effectiveSqmP(r) ? fmt2(effectiveSqmP(r)) : ""}</td>
             ${mode === "real" && showAvgCost    ? `<td class="tr">${r.averageCost != null ? fmt2(r.averageCost) : ""}</td>` : ""}
             ${mode === "real" && showLastCost   ? `<td class="tr">${r.lastCost    != null ? fmt2(r.lastCost)    : ""}</td>` : ""}
             ${mode === "name" && showAvgCostCVM ? `<td class="tr">${r.averageCostCVM != null ? fmt2(r.averageCostCVM) : ""}</td>` : ""}
             ${mode === "name" && showAvgCostC   ? `<td class="tr">${r.averageCostC   != null ? fmt2(r.averageCostC)   : ""}</td>` : ""}
             ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
             ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
-            ${showAmountCol ? `<td class="tr">${(r.sqmTotal || r.qtySheet) ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
+            ${showAmountCol ? `<td class="tr">${(effectiveSqmP(r) || r.qtySheet) ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
           </tr>`;
         })
         .join("");
 
       const totalColsForEmpty = transferMode
         ? 2 + (mode === "name" ? costColsName : 0) + 1 + (showAmountCol ? 1 : 0)
-        : 3 + costCols + 3 + (showAmountCol ? 1 : 0);
+        : 3 + (showTripoliCol ? 1 : 0) + costCols + 3 + (showAmountCol ? 1 : 0);
 
       const totalRow = transferMode
         ? `<tr>
              <td colspan="${2 + (mode === "name" ? costColsName : 0)}" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
-             <td class="tr" style="font-weight:700;background:#fafafa">${totSqm ? fmt2(totSqm) : ""}</td>
+             <td class="tr" style="font-weight:700;background:#fafafa">${totSqmEff ? fmt2(totSqmEff) : ""}</td>
              ${showAmountCol ? `<td class="tr" style="font-weight:700;background:#fafafa">${showAmountTotals ? fmt2(totAmount) : ""}</td>` : ""}
            </tr>`
         : `<tr>
              <td colspan="3" class="tr" style="font-weight:700;background:#fafafa">Group Total:</td>
              <td class="tr" style="font-weight:700;background:#fafafa">${totBox   ? fmt2(totBox)   : ""}</td>
+             ${showTripoliCol ? `<td class="tr" style="font-weight:700;background:#fafafa;color:#1a237e">${totBoxTripoli ? fmt2(totBoxTripoli) : ""}</td>` : ""}
              <td class="tr" style="font-weight:700;background:#fafafa">${totSheet ? fmt2(totSheet) : ""}</td>
-             <td class="tr" style="font-weight:700;background:#fafafa">${totSqm   ? fmt2(totSqm)   : ""}</td>
+             <td class="tr" style="font-weight:700;background:#fafafa">${totSqmEff ? fmt2(totSqmEff) : ""}</td>
              ${(mode === "real" && showAvgCost)    ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvg    != null ? fmt2(pWAvg)    : ""}</td>` : ""}
              ${(mode === "real" && showLastCost)   ? `<td class="tr" style="font-weight:700;background:#fafafa"></td>` : ""}
              ${(mode === "name" && showAvgCostCVM) ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWAvgCVM != null ? fmt2(pWAvgCVM) : ""}</td>` : ""}
@@ -771,9 +807,11 @@ function buildPrintHTML({
     .join("");
 
   const grand = grandTotals && typeof grandTotals === "object" ? grandTotals : null;
-  const gtBoxes  = grand ? Number(grand.boxes  || 0) : 0;
-  const gtSheets = grand ? Number(grand.sheets || 0) : 0;
-  const gtSqm    = grand ? Number(grand.sqm    || 0) : 0;
+  const gtBoxes     = grand ? Number(grand.boxes      || 0) : 0;
+  const gtSheets    = grand ? Number(grand.sheets     || 0) : 0;
+  const gtSqmBase   = grand ? Number(grand.sqm        || 0) : 0;
+  const gtSqmTrip   = grand ? Number(grand.sqmTripoli || 0) : 0;
+  const gtSqm       = gtSqmBase + (showTripoliCol ? gtSqmTrip : 0);
   const gtAmount = showAmountTotals
     ? (groups || []).reduce((sumG, g) =>
         sumG + (g.rows || []).reduce((sumR, r) => sumR + sqmAmountOfRow(r), 0), 0)
@@ -788,7 +826,7 @@ function buildPrintHTML({
       <table class="table">
         <thead><tr>
           <th class="tr">Boxes</th><th class="tr">Sheets</th><th class="tr">SQM</th>
-          ${showAmountTotals ? `<th class="tr">Total Amount</th>` : ""}
+          ${showAmountTotals ? `<th class="tr" style="width:65px">Total Amount</th>` : ""}
         </tr></thead>
         <tbody><tr>
           <td class="tr" style="font-weight:800;background:#fafafa">${fmt2(gtBoxes)}</td>
@@ -810,8 +848,8 @@ function buildPrintHTML({
     .g-title { font-weight: 800; }
     .g-right { display: inline-flex; gap: 12px; align-items: baseline; }
     .itmno { font-weight: 600; }
-    .table { width: 100%; border-collapse: collapse; }
-    .table th, .table td { border:1px solid #e8e8e8; padding:6px 8px; }
+    .table { width: 100%; border-collapse: collapse; table-layout: auto; }
+    .table th, .table td { border:1px solid #e8e8e8; padding:5px 7px; white-space: nowrap; }
     .table thead th { background:#f3f3f3; font-weight:700; font-size:11px; text-transform: uppercase; }
     .tc { text-align:center; } .tr { text-align:right; } .muted { color:#666; }
     .table th.col-ar, .table td.col-ar {
@@ -838,11 +876,14 @@ export default function ReportModal({
   loading = false,
   mode = "real",
   debug = true,
+  showTripoliColInitial = false,
+  companyWarehouse = null,
+  remoteWarehouse = "Tripoli",
 }) {
   const rowsForSpbIndex =
     spbSourceRows && spbSourceRows.length ? spbSourceRows : rows;
 
-  const { groups } = useGroupedByDescription(rows, mode, { debug, rowsForSpbIndex });
+  const { groups } = useGroupedByDescription(rows, mode, { debug, rowsForSpbIndex, companyWarehouse, remoteWarehouse });
 
   const [transferToSqm, setTransferToSqm] = useState(false);
   const [showAvgCost,     setShowAvgCost]     = useState(false);
@@ -854,6 +895,7 @@ export default function ReportModal({
   const [showSqmAmount,       setShowSqmAmount]       = useState(false);
   const [showSqmAmountTotals, setShowSqmAmountTotals] = useState(false);
   const [showGroupHeaders,    setShowGroupHeaders]    = useState(true);
+  const [showTripoliCol,      setShowTripoliCol]      = useState(showTripoliColInitial);
   useEffect(() => {
     setTransferToSqm(false);
     if (mode !== "real") { setShowAvgCost(false); setShowLastCost(false); }
@@ -862,6 +904,11 @@ export default function ReportModal({
       setShowLastCostC(false);  setShowLastCostCVM(false);
     }
   }, [mode]);
+
+  useEffect(() => {
+    if (open) setShowTripoliCol(showTripoliColInitial);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const displayGroups = useTransferredGroups(groups, transferToSqm, mode);
   const transferMode  = transferToSqm && mode === "name";
@@ -876,24 +923,30 @@ export default function ReportModal({
     }
     return safeNum(row?.averageCost) || safeNum(row?.averageCostCVM) || safeNum(row?.averageCostC) || 0;
   };
+  const effectiveSqm = (row) => {
+    const base = safeNum(row?.sqmTotal);
+    return showTripoliCol ? base + safeNum(row?.sqmTripoli) : base;
+  };
   const sqmAmountOfRow = (row) => {
     const cost = costForAmount(row);
-    return safeNum(row?.sqmTotal) > 0 ? safeNum(row?.sqmTotal) * cost : safeNum(row?.qtySheet) * cost;
+    const sqm = effectiveSqm(row);
+    return sqm > 0 ? sqm * cost : safeNum(row?.qtySheet) * cost;
   };
 
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
 
   const grandTotals = useMemo(() => {
-    let boxes = 0, sheets = 0, sqm = 0;
+    let boxes = 0, sheets = 0, sqm = 0, sqmTripoli = 0;
     (groups || []).forEach((g) => {
       (g.rows || []).forEach((r) => {
-        boxes  += Number(r.qtyBox   || 0);
-        sheets += Number(r.qtySheet || 0);
-        sqm    += Number(r.sqmTotal || 0);
+        boxes      += Number(r.qtyBox      || 0);
+        sheets     += Number(r.qtySheet    || 0);
+        sqm        += Number(r.sqmTotal    || 0);
+        sqmTripoli += Number(r.sqmTripoli  || 0);
       });
     });
-    return { boxes, sheets, sqm };
+    return { boxes, sheets, sqm, sqmTripoli };
   }, [groups]);
 
   const grandAmount = useMemo(() => {
@@ -931,7 +984,8 @@ export default function ReportModal({
       showAvgCost, showLastCost,
       showAvgCostCVM, showAvgCostC, showLastCostC, showLastCostCVM,
       showSqmAmount, showSqmAmountTotals,
-      showGroupHeaders,
+      showGroupHeaders, showTripoliCol,
+      remoteWarehouse,
       mode, grandTotals,
     });
 
@@ -1040,6 +1094,10 @@ export default function ReportModal({
                 <input type="checkbox" checked={showGroupHeaders} onChange={(e) => setShowGroupHeaders(e.target.checked)} />
                 Show Group Headers
               </label>
+              <label className="invb-chk">
+                <input type="checkbox" checked={showTripoliCol} onChange={(e) => setShowTripoliCol(e.target.checked)} />
+                Inventory {remoteWarehouse}
+              </label>
             </div>
 
             <div className="row" style={{ gap: 16 }}>
@@ -1074,16 +1132,18 @@ export default function ReportModal({
               )}
 
               {!loading && (displayGroups || []).map((g) => {
-                let totBox = 0, totSheet = 0, totSqm = 0, totAmount = 0;
+                let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0;
                 let wAvgNumerator = 0, wAvgCVMNumerator = 0, wAvgCNumerator = 0;
                 let wLastCNumerator = 0, wLastCVMNumerator = 0;
                 let wAvgDenom = 0;
                 for (const r of g.rows) {
-                  totBox    += Number(r.qtyBox   || 0);
+                  totBox         += Number(r.qtyBox         || 0);
+                  totBoxTripoli  += Number(r.qtyBoxTripoli  || 0);
                   totSheet  += Number(r.qtySheet || 0);
                   totSqm    += Number(r.sqmTotal || 0);
+                  totSqmTripoli += Number(r.sqmTripoli || 0);
                   totAmount += sqmAmountOfRow(r);
-                  const sqm = Number(r.sqmTotal || 0);
+                  const sqm = effectiveSqm(r);
                   if (sqm > 0) {
                     wAvgDenom        += sqm;
                     if (r.averageCost    != null) wAvgNumerator    += sqm * Number(r.averageCost);
@@ -1093,6 +1153,7 @@ export default function ReportModal({
                     if (r.lastCostCVM    != null) wLastCVMNumerator+= sqm * Number(r.lastCostCVM);
                   }
                 }
+                const totSqmEffective = totSqm + (showTripoliCol ? totSqmTripoli : 0);
                 const wAvg    = wAvgDenom > 0 ? wAvgNumerator    / wAvgDenom : null;
                 const wAvgCVM = wAvgDenom > 0 ? wAvgCVMNumerator / wAvgDenom : null;
                 const wAvgC   = wAvgDenom > 0 ? wAvgCNumerator   / wAvgDenom : null;
@@ -1118,14 +1179,14 @@ export default function ReportModal({
                         <div className="report-group-totals">
                           {transferMode ? (
                             <>
-                              <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
+                              <span className="u-muted">SQM: <strong>{fmt2(totSqmEffective)}</strong></span>
                               {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
                             </>
                           ) : (
                             <>
                               <span>Boxes: <strong>{fmt2(totBox)}</strong></span>
                               <span>Sheets: <strong>{fmt2(totSheet)}</strong></span>
-                              <span className="u-muted">SQM: <strong>{fmt2(totSqm)}</strong></span>
+                              <span className="u-muted">SQM: <strong>{fmt2(totSqmEffective)}</strong></span>
                               {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
                             </>
                           )}
@@ -1152,7 +1213,8 @@ export default function ReportModal({
                             <th className="ta-center col-ar">Name+Thk (AR)</th>
                             <th className="ta-center">Dimension</th>
                             <th className="ta-right">Qty (Box)</th>
-                            <th className="ta-right">Qty (Sheet/Unit)</th>
+                            {showTripoliCol && <th className="ta-right" style={{ color: "#1a237e" }}>Qty {remoteWarehouse.slice(0,3)}</th>}
+                            <th className="ta-right">Qty (S/U)</th>
                             <th className="ta-right">SQM (Total)</th>
                             {mode === "real" && showAvgCost    && <th className="ta-right">Avg Cost</th>}
                             {mode === "real" && showLastCost   && <th className="ta-right">Last Cost</th>}
@@ -1184,15 +1246,16 @@ export default function ReportModal({
                               <td className="ta-center col-ar">{row.nameThkAr || ""}</td>
                               <td className="ta-center">{row.dim}</td>
                               <td className="ta-right">{row.qtyBox   ? fmt2(row.qtyBox)   : ""}</td>
+                              {showTripoliCol && <td className="ta-right" style={{ color: "#1a237e" }}>{row.qtyBoxTripoli ? fmt2(row.qtyBoxTripoli) : ""}</td>}
                               <td className="ta-right">{row.qtySheet ? fmt2(row.qtySheet) : ""}</td>
-                              <td className="ta-right u-muted">{row.sqmTotal ? fmt2(row.sqmTotal) : ""}</td>
+                              <td className="ta-right u-muted">{effectiveSqm(row) ? fmt2(effectiveSqm(row)) : ""}</td>
                               {mode === "real" && showAvgCost    && <td className="ta-right u-muted">{row.averageCost != null ? fmt2(row.averageCost) : ""}</td>}
                               {mode === "real" && showLastCost   && <td className="ta-right u-muted">{row.lastCost    != null ? fmt2(row.lastCost)    : ""}</td>}
                               {mode === "name" && showAvgCostCVM && <td className="ta-right u-muted">{row.averageCostCVM != null ? fmt2(row.averageCostCVM) : ""}</td>}
                               {mode === "name" && showAvgCostC   && <td className="ta-right u-muted">{row.averageCostC   != null ? fmt2(row.averageCostC)   : ""}</td>}
                               {mode === "name" && showLastCostC  && <td className="ta-right u-muted">{row.lastCostC      != null ? fmt2(row.lastCostC)      : ""}</td>}
                               {mode === "name" && showLastCostCVM&& <td className="ta-right u-muted">{row.lastCostCVM    != null ? fmt2(row.lastCostCVM)    : ""}</td>}
-                              {showAmountCol && <td className="ta-right u-muted">{(row.sqmTotal || row.qtySheet) ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
+                              {showAmountCol && <td className="ta-right u-muted">{(effectiveSqm(row) || row.qtySheet) ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
                             </tr>
                           )
                         )}
@@ -1208,8 +1271,9 @@ export default function ReportModal({
                           <tr>
                             <td colSpan={3} className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>Group Total:</td>
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totBox   ? fmt2(totBox)   : ""}</td>
+                            {showTripoliCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa", color: "#1a237e" }}>{totBoxTripoli ? fmt2(totBoxTripoli) : ""}</td>}
                             <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSheet ? fmt2(totSheet) : ""}</td>
-                            <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSqm   ? fmt2(totSqm)   : ""}</td>
+                            <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{totSqmEffective ? fmt2(totSqmEffective) : ""}</td>
                             {mode === "real" && showAvgCost    && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvg    != null ? fmt2(wAvg)    : ""}</td>}
                             {mode === "real" && showLastCost   && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}></td>}
                             {mode === "name" && showAvgCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wAvgCVM != null ? fmt2(wAvgCVM) : ""}</td>}
@@ -1235,7 +1299,7 @@ export default function ReportModal({
                     <div className="report-group-totals">
                       <span>Boxes: <strong>{fmt2(grandTotals.boxes)}</strong></span>
                       <span>Sheets: <strong>{fmt2(grandTotals.sheets)}</strong></span>
-                      <span className="u-muted">SQM: <strong>{fmt2(grandTotals.sqm)}</strong></span>
+                      <span className="u-muted">SQM: <strong>{fmt2(grandTotals.sqm + (showTripoliCol ? grandTotals.sqmTripoli : 0))}</strong></span>
                       {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(grandAmount)}</strong></span>}
                     </div>
                   </div>
@@ -1253,7 +1317,7 @@ export default function ReportModal({
                       <tr>
                         <td className="ta-right" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.boxes)}</td>
                         <td className="ta-right" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.sheets)}</td>
-                        <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.sqm)}</td>
+                        <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.sqm + (showTripoliCol ? grandTotals.sqmTripoli : 0))}</td>
                         {showAmountTotals && <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandAmount)}</td>}
                       </tr>
                     </tbody>

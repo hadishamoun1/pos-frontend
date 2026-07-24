@@ -110,6 +110,7 @@ const PERMISSION_GROUPS = [
       "transfers.create",
       "transfers.update",
       "transfers.delete",
+      "transfers.warehouseTransfer",
       "cuts.view",
       "inventory.view",
       "settings.accountRoles",

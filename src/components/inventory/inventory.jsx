@@ -200,9 +200,23 @@ export default function InventoryBrowser() {
   const [drawerVariantTotalQty, setDrawerVariantTotalQty] = useState(0);
   const [drawerVariantTotalSqm, setDrawerVariantTotalSqm] = useState(0);
 
+  // Home + remote warehouse (set in Warehouse Settings)
+  const [companyWarehouse, setCompanyWarehouse] = useState(null);
+  const [remoteWarehouse, setRemoteWarehouse] = useState("Tripoli");
+  useEffect(() => {
+    axiosClient.get("/warehouses").then((res) => {
+      const list = res?.data || [];
+      const home = list.find((w) => w.isHome);
+      const remote = list.find((w) => !w.isHome);
+      if (home?.name) setCompanyWarehouse(home.name.trim());
+      if (remote?.name) setRemoteWarehouse(remote.name.trim());
+    }).catch(() => {});
+  }, []);
+
   // Toggles
   const [includeZeros, setIncludeZeros] = useState(false);
   const [showBoth, setShowBoth] = useState(true);
+  const [showTripoli, setShowTripoli] = useState(false);
   const [asOf, setAsOf] = useState("");
 
   // description source
@@ -659,6 +673,11 @@ export default function InventoryBrowser() {
           Show SQM column
         </label>
 
+        <label className="invb-chk">
+          <input type="checkbox" checked={showTripoli} onChange={(e) => setShowTripoli(e.target.checked)} />
+          Inventory {remoteWarehouse}
+        </label>
+
         <button className="invb-btn" onClick={exportCsv} style={{ marginInlineStart: "auto" }}>
           ⬇ Export CSV (page)
         </button>
@@ -706,7 +725,7 @@ export default function InventoryBrowser() {
     </div>
   );
 
-  const colCount = 7 + (showBoth ? 1 : 0);
+  const colCount = 7 + (showBoth ? 1 : 0) + (showTripoli ? 1 : 0);
   const isNameMode = descMode === "name";
 
   return (
@@ -759,6 +778,7 @@ export default function InventoryBrowser() {
               <th className="ta-center">SPB</th>
               <th>Origin</th>
               <th className="ta-right">Balance (Qty)</th>
+              {showTripoli && <th className="ta-right" style={{ color: "#1a237e" }}>Qty {remoteWarehouse.slice(0,3)}</th>}
               {showBoth && <th className="ta-right">Balance (SQM)</th>}
               <th style={{ width: 1 }}></th>
             </tr>
@@ -789,6 +809,18 @@ export default function InventoryBrowser() {
 
                 const canViewBatches = descMode === "real" && Array.isArray(r?.batches);
 
+                const tripoliQty = showTripoli
+                  ? (r.batches || [])
+                      .filter((b) => (b.warehouse ?? null) === remoteWarehouse)
+                      .reduce((sum, b) => sum + batchQtyUnits(b, r), 0)
+                  : null;
+
+                const homeQty = showTripoli && companyWarehouse
+                  ? (r.batches || [])
+                      .filter((b) => (b.warehouse ?? null) === companyWarehouse)
+                      .reduce((sum, b) => sum + batchQtyUnits(b, r), 0)
+                  : null;
+
                 return (
                   <tr key={vid} className={lowStock ? "invb-row--low" : ""}>
                     <td style={{ direction: "rtl", textAlign: "right", maxWidth: 360 }} className="truncate">
@@ -809,6 +841,17 @@ export default function InventoryBrowser() {
                         </span>
                       )}
                     </td>
+                    {showTripoli && (
+                      <td className="ta-right" style={{ color: "#1a237e" }}>
+                        {tripoliQty > 0 ? (
+                          <span className="qty-pill">
+                            {fmt2(tripoliQty)} <span className="u-muted">{unitLabelFor(r.type)}</span>
+                          </span>
+                        ) : (
+                          <span className="u-muted">—</span>
+                        )}
+                      </td>
+                    )}
                     {showBoth && (
                       <td className="ta-right u-muted">
                         {balancesLoading && sqm === undefined ? "…" : sqm === undefined ? "—" : fmt2(sqm)}
@@ -913,6 +956,9 @@ export default function InventoryBrowser() {
         spbSourceRows={reportSpbRows}
         loading={reportLoading}
         mode={descMode}
+        showTripoliColInitial={showTripoli}
+        companyWarehouse={companyWarehouse}
+        remoteWarehouse={remoteWarehouse}
       />
     </div>
   );

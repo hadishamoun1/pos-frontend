@@ -75,6 +75,8 @@ const PurchasesInvoicePage = () => {
   const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
   const [isPurchaseReturn, setIsPurchaseReturn] = useState(false);
   const [returnBaseType, setReturnBaseType] = useState("S");
+  const [warehouse, setWarehouse] = useState("Shamoun");
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const saveLockRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -126,6 +128,7 @@ const PurchasesInvoicePage = () => {
     setShowTypePopup(false);
     setIsPurchaseReturn(false);
     setReturnBaseType("S");
+    setWarehouse("Shamoun");
   };
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
@@ -318,6 +321,16 @@ const handleViewJournalVoucher = async () => {
     setIsEditMode(false);
   }, [selectedInvoiceId]);
 
+  useEffect(() => {
+    axiosClient.get("/warehouses").then((res) => {
+      const list = (res?.data || []).map((w) => w.name);
+      if (list.length > 0) {
+        setWarehouseOptions(list);
+        setWarehouse((prev) => (list.includes(prev) ? prev : list[0]));
+      }
+    }).catch(() => {});
+  }, []);
+
   const [notif, setNotif] = useState({
     open: false,
     type: "success",
@@ -388,6 +401,7 @@ const handleViewJournalVoucher = async () => {
         poDate,
         type,
         supplierId,
+        warehouse,
         vatAmount: calculatedVatAmount.toFixed(2),
         vatPercent: vatRate,
         grandAmount: grandTotal,
@@ -589,6 +603,7 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
       setIsPurchaseReturn(false);
       setReturnBaseType("S");
     }
+    setWarehouse(fullInvoice.warehouse ?? "Shamoun");
     setPoDate(fullInvoice.poDate?.slice(0, 10) || "");
 
     // 4) items
@@ -708,6 +723,7 @@ setUnitPriceRows(
       setIsPurchaseReturn(false);
       setReturnBaseType("S");
     }
+    setWarehouse(inv.warehouse ?? "Shamoun");
     const mapped = (inv.items ?? []).map((i) => {
       const v = i.itemVariant;
       const t = v?.thickness;
@@ -1126,6 +1142,19 @@ return (
               >
                 <option value="USD">USD</option>
                 <option value="EURO">EURO</option>
+              </select>
+            </label>
+
+            <label>
+              Warehouse
+              <select
+                value={warehouse}
+                onChange={(e) => setWarehouse(e.target.value)}
+                disabled={!canEdit}
+              >
+                {(warehouseOptions.length > 0 ? warehouseOptions : [warehouse]).map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
             </label>
 

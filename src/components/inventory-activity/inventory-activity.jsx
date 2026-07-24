@@ -260,6 +260,7 @@ export default function InventoryActivityPage() {
       { Header: "Subcategory", accessor: "subCategory" },
       { Header: "Item Name", accessor: "name" },
       { Header: "Condition", accessor: "condition" },
+      { Header: "Warehouse", accessor: "warehouse" },
       { Header: "Batch Date", accessor: "batchDate" },
       { Header: "Dimensions", accessor: "dimension" },
       { Header: "Brand", accessor: "origin" },
@@ -315,6 +316,7 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
 
         name: `${r.thickness} ملم ${r.itemName}`,
         condition: r.itemBatch?.condition || "—",
+        warehouse: r.itemBatch?.warehouse || "—",
         batchDate: r.itemBatch?.dateReceived || "—",
         dimension:
           r.itemType === "box" && r.sheetsPerBox
@@ -428,6 +430,7 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
       subCategory: { type: "textLike", api: "subCategory" },
       name: { type: "nameContains", api: "nameContains" },
       condition: { type: "textLike", api: "condition" },
+      warehouse: { type: "textLike", api: "warehouse" },
       batchDate: { type: "date", api: "batchDate" },
       dimension: { type: "dimension", api: "dimension" },
       origin: { type: "textLike", api: "origin" },

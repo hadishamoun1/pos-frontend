@@ -4,37 +4,57 @@ import PreviewTransferTable from "./previewTransferTable";
 import NotificationModal from "../recievables/NotificationModal";
 import "./transferModal.css";
 import { axiosClient } from "../api/axiosClient";
+import { hasPerm } from "../auth/authz";
 
-const LOCATION_OPTIONS = [
+const BASE_LOCATION_OPTIONS = [
   "BS", "SB", "SQM", "SQM Return", "Breakage",
   "Adjustment +", "Adjustment -", "Defects",
 ];
 
 // Display label → backend value sent to API
-const LOCATION_TO_BACKEND = {
+const FIXED_LOCATION_TO_BACKEND = {
   "BS":         "JF",
   "SB":         "FJ",
   "SQM":        "BOSTS",
   "SQM Return": "STBOS",
 };
-const toBackendLocation = (loc) => LOCATION_TO_BACKEND[loc] ?? loc;
+
+// Convert display label to backend value
+// Fixed labels use the table above; "To X" → "To:X" (new dynamic format)
+// Legacy "ToTripoli"/"ToShamoun" records are handled in the reverse mapping only
+const toBackendLocation = (loc) => {
+  if (FIXED_LOCATION_TO_BACKEND[loc]) return FIXED_LOCATION_TO_BACKEND[loc];
+  if (loc?.startsWith("To ")) return `To:${loc.slice(3)}`; // "To Tripoli" → "To:Tripoli"
+  return loc;
+};
 
 // Backend value → display label (for loading existing transfers)
-const BACKEND_TO_LOCATION = Object.fromEntries(
-  Object.entries(LOCATION_TO_BACKEND).map(([display, backend]) => [backend, display])
-);
-const toDisplayLocation = (loc) => BACKEND_TO_LOCATION[loc] ?? loc;
+const FIXED_BACKEND_TO_DISPLAY = {
+  "JF":    "BS",
+  "FJ":    "SB",
+  "BOSTS": "SQM",
+  "STBOS": "SQM Return",
+  // legacy hardcoded warehouse transfer values
+  "ToTripoli": "To Tripoli",
+  "ToShamoun": "To Shamoun",
+};
+const toDisplayLocation = (loc) => {
+  if (FIXED_BACKEND_TO_DISPLAY[loc]) return FIXED_BACKEND_TO_DISPLAY[loc];
+  if (loc?.startsWith("To:")) return `To ${loc.slice(3)}`; // "To:Tripoli" → "To Tripoli"
+  return loc ?? "";
+};
 
-const LOCATION_COLORS = {
-  "BS":         { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
-  "SB":         { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
-  "SQM":        { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
-  "SQM Return": { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
+const BASE_LOCATION_COLORS = {
+  "BS":           { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
+  "SB":           { bg: "#e8f4fd", border: "#2196f3", text: "#1565c0" },
+  "SQM":          { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
+  "SQM Return":   { bg: "#f3e8fd", border: "#9c27b0", text: "#6a1b9a" },
   "Breakage":     { bg: "#fdecea", border: "#f44336", text: "#b71c1c" },
   "Adjustment +": { bg: "#e8f5e9", border: "#4caf50", text: "#1b5e20" },
   "Adjustment -": { bg: "#fff3e0", border: "#ff9800", text: "#e65100" },
   "Defects":      { bg: "#fdecea", border: "#f44336", text: "#b71c1c" },
 };
+const WH_COLOR = { bg: "#e8f0fe", border: "#3f51b5", text: "#1a237e" };
 
 const CONDITION_ROW_COLOR = (condition) => {
   const c = (condition || "").toLowerCase();
@@ -52,12 +72,35 @@ const toNum = (v, fallback = 0) => {
 export default function TransferModal({ isOpen, onClose, existingTransfer = null, isEdit = false }) {
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [warehouses, setWarehouses] = useState([]);
+
+  // Build full location options: base + "To [WarehouseName]" for each configured warehouse
+  // Warehouse transfer options are only shown if the user has the permission
+  const canWarehouseTransfer = hasPerm("transfers.warehouseTransfer");
+  const locationOptions = useMemo(() => {
+    if (!canWarehouseTransfer) return BASE_LOCATION_OPTIONS;
+    const toOptions = warehouses.map((w) => `To ${w.name}`);
+    return [...BASE_LOCATION_OPTIONS, ...toOptions];
+  }, [warehouses, canWarehouseTransfer]);
+
+  // Build color map including dynamic warehouse options
+  const locationColors = useMemo(() => {
+    const map = { ...BASE_LOCATION_COLORS };
+    warehouses.forEach((w) => { map[`To ${w.name}`] = WH_COLOR; });
+    return map;
+  }, [warehouses]);
+
+  useEffect(() => {
+    axiosClient.get("/warehouses").catch(() => ({ data: [] })).then((res) => {
+      setWarehouses(res?.data || []);
+    });
+  }, []);
 
   const [details, setDetails] = useState({
     transferNumber: "",
     date: new Date().toISOString().slice(0, 10),
     type: "G",
-    location: LOCATION_OPTIONS[0],
+    location: BASE_LOCATION_OPTIONS[0],
   });
 
   const [rows, setRows] = useState([]);
@@ -70,6 +113,21 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
   const [editingId, setEditingId] = useState(existingTransfer?.id ?? null);
   const [reloadKey, setReloadKey] = useState(0);
   const isEditing = !!editingId;
+
+  // For "To X": show items from the OTHER warehouse so user picks what to transfer.
+  // With 2 warehouses the source is unambiguous; with 3+ we use the home warehouse as source.
+  const warehouseFilter = useMemo(() => {
+    if (!details.location.startsWith("To ")) return undefined;
+    const targetName = details.location.slice(3); // "To Tripoli" → "Tripoli"
+    if (warehouses.length === 0) return undefined;
+    if (warehouses.length === 2) {
+      return warehouses.find((w) => w.name !== targetName)?.name ?? undefined;
+    }
+    // 3+ warehouses: use home warehouse as source when target is not home
+    const home = warehouses.find((w) => w.isHome);
+    if (!home || home.name === targetName) return undefined;
+    return home.name;
+  }, [details.location, warehouses]);
 
   const existingKeys = useMemo(() => {
     const s = new Set();
@@ -104,7 +162,7 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
       transferNumber: transfer.transferNumber || "",
       date: transfer.date ? String(transfer.date).slice(0, 10) : new Date().toISOString().slice(0, 10),
       type: transfer.type || "G",
-      location: toDisplayLocation(transfer.location || LOCATION_OPTIONS[0]),
+      location: toDisplayLocation(transfer.location || BASE_LOCATION_OPTIONS[0]),
     });
     const mappedRows = (transfer.items || []).map((i) => ({
       itemBatchId: i.itemBatchId ?? i.batchId ?? i.itemBatch?.id ?? null,
@@ -148,7 +206,7 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
   if (!isOpen) return null;
 
   const resetAll = () => {
-    setDetails({ transferNumber: "", date: new Date().toISOString().slice(0, 10), type: "G", location: LOCATION_OPTIONS[0] });
+    setDetails({ transferNumber: "", date: new Date().toISOString().slice(0, 10), type: "G", location: BASE_LOCATION_OPTIONS[0] });
     setRows([]);
     setPreviewing(false);
     setEditingId(null);
@@ -339,7 +397,7 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
   const totalQty = rows.reduce((s, r) => s + toNum(r.quantity, 0), 0);
   const totalSqm = rows.reduce((s, r) => s + toNum(r.sqm, 0), 0);
 
-  const locColor = LOCATION_COLORS[details.location] || { bg: "#f5f5f5", border: "#ccc", text: "#333" };
+  const locColor = locationColors[details.location] || { bg: "#f5f5f5", border: "#ccc", text: "#333" };
 
   return (
     <>
@@ -389,8 +447,8 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
                 <div className="tm-field tm-field--grow">
                   <span className="tm-field-label">Location</span>
                   <div className="tm-location-chips">
-                    {LOCATION_OPTIONS.map((loc) => {
-                      const col = LOCATION_COLORS[loc];
+                    {locationOptions.map((loc) => {
+                      const col = locationColors[loc] || { bg: "#f5f5f5", border: "#ccc", text: "#333" };
                       const active = details.location === loc;
                       return (
                         <button
@@ -577,6 +635,7 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
         onClose={() => setSearchOpen(false)}
         onSelect={handleSelectItems}
         existingKeys={existingKeys}
+        warehouseFilter={warehouseFilter}
       />
 
       <TransferSearchModal
@@ -585,6 +644,7 @@ export default function TransferModal({ isOpen, onClose, existingTransfer = null
         onSelect={handleSelectBoxForRow}
         existingKeys={new Set()}
         singleSelect={true}
+        warehouseFilter={warehouseFilter}
       />
 
       {notif.open && (

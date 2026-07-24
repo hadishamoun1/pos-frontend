@@ -18,6 +18,7 @@ const TransferSearchModal = ({
   onSelect,
   existingKeys = new Set(),
   singleSelect = false,
+  warehouseFilter = undefined,
 }) => {
   const [inputValue, setInputValue] = useState("");
   const [qChip, setQChip] = useState("");
@@ -57,6 +58,7 @@ const TransferSearchModal = ({
             limit,
             instockOnly: true,
             includeDesc: true,
+            ...(warehouseFilter ? { warehouse: warehouseFilter } : {}),
           },
         });
 
@@ -85,7 +87,7 @@ const TransferSearchModal = ({
         setLoading(false);
       }
     },
-    [limit]
+    [limit, warehouseFilter]
   );
 
   const fetchSearchPage = useCallback(
@@ -100,6 +102,7 @@ const TransferSearchModal = ({
             dims: dimsChip || undefined,
             page: pageToLoad,
             limit,
+            ...(warehouseFilter ? { warehouse: warehouseFilter } : {}),
           },
         });
 
@@ -133,7 +136,7 @@ const TransferSearchModal = ({
         setLoading(false);
       }
     },
-    [qChip, dimsChip, limit]
+    [qChip, dimsChip, limit, warehouseFilter]
   );
 
   // reset everything when modal opens
@@ -197,6 +200,7 @@ const TransferSearchModal = ({
           itemBatchId: item.batchId,
           condition: item.condition,
           dateReceived: item.dateReceived,
+          warehouse: item.warehouse ?? null,
           balanceOFR: item.balanceOFR,
         };
       });
@@ -249,6 +253,7 @@ const TransferSearchModal = ({
 
               condition: b?.condition ?? "",
               dateReceived: b?.dateReceived ?? null,
+              warehouse: b?.warehouse ?? null,
               balanceOFR: b?.balanceOFR ?? 0,
             });
           }
@@ -405,6 +410,7 @@ const TransferSearchModal = ({
                 <th>Origin</th>
                 <th>Type</th>
                 <th>Condition</th>
+                <th>Warehouse</th>
                 <th>Date Received</th>
                 <th>Balance OFR</th>
               </tr>
@@ -440,6 +446,7 @@ const TransferSearchModal = ({
                     <td>{r.origin}</td>
                     <td>{r.itemVariantType}</td>
                     <td>{r.condition}</td>
+                    <td>{r.warehouse ?? "—"}</td>
                     <td>{r.dateReceived}</td>
                     <td>{r.balanceOFR}</td>
                   </tr>
@@ -448,7 +455,7 @@ const TransferSearchModal = ({
 
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="empty-cell">
+                  <td colSpan={11} className="empty-cell">
                     {isSearchMode ? "No results" : "No items loaded"}
                   </td>
                 </tr>
@@ -456,7 +463,7 @@ const TransferSearchModal = ({
 
               {loading && (
                 <tr>
-                  <td colSpan={10} className="empty-cell">
+                  <td colSpan={11} className="empty-cell">
                     Loading...
                   </td>
                 </tr>
