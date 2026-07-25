@@ -13,7 +13,7 @@ import { axiosClient } from "../api/axiosClient"; // ✅ use api client
 import "./AllTab.css";
 
 const AllTab = forwardRef(function AllTab(
-  { modalOpen, isActive, selectedMap, setSelectedMap },
+  { modalOpen, isActive, selectedMap, setSelectedMap, homeWarehouse },
   ref
 ) {
   const [flatRows, setFlatRows] = useState([]);
@@ -240,9 +240,9 @@ const AllTab = forwardRef(function AllTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
-        // ✅ relative path (NO baseUrl, NO /api here)
         const url = `/items/v2/filtered-items-all-batches`;
-        const params = { page: targetPage, limit };
+        const params: any = { page: targetPage, limit };
+        if (homeWarehouse) params.warehouse = homeWarehouse;
         const res = await axiosClient.get(url, { params, signal });
         const { data: flat, hasMore: hm } = normalizeEnvelope(res.data);
 
@@ -260,7 +260,7 @@ const AllTab = forwardRef(function AllTab(
         setLoading(false);
       }
     },
-    [isActive, limit, modalOpen, normalizeEnvelope]
+    [isActive, limit, modalOpen, normalizeEnvelope, homeWarehouse]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -271,9 +271,9 @@ const AllTab = forwardRef(function AllTab(
     setLoading(true);
     try {
       const signal = cancelInFlight();
-      // ✅ relative path (NO baseUrl, NO /api here)
       const url = `/items/pos/search-modal`;
-      const params = { page: 1, limit: 200, includeEmpty: 1 };
+      const params: any = { page: 1, limit: 200, includeEmpty: 1 };
+      if (homeWarehouse) params.warehouse = homeWarehouse;
 
       if (nameChip) params.q = normalizeArabic(nameChip);
 
@@ -307,6 +307,7 @@ const AllTab = forwardRef(function AllTab(
     nameChip,
     normalizeArabic,
     normalizeDigits,
+    homeWarehouse,
   ]);
 
   // ✅ clear everything (input + chips + bubbles)

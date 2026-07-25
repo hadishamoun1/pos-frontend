@@ -88,7 +88,7 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
 }
 
 const StockTab = forwardRef(function StockTab(
-  { modalOpen, isActive, selectedMap, setSelectedMap },
+  { modalOpen, isActive, selectedMap, setSelectedMap, homeWarehouse },
   ref
 ) {
   const { t } = useTranslation(); // ✅ ADD THIS LINE
@@ -317,8 +317,9 @@ const StockTab = forwardRef(function StockTab(
       setLoading(true);
       try {
         const signal = cancelInFlight();
+        const whParams = homeWarehouse ? { warehouse: homeWarehouse } : {};
         const res = await axiosClient.get("/items/v1/real-variant-ledger", {
-          params: { page: targetPage, limit, includeSqm: true },
+          params: { page: targetPage, limit, includeSqm: true, ...whParams },
           signal,
         });
         const { data: variants, hasMore: hm } = normalizeEnvelope(res.data);
@@ -338,7 +339,7 @@ const StockTab = forwardRef(function StockTab(
         setLoading(false);
       }
     },
-    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants]
+    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants, homeWarehouse]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -361,6 +362,7 @@ const StockTab = forwardRef(function StockTab(
         }
       }
 
+      if (homeWarehouse) params.warehouse = homeWarehouse;
       const res = await axiosClient.get("/items/v1/real-variant-ledger", { params: { ...params, includeSqm: true }, signal });
       const { data: variants } = normalizeEnvelope(res.data);
       const flat = flattenVariants(variants);
@@ -388,6 +390,7 @@ const StockTab = forwardRef(function StockTab(
     normalizeDigits,
     normalizeEnvelope,
     flattenVariants,
+    homeWarehouse,
   ]);
 
   const clearEverything = useCallback(() => {

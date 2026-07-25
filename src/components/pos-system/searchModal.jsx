@@ -6,9 +6,11 @@ import AllTab from "./AllTab";
 import SqmPiecesTab from "./SqmPiecesTab";
 import { hasPerm } from "../auth/authz";
 import { useTranslation } from "../hooks/useTranslation"; // ✅ NEW
+import { axiosClient } from "../api/axiosClient";
 
 const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const { t } = useTranslation(); // ✅ NEW
+  const [homeWarehouse, setHomeWarehouse] = useState(null);
 
   // ✅ permissions: control all 3 tabs
   const canStock = hasPerm("pos.search.stockTab");
@@ -46,6 +48,15 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     const first = allowedTabs[0] || null;
     setActiveTab(first || "all");
   }, [isOpen, allowedTabs]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    axiosClient.get("/warehouses").then((res) => {
+      const list = res?.data || [];
+      const home = list.find((w) => w.isHome);
+      if (home?.name) setHomeWarehouse(home.name.trim());
+    }).catch(() => {});
+  }, [isOpen]);
 
   // if permissions change or active tab is no longer allowed, move to first allowed
   useEffect(() => {
@@ -155,6 +166,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
               isActive={activeTab === "stock"}
               selectedMap={selectedStock}
               setSelectedMap={setSelectedStock}
+              homeWarehouse={homeWarehouse}
             />
           </div>
         )}
@@ -167,6 +179,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
               isActive={activeTab === "all"}
               selectedMap={selectedAll}
               setSelectedMap={setSelectedAll}
+              homeWarehouse={homeWarehouse}
             />
           </div>
         )}
