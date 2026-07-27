@@ -36,6 +36,7 @@ const PERMISSION_GROUPS = [
       "rvrRandomizer.view",
       "invoiceTypeConverter.view",
       "receivableTypeConverter.view",
+      "receivableSequenceAudit.view",
     ],
   },
   {
@@ -162,6 +163,7 @@ const PERMISSION_GROUPS = [
       "rvrRandomizer.view",
       "invoiceTypeConverter.view",
       "receivableTypeConverter.view",
+      "receivableSequenceAudit.view",
     ],
   },
   {

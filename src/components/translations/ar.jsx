@@ -199,6 +199,7 @@ export const ar = {
       rvrRandomizer: "موزع RVR العشوائي",
       invoiceTypeConverter: "محوّل نوع الفاتورة",
       receivableTypeConverter: "محوّل نوع المقبوضات",
+      receivableSequenceAudit: "مراجعة تسلسل المقبوضات",
     },
   },
 

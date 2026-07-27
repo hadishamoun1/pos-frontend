@@ -1,0 +1,143 @@
+.rsa-page {}
+
+.rsa-badge-gap {
+  background: #f59e0b;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rsa-badge-ok {
+  background: #22c55e;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Gap rows */
+.rsa-gap-row {
+  background: #fef3c7;
+}
+@media (prefers-color-scheme: dark) {
+  .rsa-gap-row { background: #3b2a00; }
+}
+
+.rsa-gap-cell {
+  padding: 4px 12px !important;
+}
+
+.rsa-gap-label {
+  font-size: 12px;
+  color: #d97706;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Wrong number rows */
+.rsa-wrong-row {
+  background: #fef2f2;
+}
+@media (prefers-color-scheme: dark) {
+  .rsa-wrong-row { background: #2d0a0a; }
+}
+
+.rsa-wrong-badge {
+  margin-left: 6px;
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.rsa-status-wrong {
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rsa-status-ok {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.rsa-seq {
+  color: #9ca3af;
+  font-size: 12px;
+  text-align: right;
+  padding-right: 8px !important;
+}
+
+/* Type badges */
+.rsa-type-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.rsa-type-s   { background: #dbeafe; color: #1d4ed8; }
+.rsa-type-rvr { background: #dcfce7; color: #15803d; }
+.rsa-type-g   { background: #f3e8ff; color: #7e22ce; }
+
+@media (prefers-color-scheme: dark) {
+  .rsa-type-s   { background: #1e3a5f; color: #93c5fd; }
+  .rsa-type-rvr { background: #14532d; color: #86efac; }
+  .rsa-type-g   { background: #3b1a6b; color: #d8b4fe; }
+}
+
+/* Inline edit */
+.rsa-edit-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rsa-edit-input {
+  padding: 3px 7px;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+  width: 140px;
+}
+
+.rsa-hint-btn {
+  font-size: 11px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+.rsa-hint-btn:hover { background: #dbeafe; }
+
+@media (prefers-color-scheme: dark) {
+  .rsa-hint-btn { background: #1e3a5f; border-color: #2563eb; color: #93c5fd; }
+  .rsa-hint-btn:hover { background: #1d4ed8; color: #fff; }
+  .rsa-edit-input { background: #1f2937; color: #f9fafb; border-color: #3b82f6; }
+}
+
+.rsa-edit-error {
+  color: #ef4444;
+  font-size: 11px;
+}
+
+.rsa-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.rsa-sm-btn {
+  padding: 3px 8px !important;
+  font-size: 12px !important;
+}
+
+.rsa-table th,
+.rsa-table td {
+  white-space: nowrap;
+}

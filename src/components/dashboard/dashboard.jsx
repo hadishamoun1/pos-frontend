@@ -43,7 +43,8 @@ const sections = [
   { key: "recording",         path: "/recording",          image: "/assets/recording.png",          perm: "recording.view" },
   { key: "rvrRandomizer",        path: "/rvr-randomizer",          image: "/assets/rvr.png",          perm: "rvrRandomizer.view" },
   { key: "invoiceTypeConverter",    path: "/invoice-type-converter",    image: "/assets/rvr.png", perm: "invoiceTypeConverter.view" },
-  { key: "receivableTypeConverter", path: "/receivable-type-converter", image: "/assets/rvr.png", perm: "receivableTypeConverter.view" },
+  { key: "receivableTypeConverter",  path: "/receivable-type-converter",  image: "/assets/rvr.png", perm: "receivableTypeConverter.view" },
+  { key: "receivableSequenceAudit",  path: "/receivable-sequence-audit",  image: "/assets/rvr.png", perm: "receivableSequenceAudit.view" },
 ];
 
 const DashboardPage = () => {

@@ -207,6 +207,7 @@ export const en = {
       rvrRandomizer: "RVR Bulk Randomizer",
       invoiceTypeConverter: "Invoice Type Converter",
       receivableTypeConverter: "Receivable Type Converter",
+      receivableSequenceAudit: "Receivable Sequence Audit",
     },
   },
 
