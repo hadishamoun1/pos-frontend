@@ -272,9 +272,12 @@ const AccountingPage = () => {
     if (loadingMore) return;
     setLoadingMore(true);
     try {
-      const res = await axiosClient.get(`/recievables/v1/summary`, {
-        params: { limit: PAGE_SIZE, offset: nextOffset },
-      });
+      const params = { limit: PAGE_SIZE, offset: nextOffset };
+      if (filterCustomer.trim()) params.customer = filterCustomer.trim();
+      if (filterCashNumber.trim()) params.cashNumber = filterCashNumber.trim();
+      if (filterDateFrom) params.dateFrom = filterDateFrom;
+      if (filterDateTo) params.dateTo = filterDateTo;
+      const res = await axiosClient.get(`/recievables/v1/summary`, { params });
       const { data: rows } = res.data;
       const formatted = formatRows(rows);
       setData((prev) => [...prev, ...formatted]);
@@ -383,48 +386,63 @@ const AccountingPage = () => {
   const hasActiveFilters = filterCustomer || filterCashNumber || filterDateFrom || filterDateTo;
 
   const searchAbortRef = useRef(null);
+  const filterMountRef = useRef(true);
+
+  // Server-side filter fetch — runs whenever any of the 4 filter fields change
+  useEffect(() => {
+    if (filterMountRef.current) {
+      filterMountRef.current = false;
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSelectedRowIndex(null);
+      setLoading(true);
+      try {
+        const params = { limit: PAGE_SIZE, offset: 0 };
+        if (filterCustomer.trim()) params.customer = filterCustomer.trim();
+        if (filterCashNumber.trim()) params.cashNumber = filterCashNumber.trim();
+        if (filterDateFrom) params.dateFrom = filterDateFrom;
+        if (filterDateTo) params.dateTo = filterDateTo;
+        const res = await axiosClient.get(`/recievables/v1/summary`, { params });
+        const { data: rows, total: serverTotal } = res.data;
+        const formatted = formatRows(rows);
+        setData(formatted);
+        setFilteredData(formatted);
+        setTotal(serverTotal);
+        setNextOffset(PAGE_SIZE);
+      } catch (err) {
+        console.error("filter fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCustomer, filterCashNumber, filterDateFrom, filterDateTo]);
+
+  // Client-side search term filter on loaded data
   useEffect(() => {
     const norm = (v) => String(v ?? "").toLowerCase();
     const term = (searchTerm || "").trim();
 
-    let result = data;
-
-    // Filter by customer name
-    if (filterCustomer.trim()) {
-      const fc = norm(filterCustomer.trim());
-      result = result.filter((r) => norm(r.customerName).includes(fc));
+    if (!term) {
+      setFilteredData(data);
+      return;
     }
 
-    // Filter by cash number
-    if (filterCashNumber.trim()) {
-      const fn = norm(filterCashNumber.trim());
-      result = result.filter((r) => norm(r.cashNumber).includes(fn));
-    }
-
-    // Filter by date range
-    if (filterDateFrom) {
-      result = result.filter((r) => r.date >= filterDateFrom);
-    }
-    if (filterDateTo) {
-      result = result.filter((r) => r.date <= filterDateTo);
-    }
-
-    // General search term
-    if (term) {
-      const tt = norm(term);
-      result = result.filter(
-        (r) =>
-          norm(r.customerName).includes(tt) ||
-          norm(r.refInvoice).includes(tt) ||
-          norm(r.invoiceNumber).includes(tt) ||
-          norm(r.comments).includes(tt) ||
-          norm(r.pmtType).includes(tt)
-      );
-    }
+    const tt = norm(term);
+    const result = data.filter(
+      (r) =>
+        norm(r.customerName).includes(tt) ||
+        norm(r.refInvoice).includes(tt) ||
+        norm(r.invoiceNumber).includes(tt) ||
+        norm(r.comments).includes(tt) ||
+        norm(r.pmtType).includes(tt)
+    );
 
     setFilteredData(result);
 
-    if (!term || term.length < 2) return;
+    if (term.length < 2) return;
 
     const timeout = setTimeout(async () => {
       if (searchAbortRef.current) searchAbortRef.current.abort();
@@ -460,7 +478,7 @@ const AccountingPage = () => {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchTerm, filterCustomer, filterCashNumber, filterDateFrom, filterDateTo, data]);
+  }, [searchTerm, data]);
 
   const handlePreviewReceipt = (record) => setReceiptPreviewRecord(record);
 
