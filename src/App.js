@@ -37,6 +37,7 @@ const RecordingPage            = lazy(() => import("./components/recording/Recor
 const MaintenanceModePage      = lazy(() => import("./components/settings/MaintenanceModePage"));
 const RVRBulkRandomizer        = lazy(() => import("./components/settings/RVRBulkRandomizer"));
 const InvoiceTypeConverter     = lazy(() => import("./components/settings/InvoiceTypeConverter"));
+const ReceivableTypeConverter  = lazy(() => import("./components/settings/ReceivableTypeConverter"));
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
 const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
@@ -98,6 +99,14 @@ function App() {
                     element={
                       hasPerm("invoiceTypeConverter.view")
                         ? <InvoiceTypeConverter />
+                        : <Navigate to="/dashboard" replace />
+                    }
+                  />
+                  <Route
+                    path="/receivable-type-converter"
+                    element={
+                      hasPerm("receivableTypeConverter.view")
+                        ? <ReceivableTypeConverter />
                         : <Navigate to="/dashboard" replace />
                     }
                   />

@@ -42,7 +42,8 @@ const sections = [
   { key: "faceEnroll",        path: "/face-enroll",        image: "/assets/faceLogin.png",        perm: "faceEnroll.view" },
   { key: "recording",         path: "/recording",          image: "/assets/recording.png",          perm: "recording.view" },
   { key: "rvrRandomizer",        path: "/rvr-randomizer",          image: "/assets/rvr.png",          perm: "rvrRandomizer.view" },
-  { key: "invoiceTypeConverter", path: "/invoice-type-converter",  image: "/assets/rvr.png",          perm: "invoiceTypeConverter.view" },
+  { key: "invoiceTypeConverter",    path: "/invoice-type-converter",    image: "/assets/rvr.png", perm: "invoiceTypeConverter.view" },
+  { key: "receivableTypeConverter", path: "/receivable-type-converter", image: "/assets/rvr.png", perm: "receivableTypeConverter.view" },
 ];
 
 const DashboardPage = () => {

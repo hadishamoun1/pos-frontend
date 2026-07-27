@@ -198,6 +198,7 @@ export const ar = {
       recording: "التحكم بالتسجيل",
       rvrRandomizer: "موزع RVR العشوائي",
       invoiceTypeConverter: "محوّل نوع الفاتورة",
+      receivableTypeConverter: "محوّل نوع المقبوضات",
     },
   },
 

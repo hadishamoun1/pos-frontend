@@ -35,6 +35,7 @@ const PERMISSION_GROUPS = [
       "activity.view",
       "rvrRandomizer.view",
       "invoiceTypeConverter.view",
+      "receivableTypeConverter.view",
     ],
   },
   {
@@ -160,6 +161,7 @@ const PERMISSION_GROUPS = [
       "purchases.createReturn",
       "rvrRandomizer.view",
       "invoiceTypeConverter.view",
+      "receivableTypeConverter.view",
     ],
   },
   {

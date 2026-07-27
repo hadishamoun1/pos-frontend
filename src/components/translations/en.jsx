@@ -206,6 +206,7 @@ export const en = {
       recording: "Recording Control",
       rvrRandomizer: "RVR Bulk Randomizer",
       invoiceTypeConverter: "Invoice Type Converter",
+      receivableTypeConverter: "Receivable Type Converter",
     },
   },
 
