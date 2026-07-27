@@ -33,6 +33,9 @@ const AccountingPage = () => {
   const [filterCashNumber, setFilterCashNumber] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [total, setTotal] = useState(0);
+  const [nextOffset, setNextOffset] = useState(200);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
@@ -40,6 +43,8 @@ const AccountingPage = () => {
   const [receiptPreviewRecord, setReceiptPreviewRecord] = useState(null);
 
   const [newlyAddedIds, setNewlyAddedIds] = useState(new Set());
+
+  const PAGE_SIZE = 200;
 
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [stmtCustomerId, setStmtCustomerId] = useState(null);
@@ -245,6 +250,42 @@ const AccountingPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
+  const formatRows = (rows) =>
+    (rows || []).map((v) => ({
+      id: v.id,
+      date: v.date.slice(0, 10),
+      customerName: v.customerName,
+      customerAccountId: v.customerid,
+      currency: v.currency,
+      exchangeRate: v.exchangeRate,
+      cashNumber: v.cashNumber,
+      amountExchanged: v.amountExchanged,
+      refInvoice: v.invoiceId,
+      invoiceNumber: v.jvNumber,
+      pmtType: v.pmtType,
+      comments: v.comments,
+      rct: v.jvNumber,
+      type: v.type,
+    }));
+
+  const loadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await axiosClient.get(`/recievables/v1/summary`, {
+        params: { limit: PAGE_SIZE, offset: nextOffset },
+      });
+      const { data: rows } = res.data;
+      const formatted = formatRows(rows);
+      setData((prev) => [...prev, ...formatted]);
+      setNextOffset((prev) => prev + PAGE_SIZE);
+    } catch (err) {
+      console.error("loadMore error:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   // ✅ FIXED: do NOT depend on `t` (which may change every render)
   // Use `language` instead (only changes when language changes).
   useEffect(() => {
@@ -252,27 +293,15 @@ const AccountingPage = () => {
 
     const fetchData = async () => {
       try {
-        const res = await axiosClient.get(`/recievables/v1/summary`);
-
-        const formatted = (res.data || []).map((v) => ({
-          id: v.id,
-          date: v.date.slice(0, 10),
-          customerName: v.customerName,
-          customerAccountId: v.customerid,
-          currency: v.currency,
-          exchangeRate: v.exchangeRate,
-          cashNumber: v.cashNumber,
-          amountExchanged: v.amountExchanged,
-          refInvoice: v.invoiceId,
-          invoiceNumber: v.jvNumber,
-          pmtType: v.pmtType,
-          comments: v.comments,
-          rct: v.jvNumber,
-          type: v.type,
-        }));
-
+        const res = await axiosClient.get(`/recievables/v1/summary`, {
+          params: { limit: PAGE_SIZE, offset: 0 },
+        });
+        const { data: rows, total: serverTotal } = res.data;
+        const formatted = formatRows(rows);
         setData(formatted);
         setFilteredData(formatted);
+        setTotal(serverTotal);
+        setNextOffset(PAGE_SIZE);
       } catch (err) {
         console.error("🚨 fetchData error:", err);
         setError(err?.message || t("receivables.page.errors.failedLoadData"));
@@ -299,40 +328,34 @@ const AccountingPage = () => {
       });
 
       socket.on("recievables", (updated) => {
-        const fmt = (updated || []).map((v) => ({
-          id: v.id,
-          date: v.date.slice(0, 10),
-          customerName: v.customerName,
-          customerAccountId: v.customerid,
-          currency: v.currency,
-          exchangeRate: v.exchangeRate,
-          cashNumber: v.cashNumber,
-          amountExchanged: v.amountExchanged,
-          refInvoice: v.invoiceId,
-          invoiceNumber: v.jvNumber,
-          pmtType: v.pmtType,
-          comments: v.comments,
-          rct: v.jvNumber,
-          type: v.type,
-        }));
+        const fmt = formatRows(updated);
+        const fmtMap = new Map(fmt.map((item) => [item.id, item]));
+
+        setTotal(fmt.length);
 
         setData((prevData) => {
           const prevIds = new Set(prevData.map((item) => item.id));
-          const newIds = new Set();
 
-          fmt.forEach((item) => {
-            if (!prevIds.has(item.id)) newIds.add(item.id);
-          });
+          // Only treat an entry as "new" if its id is higher than every id
+          // currently loaded — otherwise it's just an unloaded pagination page.
+          const maxLoadedId = prevData.length
+            ? Math.max(...prevData.map((item) => item.id))
+            : -Infinity;
+          const newItems = fmt.filter(
+            (item) => !prevIds.has(item.id) && item.id > maxLoadedId,
+          );
 
-          if (newIds.size > 0) {
-            setNewlyAddedIds(newIds);
+          if (newItems.length > 0) {
+            setNewlyAddedIds(new Set(newItems.map((item) => item.id)));
             setTimeout(() => setNewlyAddedIds(new Set()), 5000);
           }
 
-          return fmt;
+          // Update or remove existing items; prepend new ones
+          const updatedExisting = prevData
+            .filter((item) => fmtMap.has(item.id))
+            .map((item) => fmtMap.get(item.id));
+          return [...newItems, ...updatedExisting];
         });
-
-        setFilteredData(fmt);
       });
     } catch (err) {
       console.warn("Socket.io not available:", err);
@@ -341,6 +364,7 @@ const AccountingPage = () => {
     return () => {
       if (socket) socket.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]); // ✅ FIX (was [t])
 
   const formatNumberWithCommas = (n) =>
@@ -480,7 +504,7 @@ const AccountingPage = () => {
                 </button>
               )}
               <span className="rct-filter-count">
-                {filteredData.length} / {data.length}
+                {filteredData.length} / {data.length} / {total}
               </span>
             </div>
 
@@ -606,6 +630,20 @@ const AccountingPage = () => {
                   })}
                 </tbody>
               </table>
+
+              {data.length < total && (
+                <div className="rct-load-more">
+                  <button
+                    className="rct-load-more-btn"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore
+                      ? "Loading…"
+                      : `Load More (${total - data.length} remaining)`}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
