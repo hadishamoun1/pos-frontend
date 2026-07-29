@@ -6,6 +6,8 @@ export default function WarehouseSettings() {
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState("");
 
   const fetch = async () => {
     try {
@@ -41,6 +43,29 @@ export default function WarehouseSettings() {
       await fetch();
     } catch {
       setError("Failed to set home warehouse.");
+    }
+  };
+
+  const handleEditStart = (w) => {
+    setEditId(w.id);
+    setEditName(w.name);
+    setError("");
+  };
+
+  const handleEditSave = async () => {
+    const name = editName.trim();
+    if (!name) return;
+    setLoading(true);
+    setError("");
+    try {
+      await axiosClient.patch(`/warehouses/${editId}`, { name });
+      setEditId(null);
+      setEditName("");
+      await fetch();
+    } catch (e) {
+      setError(e?.response?.data?.message || "Failed to rename warehouse.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,24 +121,65 @@ export default function WarehouseSettings() {
           >
             <div className="wh-settings__item-left">
               {w.isHome && <span className="wh-settings__badge">Home</span>}
-              <span className="wh-settings__name">{w.name}</span>
+              {editId === w.id ? (
+                <input
+                  className="wh-settings__input wh-settings__input--inline"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleEditSave();
+                    if (e.key === "Escape") { setEditId(null); setEditName(""); }
+                  }}
+                  autoFocus
+                  disabled={loading}
+                />
+              ) : (
+                <span className="wh-settings__name">{w.name}</span>
+              )}
             </div>
 
             <div className="wh-settings__item-actions">
-              {!w.isHome && (
-                <button
-                  className="wh-settings__btn wh-settings__btn--home"
-                  onClick={() => handleSetHome(w.id)}
-                >
-                  Set as Home
-                </button>
+              {editId === w.id ? (
+                <>
+                  <button
+                    className="wh-settings__btn wh-settings__btn--save"
+                    onClick={handleEditSave}
+                    disabled={loading || !editName.trim()}
+                  >
+                    Save
+                  </button>
+                  <button
+                    className="wh-settings__btn wh-settings__btn--cancel"
+                    onClick={() => { setEditId(null); setEditName(""); }}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!w.isHome && (
+                    <button
+                      className="wh-settings__btn wh-settings__btn--home"
+                      onClick={() => handleSetHome(w.id)}
+                    >
+                      Set as Home
+                    </button>
+                  )}
+                  <button
+                    className="wh-settings__btn wh-settings__btn--edit"
+                    onClick={() => handleEditStart(w)}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="wh-settings__btn wh-settings__btn--delete"
+                    onClick={() => handleDelete(w.id)}
+                  >
+                    Delete
+                  </button>
+                </>
               )}
-              <button
-                className="wh-settings__btn wh-settings__btn--delete"
-                onClick={() => handleDelete(w.id)}
-              >
-                Delete
-              </button>
             </div>
           </div>
         ))}
@@ -188,12 +254,35 @@ export default function WarehouseSettings() {
           border-color: #86efac;
         }
         .wh-settings__btn--home:hover { background: #dcfce7; }
+        .wh-settings__btn--edit {
+          background: #fff;
+          color: #2563eb;
+          border-color: #93c5fd;
+        }
+        .wh-settings__btn--edit:hover { background: #eff6ff; }
+        .wh-settings__btn--save {
+          background: #2563eb;
+          color: #fff;
+          border-color: #2563eb;
+        }
+        .wh-settings__btn--save:hover:not(:disabled) { background: #1d4ed8; }
+        .wh-settings__btn--cancel {
+          background: #fff;
+          color: #6b7280;
+          border-color: #d1d5db;
+        }
+        .wh-settings__btn--cancel:hover { background: #f9fafb; }
         .wh-settings__btn--delete {
           background: #fff;
           color: #dc2626;
           border-color: #fca5a5;
         }
         .wh-settings__btn--delete:hover { background: #fee2e2; }
+        .wh-settings__input--inline {
+          padding: 4px 8px;
+          font-size: 14px;
+          width: 180px;
+        }
         .wh-settings__list {
           display: flex;
           flex-direction: column;

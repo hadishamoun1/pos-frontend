@@ -75,8 +75,9 @@ const PurchasesInvoicePage = () => {
   const [jvDate, setJvDate] = useState(new Date().toISOString().slice(0, 10)); // تاريخ المعاملة
   const [isPurchaseReturn, setIsPurchaseReturn] = useState(false);
   const [returnBaseType, setReturnBaseType] = useState("S");
-  const [warehouse, setWarehouse] = useState("Shamoun");
+  const [warehouse, setWarehouse] = useState("");
   const [warehouseOptions, setWarehouseOptions] = useState([]);
+  const homeWarehouseRef = useRef("");
   const saveLockRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
@@ -128,7 +129,7 @@ const PurchasesInvoicePage = () => {
     setShowTypePopup(false);
     setIsPurchaseReturn(false);
     setReturnBaseType("S");
-    setWarehouse("Shamoun");
+    setWarehouse(homeWarehouseRef.current || warehouseOptions[0] || "");
   };
 
   const toYMD = (iso) => (iso ? String(iso).split("T")[0] : "");
@@ -323,10 +324,13 @@ const handleViewJournalVoucher = async () => {
 
   useEffect(() => {
     axiosClient.get("/warehouses").then((res) => {
-      const list = (res?.data || []).map((w) => w.name);
+      const data = res?.data || [];
+      const list = data.map((w) => w.name);
       if (list.length > 0) {
+        const home = data.find((w) => w.isHome)?.name || list[0];
+        homeWarehouseRef.current = home;
         setWarehouseOptions(list);
-        setWarehouse((prev) => (list.includes(prev) ? prev : list[0]));
+        setWarehouse((prev) => (prev && list.includes(prev) ? prev : home));
       }
     }).catch(() => {});
   }, []);
@@ -603,7 +607,7 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
       setIsPurchaseReturn(false);
       setReturnBaseType("S");
     }
-    setWarehouse(fullInvoice.warehouse ?? "Shamoun");
+    setWarehouse(fullInvoice.warehouse ?? homeWarehouseRef.current ?? "");
     setPoDate(fullInvoice.poDate?.slice(0, 10) || "");
 
     // 4) items
@@ -723,7 +727,7 @@ setUnitPriceRows(
       setIsPurchaseReturn(false);
       setReturnBaseType("S");
     }
-    setWarehouse(inv.warehouse ?? "Shamoun");
+    setWarehouse(inv.warehouse ?? homeWarehouseRef.current ?? "");
     const mapped = (inv.items ?? []).map((i) => {
       const v = i.itemVariant;
       const t = v?.thickness;
