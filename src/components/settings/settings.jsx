@@ -19,6 +19,7 @@ import AccountingRoleSettings from "./AccountingRoleSettings";
 import LinkedPartySettings from "./LinkedPartySettings";
 import CompanySettings from "./CompanySettings";
 import WarehouseSettings from "./WarehouseSettings";
+import SqmPiecesMaintenance from "./SqmPiecesMaintenance";
 import SecurityLockdownSettings from "./Securitylockdownsettings";
 import FileBrowser from "./FileBrowser";
 import ApiDelaySettings from "./ApiDelaySettings";
@@ -50,6 +51,7 @@ const SettingsPage = () => {
       { key: "logout-users", label: "Users Logout", perm: "settings.logoutUsers", component: <LogoutAllUsersPage /> },
       { key: "company-settings", label: "Company", perm: "settings.company", component: <CompanySettings /> },
       { key: "warehouse-settings", label: "Warehouses", perm: "settings.company", component: <WarehouseSettings /> },
+      { key: "sqm-maintenance", label: "SQM Pieces", perm: "sqm.update", component: <SqmPiecesMaintenance /> },
 
       { key: "security-lockdown", label: "Security Lockdown", perm: "settings.logoutUsers", component: <SecurityLockdownSettings /> },
       { key: "pos-controls", label: "POS Controls", perm: "settings.posControls", component: <PosControlsSettings /> },
