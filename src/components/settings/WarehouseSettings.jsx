@@ -69,6 +69,22 @@ export default function WarehouseSettings() {
     }
   };
 
+  const handleMigrate = async () => {
+    if (!window.confirm(
+      "This will update ALL item batches where warehouse = \"Shamoun\" (or is blank) to the current home warehouse.\n\nProceed?"
+    )) return;
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await axiosClient.post("/warehouses/migrate-batches");
+      alert(`Done — updated ${data.updated} batch record(s) to "${data.homeName}".`);
+    } catch (e) {
+      setError(e?.response?.data?.message || "Migration failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this warehouse?")) return;
     setError("");
@@ -89,6 +105,20 @@ export default function WarehouseSettings() {
       </p>
 
       {error && <div className="wh-settings__error">{error}</div>}
+
+      <div className="wh-settings__migrate-row">
+        <button
+          className="wh-settings__btn wh-settings__btn--migrate"
+          onClick={handleMigrate}
+          disabled={loading}
+        >
+          Fix Existing Batch Data
+        </button>
+        <span className="wh-settings__migrate-hint">
+          Updates all inventory batches labelled "Shamoun" to the current home warehouse.
+          Run this once after changing the home warehouse.
+        </span>
+      </div>
 
       <div className="wh-settings__add-row">
         <input
@@ -283,6 +313,28 @@ export default function WarehouseSettings() {
           font-size: 14px;
           width: 180px;
         }
+        .wh-settings__migrate-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+          padding: 12px 14px;
+          background: #fefce8;
+          border: 1px solid #fde68a;
+          border-radius: 8px;
+        }
+        .wh-settings__migrate-hint {
+          font-size: 12px;
+          color: #92400e;
+          line-height: 1.4;
+        }
+        .wh-settings__btn--migrate {
+          background: #f59e0b;
+          color: #fff;
+          border-color: #f59e0b;
+          white-space: nowrap;
+        }
+        .wh-settings__btn--migrate:hover:not(:disabled) { background: #d97706; }
         .wh-settings__list {
           display: flex;
           flex-direction: column;
