@@ -330,7 +330,7 @@ const handleViewJournalVoucher = async () => {
         const home = data.find((w) => w.isHome)?.name || list[0];
         homeWarehouseRef.current = home;
         setWarehouseOptions(list);
-        setWarehouse((prev) => (prev && list.includes(prev) ? prev : home));
+        setWarehouse((prev) => (prev ? prev : home));
       }
     }).catch(() => {});
   }, []);
@@ -1156,7 +1156,10 @@ return (
                 onChange={(e) => setWarehouse(e.target.value)}
                 disabled={!canEdit}
               >
-                {(warehouseOptions.length > 0 ? warehouseOptions : [warehouse]).map((name) => (
+                {(warehouseOptions.length > 0
+                  ? (warehouse && !warehouseOptions.includes(warehouse) ? [...warehouseOptions, warehouse] : warehouseOptions)
+                  : [warehouse]
+                ).map((name) => (
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
