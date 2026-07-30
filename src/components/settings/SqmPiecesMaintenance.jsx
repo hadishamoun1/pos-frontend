@@ -28,7 +28,10 @@ export default function SqmPiecesMaintenance() {
   useEffect(() => { load(); }, []);
 
   const handleFix = async () => {
-    if (!window.confirm("This will recalculate sqmRemaining for all pieces where it is incorrect (sqmRemaining ≠ sqmTotal − sqmSold − sqmTrash). Proceed?")) return;
+    if (!window.confirm(
+      "This will recalculate sqmSold (from actual invoice records) and sqmRemaining for all pieces where they are incorrect.\n\n" +
+      "Use this if pieces appear stuck (sqmSold > 0 even though the invoice was deleted). Proceed?"
+    )) return;
     setFixing(true);
     setError("");
     setFixResult(null);
@@ -48,20 +51,27 @@ export default function SqmPiecesMaintenance() {
     return Math.abs(r.sqmRemaining - correct) > 0.0001;
   };
 
+  const isCommitted = (r) => r.sqmSold > 0 || r.sqmTrash > 0;
+
   const displayed = rows.filter((r) => {
     if (filter === "wrong") return isWrong(r);
     if (filter === "zero") return r.sqmRemaining === 0;
+    if (filter === "committed") return isCommitted(r);
     return true;
   });
 
   const wrongCount = rows.filter(isWrong).length;
+  const committedCount = rows.filter(isCommitted).length;
 
   return (
     <div style={{ padding: 24, fontFamily: "Arial, sans-serif", maxWidth: "100%" }}>
       <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>SQM Pieces Maintenance</h2>
-      <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
-        Shows all rows in the <code>sqm_pieces</code> table. Rows highlighted in red have an incorrect
-        <code> sqmRemaining</code> (does not equal <code>sqmTotal − sqmSold − sqmTrash</code>).
+      <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
+        Shows all rows in the <code>sqm_pieces</code> table. Red = wrong <code>sqmRemaining</code>.
+        Orange = has sales/trash history (committed — cannot be deleted from SQM page until sales are reversed).
+      </p>
+      <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 16 }}>
+        If a piece row is stuck (sqmSold &gt; 0 but invoice was deleted), click <strong>Fix Wrong Rows</strong> — it now recalculates sqmSold from actual invoice records.
       </p>
 
       {error && (
@@ -85,19 +95,24 @@ export default function SqmPiecesMaintenance() {
         </button>
 
         <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
-          {["all", "wrong", "zero"].map((f) => (
+          {[
+            { key: "all", label: `All (${rows.length})` },
+            { key: "wrong", label: `Wrong (${wrongCount})` },
+            { key: "committed", label: `Committed (${committedCount})` },
+            { key: "zero", label: `Zero Remaining (${rows.filter(r => r.sqmRemaining === 0).length})` },
+          ].map(({ key, label }) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={key}
+              onClick={() => setFilter(key)}
               style={{
                 padding: "5px 12px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
                 border: "1px solid",
-                background: filter === f ? "#1e40af" : "#fff",
-                color: filter === f ? "#fff" : "#374151",
-                borderColor: filter === f ? "#1e40af" : "#d1d5db",
+                background: filter === key ? "#1e40af" : "#fff",
+                color: filter === key ? "#fff" : "#374151",
+                borderColor: filter === key ? "#1e40af" : "#d1d5db",
               }}
             >
-              {f === "all" ? `All (${rows.length})` : f === "wrong" ? `Wrong (${wrongCount})` : `Zero Remaining (${rows.filter(r => r.sqmRemaining === 0).length})`}
+              {label}
             </button>
           ))}
         </div>
@@ -123,21 +138,17 @@ export default function SqmPiecesMaintenance() {
               displayed.map((r) => {
                 const expected = Math.max(0, r.sqmTotal - r.sqmSold - r.sqmTrash);
                 const wrong = Math.abs(r.sqmRemaining - expected) > 0.0001;
+                const committed = r.sqmSold > 0 || r.sqmTrash > 0;
+                const bg = wrong ? "#fee2e2" : committed ? "#fff7ed" : r.sqmRemaining === 0 ? "#fefce8" : "#fff";
                 return (
-                  <tr
-                    key={r.id}
-                    style={{
-                      background: wrong ? "#fee2e2" : r.sqmRemaining === 0 ? "#fefce8" : "#fff",
-                      borderBottom: "1px solid #e5e7eb",
-                    }}
-                  >
+                  <tr key={r.id} style={{ background: bg, borderBottom: "1px solid #e5e7eb" }}>
                     <td style={td}>{r.id}</td>
                     <td style={td}>{r.transferItemId}</td>
                     <td style={td}>{r.length}</td>
                     <td style={td}>{r.width}</td>
                     <td style={td}>{r.piecesCount}</td>
                     <td style={td}>{fmt4(r.sqmTotal)}</td>
-                    <td style={td}>{fmt4(r.sqmSold)}</td>
+                    <td style={{ ...td, color: r.sqmSold > 0 ? "#d97706" : "#374151" }}>{fmt4(r.sqmSold)}</td>
                     <td style={td}>{fmt4(r.sqmTrash)}</td>
                     <td style={{ ...td, fontWeight: 700, color: wrong ? "#dc2626" : r.sqmRemaining > 0 ? "#16a34a" : "#374151" }}>
                       {fmt4(r.sqmRemaining)}
@@ -147,8 +158,10 @@ export default function SqmPiecesMaintenance() {
                     <td style={td}>
                       {wrong
                         ? <span style={{ color: "#dc2626", fontWeight: 700 }}>Wrong</span>
+                        : committed
+                        ? <span style={{ color: "#d97706", fontWeight: 600 }}>Committed</span>
                         : r.sqmRemaining === 0
-                        ? <span style={{ color: "#d97706" }}>Zero</span>
+                        ? <span style={{ color: "#6b7280" }}>Zero</span>
                         : <span style={{ color: "#16a34a" }}>OK</span>}
                     </td>
                   </tr>
