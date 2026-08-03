@@ -80,6 +80,8 @@ export default function AccountStatement() {
   const [netItems, setNetItems] = useState([]);
   const [allNetData, setAllNetData] = useState(null);
   const [allNetLoading, setAllNetLoading] = useState(false);
+  const [allNetDetail, setAllNetDetail] = useState(null);
+  const [allNetDetailLoading, setAllNetDetailLoading] = useState(false);
 
   // Persist filters + results so navigating away and back restores everything
   useEffect(() => {
@@ -237,6 +239,40 @@ export default function AccountStatement() {
       setErr(e?.response?.data?.message || e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllNetDetail = async (customerId) => {
+    if (allNetDetail?.customerId === customerId) { setAllNetDetail(null); return; }
+    setAllNetDetailLoading(true);
+    try {
+      const res = await axiosClient.get(`/journal-vouchers/statements/net/${customerId}`, {
+        params: sanitizeParams({ type, from, to }),
+      });
+      const data = res.data || {};
+      setAllNetDetail({
+        customerId,
+        customerName: data.customerName,
+        supplierName: data.supplierName,
+        openingBalance: Number(data.openingBalance || 0),
+        closingBalance: Number(data.closingBalance || 0),
+        totalDebit: Number(data?.totals?.totalDebit || 0),
+        totalCredit: Number(data?.totals?.totalCredit || 0),
+        items: (data.items || []).map((r) => ({
+          date: r.date,
+          jvNumber: r.jvNumber,
+          journalVoucherId: r.journalVoucherId,
+          description: r.description ?? "",
+          side: r.side,
+          debit: Number(r.debit || 0),
+          credit: Number(r.credit || 0),
+          balanceAfter: Number(r.balanceAfter || 0),
+        })),
+      });
+    } catch (e) {
+      setErr(e?.response?.data?.message || e.message);
+    } finally {
+      setAllNetDetailLoading(false);
     }
   };
 
@@ -1009,18 +1045,29 @@ export default function AccountStatement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allNetData.customers.map((c) => (
-                    <tr key={c.customerId} style={{ background: c.linkedSupplierId ? "#fef9c3" : undefined }}>
-                      <td>{c.customerName}</td>
-                      <td style={{ color: "#92400e", fontSize: 12 }}>{c.supplierName ?? "—"}</td>
-                      <td className="num">{fmt(c.openingBalance)}</td>
-                      <td className="num">{fmt(c.totalDebit)}</td>
-                      <td className="num">{fmt(c.totalCredit)}</td>
-                      <td className="num" style={{ fontWeight: 700, color: c.closingBalance > 0 ? "#15803d" : c.closingBalance < 0 ? "#dc2626" : undefined }}>
-                        {fmt(c.closingBalance)}
-                      </td>
-                    </tr>
-                  ))}
+                  {allNetData.customers.map((c) => {
+                    const isSelected = allNetDetail?.customerId === c.customerId;
+                    return (
+                      <tr
+                        key={c.customerId}
+                        onClick={() => fetchAllNetDetail(c.customerId)}
+                        style={{
+                          background: isSelected ? "#dbeafe" : c.linkedSupplierId ? "#fef9c3" : undefined,
+                          cursor: "pointer",
+                        }}
+                        title="Click to view details"
+                      >
+                        <td style={{ color: "#1d4ed8", textDecoration: "underline" }}>{c.customerName}</td>
+                        <td style={{ color: "#92400e", fontSize: 12 }}>{c.supplierName ?? "—"}</td>
+                        <td className="num">{fmt(c.openingBalance)}</td>
+                        <td className="num">{fmt(c.totalDebit)}</td>
+                        <td className="num">{fmt(c.totalCredit)}</td>
+                        <td className="num" style={{ fontWeight: 700, color: c.closingBalance > 0 ? "#15803d" : c.closingBalance < 0 ? "#dc2626" : undefined }}>
+                          {fmt(c.closingBalance)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {!allNetData.customers.length && (
                     <tr><td colSpan={6} style={{ textAlign: "center", color: "#9ca3af" }}>No data for the selected range</td></tr>
                   )}
@@ -1038,6 +1085,72 @@ export default function AccountStatement() {
                 </tfoot>
               </table>
             </div>
+
+            {/* Customer detail panel */}
+            {allNetDetailLoading && (
+              <div style={{ padding: 12, color: "#6b7280", fontSize: 13 }}>Loading detail…</div>
+            )}
+            {allNetDetail && !allNetDetailLoading && (
+              <div style={{ marginTop: 14, borderTop: "2px solid #93c5fd", paddingTop: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <h4 style={{ margin: 0, color: "#1d4ed8", fontSize: 14 }}>
+                    {allNetDetail.customerName}
+                    {allNetDetail.supplierName && (
+                      <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 8, color: "#92400e" }}>
+                        (linked: {allNetDetail.supplierName})
+                      </span>
+                    )}
+                  </h4>
+                  <button
+                    onClick={() => setAllNetDetail(null)}
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "#6b7280", fontSize: 18, lineHeight: 1 }}
+                  >×</button>
+                </div>
+                <div style={{ display: "flex", gap: 24, fontSize: 13, marginBottom: 10 }}>
+                  <span><strong>Opening:</strong> {fmt(allNetDetail.openingBalance)}</span>
+                  <span><strong>Total DR:</strong> {fmt(allNetDetail.totalDebit)}</span>
+                  <span><strong>Total CR:</strong> {fmt(allNetDetail.totalCredit)}</span>
+                  <span>
+                    <strong>Net Balance:</strong>{" "}
+                    <span style={{ fontWeight: 700, color: allNetDetail.closingBalance >= 0 ? "#15803d" : "#dc2626" }}>
+                      {fmt(allNetDetail.closingBalance)}
+                    </span>
+                  </span>
+                </div>
+                <table className="tb-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th><th>JV Number</th><th>Side</th><th>Description</th>
+                      <th>DR USD</th><th>CR USD</th><th>Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allNetDetail.items.map((r, i) => (
+                      <tr key={i} style={{ background: r.side === "supplier" ? "#fef9c3" : undefined }}>
+                        <td>{r.date ?? ""}</td>
+                        <td>
+                          {r.journalVoucherId ? (
+                            <span style={{ color: "#2563eb", cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate(`/journal-voucher/${r.journalVoucherId}`)}>
+                              {r.jvNumber ?? ""}
+                            </span>
+                          ) : (r.jvNumber ?? "")}
+                        </td>
+                        <td style={{ fontSize: 11, color: r.side === "supplier" ? "#92400e" : "#1e40af" }}>
+                          {r.side === "supplier" ? "Supplier" : "Customer"}
+                        </td>
+                        <td>{r.description}</td>
+                        <td className="num">{fmt(r.debit)}</td>
+                        <td className="num">{fmt(r.credit)}</td>
+                        <td className="num">{fmt(r.balanceAfter)}</td>
+                      </tr>
+                    ))}
+                    {!allNetDetail.items.length && (
+                      <tr><td colSpan={7} style={{ textAlign: "center", color: "#9ca3af" }}>No transactions in this range</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
