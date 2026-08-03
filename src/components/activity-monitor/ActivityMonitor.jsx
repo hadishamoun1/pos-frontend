@@ -77,6 +77,7 @@ export default function ActivityMonitor() {
   const [filterTo, setFilterTo] = useState(TODAY);
   const [filterUser, setFilterUser] = useState("");
   const [filterAction, setFilterAction] = useState("");
+  const [filterSearch, setFilterSearch] = useState("");
   const [userOptions, setUserOptions] = useState([]);
   const [actionOptions, setActionOptions] = useState([]);
 
@@ -105,6 +106,7 @@ export default function ActivityMonitor() {
       if (filterTo)   params.set("to", filterTo);
       if (filterUser) params.set("userId", filterUser);
       if (filterAction) params.set("action", filterAction);
+      if (filterSearch.trim()) params.set("search", filterSearch.trim());
       const { data } = await axiosClient.get(`/activity-log?${params}`);
       setLogs(data.items || []);
       setLogTotal(data.total || 0);
@@ -115,7 +117,7 @@ export default function ActivityMonitor() {
     } finally {
       setLogLoading(false);
     }
-  }, [filterFrom, filterTo, filterUser, filterAction]);
+  }, [filterFrom, filterTo, filterUser, filterAction, filterSearch]);
 
   const fetchAlerts = useCallback(async () => {
     setAlertLoading(true);
@@ -353,6 +355,25 @@ export default function ActivityMonitor() {
                   ))}
                 </select>
               </label>
+              <label>
+                Invoice / Doc #
+                <input
+                  type="text"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  placeholder="e.g. S26-1240"
+                  style={{ width: 140 }}
+                />
+              </label>
+              {filterSearch && (
+                <button
+                  type="button"
+                  onClick={() => setFilterSearch("")}
+                  style={{ marginTop: 20, background: "none", border: "1px solid #d0d5dd", borderRadius: 6, padding: "8px 12px", cursor: "pointer", fontSize: 13, color: "#666" }}
+                >
+                  ✕ Clear
+                </button>
+              )}
               <button type="submit" className="am-refresh-btn" style={{ marginTop: 20 }}>
                 Search
               </button>
