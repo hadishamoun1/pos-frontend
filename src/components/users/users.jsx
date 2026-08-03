@@ -52,6 +52,7 @@ const PERMISSION_GROUPS = [
       "reports.customerBalances",
       "reports.profitability",
       "reports.topCustomers",
+      "reports.netPositions",
     ],
   },
   {

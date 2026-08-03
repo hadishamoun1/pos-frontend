@@ -71,7 +71,7 @@ const TABS = [
   {
     key: "net-positions",
     label: "Net Positions / المراكز الصافية",
-    perm: "reports.accountStatement",
+    perm: "reports.netPositions",
   },
   {
     key: "aging",
@@ -108,7 +108,7 @@ export default function ReportsPage() {
     (active === "customer-activity"   && !hasPerm("reports.customerBalances"))  ||
     (active === "invoice-report"      && !hasPerm("invoices.view"))      ||
     (active === "top-customers"       && !hasPerm("reports.topCustomers"))      ||
-    (active === "net-positions"       && !hasPerm("reports.accountStatement"));
+    (active === "net-positions"       && !hasPerm("reports.netPositions"));
 
   return (
     <div className="reports-page">
@@ -135,7 +135,7 @@ export default function ReportsPage() {
         {active === "customer-activity" && hasPerm("reports.customerBalances") && <CustomerActivityReport />}
         {active === "invoice-report"    && hasPerm("invoices.view")            && <InvoiceReport />}
         {active === "top-customers"    && hasPerm("reports.topCustomers")     && <TopCustomersReport />}
-        {active === "net-positions"    && hasPerm("reports.accountStatement") && <AllNetPositions />}
+        {active === "net-positions"    && hasPerm("reports.netPositions")     && <AllNetPositions />}
 
         {noAccess && (
           <div className="reports-no-access">

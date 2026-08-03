@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { axiosClient } from "../api/axiosClient";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+import { printHtml } from "./printHelper";
 import "./Reports.css";
 
 function sanitizeParams(p) {
@@ -96,6 +99,96 @@ export default function AllNetPositions() {
   };
 
   const totalClosing = data?.customers?.reduce((s, c) => s + c.closingBalance, 0) ?? 0;
+  const contentRef = useRef(null);
+
+  const handlePrint = () => {
+    if (!data) return;
+    const customers = data.customers || [];
+    const totalOpen  = customers.reduce((s, c) => s + c.openingBalance, 0);
+    const totalDR    = customers.reduce((s, c) => s + c.totalDebit, 0);
+    const totalCR    = customers.reduce((s, c) => s + c.totalCredit, 0);
+    const totalClose = customers.reduce((s, c) => s + c.closingBalance, 0);
+
+    const rows = customers.map((c) => `
+      <tr>
+        <td>${c.customerName}</td>
+        <td style="color:#92400e">${c.supplierName ?? "—"}</td>
+        <td style="text-align:right">${fmt(c.openingBalance)}</td>
+        <td style="text-align:right">${fmt(c.totalDebit)}</td>
+        <td style="text-align:right">${fmt(c.totalCredit)}</td>
+        <td style="text-align:right;font-weight:700;color:${c.closingBalance > 0 ? "#15803d" : c.closingBalance < 0 ? "#dc2626" : "#000"}">${fmt(c.closingBalance)}</td>
+      </tr>`).join("");
+
+    printHtml(`
+      <style>
+        @page { size: A4 portrait; margin: 14mm; }
+        body { font-family: Arial, sans-serif; font-size: 15px; color: #111; }
+        h2 { font-size: 20px; margin: 0 0 6px; color: #1d4ed8; }
+        .sub { font-size: 13px; color: #6b7280; margin: 0 0 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #d1d5db; padding: 7px 10px; font-size: 14px; }
+        th { background: #f3f4f6; text-align: left; font-size: 14px; font-weight: 700; }
+        tfoot tr { font-weight: 700; background: #f0f9ff; font-size: 15px; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      </style>
+      <h2>All Customers — Net Position</h2>
+      <p class="sub">${data.from} → ${data.to} &nbsp;|&nbsp; ${customers.length} customers</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th><th>Linked Supplier</th>
+            <th style="text-align:right">Opening Balance</th>
+            <th style="text-align:right">Total DR</th>
+            <th style="text-align:right">Total CR</th>
+            <th style="text-align:right">Net Balance</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total</td>
+            <td style="text-align:right">${fmt(totalOpen)}</td>
+            <td style="text-align:right">${fmt(totalDR)}</td>
+            <td style="text-align:right">${fmt(totalCR)}</td>
+            <td style="text-align:right;color:${totalClose >= 0 ? "#15803d" : "#dc2626"}">${fmt(totalClose)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    `);
+  };
+
+  const handlePDF = async () => {
+    if (!contentRef.current) return;
+    try {
+      const canvas = await html2canvas(contentRef.current, { scale: 2, useCORS: true, backgroundColor: "#fff" });
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
+      const imgW = pdfW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      if (imgH <= pdfH) {
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, imgW, imgH);
+      } else {
+        const rowH = (pdfH / imgH) * canvas.height;
+        let srcY = 0;
+        while (srcY < canvas.height) {
+          const sliceH = Math.min(rowH, canvas.height - srcY);
+          const slice = document.createElement("canvas");
+          slice.width = canvas.width;
+          slice.height = sliceH;
+          slice.getContext("2d").drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          const sliceImgH = (sliceH * imgW) / canvas.width;
+          pdf.addImage(slice.toDataURL("image/png"), "PNG", 0, 0, imgW, sliceImgH);
+          srcY += sliceH;
+          if (srcY < canvas.height) pdf.addPage();
+        }
+      }
+      pdf.save(`net-positions-${data.from}-${data.to}.pdf`);
+    } catch (e) {
+      console.error("PDF generation failed", e);
+    }
+  };
 
   return (
     <div style={{ padding: 16 }}>
@@ -124,7 +217,7 @@ export default function AllNetPositions() {
 
       {/* Summary table */}
       {data && (
-        <div style={{ border: "2px solid #1d4ed8", borderRadius: 8, padding: 14 }}>
+        <div ref={contentRef} style={{ border: "2px solid #1d4ed8", borderRadius: 8, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <h3 style={{ margin: 0, color: "#1d4ed8", fontSize: 15 }}>
               All Customers — Net Position
@@ -132,7 +225,21 @@ export default function AllNetPositions() {
                 {data.from} → {data.to}
               </span>
             </h3>
-            <span style={{ fontSize: 12, color: "#6b7280" }}>{data.customers.length} customers</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 13, color: "#6b7280" }}>{data.customers.length} customers</span>
+              <button
+                onClick={handlePrint}
+                style={{ padding: "7px 18px", fontSize: 14, fontWeight: 600, border: "1px solid #6b7280", borderRadius: 6, background: "#f9fafb", cursor: "pointer", lineHeight: 1 }}
+              >
+                🖨 Print
+              </button>
+              <button
+                onClick={handlePDF}
+                style={{ padding: "7px 18px", fontSize: 14, fontWeight: 600, border: "1px solid #1d4ed8", borderRadius: 6, background: "#1d4ed8", color: "#fff", cursor: "pointer", lineHeight: 1 }}
+              >
+                ⬇ PDF
+              </button>
+            </div>
           </div>
 
           <div style={{ overflowX: "auto" }}>
