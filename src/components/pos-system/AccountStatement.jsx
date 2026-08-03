@@ -78,6 +78,8 @@ export default function AccountStatement() {
   const [netView, setNetView] = useState(false);
   const [netMeta, setNetMeta] = useState(null);
   const [netItems, setNetItems] = useState([]);
+  const [allNetData, setAllNetData] = useState(null);
+  const [allNetLoading, setAllNetLoading] = useState(false);
 
   // Persist filters + results so navigating away and back restores everything
   useEffect(() => {
@@ -235,6 +237,21 @@ export default function AccountStatement() {
       setErr(e?.response?.data?.message || e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllNetPositions = async () => {
+    setAllNetLoading(true);
+    setAllNetData(null);
+    try {
+      const res = await axiosClient.get(`/journal-vouchers/reports/net-positions`, {
+        params: sanitizeParams({ type, from, to }),
+      });
+      setAllNetData(res.data);
+    } catch (e) {
+      setErr(e?.response?.data?.message || e.message);
+    } finally {
+      setAllNetLoading(false);
     }
   };
 
@@ -959,7 +976,70 @@ export default function AccountStatement() {
               PDF
             </button>
           )}
+          <button
+            className="tb-btn"
+            style={{ marginLeft: "auto", background: allNetData ? "#1d4ed8" : undefined, color: allNetData ? "#fff" : undefined }}
+            onClick={() => allNetData ? setAllNetData(null) : fetchAllNetPositions()}
+            disabled={allNetLoading}
+          >
+            {allNetLoading ? "Loading…" : allNetData ? "Hide All Net Positions" : "All Customers Net Position"}
+          </button>
         </div>
+
+        {/* All customers net position panel */}
+        {allNetData && (
+          <div style={{ marginTop: 16, border: "2px solid #1d4ed8", borderRadius: 8, padding: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <h3 style={{ margin: 0, color: "#1d4ed8", fontSize: 15 }}>
+                All Customers — Net Position
+                {allNetData.from && <span style={{ fontWeight: 400, fontSize: 12, marginLeft: 10, color: "#6b7280" }}>{allNetData.from} → {allNetData.to}</span>}
+              </h3>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>{allNetData.customers.length} customers</span>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="tb-table">
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Linked Supplier</th>
+                    <th style={{ textAlign: "right" }}>Opening Balance</th>
+                    <th style={{ textAlign: "right" }}>Total DR</th>
+                    <th style={{ textAlign: "right" }}>Total CR</th>
+                    <th style={{ textAlign: "right" }}>Net Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allNetData.customers.map((c) => (
+                    <tr key={c.customerId} style={{ background: c.linkedSupplierId ? "#fef9c3" : undefined }}>
+                      <td>{c.customerName}</td>
+                      <td style={{ color: "#92400e", fontSize: 12 }}>{c.supplierName ?? "—"}</td>
+                      <td className="num">{fmt(c.openingBalance)}</td>
+                      <td className="num">{fmt(c.totalDebit)}</td>
+                      <td className="num">{fmt(c.totalCredit)}</td>
+                      <td className="num" style={{ fontWeight: 700, color: c.closingBalance > 0 ? "#15803d" : c.closingBalance < 0 ? "#dc2626" : undefined }}>
+                        {fmt(c.closingBalance)}
+                      </td>
+                    </tr>
+                  ))}
+                  {!allNetData.customers.length && (
+                    <tr><td colSpan={6} style={{ textAlign: "center", color: "#9ca3af" }}>No data for the selected range</td></tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr style={{ fontWeight: 700, background: "#f0f9ff" }}>
+                    <td colSpan={2}>Total</td>
+                    <td className="num">{fmt(allNetData.customers.reduce((s, c) => s + c.openingBalance, 0))}</td>
+                    <td className="num">{fmt(allNetData.customers.reduce((s, c) => s + c.totalDebit, 0))}</td>
+                    <td className="num">{fmt(allNetData.customers.reduce((s, c) => s + c.totalCredit, 0))}</td>
+                    <td className="num" style={{ color: allNetData.customers.reduce((s, c) => s + c.closingBalance, 0) >= 0 ? "#15803d" : "#dc2626" }}>
+                      {fmt(allNetData.customers.reduce((s, c) => s + c.closingBalance, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {err && <div className="tb-error">{err}</div>}
