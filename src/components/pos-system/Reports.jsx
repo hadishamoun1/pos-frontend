@@ -10,6 +10,7 @@ import ProfitabilityReport from "./Profitability-report";
 import CustomerActivityReport from "./Customeractivityreport"; // ✅ NEW
 import InvoiceReport from "./InvoiceReport";
 import TopCustomersReport from "./TopCustomersReport";
+import AllNetPositions from "./AllNetPositions";
 
 // ✅ Permission check helper
 function hasPerm(perm) {
@@ -68,6 +69,11 @@ const TABS = [
     perm: "reports.topCustomers",
   },
   {
+    key: "net-positions",
+    label: "Net Positions / المراكز الصافية",
+    perm: "reports.accountStatement",
+  },
+  {
     key: "aging",
     label: "A/R Aging (soon)",
     disabled: true,
@@ -101,7 +107,8 @@ export default function ReportsPage() {
     (active === "profitability"       && !hasPerm("reports.profitability"))      ||
     (active === "customer-activity"   && !hasPerm("reports.customerBalances"))  ||
     (active === "invoice-report"      && !hasPerm("invoices.view"))      ||
-    (active === "top-customers"       && !hasPerm("reports.topCustomers"));
+    (active === "top-customers"       && !hasPerm("reports.topCustomers"))      ||
+    (active === "net-positions"       && !hasPerm("reports.accountStatement"));
 
   return (
     <div className="reports-page">
@@ -128,6 +135,7 @@ export default function ReportsPage() {
         {active === "customer-activity" && hasPerm("reports.customerBalances") && <CustomerActivityReport />}
         {active === "invoice-report"    && hasPerm("invoices.view")            && <InvoiceReport />}
         {active === "top-customers"    && hasPerm("reports.topCustomers")     && <TopCustomersReport />}
+        {active === "net-positions"    && hasPerm("reports.accountStatement") && <AllNetPositions />}
 
         {noAccess && (
           <div className="reports-no-access">
