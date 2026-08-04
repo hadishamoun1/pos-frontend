@@ -339,7 +339,7 @@ function StatementRow({ r, fmt, colSpan, onInvoiceLoaded, isRevo, expanded, onTo
 // ─────────────────────────────────────────────
 //  StatementModal
 // ─────────────────────────────────────────────
-const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName }) => {
+const StatementModal = ({ isOpen, onClose, customerId, alternativeCustomerId, defaultDate, customerName }) => {
   const [type, setType] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -445,7 +445,7 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
   }
 
   const fetchStatement = async () => {
-    if (!customerId) return;
+    if (!customerId && !alternativeCustomerId) return;
     if (from < MIN_DATE) { setErr(`From date cannot be before ${MIN_DATE}`); return; }
     if (to < MIN_DATE) { setErr(`To date cannot be before ${MIN_DATE}`); return; }
     setLoading(true); setErr(""); setData(null);
@@ -454,7 +454,12 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
     try {
       const params = { from, to };
       if (type !== "ALL") params.type = type;
-      const res = await axiosClient.get(`/journal-vouchers/statements/customers/${customerId}`, { params });
+      // When the selected invoice has an alternative customer, the statement should
+      // follow that alternative-customer column instead of the real customer's account.
+      const url = alternativeCustomerId
+        ? `/journal-vouchers/statements/alternative-customers/${alternativeCustomerId}`
+        : `/journal-vouchers/statements/customers/${customerId}`;
+      const res = await axiosClient.get(url, { params });
       setData(res.data);
     } catch (e) {
       setErr(e?.response?.data?.message || e.message);
@@ -494,13 +499,13 @@ const StatementModal = ({ isOpen, onClose, customerId, defaultDate, customerName
             <label>From <DateInput value={from} min={MIN_DATE} onChange={handleFromChange} disabled={loading} /></label>
             <label>To <DateInput value={to} min={MIN_DATE} onChange={handleToChange} disabled={loading} /></label>
             <button className="pos-page-toolbar-button pos-page-blue-button"
-              onClick={fetchStatement} disabled={loading || !customerId}>
+              onClick={fetchStatement} disabled={loading || (!customerId && !alternativeCustomerId)}>
               {loading ? "Loading..." : "Generate"}
             </button>
           </div>
           <div className="controls-right">
             <button className="statement-report-button"
-              onClick={() => setShowReportModal(true)} disabled={!customerId || loading}>
+              onClick={() => setShowReportModal(true)} disabled={(!customerId && !alternativeCustomerId) || loading}>
               Report
             </button>
           </div>

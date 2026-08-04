@@ -193,6 +193,68 @@ function runDistribution(selectedInvoices, itemPool, params) {
   return results;
 }
 
+/* ─── Alternative Customer Picker (searchable) ───────────── */
+function AltCustomerPicker({ altCustomers, value, onChange }) {
+  const [open, setOpen]   = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapRef = useRef(null);
+
+  const selected = useMemo(() => altCustomers.find(c => c.id === value) || null, [altCustomers, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocMouseDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return altCustomers.slice(0, 50);
+    return altCustomers.filter(c =>
+      (c.company || '').toLowerCase().includes(q) ||
+      (c.businessPhone || '').toLowerCase().includes(q) ||
+      (c.address || '').toLowerCase().includes(q) ||
+      (c.areaDescription || '').toLowerCase().includes(q)
+    ).slice(0, 50);
+  }, [altCustomers, query]);
+
+  const pick = (id) => { onChange(id); setOpen(false); setQuery(''); };
+
+  return (
+    <div className="rvr-item-search-wrap" ref={wrapRef}>
+      <input
+        type="text"
+        className="rvr-input"
+        placeholder="— keep original —"
+        value={open ? query : (selected?.company || '')}
+        onFocus={() => { setOpen(true); setQuery(''); }}
+        onChange={e => { setQuery(e.target.value); if (!open) setOpen(true); }}
+        dir="rtl"
+      />
+      {selected && !open && <span className="rvr-check">✓</span>}
+      {open && (
+        <div className="rvr-dropdown">
+          <div className="rvr-dropdown-row" onClick={() => pick(null)}>
+            <span className="rvr-dropdown-type">— keep original —</span>
+          </div>
+          {filtered.map(c => (
+            <div key={c.id} className="rvr-dropdown-row" onClick={() => pick(c.id)}>
+              <span className="rvr-dropdown-name" dir="rtl">{c.company}</span>
+              <span className="rvr-dropdown-type">{c.businessPhone || ''}</span>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="rvr-dropdown-row"><span className="rvr-dropdown-type">No matches</span></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Price Prompt Modal ─────────────────────────────────── */
 function PricePrompt({ row, onConfirm, onCancel }) {
   const [price, setPrice] = useState('');
@@ -745,12 +807,31 @@ export default function RVRBulkRandomizer() {
   const [poolSaving,    setPoolSaving]    = useState(false);
   const [poolSaveMsg,   setPoolSaveMsg]   = useState('');
 
+  const [altCustomers,          setAltCustomers]          = useState([]);
+  const [altCustomerOverrides,  setAltCustomerOverrides]  = useState(new Map());
+
   // Load saved pool from DB on mount
   useEffect(() => {
     axiosClient.get('/bulk-rvr-schedule/item-pool')
       .then(res => { if (Array.isArray(res.data)) setItemPool(res.data); })
       .catch(() => {});
   }, []);
+
+  // Load alternative customers from DB on mount
+  useEffect(() => {
+    axiosClient.get('/alternative-customers')
+      .then(res => { if (Array.isArray(res.data)) setAltCustomers(res.data); })
+      .catch(() => {});
+  }, []);
+
+  const setAltCustomerFor = (invId, altCustomerId) => {
+    setAltCustomerOverrides(prev => {
+      const next = new Map(prev);
+      if (altCustomerId) next.set(invId, Number(altCustomerId));
+      else next.delete(invId);
+      return next;
+    });
+  };
 
   const printRef = useRef(null);
 
@@ -825,6 +906,9 @@ export default function RVRBulkRandomizer() {
       });
       const data = Array.isArray(res.data) ? res.data : [];
       setInvoices(data);
+      setAltCustomerOverrides(new Map(
+        data.filter(inv => inv.alternativeCustomer?.id).map(inv => [inv.id, inv.alternativeCustomer.id])
+      ));
       if (!data.length) setSearchErr('No RVR invoices found in this date range.');
     } catch (e) {
       setSearchErr(e?.response?.data?.message || e.message || 'Search failed.');
@@ -839,6 +923,61 @@ export default function RVRBulkRandomizer() {
   const toggleAll = () => {
     if (selected.size === invoices.length) setSelected(new Set());
     else setSelected(new Set(invoices.map(i => i.id)));
+  };
+
+  const shuffleArray = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // Assigns a shuffled alternative customer to every selected invoice, cycling through
+  // the full list with no repeats until it's exhausted, then starting over from the top.
+  const handleAutoAssignCustomerNames = () => {
+    if (!altCustomers.length) return;
+    const targets = invoices.filter(inv => selected.has(inv.id));
+    if (!targets.length) return;
+
+    const shuffled = shuffleArray(altCustomers);
+    setAltCustomerOverrides(prev => {
+      const next = new Map(prev);
+      targets.forEach((inv, i) => {
+        next.set(inv.id, shuffled[i % shuffled.length].id);
+      });
+      return next;
+    });
+  };
+
+  const [applyingAltNames, setApplyingAltNames] = useState(false);
+  const [altApplyProgress, setAltApplyProgress] = useState(null);
+  const [altApplyResult,   setAltApplyResult]   = useState(null);
+
+  // Assigns alternative customers to already-processed RVR invoices without touching items.
+  const handleApplyCustomerNamesOnly = async () => {
+    const targets = invoices.filter(inv => selected.has(inv.id) && altCustomerOverrides.has(inv.id));
+    if (!targets.length) return;
+
+    setAltApplyResult(null); setApplyingAltNames(true);
+    const errors = [];
+    let done = 0;
+    for (const inv of targets) {
+      setAltApplyProgress({ current: done + 1, total: targets.length, invoiceNumber: inv.invoiceNumber });
+      try {
+        await axiosClient.patch(`/invoices/${inv.id}/alternative-customer`, {
+          alternativeCustomerId: altCustomerOverrides.get(inv.id),
+        });
+        done++;
+      } catch (e) {
+        errors.push(`${inv.invoiceNumber}: ${e?.response?.data?.message || e.message}`);
+        done++;
+      }
+    }
+    setApplyingAltNames(false);
+    setAltApplyProgress(null);
+    setAltApplyResult({ done, total: targets.length, errors });
   };
 
   const addItem    = (item) => {
@@ -872,7 +1011,12 @@ export default function RVRBulkRandomizer() {
       vatPct: parseFloat(vatPct),
     };
     try {
-      setPreview(runDistribution(selInvoices, itemPool, params));
+      const results = runDistribution(selInvoices, itemPool, params).map(entry => {
+        const altId = altCustomerOverrides.get(entry.invoice.id) || null;
+        const alt = altId ? altCustomers.find(c => c.id === altId) : null;
+        return { ...entry, alternativeCustomerId: altId, alternativeCustomerName: alt?.company || null };
+      });
+      setPreview(results);
       setApplyResult(null);
     } catch (e) {
       setPreviewErr('Distribution failed: ' + e.message);
@@ -901,7 +1045,8 @@ export default function RVRBulkRandomizer() {
         length: l.length || null, width: l.width || null, sheetsPerBox: l.sheetsPerBox || null,
       }));
       const payload = {
-        customerId:      inv.customer?.id,
+        customerId:            inv.customer?.id,
+        alternativeCustomerId: entry.alternativeCustomerId ?? null,
         date:            inv.date,
         invoiceType:     'RVR',
         currencyCode:    inv.currency?.code || 'USD',
@@ -988,7 +1133,7 @@ export default function RVRBulkRandomizer() {
               <thead>
                 <tr>
                   <th><input type="checkbox" checked={selected.size === invoices.length && invoices.length > 0} onChange={toggleAll} /></th>
-                  <th>Invoice #</th><th>Date</th><th>Customer</th>
+                  <th>Invoice #</th><th>Date</th><th>Customer</th><th>Alternative Customer</th>
                   <th className="num">Grand Total</th><th className="num">Items</th>
                 </tr>
               </thead>
@@ -1001,7 +1146,22 @@ export default function RVRBulkRandomizer() {
                     </td>
                     <td className="rvr-inv-num">{inv.invoiceNumber}</td>
                     <td>{inv.date}</td>
-                    <td>{inv.customer?.name || '—'}</td>
+                    <td>
+                      {inv.alternativeCustomer?.name ? (
+                        <>
+                          <span style={{ textDecoration: 'line-through', opacity: 0.5 }}>{inv.customer?.name || '—'}</span>
+                          <br />
+                          <span dir="rtl" style={{ fontWeight: 600 }}>{inv.alternativeCustomer.name}</span>
+                        </>
+                      ) : (inv.customer?.name || '—')}
+                    </td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <AltCustomerPicker
+                        altCustomers={altCustomers}
+                        value={altCustomerOverrides.get(inv.id) || null}
+                        onChange={(id) => setAltCustomerFor(inv.id, id)}
+                      />
+                    </td>
                     <td className="num">${fmt(inv.totals?.grandTotal)}</td>
                     <td className="num">{inv.items?.length ?? 0}</td>
                   </tr>
@@ -1009,6 +1169,40 @@ export default function RVRBulkRandomizer() {
               </tbody>
             </table>
           </div>
+
+          <div className="rvr-generate-row">
+            <button
+              className="rvr-btn rvr-btn-outline"
+              onClick={handleAutoAssignCustomerNames}
+              disabled={selected.size === 0 || altCustomers.length === 0}
+              title="Shuffles the alternative customer list and assigns one per selected invoice with no repeats until the list is exhausted, then starts over."
+            >
+              🎲 Auto-Assign Names to Selected
+            </button>
+            <button
+              className="rvr-btn rvr-btn-confirm"
+              onClick={handleApplyCustomerNamesOnly}
+              disabled={applyingAltNames || ![...selected].some(id => altCustomerOverrides.has(id))}
+            >
+              {applyingAltNames
+                ? (altApplyProgress ? `Applying ${altApplyProgress.current}/${altApplyProgress.total} — ${altApplyProgress.invoiceNumber}…` : 'Applying…')
+                : '💾 Apply Customer Names to Selected'}
+            </button>
+            <span style={{ fontSize: 12, opacity: 0.7, marginLeft: 8 }}>
+              Only sets the alternative customer on selected invoices — items are left untouched.
+            </span>
+          </div>
+          {altApplyResult && (
+            <div className={`rvr-result ${altApplyResult.errors.length ? 'rvr-result-warn' : 'rvr-result-ok'}`}>
+              <strong>{altApplyResult.errors.length === 0 ? '✅ All done!' : '⚠ Completed with errors'}</strong>
+              <span> — {altApplyResult.done} of {altApplyResult.total} invoices updated.</span>
+              {altApplyResult.errors.length > 0 && (
+                <ul className="rvr-error-list">
+                  {altApplyResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -1086,7 +1280,11 @@ export default function RVRBulkRandomizer() {
             <div key={ei} className="rvr-preview-card">
               <div className="rvr-preview-card-header">
                 <span className="rvr-inv-num">{entry.invoice.invoiceNumber}</span>
-                <span className="rvr-preview-customer">{entry.invoice.customer?.name}</span>
+                <span className="rvr-preview-customer">
+                  {entry.alternativeCustomerName
+                    ? `${entry.invoice.customer?.name} → ${entry.alternativeCustomerName}`
+                    : entry.invoice.customer?.name}
+                </span>
                 <span className="rvr-preview-date">{entry.invoice.date}</span>
                 <span className="rvr-preview-target">Target: ${fmt(entry.grandTarget)}</span>
                 <span className="rvr-preview-actual">Actual: ${fmt(entry.grandTotal)}</span>

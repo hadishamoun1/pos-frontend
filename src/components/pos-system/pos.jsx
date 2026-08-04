@@ -29,6 +29,7 @@ const POSSystemPage = () => {
   const [customerInput, setCustomerInput] = useState("");
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [selectedAlternativeCustomerId, setSelectedAlternativeCustomerId] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [currencyRate, setCurrencyRate] = useState("89500");
   const [loading, setLoading] = useState(false);
@@ -747,6 +748,8 @@ const POSSystemPage = () => {
     setLoading(true);
     setIsEditable(false);
 
+    setSelectedAlternativeCustomerId(null);
+
     if (typeof reqOrId === "object") {
       setSelectedRequestNumber(reqOrId?.requestNumber || "");
       setSelectedCustomerName(reqOrId?.customerName || "");
@@ -1011,6 +1014,7 @@ const POSSystemPage = () => {
 
     setTableData([]);
     setSelectedCustomerId(null);
+    setSelectedAlternativeCustomerId(null);
     setCustomerInput("");
     setSelectedCustomerName("");
     setCurrencyRate("89500");
@@ -1162,6 +1166,7 @@ const POSSystemPage = () => {
 
   const handleCustomerSelect = async (customer) => {
     setSelectedCustomerId(customer.id);
+    setSelectedAlternativeCustomerId(null);
     setSelectedCustomerName(customer.customerName);
     setCustomerInput(customer.customerName);
     setCustomerSuggestions([]);
@@ -1390,6 +1395,7 @@ const POSSystemPage = () => {
 
     setCustomerInput(invoice?.customerName || invoice?.customer?.customerName || "");
     setSelectedCustomerId(invoice?.customerId ?? invoice?.customer?.id ?? null);
+    setSelectedAlternativeCustomerId(invoice?.alternativeCustomerId ?? null);
     setSelectedCustomerName(
       invoice?.customerName || invoice?.customer?.customerName || ""
     );
@@ -1898,6 +1904,7 @@ const POSSystemPage = () => {
             isOpen={showStatement}
             onClose={() => setShowStatement(false)}
             customerId={selectedCustomerId}
+            alternativeCustomerId={selectedAlternativeCustomerId}
             defaultDate={statementBaseDate}
             customerName={selectedCustomerName}
           />

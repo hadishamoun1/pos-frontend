@@ -1493,7 +1493,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
       setIsEditing(false);
       const rows = (jv.details || []).map((d) => {
         const entityNumber = d.account?.accountNumber || d.supplier?.supplierAccountNumber || d.customer?.customerAccountNumber || "";
-        const entityName = d.account?.arabicAccountName || d.supplier?.supplierName || d.customer?.customerName || "";
+        const entityName = d.account?.arabicAccountName || d.supplier?.supplierName || d.alternativeCustomer?.company || d.customer?.customerName || "";
         return {
           rid: makeRid(),
           detailId: d.id ?? null,
