@@ -183,6 +183,7 @@ export const en = {
     sections: {
       posSystem: "POS System",
       recievables: "Recivables",
+      rvrRecievables: "RVR Receivables",
       inventory: "Inventory",
       customers: "Customers",
       purchasesInvoice: "Purchases Invoice",
