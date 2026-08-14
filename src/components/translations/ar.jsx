@@ -176,6 +176,7 @@ export const ar = {
       posSystem: "نظام نقاط البيع",
       recievables: "الذمم المدينة",
       rvrRecievables: "ذمم RVR",
+      warehouseStock: "مخزون المستودعات",
       inventory: "المخزون",
       customers: "العملاء",
       purchasesInvoice: "فاتورة المشتريات",

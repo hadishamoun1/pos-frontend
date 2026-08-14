@@ -17,6 +17,7 @@ const DashboardPage            = lazy(() => import("./components/dashboard/dashb
 const POSSystemPage            = lazy(() => import("./components/pos-system/pos"));
 const AccountingPage           = lazy(() => import("./components/recievables/recievables"));
 const RvrReceivablesPage       = lazy(() => import("./components/recievables/RvrReceivables"));
+const WarehouseStockPage       = lazy(() => import("./components/inventory/WarehouseStockPanel"));
 const PurchasesInvoicePage     = lazy(() => import("./components/purchases-invoice/purchases-invoice"));
 const InventoryPage            = lazy(() => import("./components/inventory/inventory"));
 const SuppliersPage            = lazy(() => import("./components/suppliers/suppliers"));
@@ -76,6 +77,7 @@ function App() {
                   <Route path="/pos-system" element={<POSSystemPage />} />
                   <Route path="/recivables" element={<AccountingPage />} />
                   <Route path="/recivables/rvr" element={<RvrReceivablesPage />} />
+                  <Route path="/warehouse-stock" element={<WarehouseStockPage />} />
                   <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />

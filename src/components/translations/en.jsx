@@ -184,6 +184,7 @@ export const en = {
       posSystem: "POS System",
       recievables: "Recivables",
       rvrRecievables: "RVR Receivables",
+      warehouseStock: "Warehouse Stock",
       inventory: "Inventory",
       customers: "Customers",
       purchasesInvoice: "Purchases Invoice",
