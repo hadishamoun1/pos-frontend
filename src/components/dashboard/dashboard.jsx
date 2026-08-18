@@ -22,6 +22,7 @@ const sections = [
   { key: "recievables",       path: "/recivables",         image: "/assets/accounting.png",       perm: "recievables.view" },
   { key: "rvrRecievables",    path: "/recivables/rvr",     image: "/assets/rvr.png",             perm: "rvrRecievables.view" },
   { key: "warehouseStock",    path: "/warehouse-stock",    image: "/assets/inventory.png?v=2",    perm: "warehouseStock.view" },
+  { key: "zeroVatInvoices",   path: "/zero-vat-invoices",  image: "/assets/rvr.png",             perm: "zeroVatInvoices.view" },
   { key: "inventory",         path: "/inventory",          image: "/assets/inventory.png?v=2",    perm: "inventory.view" },
   { key: "customers",         path: "/customers",          image: "/assets/customers.png",       perm: "customers.view" },
   { key: "purchasesInvoice",  path: "/purchases-invoice", image: "/assets/purchase.png",         perm: "purchases.view" },

@@ -185,6 +185,7 @@ export const en = {
       recievables: "Recivables",
       rvrRecievables: "RVR Receivables",
       warehouseStock: "Warehouse Stock",
+      zeroVatInvoices: "0% VAT Invoices",
       inventory: "Inventory",
       customers: "Customers",
       purchasesInvoice: "Purchases Invoice",

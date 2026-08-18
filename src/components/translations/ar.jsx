@@ -177,6 +177,7 @@ export const ar = {
       recievables: "الذمم المدينة",
       rvrRecievables: "ذمم RVR",
       warehouseStock: "مخزون المستودعات",
+      zeroVatInvoices: "فواتير بدون ضريبة",
       inventory: "المخزون",
       customers: "العملاء",
       purchasesInvoice: "فاتورة المشتريات",
