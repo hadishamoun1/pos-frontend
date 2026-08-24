@@ -1,7 +1,7 @@
 // UniqueItemsPage.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import "./items.css";
-import { axiosClient } from "../api/axiosClient"; // ✅ added
+import { axiosClient, getUploadsBaseUrl } from "../api/axiosClient"; // ✅ added
 
 const PAGE_SIZE = 50;
 
@@ -1348,7 +1348,7 @@ const buildEditPayload = () => {
                         >
                           {r.pictureUrl ? (
                             <img
-                              src={`${axiosClient.defaults.baseURL}${r.pictureUrl}`}
+                              src={`${getUploadsBaseUrl()}${r.pictureUrl}`}
                               alt=""
                               className="items-thumb-img"
                             />
@@ -1788,7 +1788,7 @@ const buildEditPayload = () => {
               {productInfo.pictureUrl && (
                 <img
                   className="items-product-info-thumb"
-                  src={`${axiosClient.defaults.baseURL}${productInfo.pictureUrl}`}
+                  src={`${getUploadsBaseUrl()}${productInfo.pictureUrl}`}
                   alt="Item"
                 />
               )}
@@ -1838,7 +1838,7 @@ const buildEditPayload = () => {
             <h2>{previewInfo.itemName || "Item"}</h2>
             {previewInfo.pictureUrl && (
               <img
-                src={`${axiosClient.defaults.baseURL}${previewInfo.pictureUrl}`}
+                src={`${getUploadsBaseUrl()}${previewInfo.pictureUrl}`}
                 alt={previewInfo.itemName || ""}
                 className="items-preview-img"
               />

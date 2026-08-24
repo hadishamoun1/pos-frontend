@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import axios from "axios";
-import { axiosClient } from "../api/axiosClient";
+import { axiosClient, getUploadsBaseUrl } from "../api/axiosClient";
 import { useTranslation } from "../hooks/useTranslation"; // ✅ ADD THIS
 
 /* ----------------- Light Repeat Modal (no prompt) ----------------- */
@@ -943,7 +943,7 @@ const StockTab = forwardRef(function StockTab(
                 ? `${r.itemName ?? ""}`.trim()
                 : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim();
 
-            const imgUrl = r.pictureUrl ? `${axiosClient.defaults.baseURL}${r.pictureUrl}` : null;
+            const imgUrl = r.pictureUrl ? `${getUploadsBaseUrl()}${r.pictureUrl}` : null;
 
             return (
               <div

@@ -10,6 +10,17 @@ export const axiosClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Uploaded files (item pictures, employee docs, etc.) are served by the
+// backend's static file middleware, which sits OUTSIDE the "/api" prefix
+// (NestJS's global API prefix only applies to controller routes, not
+// app.useStaticAssets()). So a URL like "/uploads/items/x.png" must be
+// resolved against the API origin WITHOUT "/api" — not against
+// axiosClient.defaults.baseURL directly, or it 404s behind an /api proxy.
+export const getUploadsBaseUrl = () => {
+  const base = axiosClient.defaults.baseURL || "";
+  return base.replace(/\/api\/?$/, "");
+};
+
 // Attach token on EVERY request automatically
 axiosClient.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
