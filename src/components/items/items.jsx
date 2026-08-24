@@ -104,6 +104,18 @@ const [editForm, setEditForm] = useState({
   // Debug: show last sent payload
   const [lastSentPayload, setLastSentPayload] = useState(null);
 
+  // Product description + picture (separate from the main edit form/payload above,
+  // saved through their own small endpoints so they never touch the fragile
+  // createFullItem/editFullItem whitelisted-payload pipeline).
+  const [productInfo, setProductInfo] = useState({ productDescription: "", pictureUrl: "" });
+  const [productInfoLoading, setProductInfoLoading] = useState(false);
+  const [productInfoSaving, setProductInfoSaving] = useState(false);
+  const [pictureUploading, setPictureUploading] = useState(false);
+  const [productInfoMsg, setProductInfoMsg] = useState("");
+
+  // Photo/description preview popup for a row in the main table
+  const [previewInfo, setPreviewInfo] = useState(null);
+
   // which description mode drives list/edit/create/search APIs
   const [descMode, setDescMode] = useState("real"); // 'real' | 'name'
 
@@ -225,6 +237,8 @@ const [editForm, setEditForm] = useState({
             width: v?.width,
             sheetsPerBox: v?.sheetsPerBox,
             origin: v?.origin,
+            productDescription: v?.productDescription ?? null,
+            pictureUrl: v?.pictureUrl ?? null,
             description: rdOrName,
           });
         }
@@ -298,6 +312,11 @@ const [editForm, setEditForm] = useState({
   const idemKeyRef = useRef(
     `${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
+
+  // Description + picture collected at creation time — saved as a follow-up
+  // to the new variant right after it's created (see handleFormSubmit).
+  const [newItemDescription, setNewItemDescription] = useState("");
+  const [newItemPicture, setNewItemPicture] = useState(null);
 
   // initial state
   const [newItemData, setNewItemData] = useState({
@@ -534,6 +553,8 @@ const [editForm, setEditForm] = useState({
         },
       ],
     });
+    setNewItemDescription("");
+    setNewItemPicture(null);
   };
 
   const handleInputChange = (e, index = 0, variantIndex = 0) => {
@@ -615,12 +636,42 @@ const [editForm, setEditForm] = useState({
     try {
       const url = endpoints.create[descMode];
 
-      await axiosClient.post(url, payload, {
+      const res = await axiosClient.post(url, payload, {
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idemKeyRef.current,
         },
       });
+
+      // Best-effort: attach the description/picture entered above to the
+      // variant that was just created. Doesn't affect the main success/error
+      // result — the item itself is already created either way.
+      if (newItemDescription.trim() || newItemPicture) {
+        const variants = res?.data?.thicknesses?.[0]?.variants || [];
+        const newVariant = variants.reduce(
+          (best, v) => (!best || Number(v.id) > Number(best.id) ? v : best),
+          null,
+        );
+        const newVariantId = newVariant?.id;
+        if (newVariantId) {
+          try {
+            if (newItemDescription.trim()) {
+              await axiosClient.patch(`/items/v1/variants/${newVariantId}/product-info`, {
+                productDescription: newItemDescription.trim(),
+              });
+            }
+            if (newItemPicture) {
+              const formData = new FormData();
+              formData.append("file", newItemPicture);
+              await axiosClient.post(`/items/v1/variants/${newVariantId}/picture`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+              });
+            }
+          } catch (attachErr) {
+            console.warn("Item created, but saving description/picture failed:", attachErr);
+          }
+        }
+      }
 
       await refreshItems();
       setModalType("success");
@@ -702,6 +753,8 @@ const [editForm, setEditForm] = useState({
           width: Number(g?.width ?? 0),
           sheetsPerBox: Number(g?.sheetsPerBox ?? 0),
           origin: g?.origin ?? "",
+          productDescription: g?.productDescription ?? null,
+          pictureUrl: g?.pictureUrl ?? null,
           description: rd,
         });
       }
@@ -906,11 +959,62 @@ const openEditSelected = () => {
     designName: snap.designName,
   });
   setEditOpen(true);
+
+  setProductInfoMsg("");
+  setProductInfo({ productDescription: "", pictureUrl: "" });
+  setProductInfoLoading(true);
+  axiosClient
+    .get(`/items/v1/variants/${snap.variantId}/product-info`)
+    .then((res) => {
+      setProductInfo({
+        productDescription: res.data?.productDescription || "",
+        pictureUrl: res.data?.pictureUrl || "",
+      });
+    })
+    .catch(() => {})
+    .finally(() => setProductInfoLoading(false));
 };
 
   const closeEdit = () => {
     setEditOpen(false);
     setEditVariantId(null);
+  };
+
+  const saveProductDescription = async () => {
+    if (!editVariantId) return;
+    setProductInfoSaving(true);
+    setProductInfoMsg("");
+    try {
+      await axiosClient.patch(`/items/v1/variants/${editVariantId}/product-info`, {
+        productDescription: productInfo.productDescription || null,
+      });
+      setProductInfoMsg("Description saved.");
+    } catch (err) {
+      setProductInfoMsg(err?.response?.data?.message || "Failed to save description.");
+    } finally {
+      setProductInfoSaving(false);
+    }
+  };
+
+  const uploadVariantPicture = async (file) => {
+    if (!editVariantId || !file) return;
+    setPictureUploading(true);
+    setProductInfoMsg("");
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await axiosClient.post(
+        `/items/v1/variants/${editVariantId}/picture`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } },
+      );
+      setProductInfo((prev) => ({ ...prev, pictureUrl: res.data?.pictureUrl || prev.pictureUrl }));
+      setProductInfoMsg("Picture uploaded.");
+    } catch (err) {
+      setProductInfoMsg(err?.response?.data?.message || "Failed to upload picture.");
+    } finally {
+      setPictureUploading(false);
+    }
   };
 
   const handleEditChange = (e) => {
@@ -1176,6 +1280,7 @@ const buildEditPayload = () => {
               <th>Width(cm)</th>
               <th>Sheets/Box</th>
               <th>Origin</th>
+              <th>Photo</th>
             </tr>
           </thead>
 
@@ -1227,6 +1332,34 @@ const buildEditPayload = () => {
                       {t === "box" ? r.sheetsPerBox ?? "—" : "—"}
                     </td>
                     <td className="ar-rtl">{r.origin ?? "—"}</td>
+                    <td className="items-creation-col-photo">
+                      {r.pictureUrl || r.productDescription ? (
+                        <button
+                          type="button"
+                          className="items-thumb-btn"
+                          onClick={() =>
+                            setPreviewInfo({
+                              itemName: r.itemName,
+                              pictureUrl: r.pictureUrl,
+                              productDescription: r.productDescription,
+                            })
+                          }
+                          title="View photo / description"
+                        >
+                          {r.pictureUrl ? (
+                            <img
+                              src={`${axiosClient.defaults.baseURL}${r.pictureUrl}`}
+                              alt=""
+                              className="items-thumb-img"
+                            />
+                          ) : (
+                            <span className="items-thumb-note">📝</span>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="items-thumb-empty">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               }
@@ -1465,6 +1598,26 @@ const buildEditPayload = () => {
                 />
               </label>
 
+              <label style={{ gridColumn: "1 / -1" }}>
+                Description:
+                <textarea
+                  rows={2}
+                  value={newItemDescription}
+                  onChange={(e) => setNewItemDescription(e.target.value)}
+                  className="ar-rtl"
+                  placeholder="Notes about this item…"
+                />
+              </label>
+
+              <label>
+                Picture:
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => setNewItemPicture(e.target.files?.[0] || null)}
+                />
+              </label>
+
               <div className="items-creation-button-row">
                 <button ref={refSubmit} type="submit" disabled={submitting}>
                   {submitting ? "Creating…" : "Create Item"}
@@ -1606,6 +1759,59 @@ const buildEditPayload = () => {
         </div>
       </form>
 
+      <div className="items-product-info">
+        <h3>Description &amp; Picture</h3>
+
+        {productInfoLoading ? (
+          <div className="items-product-info-loading">Loading…</div>
+        ) : (
+          <div className="items-product-info-body">
+            <label>
+              Description:
+              <textarea
+                rows={3}
+                value={productInfo.productDescription}
+                onChange={(e) =>
+                  setProductInfo((prev) => ({ ...prev, productDescription: e.target.value }))
+                }
+                className="ar-rtl"
+                placeholder="Notes about this item…"
+              />
+            </label>
+            <div className="items-product-info-actions">
+              <button type="button" onClick={saveProductDescription} disabled={productInfoSaving}>
+                {productInfoSaving ? "Saving…" : "Save Description"}
+              </button>
+            </div>
+
+            <div className="items-product-info-picture-row">
+              {productInfo.pictureUrl && (
+                <img
+                  className="items-product-info-thumb"
+                  src={`${axiosClient.defaults.baseURL}${productInfo.pictureUrl}`}
+                  alt="Item"
+                />
+              )}
+              <label>
+                Picture:
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => uploadVariantPicture(e.target.files?.[0])}
+                  disabled={pictureUploading}
+                />
+              </label>
+            </div>
+
+            {productInfoMsg && (
+              <div className={`items-product-info-msg ${productInfoMsg.includes("Failed") ? "error" : "success"}`}>
+                {productInfoMsg}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {lastSentPayload && (
         <pre
           style={{
@@ -1621,6 +1827,36 @@ const buildEditPayload = () => {
     </div>
   </div>
 )}
+
+      {/* Photo / description preview */}
+      {previewInfo && (
+        <div className="items-creation-modal" onClick={() => setPreviewInfo(null)}>
+          <div
+            className="items-creation-modal-content items-preview-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>{previewInfo.itemName || "Item"}</h2>
+            {previewInfo.pictureUrl && (
+              <img
+                src={`${axiosClient.defaults.baseURL}${previewInfo.pictureUrl}`}
+                alt={previewInfo.itemName || ""}
+                className="items-preview-img"
+              />
+            )}
+            {previewInfo.productDescription && (
+              <p className="items-preview-desc ar-rtl">{previewInfo.productDescription}</p>
+            )}
+            {!previewInfo.pictureUrl && !previewInfo.productDescription && (
+              <p className="items-preview-desc">No description or picture yet.</p>
+            )}
+            <div className="items-creation-button-row">
+              <button type="button" onClick={() => setPreviewInfo(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status modal */}
       {modalContent && (

@@ -121,6 +121,7 @@ export const en = {
       stock: "Stock Items",
       all: "All",
       sqm: "SQM Pieces",
+      media: "Pictured Items",
     },
   },
 

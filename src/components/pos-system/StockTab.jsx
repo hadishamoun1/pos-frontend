@@ -88,13 +88,16 @@ function RepeatModal({ open, label, defaultValue = 1, onCancel, onConfirm }) {
 }
 
 const StockTab = forwardRef(function StockTab(
-  { modalOpen, isActive, selectedMap, setSelectedMap, homeWarehouse },
+  { modalOpen, isActive, selectedMap, setSelectedMap, homeWarehouse, mediaOnly },
   ref
 ) {
   const { t } = useTranslation(); // ✅ ADD THIS LINE
   
   const [flatRows, setFlatRows] = useState([]);
   const [nestedItems, setNestedItems] = useState([]);
+
+  // Full-size photo preview for the "Pictured Items" (mediaOnly) tab
+  const [previewImage, setPreviewImage] = useState(null);
 
   const [inputValue, setInputValue] = useState("");
   const [nameChip, setNameChip] = useState("");
@@ -305,6 +308,8 @@ const StockTab = forwardRef(function StockTab(
           condition: b.condition,
           dateReceived: b.dateReceived,
           stockQty: isService ? "" : Number(b.balanceOFR ?? 0),
+          productDescription: v.productDescription ?? null,
+          pictureUrl: v.pictureUrl ?? null,
         });
       }
     }
@@ -318,8 +323,9 @@ const StockTab = forwardRef(function StockTab(
       try {
         const signal = cancelInFlight();
         const whParams = homeWarehouse ? { warehouse: homeWarehouse } : {};
+        const mediaParams = mediaOnly ? { hasMedia: true } : {};
         const res = await axiosClient.get("/items/v1/real-variant-ledger", {
-          params: { page: targetPage, limit, includeSqm: true, ...whParams },
+          params: { page: targetPage, limit, includeSqm: true, ...whParams, ...mediaParams },
           signal,
         });
         const { data: variants, hasMore: hm } = normalizeEnvelope(res.data);
@@ -339,7 +345,7 @@ const StockTab = forwardRef(function StockTab(
         setLoading(false);
       }
     },
-    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants, homeWarehouse]
+    [isActive, limit, modalOpen, normalizeEnvelope, flattenVariants, homeWarehouse, mediaOnly]
   );
 
   const fetchDefault = useCallback(() => fetchDefaultPage(1), [fetchDefaultPage]);
@@ -363,6 +369,7 @@ const StockTab = forwardRef(function StockTab(
       }
 
       if (homeWarehouse) params.warehouse = homeWarehouse;
+      if (mediaOnly) params.hasMedia = true;
       const res = await axiosClient.get("/items/v1/real-variant-ledger", { params: { ...params, includeSqm: true }, signal });
       const { data: variants } = normalizeEnvelope(res.data);
       const flat = flattenVariants(variants);
@@ -391,6 +398,7 @@ const StockTab = forwardRef(function StockTab(
     normalizeEnvelope,
     flattenVariants,
     homeWarehouse,
+    mediaOnly,
   ]);
 
   const clearEverything = useCallback(() => {
@@ -634,6 +642,8 @@ const StockTab = forwardRef(function StockTab(
         condition: r.condition ?? "",
         dateReceived: r.dateReceived ?? "",
         stockQty: r.stockQty ?? "",
+        productDescription: r.productDescription ?? null,
+        pictureUrl: r.pictureUrl ?? null,
       };
     });
   }, [flatRows]);
@@ -911,6 +921,89 @@ const StockTab = forwardRef(function StockTab(
         </div>
       </div>
 
+      {mediaOnly ? (
+        <div className="media-grid">
+          {rows.map((r) => {
+            const checked = selectedMap.has(r.uniqueId);
+            const typeLower = String(r.type || "").toLowerCase();
+            const isBox = typeLower === "box";
+            const isSheet = typeLower === "sheet";
+
+            let dimensionsDisplay = "";
+            if (isBox) {
+              dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}-${String(r.sheetsPerBox || 0).padStart(3, "0")}`;
+            } else if (isSheet) {
+              dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
+            } else {
+              dimensionsDisplay = r.length && r.width ? `${r.length}×${r.width}` : (r.length ?? "");
+            }
+
+            const displayName =
+              typeLower === "unit"
+                ? `${r.itemName ?? ""}`.trim()
+                : `${parseFloat(String(r.thickness))} ملم ${r.itemName ?? ""}`.trim();
+
+            const imgUrl = r.pictureUrl ? `${axiosClient.defaults.baseURL}${r.pictureUrl}` : null;
+
+            return (
+              <div
+                key={r.uniqueId}
+                className={`media-card${checked ? " selected" : ""}${!r.selectable ? " disabled" : ""}`}
+                onClick={() => r.selectable && toggleSelect(r)}
+              >
+                <div className="media-card-check">
+                  <input type="checkbox" checked={checked} disabled={!r.selectable} readOnly />
+                </div>
+
+                <div className="media-card-image">
+                  {imgUrl ? (
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage({ url: imgUrl, itemName: r.itemName, productDescription: r.productDescription });
+                      }}
+                    />
+                  ) : (
+                    <div className="media-card-noimg">No photo</div>
+                  )}
+                </div>
+
+                <div className="media-card-body">
+                  <div className="media-card-name" dir="rtl">{displayName}</div>
+
+                  <div className="media-card-dims-row">
+                    {dimensionsDisplay && <span className="media-card-dims">{dimensionsDisplay}</span>}
+                    {r.type && <span className="media-card-type-badge">{r.type}</span>}
+                  </div>
+
+                  {r.origin && (
+                    <div className="media-card-kv">
+                      <span className="media-card-kv-label">{t('stockTab.origin')}:</span>
+                      <span className="media-card-kv-value">{r.origin}</span>
+                    </div>
+                  )}
+
+                  {r.stockQty !== "" && r.stockQty != null && (
+                    <div className="media-card-kv">
+                      <span className="media-card-kv-label">{t('stockTab.stockBox')}/{t('stockTab.stockSheet')}:</span>
+                      <span className="media-card-kv-value">{r.stockQty}</span>
+                    </div>
+                  )}
+                  {r.productDescription && (
+                    <div className="media-card-desc" dir="rtl">{r.productDescription}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {rows.length === 0 && (
+            <div className="media-grid-empty">{t('stockTab.noData')}</div>
+          )}
+        </div>
+      ) : (
       <table className="search-modal-table">
         <thead>
           <tr>
@@ -930,11 +1023,11 @@ const StockTab = forwardRef(function StockTab(
           {rows.map((r) => {
             const checked = selectedMap.has(r.uniqueId);
             const rep = checked ? Number(selectedMap.get(r.uniqueId)?.repeat || 1) : 1;
-            
+
             const typeLower = String(r.type || "").toLowerCase();
             const isBox = typeLower === "box";
             const isSheet = typeLower === "sheet";
-            
+
             let dimensionsDisplay = "";
             if (isBox) {
               dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}-${String(r.sheetsPerBox || 0).padStart(3, "0")}`;
@@ -947,7 +1040,7 @@ const StockTab = forwardRef(function StockTab(
                 dimensionsDisplay = r.length ?? "";
               }
             }
-            
+
             const stockBox = isBox ? (r.stockQty ?? "") : "";
             const stockSheet = isSheet ? (r.stockQty ?? "") : "";
 
@@ -993,6 +1086,7 @@ const StockTab = forwardRef(function StockTab(
           )}
         </tbody>
       </table>
+      )}
 
       {!inSearchMode && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
@@ -1006,6 +1100,36 @@ const StockTab = forwardRef(function StockTab(
           <span style={{ fontSize: 12, opacity: 0.7 }}>
             {t('stockTab.page')} {page} • {t('stockTab.showing')} {rows.length} {t('stockTab.rows')} {/* ✅ CHANGED */}
           </span>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="media-preview-overlay" onClick={() => setPreviewImage(null)}>
+          <div className="media-preview-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="media-preview-close"
+              onClick={() => setPreviewImage(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+
+            <div className="media-preview-image-wrap">
+              <img src={previewImage.url} alt="" />
+            </div>
+
+            {(previewImage.itemName || previewImage.productDescription) && (
+              <div className="media-preview-info">
+                {previewImage.itemName && (
+                  <div className="media-preview-name" dir="rtl">{previewImage.itemName}</div>
+                )}
+                {previewImage.productDescription && (
+                  <div className="media-preview-desc" dir="rtl">{previewImage.productDescription}</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </>

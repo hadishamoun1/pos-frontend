@@ -16,25 +16,30 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
   const canStock = hasPerm("pos.search.stockTab");
   const canAll = hasPerm("pos.search.allTab");
   const canSqm = hasPerm("pos.search.sqmTab");
+  // "Pictured" tab reuses the same permission as Stock — it's just a filtered view of it.
+  const canMedia = canStock;
 
   const allowedTabs = useMemo(() => {
     const tabs = [];
     if (canStock) tabs.push("stock");
     if (canAll) tabs.push("all");
     if (canSqm) tabs.push("sqm");
+    if (canMedia) tabs.push("media");
     return tabs;
-  }, [canStock, canAll, canSqm]);
+  }, [canStock, canAll, canSqm, canMedia]);
 
-  const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all" | "sqm"
+  const [activeTab, setActiveTab] = useState("stock"); // "stock" | "all" | "sqm" | "media"
 
   // ✅ selections stored in parent so they don't disappear on tab switch
   const [selectedStock, setSelectedStock] = useState(() => new Map());
   const [selectedAll, setSelectedAll] = useState(() => new Map());
   const [selectedSqm, setSelectedSqm] = useState(() => new Map());
+  const [selectedMedia, setSelectedMedia] = useState(() => new Map());
 
   const stockRef = useRef(null);
   const allRef = useRef(null);
   const sqmRef = useRef(null);
+  const mediaRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -43,6 +48,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     setSelectedStock(new Map());
     setSelectedAll(new Map());
     setSelectedSqm(new Map());
+    setSelectedMedia(new Map());
 
     // pick first allowed tab
     const first = allowedTabs[0] || null;
@@ -82,9 +88,10 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
     addValues(selectedStock);
     addValues(selectedAll);
     addValues(selectedSqm);
+    addValues(selectedMedia);
 
     return keys.size;
-  }, [selectedStock, selectedAll, selectedSqm]);
+  }, [selectedStock, selectedAll, selectedSqm, selectedMedia]);
 
   if (!isOpen) return null;
 
@@ -113,6 +120,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
       ...Array.from(selectedStock.values()),
       ...Array.from(selectedAll.values()),
       ...Array.from(selectedSqm.values()),
+      ...Array.from(selectedMedia.values()),
     ];
     onSelectItems(items);
     onClose();
@@ -155,6 +163,7 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
           {canStock && <TabButton id="stock" label={t("searchModal.tabs.stock")} />}
           {canAll && <TabButton id="all" label={t("searchModal.tabs.all")} />}
           {canSqm && <TabButton id="sqm" label={t("searchModal.tabs.sqm")} />}
+          {canMedia && <TabButton id="media" label={t("searchModal.tabs.media")} />}
         </div>
 
         {/* Panels */}
@@ -192,6 +201,20 @@ const SearchModal = ({ isOpen, onClose, onSelectItems }) => {
               isActive={activeTab === "sqm"}
               selectedMap={selectedSqm}
               setSelectedMap={setSelectedSqm}
+            />
+          </div>
+        )}
+
+        {canMedia && activeTab === "media" && (
+          <div id="media-panel" role="tabpanel" aria-labelledby="media-tab">
+            <StockTab
+              ref={mediaRef}
+              modalOpen={isOpen}
+              isActive={activeTab === "media"}
+              selectedMap={selectedMedia}
+              setSelectedMap={setSelectedMedia}
+              homeWarehouse={homeWarehouse}
+              mediaOnly
             />
           </div>
         )}
