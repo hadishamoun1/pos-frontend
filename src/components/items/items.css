@@ -379,7 +379,7 @@ input, select, button, table {
 
 .items-preview-modal { width: min(520px, 92vw); text-align: center; }
 .items-preview-img {
-  max-width: 100%;
+  width: 100%;
   max-height: 420px;
   object-fit: contain;
   border-radius: 10px;
