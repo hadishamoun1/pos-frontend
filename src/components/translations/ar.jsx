@@ -83,6 +83,7 @@ export const ar = {
     length: "الطول",
     stockBox: "مخزون الصناديق",
     stockSheet: "مخزون الألواح",
+    stock: "المخزون",
     origin: "المنشأ",
     condition: "الحالة",
     dateReceived: "تاريخ الاستلام",

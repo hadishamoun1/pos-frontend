@@ -83,6 +83,7 @@ export const en = {
     length: "LENGTH",
     stockBox: "STOCK BOX",
     stockSheet: "STOCK SHEET",
+    stock: "STOCK",
     origin: "ORIGIN",
     condition: "CONDITION",
     dateReceived: "DATE RECEIVED",

@@ -934,8 +934,8 @@ const StockTab = forwardRef(function StockTab(
               dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}-${String(r.sheetsPerBox || 0).padStart(3, "0")}`;
             } else if (isSheet) {
               dimensionsDisplay = `${r.length ?? ""}×${r.width ?? ""}`;
-            } else {
-              dimensionsDisplay = r.length && r.width ? `${r.length}×${r.width}` : (r.length ?? "");
+            } else if (typeLower !== "unit" && typeLower !== "sqm" && r.length && r.width) {
+              dimensionsDisplay = `${r.length}×${r.width}`;
             }
 
             const displayName =
@@ -987,7 +987,9 @@ const StockTab = forwardRef(function StockTab(
 
                   {r.stockQty !== "" && r.stockQty != null && (
                     <div className="media-card-kv">
-                      <span className="media-card-kv-label">{t('stockTab.stockBox')}/{t('stockTab.stockSheet')}:</span>
+                      <span className="media-card-kv-label">
+                        {isBox ? t('stockTab.stockBox') : isSheet ? t('stockTab.stockSheet') : t('stockTab.stock')}:
+                      </span>
                       <span className="media-card-kv-value">{r.stockQty}</span>
                     </div>
                   )}
