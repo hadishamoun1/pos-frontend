@@ -1,0 +1,195 @@
+.ship-track-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #0e2430;
+}
+
+.ship-track-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #f1e2c0;
+  border: 1px solid #a8791f;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.ship-track-banner strong {
+  color: #a8791f;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11.5px;
+}
+
+.ship-track-header h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(22px, 2.6vw, 30px);
+}
+
+.ship-track-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .ship-track-grid { grid-template-columns: 1fr; }
+}
+
+.ship-track-map-wrap {
+  background: #fff;
+  border: 1px solid #cfdbda;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(14, 36, 48, 0.06), 0 6px 20px rgba(14, 36, 48, 0.05);
+}
+.ship-track-leaflet {
+  width: 100%;
+  height: 640px;
+}
+@media (max-width: 960px) {
+  .ship-track-leaflet { height: 420px; }
+}
+
+/* Leaflet custom ship marker */
+.ship-div-icon { background: none; border: none; }
+.ship-div-icon-pin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+/* Leaflet custom port marker (dot + label, no default pin) */
+.port-div-icon { background: none; border: none; }
+.port-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0e2430;
+  border: 1.5px solid #fff;
+  transform: translate(-3.5px, -3.5px);
+}
+.port-label {
+  position: absolute;
+  top: -8px;
+  left: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0e2430;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Popup content */
+.ship-popup { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; min-width: 170px; }
+.ship-popup-po { font: 600 10.5px/1 "SF Mono", Consolas, monospace; color: #51707b; }
+.ship-popup-supplier { font-family: Georgia, serif; font-weight: 700; font-size: 14px; margin: 2px 0; }
+.ship-popup-vessel { font-size: 11.5px; color: #374151; }
+.ship-popup-carrier { font-size: 11.5px; color: #51707b; }
+.ship-popup-eta { font-weight: 700; font-size: 12px; margin-top: 3px; }
+.ship-popup-eta.good { color: #2f7a5c; }
+.ship-popup-eta.warn { color: #a85a24; }
+.ship-popup-eta.bad { color: #ae4436; }
+.ship-popup-eta.mute { color: #8a99a3; }
+
+/* Sidebar list */
+.ship-track-list {
+  background: #fff;
+  border: 1px solid #cfdbda;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(14, 36, 48, 0.06), 0 6px 20px rgba(14, 36, 48, 0.05);
+  overflow: hidden;
+}
+.ship-track-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  border-bottom: 1px solid #cfdbda;
+  background: #e4ecea;
+}
+.ship-track-list-head h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+.ship-track-count {
+  font: 600 11px/1 "SF Mono", Consolas, monospace;
+  color: #51707b;
+  background: #eff4f3;
+  border: 1px solid #cfdbda;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.ship-track-cards { display: flex; flex-direction: column; max-height: 640px; overflow-y: auto; }
+.ship-track-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #cfdbda;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease, border-left-color 0.15s ease;
+}
+.ship-track-card:hover { background: #f4f8f7; }
+.ship-track-card.selected { background: #f1e2c0; border-left-color: #a8791f; }
+.ship-track-card.disabled { cursor: default; opacity: 0.7; }
+.ship-track-card.disabled:hover { background: #fff; }
+
+.ship-track-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ship-track-po { font: 600 10.5px/1 "SF Mono", Consolas, monospace; color: #51707b; }
+.ship-track-supplier { margin: 2px 0 0; font-family: Georgia, serif; font-weight: 700; font-size: 14px; }
+
+.ship-track-pill {
+  flex: none;
+  font: 700 10px/1 -apple-system, sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ship-track-pill.good { color: #2f7a5c; background: #e0efe7; }
+.ship-track-pill.warn { color: #a85a24; background: #f2e1d0; }
+.ship-track-pill.bad { color: #ae4436; background: #f6e1dd; }
+.ship-track-pill.mute { color: #51707b; background: #e4ecea; }
+
+.ship-track-meta { font-size: 11.5px; color: #51707b; }
+.ship-track-meta code { font: 600 11px/1 "SF Mono", Consolas, monospace; color: #0e2430; }
+.ship-track-route { font-size: 12px; color: #0e2430; }
+.ship-track-eta { font-size: 12px; font-weight: 700; }
+.ship-track-eta.good { color: #2f7a5c; }
+.ship-track-eta.warn { color: #a85a24; }
+.ship-track-eta.bad { color: #ae4436; }
+.ship-track-eta.mute { color: #51707b; font-weight: 500; }
+
+.ship-track-footer {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+  color: #51707b;
+  padding: 2px 2px 0;
+}
+.ship-track-footer strong { color: #0e2430; }

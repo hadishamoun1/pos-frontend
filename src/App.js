@@ -19,6 +19,7 @@ const AccountingPage           = lazy(() => import("./components/recievables/rec
 const RvrReceivablesPage       = lazy(() => import("./components/recievables/RvrReceivables"));
 const WarehouseStockPage       = lazy(() => import("./components/inventory/WarehouseStockPanel"));
 const ZeroVatInvoicesPage      = lazy(() => import("./components/pos-system/ZeroVatInvoices"));
+const ShipmentTrackingPage     = lazy(() => import("./components/purchases-invoice/ShipmentTrackingMap"));
 const PurchasesInvoicePage     = lazy(() => import("./components/purchases-invoice/purchases-invoice"));
 const InventoryPage            = lazy(() => import("./components/inventory/inventory"));
 const SuppliersPage            = lazy(() => import("./components/suppliers/suppliers"));
@@ -80,6 +81,7 @@ function App() {
                   <Route path="/recivables/rvr" element={<RvrReceivablesPage />} />
                   <Route path="/warehouse-stock" element={<WarehouseStockPage />} />
                   <Route path="/zero-vat-invoices" element={<ZeroVatInvoicesPage />} />
+                  <Route path="/shipment-tracking" element={<ShipmentTrackingPage />} />
                   <Route path="/purchases-invoice" element={<PurchasesInvoicePage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />

@@ -180,6 +180,7 @@ export const ar = {
       rvrRecievables: "ذمم RVR",
       warehouseStock: "مخزون المستودعات",
       zeroVatInvoices: "فواتير بدون ضريبة",
+      shipmentTracking: "تتبع الشحنات",
       inventory: "المخزون",
       customers: "العملاء",
       purchasesInvoice: "فاتورة المشتريات",

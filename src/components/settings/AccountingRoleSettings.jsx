@@ -19,6 +19,8 @@ const DEFAULT_ROLE_KEYS = [
   "SALES_VAT_OUTPUT",
   "SalesReturn_USD",
   "SalesReturn_LL",
+  "SalesZeroVat_USD",
+  "SalesZeroVat_LL",
   "PURCHASE_EXPENSE",
   "PURCHASE_DISCOUNT",
   "PURCHASE_VAT_INPUT",
