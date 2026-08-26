@@ -1,6 +1,6 @@
 // CustomerDetails.jsx
 import React, { useState } from "react";
-import HistoryModal from "./HistoryModal";
+import ItemSalesHistoryModal from "./ItemSalesHistoryModal";
 import { useTranslation } from "../../hooks/useTranslation"; // ✅ adjust path if needed
 
 const CustomerDetails = ({
@@ -25,8 +25,7 @@ const CustomerDetails = ({
 }) => {
   const { t } = useTranslation(); // ✅
 
-  // ✅ Add state for history modal
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isItemSalesHistoryOpen, setIsItemSalesHistoryOpen] = useState(false);
 
   return (
     <div>
@@ -180,21 +179,21 @@ const CustomerDetails = ({
             {t("customerDetails.getPrice")}
           </button>
 
-          {/* ✅ View History Button */}
+          {/* ✅ Item Sales History Button */}
           <button
             className="pos-page-toolbar-button pos-page-purple-button"
-            onClick={() => setIsHistoryModalOpen(true)}
-            title={t("posCustomerDetails.viewHistoryTitle")}
+            onClick={() => setIsItemSalesHistoryOpen(true)}
+            title={t("customerDetails.itemSalesHistory")}
           >
-            {t("customerDetails.viewHistory")}
+            {t("customerDetails.itemSalesHistory")}
           </button>
         </div>
       </div>
 
-      {/* ✅ History Modal */}
-      <HistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
+      {/* ✅ Item Sales History Modal */}
+      <ItemSalesHistoryModal
+        isOpen={isItemSalesHistoryOpen}
+        onClose={() => setIsItemSalesHistoryOpen(false)}
       />
     </div>
   );

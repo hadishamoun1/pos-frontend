@@ -1,7 +1,9 @@
 // src/pos-system/Components/HistoryModal.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { axiosClient } from "../../api/axiosClient";
 import "./HistoryModal.css";
+
+const HISTORY_PAGE_SIZE = 100;
 
 const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   const [customers, setCustomers] = useState([]);
@@ -11,12 +13,15 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   const [totalPages, setTotalPages] = useState(1);
 
   const [selectedCustomerName, setSelectedCustomerName] = useState(null);
-  const [allCustomerHistory, setAllCustomerHistory] = useState([]); // ✅ Store ALL history
+  const [historyRows, setHistoryRows] = useState([]); // ✅ current page only, server-paginated
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
   // ✅ Search input (live)
   const [historySearchInput, setHistorySearchInput] = useState("");
+  // Debounced version of the live input — this is what actually drives the fetch,
+  // so we don't hit the server on every keystroke.
+  const [debouncedQuickSearch, setDebouncedQuickSearch] = useState("");
 
   // ✅ Pinned filters (Enter-to-pin)
   const [itemNameFilter, setItemNameFilter] = useState("");
@@ -24,6 +29,11 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     length: "",
     width: "",
   });
+
+  // ✅ Server-side pagination state for the customer detail history table
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
   // ✅ Helper: parse MM/DD/YY to Date
   const parseMMDDYY = (dateStr) => {
@@ -58,6 +68,7 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     if (isOpen && !showDetails) {
       fetchCustomers();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, page, searchTerm, showDetails]);
 
   const fetchCustomers = async () => {
@@ -80,151 +91,73 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     }
   };
 
-  // ✅ Fetch ALL customer history at once
-  const fetchAllCustomerHistory = async (customerName) => {
+  // ✅ Fetch ONE page of a customer's history from the server, with whatever
+  // search/filter is currently active.
+  const fetchCustomerHistoryPage = async (customerName, pageNum) => {
     setHistoryLoading(true);
     try {
+      const params = { page: pageNum, limit: HISTORY_PAGE_SIZE };
+
+      const quickSearch = (debouncedQuickSearch || "").trim();
+      if (quickSearch) {
+        // Live-typing mode: ignore pinned filters, same as before.
+        if (quickSearch.includes("*")) {
+          const parts = quickSearch.split("*").map((p) => p.trim());
+          if (parts.length === 2) {
+            // ✅ SWAP: DB width = actual length, DB length = actual width
+            params.width = parts[0];
+            params.length = parts[1];
+          }
+        } else {
+          params.q = quickSearch;
+        }
+      } else {
+        if (itemNameFilter) params.itemName = itemNameFilter;
+        if (dimensionsFilter.length) params.width = dimensionsFilter.length;
+        if (dimensionsFilter.width) params.length = dimensionsFilter.width;
+      }
+
       const response = await axiosClient.get(
         `/csv-imports/customers/${encodeURIComponent(customerName)}/history`,
-        { params: { limit: 100000 } }
+        { params }
       );
 
-      setAllCustomerHistory(response.data.data || []);
+      setHistoryRows(response.data.data || []);
+      setHistoryTotalPages(response.data.meta?.pages || 1);
+      setHistoryTotal(response.data.meta?.total || 0);
     } catch (error) {
       console.error("Error fetching customer history:", error);
-      setAllCustomerHistory([]);
+      setHistoryRows([]);
+      setHistoryTotalPages(1);
+      setHistoryTotal(0);
     } finally {
       setHistoryLoading(false);
     }
   };
 
-  /**
-   * ✅ REQUIRED BEHAVIOR:
-   * - While typing in historySearchInput:
-   *    - ignore pinned filters
-   *    - filter only by the search input
-   *    - sort ONLY by date desc (latest -> oldest)
-   * - When search input is empty:
-   *    - apply pinned filters
-   *    - sort by itemNumber asc, then date desc inside group
-   */
-  const filteredAndSortedHistory = useMemo(() => {
-    let filtered = [...allCustomerHistory];
+  // Debounce the live search box into debouncedQuickSearch
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuickSearch(historySearchInput.trim());
+    }, 350);
+    return () => clearTimeout(debounceRef.current);
+  }, [historySearchInput]);
 
-    const quickSearch = (historySearchInput || "").trim();
-    const quickSearchActive = quickSearch.length > 0;
-
-    // ✅ MODE 1: while typing -> IGNORE pinned filters, only search input + date sort
-    if (quickSearchActive) {
-      if (quickSearch.includes("*")) {
-        const parts = quickSearch.split("*").map((p) => p.trim());
-        if (parts.length === 2) {
-          const searchLength = parts[0];
-          const searchWidth = parts[1];
-
-          filtered = filtered.filter((item) => {
-            // ✅ SWAP: DB width = actual length, DB length = actual width
-            const actualLength = String(Math.round(Number(item.width || 0)));
-            const actualWidth = String(Math.round(Number(item.length || 0)));
-
-            const matchLength = searchLength
-              ? actualLength === searchLength || actualLength.includes(searchLength)
-              : true;
-            const matchWidth = searchWidth
-              ? actualWidth === searchWidth || actualWidth.includes(searchWidth)
-              : true;
-
-            return matchLength && matchWidth;
-          });
-        }
-      } else {
-        const q = quickSearch.toLowerCase();
-
-        filtered = filtered.filter((item) => {
-          const itemName = String(item.itemName || "").toLowerCase();
-          const itemNumber = String(item.itemNumber || "").toLowerCase();
-          const invoiceNbr = String(item.invoiceNbr || "").toLowerCase();
-          const propertyCode = String(item.propertyCode || "").toLowerCase();
-          const brand = String(item.itemBrand || "").toLowerCase();
-
-          return (
-            itemName.includes(q) ||
-            itemNumber.includes(q) ||
-            invoiceNbr.includes(q) ||
-            propertyCode.includes(q) ||
-            brand.includes(q)
-          );
-        });
-      }
-
-      // ✅ ONLY date sort
-      filtered.sort((a, b) => parseMMDDYY(b.invoiceDate) - parseMMDDYY(a.invoiceDate));
-      return filtered;
+  // Any change to the active search/filter (or opening a new customer) always
+  // jumps back to page 1 and fetches it directly. Page navigation itself is
+  // handled imperatively by the Previous/Next buttons below — keeping these
+  // two triggers separate avoids a race where this effect and a page-change
+  // effect both fire off a fetch for the same filter change (one for the
+  // stale page, one for the corrected page).
+  useEffect(() => {
+    if (isOpen && showDetails && selectedCustomerName) {
+      setHistoryPage(1);
+      fetchCustomerHistoryPage(selectedCustomerName, 1);
     }
-
-    // ✅ MODE 2: search empty -> APPLY pinned filters, then sort by item# then date desc
-    if (itemNameFilter) {
-      const searchLower = itemNameFilter.toLowerCase();
-      filtered = filtered.filter((item) =>
-        String(item.itemName || "").toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (dimensionsFilter.length || dimensionsFilter.width) {
-      filtered = filtered.filter((item) => {
-        // ✅ SWAP
-        const actualLength = String(Math.round(Number(item.width || 0)));
-        const actualWidth = String(Math.round(Number(item.length || 0)));
-
-        const searchLength = dimensionsFilter.length;
-        const searchWidth = dimensionsFilter.width;
-
-        const matchLength = searchLength
-          ? actualLength === searchLength || actualLength.includes(searchLength)
-          : true;
-        const matchWidth = searchWidth
-          ? actualWidth === searchWidth || actualWidth.includes(searchWidth)
-          : true;
-
-        return matchLength && matchWidth;
-      });
-    }
-
-    // ✅ item# grouping sort + date inside group
-    filtered.sort((a, b) => {
-      const numA = String(a.itemNumber || "");
-      const numB = String(b.itemNumber || "");
-
-      const itemCompare = numA.localeCompare(numB, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-
-      if (itemCompare === 0) {
-        return parseMMDDYY(b.invoiceDate) - parseMMDDYY(a.invoiceDate);
-      }
-      return itemCompare;
-    });
-
-    return filtered;
-  }, [allCustomerHistory, itemNameFilter, dimensionsFilter, historySearchInput]);
-
-  // ✅ Latest row per Item # (within CURRENT results set)
-  const latestStampByItemNumber = useMemo(() => {
-    const m = new Map();
-
-    for (const row of filteredAndSortedHistory) {
-      const key = String(row?.itemNumber ?? "").trim();
-      if (!key) continue;
-
-      const t = parseMMDDYY(row.invoiceDate).getTime();
-      const prev = m.get(key);
-
-      if (prev == null || t > prev) m.set(key, t);
-    }
-
-    return m;
-  }, [filteredAndSortedHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, showDetails, selectedCustomerName, debouncedQuickSearch, itemNameFilter, dimensionsFilter.length, dimensionsFilter.width]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -232,24 +165,28 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
   };
 
   const handleCustomerClick = (customer) => {
-    setSelectedCustomerName(customer.customerName);
-    setShowDetails(true);
-
     // Reset filters when selecting a new customer
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
+    setDebouncedQuickSearch("");
+    setHistoryPage(1);
 
-    fetchAllCustomerHistory(customer.customerName);
+    setSelectedCustomerName(customer.customerName);
+    setShowDetails(true);
   };
 
   const handleBackToList = () => {
     setShowDetails(false);
     setSelectedCustomerName(null);
-    setAllCustomerHistory([]);
+    setHistoryRows([]);
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
+    setDebouncedQuickSearch("");
+    setHistoryPage(1);
+    setHistoryTotalPages(1);
+    setHistoryTotal(0);
   };
 
   // ✅ Enter pins the filter
@@ -262,12 +199,14 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
         if (parts.length === 2) {
           setDimensionsFilter({ length: parts[0], width: parts[1] });
           setHistorySearchInput("");
+          setDebouncedQuickSearch("");
           return;
         }
       }
 
       setItemNameFilter(historySearchInput);
       setHistorySearchInput("");
+      setDebouncedQuickSearch("");
     }
   };
 
@@ -275,6 +214,7 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
     setItemNameFilter("");
     setDimensionsFilter({ length: "", width: "" });
     setHistorySearchInput("");
+    setDebouncedQuickSearch("");
   };
 
   const handleRemoveItemNameFilter = () => setItemNameFilter("");
@@ -287,6 +227,22 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
 
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
+  };
+
+  const handleHistoryPreviousPage = () => {
+    if (historyPage > 1) {
+      const next = historyPage - 1;
+      setHistoryPage(next);
+      fetchCustomerHistoryPage(selectedCustomerName, next);
+    }
+  };
+
+  const handleHistoryNextPage = () => {
+    if (historyPage < historyTotalPages) {
+      const next = historyPage + 1;
+      setHistoryPage(next);
+      fetchCustomerHistoryPage(selectedCustomerName, next);
+    }
   };
 
   if (!isOpen) return null;
@@ -357,19 +313,10 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
             </div>
 
             {/* Results count */}
-            {(quickSearchActive || committedFiltersActive) && (
+            {(quickSearchActive || committedFiltersActive || historyTotal > 0) && (
               <div className="history-results-info">
-                {quickSearchActive ? (
-                  <>
-                    Searching “{historySearchInput.trim()}” — Showing{" "}
-                    {filteredAndSortedHistory.length} of {allCustomerHistory.length}
-                  </>
-                ) : (
-                  <>
-                    Showing {filteredAndSortedHistory.length} of{" "}
-                    {allCustomerHistory.length} results
-                  </>
-                )}
+                Page {historyPage} of {historyTotalPages} — {historyTotal} matching result
+                {historyTotal === 1 ? "" : "s"}
               </div>
             )}
 
@@ -461,11 +408,11 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
             <>
               {historyLoading ? (
                 <div className="history-loading">Loading history...</div>
-              ) : filteredAndSortedHistory.length === 0 ? (
+              ) : historyRows.length === 0 ? (
                 <div className="history-empty">
-                  {allCustomerHistory.length === 0
-                    ? "No purchase history found"
-                    : "No results match your search"}
+                  {quickSearchActive || committedFiltersActive
+                    ? "No results match your search"
+                    : "No purchase history found"}
                 </div>
               ) : (
                 <div className="history-details-list">
@@ -490,66 +437,54 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAndSortedHistory.map((item, index) => {
-                        const key = String(item?.itemNumber ?? "").trim();
-                        const t = parseMMDDYY(item.invoiceDate).getTime();
-                        const isLatestForItem =
-                          key && latestStampByItemNumber.get(key) === t;
+                      {historyRows.map((item, index) => (
+                        <tr key={index} className="history-details-row">
+                          <td className="text-center">{formatDate(item.invoiceDate)}</td>
+                          <td>{item.invoiceNbr || "—"}</td>
+                          <td>{item.itemNumber || "—"}</td>
+                          <td>{item.propertyCode || "—"}</td>
+                          <td className="item-name" title={item.itemName}>
+                            {item.itemName || "—"}
+                          </td>
+                          <td>{item.itemBrand || "—"}</td>
 
-                        return (
-                          <tr
-                            key={index}
-                            className={`history-details-row ${
-                              isLatestForItem ? "history-latest-row" : ""
-                            }`}
-                          >
-                            <td className="text-center">{formatDate(item.invoiceDate)}</td>
-                            <td>{item.invoiceNbr || "—"}</td>
-                            <td>{item.itemNumber || "—"}</td>
-                            <td>{item.propertyCode || "—"}</td>
-                            <td className="item-name" title={item.itemName}>
-                              {item.itemName || "—"}
-                            </td>
-                            <td>{item.itemBrand || "—"}</td>
+                          {/* ✅ SWAP: DB width = actual length, DB length = actual width */}
+                          <td className="text-right">
+                            {item.width ? Number(item.width).toFixed(2) : "—"}
+                          </td>
+                          <td className="text-right">
+                            {item.length ? Number(item.length).toFixed(2) : "—"}
+                          </td>
 
-                            {/* ✅ SWAP: DB width = actual length, DB length = actual width */}
-                            <td className="text-right">
-                              {item.width ? Number(item.width).toFixed(2) : "—"}
-                            </td>
-                            <td className="text-right">
-                              {item.length ? Number(item.length).toFixed(2) : "—"}
-                            </td>
-
-                            <td className="text-right">{Number(item.qty || 0).toFixed(2)}</td>
-                            <td className="text-center">{item.qtyUnit || "—"}</td>
-                            <td className="text-center">{item.sheet || "—"}</td>
-                            <td className="text-right">
-                              {item.sqm ? Number(item.sqm).toFixed(2) : "—"}
-                            </td>
-                            <td className="text-right">
-                              $
-                              {Number(item.itemSalePrice || 0).toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </td>
-                            <td className="text-right">
-                              %
-                              {Number(item.vat || 0).toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </td>
-                            <td className="text-right total-cell">
-                              $
-                              {Number(item.lineTotal || 0).toLocaleString("en-US", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                          <td className="text-right">{Number(item.qty || 0).toFixed(2)}</td>
+                          <td className="text-center">{item.qtyUnit || "—"}</td>
+                          <td className="text-center">{item.sheet || "—"}</td>
+                          <td className="text-right">
+                            {item.sqm ? Number(item.sqm).toFixed(2) : "—"}
+                          </td>
+                          <td className="text-right">
+                            $
+                            {Number(item.itemSalePrice || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="text-right">
+                            %
+                            {Number(item.vat || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="text-right total-cell">
+                            $
+                            {Number(item.lineTotal || 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -558,7 +493,7 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
           )}
         </div>
 
-        {/* Pagination footer (customer list only) */}
+        {/* Pagination footer */}
         <div className="history-modal-footer">
           {!showDetails && (
             <>
@@ -576,6 +511,28 @@ const HistoryModal = ({ isOpen, onClose, selectedCustomer }) => {
                 className="history-pagination-btn"
                 onClick={handleNextPage}
                 disabled={page === totalPages}
+              >
+                Next →
+              </button>
+            </>
+          )}
+
+          {showDetails && (
+            <>
+              <button
+                className="history-pagination-btn"
+                onClick={handleHistoryPreviousPage}
+                disabled={historyPage === 1}
+              >
+                ← Previous
+              </button>
+              <span className="history-pagination-info">
+                Page {historyPage} of {historyTotalPages}
+              </span>
+              <button
+                className="history-pagination-btn"
+                onClick={handleHistoryNextPage}
+                disabled={historyPage >= historyTotalPages}
               >
                 Next →
               </button>
