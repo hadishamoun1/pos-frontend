@@ -663,9 +663,11 @@ function buildPrintHTML({
     const sqm = effectiveSqmP(r);
     return sqm > 0 ? sqm * cost : num(r.qtySheet) * cost;
   };
+  const tripoliAmountOfRow = (r) => costForAmount(r) * num(r.sqmTripoli);
 
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
+  const showAmountTripoliCol = showAmountCol && showTripoliCol;
 
   const costColsReal = mode === "real"
     ? (showAvgCost ? 1 : 0) + (showLastCost ? 1 : 0)
@@ -674,7 +676,7 @@ function buildPrintHTML({
 
   const groupBlocks = (groups || [])
     .map((g) => {
-      let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0;
+      let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0, totAmountTripoli = 0;
       let pWAvgNum = 0, pWAvgCVMNum = 0, pWAvgCNum = 0, pWLastCNum = 0, pWLastCVMNum = 0, pWDenom = 0;
       for (const r of g.rows || []) {
         totBox         += Number(r.qtyBox         || 0);
@@ -683,6 +685,7 @@ function buildPrintHTML({
         totSqm    += Number(r.sqmTotal || 0);
         totSqmTripoli += Number(r.sqmTripoli || 0);
         totAmount += sqmAmountOfRow(r);
+        totAmountTripoli += tripoliAmountOfRow(r);
         const sqm = effectiveSqmP(r);
         if (sqm > 0) {
           pWDenom        += sqm;
@@ -731,6 +734,7 @@ function buildPrintHTML({
              ${mode === "name" && showLastCostC  ? `<th class="tr">Last Cost C</th>`  : ""}
              ${mode === "name" && showLastCostCVM? `<th class="tr">Last Cost CVM</th>`: ""}
              ${showAmountCol ? `<th class="tr" style="width:65px">Total Amount</th>` : ""}
+             ${showAmountTripoliCol ? `<th class="tr" style="color:#1a237e;width:65px">Total Amount ${remoteWarehouse.slice(0,3)}</th>` : ""}
            </tr></thead>`;
 
       const rowsHtml = (g.rows || [])
@@ -763,13 +767,14 @@ function buildPrintHTML({
             ${mode === "name" && showLastCostC  ? `<td class="tr">${r.lastCostC      != null ? fmt2(r.lastCostC)      : ""}</td>` : ""}
             ${mode === "name" && showLastCostCVM? `<td class="tr">${r.lastCostCVM    != null ? fmt2(r.lastCostCVM)    : ""}</td>` : ""}
             ${showAmountCol ? `<td class="tr">${(effectiveSqmP(r) || r.qtySheet) ? fmt2(sqmAmountOfRow(r)) : ""}</td>` : ""}
+            ${showAmountTripoliCol ? `<td class="tr" style="color:#1a237e">${r.sqmTripoli ? fmt2(tripoliAmountOfRow(r)) : ""}</td>` : ""}
           </tr>`;
         })
         .join("");
 
       const totalColsForEmpty = transferMode
         ? 2 + (mode === "name" ? costColsName : 0) + 1 + (showAmountCol ? 1 : 0)
-        : 3 + (showTripoliCol ? 1 : 0) + costCols + 3 + (showAmountCol ? 1 : 0);
+        : 3 + (showTripoliCol ? 1 : 0) + costCols + 3 + (showAmountCol ? 1 : 0) + (showAmountTripoliCol ? 1 : 0);
 
       const totalRow = transferMode
         ? `<tr>
@@ -790,6 +795,7 @@ function buildPrintHTML({
              ${(mode === "name" && showLastCostC)  ? `<td class="tr" style="font-weight:700;background:#fafafa">${pWLastC  != null ? fmt2(pWLastC)  : ""}</td>` : ""}
              ${(mode === "name" && showLastCostCVM)? `<td class="tr" style="font-weight:700;background:#fafafa">${pWLastCVM!= null ? fmt2(pWLastCVM): ""}</td>` : ""}
              ${showAmountCol ? `<td class="tr" style="font-weight:700;background:#fafafa">${showAmountTotals ? fmt2(totAmount) : ""}</td>` : ""}
+             ${showAmountTripoliCol ? `<td class="tr" style="font-weight:700;background:#fafafa;color:#1a237e">${showAmountTotals ? fmt2(totAmountTripoli) : ""}</td>` : ""}
            </tr>`;
 
       return `
@@ -816,6 +822,10 @@ function buildPrintHTML({
     ? (groups || []).reduce((sumG, g) =>
         sumG + (g.rows || []).reduce((sumR, r) => sumR + sqmAmountOfRow(r), 0), 0)
     : 0;
+  const gtAmountTripoli = showAmountTotals && showAmountTripoliCol
+    ? (groups || []).reduce((sumG, g) =>
+        sumG + (g.rows || []).reduce((sumR, r) => sumR + tripoliAmountOfRow(r), 0), 0)
+    : 0;
 
   const grandTotalBlock = `
     <section class="group">
@@ -827,12 +837,14 @@ function buildPrintHTML({
         <thead><tr>
           <th class="tr">Boxes</th><th class="tr">Sheets</th><th class="tr">SQM</th>
           ${showAmountTotals ? `<th class="tr" style="width:65px">Total Amount</th>` : ""}
+          ${showAmountTotals && showAmountTripoliCol ? `<th class="tr" style="width:65px;color:#1a237e">Total Amount ${remoteWarehouse.slice(0,3)}</th>` : ""}
         </tr></thead>
         <tbody><tr>
           <td class="tr" style="font-weight:800;background:#fafafa">${fmt2(gtBoxes)}</td>
           <td class="tr" style="font-weight:800;background:#fafafa">${fmt2(gtSheets)}</td>
           <td class="tr" style="font-weight:800;background:#fafafa">${fmt2(gtSqm)}</td>
           ${showAmountTotals ? `<td class="tr" style="font-weight:800;background:#fafafa">${fmt2(gtAmount)}</td>` : ""}
+          ${showAmountTotals && showAmountTripoliCol ? `<td class="tr" style="font-weight:800;background:#fafafa;color:#1a237e">${fmt2(gtAmountTripoli)}</td>` : ""}
         </tr></tbody>
       </table>
     </section>`;
@@ -932,9 +944,11 @@ export default function ReportModal({
     const sqm = effectiveSqm(row);
     return sqm > 0 ? sqm * cost : safeNum(row?.qtySheet) * cost;
   };
+  const tripoliAmountOfRow = (row) => costForAmount(row) * safeNum(row?.sqmTripoli);
 
   const showAmountCol    = !!showSqmAmount;
   const showAmountTotals = showAmountCol && !!showSqmAmountTotals;
+  const showAmountTripoliCol = showAmountCol && showTripoliCol;
 
   const grandTotals = useMemo(() => {
     let boxes = 0, sheets = 0, sqm = 0, sqmTripoli = 0;
@@ -958,6 +972,16 @@ export default function ReportModal({
     return amt;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayGroups, showAmountTotals, mode, showAvgCostCVM, showAvgCostC]);
+
+  const grandAmountTripoli = useMemo(() => {
+    if (!showAmountTotals || !showAmountTripoliCol) return 0;
+    let amt = 0;
+    (displayGroups || []).forEach((g) => {
+      (g.rows || []).forEach((r) => { amt += tripoliAmountOfRow(r); });
+    });
+    return amt;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayGroups, showAmountTotals, showAmountTripoliCol, mode, showAvgCostCVM, showAvgCostC]);
 
   useEffect(() => {
     if (!open) return;
@@ -1132,7 +1156,7 @@ export default function ReportModal({
               )}
 
               {!loading && (displayGroups || []).map((g) => {
-                let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0;
+                let totBox = 0, totBoxTripoli = 0, totSheet = 0, totSqm = 0, totSqmTripoli = 0, totAmount = 0, totAmountTripoli = 0;
                 let wAvgNumerator = 0, wAvgCVMNumerator = 0, wAvgCNumerator = 0;
                 let wLastCNumerator = 0, wLastCVMNumerator = 0;
                 let wAvgDenom = 0;
@@ -1143,6 +1167,7 @@ export default function ReportModal({
                   totSqm    += Number(r.sqmTotal || 0);
                   totSqmTripoli += Number(r.sqmTripoli || 0);
                   totAmount += sqmAmountOfRow(r);
+                  totAmountTripoli += tripoliAmountOfRow(r);
                   const sqm = effectiveSqm(r);
                   if (sqm > 0) {
                     wAvgDenom        += sqm;
@@ -1188,6 +1213,11 @@ export default function ReportModal({
                               <span>Sheets: <strong>{fmt2(totSheet)}</strong></span>
                               <span className="u-muted">SQM: <strong>{fmt2(totSqmEffective)}</strong></span>
                               {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(totAmount)}</strong></span>}
+                              {showAmountTotals && showAmountTripoliCol && (
+                                <span className="u-muted" style={{ color: "#1a237e" }}>
+                                  Amount {remoteWarehouse.slice(0, 3)}: <strong>{fmt2(totAmountTripoli)}</strong>
+                                </span>
+                              )}
                             </>
                           )}
                         </div>
@@ -1223,6 +1253,7 @@ export default function ReportModal({
                             {mode === "name" && showLastCostC  && <th className="ta-right">Last Cost C</th>}
                             {mode === "name" && showLastCostCVM&& <th className="ta-right">Last Cost CVM</th>}
                             {showAmountCol && <th className="ta-right">Total Amount</th>}
+                            {showAmountTripoliCol && <th className="ta-right" style={{ color: "#1a237e" }}>Total Amount {remoteWarehouse.slice(0,3)}</th>}
                           </tr>
                         )}
                       </thead>
@@ -1256,6 +1287,7 @@ export default function ReportModal({
                               {mode === "name" && showLastCostC  && <td className="ta-right u-muted">{row.lastCostC      != null ? fmt2(row.lastCostC)      : ""}</td>}
                               {mode === "name" && showLastCostCVM&& <td className="ta-right u-muted">{row.lastCostCVM    != null ? fmt2(row.lastCostCVM)    : ""}</td>}
                               {showAmountCol && <td className="ta-right u-muted">{(effectiveSqm(row) || row.qtySheet) ? fmt2(sqmAmountOfRow(row)) : ""}</td>}
+                              {showAmountTripoliCol && <td className="ta-right u-muted" style={{ color: "#1a237e" }}>{row.sqmTripoli ? fmt2(tripoliAmountOfRow(row)) : ""}</td>}
                             </tr>
                           )
                         )}
@@ -1281,6 +1313,7 @@ export default function ReportModal({
                             {mode === "name" && showLastCostC  && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wLastC  != null ? fmt2(wLastC)  : ""}</td>}
                             {mode === "name" && showLastCostCVM && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{wLastCVM!= null ? fmt2(wLastCVM): ""}</td>}
                             {showAmountCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa" }}>{showAmountTotals ? fmt2(totAmount) : ""}</td>}
+                            {showAmountTripoliCol && <td className="ta-right" style={{ fontWeight: 700, background: "#fafafa", color: "#1a237e" }}>{showAmountTotals ? fmt2(totAmountTripoli) : ""}</td>}
                           </tr>
                         )}
                       </tbody>
@@ -1301,6 +1334,11 @@ export default function ReportModal({
                       <span>Sheets: <strong>{fmt2(grandTotals.sheets)}</strong></span>
                       <span className="u-muted">SQM: <strong>{fmt2(grandTotals.sqm + (showTripoliCol ? grandTotals.sqmTripoli : 0))}</strong></span>
                       {showAmountTotals && <span className="u-muted">Amount: <strong>{fmt2(grandAmount)}</strong></span>}
+                      {showAmountTotals && showAmountTripoliCol && (
+                        <span className="u-muted" style={{ color: "#1a237e" }}>
+                          Amount {remoteWarehouse.slice(0, 3)}: <strong>{fmt2(grandAmountTripoli)}</strong>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1311,6 +1349,7 @@ export default function ReportModal({
                         <th className="ta-right">Sheets</th>
                         <th className="ta-right">SQM</th>
                         {showAmountTotals && <th className="ta-right">Total Amount</th>}
+                        {showAmountTotals && showAmountTripoliCol && <th className="ta-right" style={{ color: "#1a237e" }}>Total Amount {remoteWarehouse.slice(0,3)}</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1319,6 +1358,7 @@ export default function ReportModal({
                         <td className="ta-right" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.sheets)}</td>
                         <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandTotals.sqm + (showTripoliCol ? grandTotals.sqmTripoli : 0))}</td>
                         {showAmountTotals && <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa" }}>{fmt2(grandAmount)}</td>}
+                        {showAmountTotals && showAmountTripoliCol && <td className="ta-right u-muted" style={{ fontWeight: 800, background: "#fafafa", color: "#1a237e" }}>{fmt2(grandAmountTripoli)}</td>}
                       </tr>
                     </tbody>
                   </table>
