@@ -30,19 +30,25 @@ function toStr(v) {
 function buildPayload(formData) {
   const payload = {
     customerName: formData.customerName?.trim(),
-    firstName: formData.firstName?.trim() || undefined,
-    middleName: formData.middleName?.trim() || undefined,
-    lastName: formData.lastName?.trim() || undefined,
-    paymentTerms: formData.paymentTerms?.trim() || undefined,
-    area: formData.area?.trim() || undefined,
-    companyType: formData.companyType?.trim() || undefined,
-    phoneNumber: formData.phoneNumber?.trim() || undefined,
-    financialNumber: formData.financialAccount?.trim() || undefined,
+    // ✅ send "" (not undefined) for these free-text fields — the backend
+    // only applies a field when it's present and non-null, so `undefined`
+    // (which gets stripped below) meant clearing a field back to blank and
+    // saving silently kept the old value instead of clearing it.
+    firstName: formData.firstName?.trim() ?? "",
+    middleName: formData.middleName?.trim() ?? "",
+    lastName: formData.lastName?.trim() ?? "",
+    paymentTerms: formData.paymentTerms?.trim() ?? "",
+    area: formData.area?.trim() ?? "",
+    companyType: formData.companyType?.trim() ?? "",
+    phoneNumber: formData.phoneNumber?.trim() ?? "",
+    financialNumber: formData.financialAccount?.trim() ?? "",
+    address: formData.address?.trim() ?? "",
+    location: formData.location?.trim() ?? "",
+    // These stay "only send when actually set" — an empty string isn't a
+    // meaningful "clear" for a dropdown/number the way it is for free text.
     invoiceType: formData.invoiceType || undefined,
     vat: formData.vat !== "" ? formData.vat : undefined,
     currencyId: formData.currency !== "" ? Number(formData.currency) : undefined,
-    address: formData.address?.trim() || undefined,
-    location: formData.location?.trim() || undefined,
   };
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
   return payload;
