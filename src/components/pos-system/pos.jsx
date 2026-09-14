@@ -582,8 +582,15 @@ const POSSystemPage = () => {
   });
 
   const syncSelectedBatchIdsFromTable = (rows) => {
+    // Number.isFinite also rejects NaN — see handleGetPriceClick for why
+    // a plain undefined/null check isn't enough here.
     const ids = Array.from(
-      new Set(rows.map((r) => r.batchId).filter((id) => id !== undefined && id !== null))
+      new Set(
+        rows
+          .map((r) => r.batchId)
+          .filter((id) => Number.isFinite(Number(id)))
+          .map((id) => Number(id))
+      )
     );
     setSelectedBatchIds(ids);
   };
@@ -900,13 +907,20 @@ const POSSystemPage = () => {
   // ====================== PRICING (Get Price) ======================
 
   const handleGetPriceClick = async () => {
+    // Number.isFinite also rejects NaN — a row whose batchId couldn't
+    // actually be resolved to a real inventory batch (e.g. picked from a
+    // source that doesn't carry one) used to slip past a plain
+    // undefined/null check as NaN, passing this guard but then getting
+    // rejected server-side with "itemBatchIds is required".
     const ids = Array.from(
       new Set(
         tableData
           .map((r) => r.batchId)
-          .filter((id) => id !== undefined && id !== null)
+          .filter((id) => Number.isFinite(Number(id)))
+          .map((id) => Number(id))
       )
     );
+    const rowsMissingBatch = tableData.filter((r) => !Number.isFinite(Number(r.batchId)));
 
     if (!selectedCustomerId) {
       showNotification("error", "Please select a customer first.");
@@ -915,6 +929,12 @@ const POSSystemPage = () => {
     if (!ids.length) {
       showNotification("error", "Please select items (batches) from Search first.");
       return;
+    }
+    if (rowsMissingBatch.length) {
+      showNotification(
+        "error",
+        `${rowsMissingBatch.length} item(s) in the table have no valid inventory batch (e.g. an out-of-stock or non-standard item) and were left out of the price lookup. Remove/reselect them, or continue with the rest.`
+      );
     }
 
     try {
@@ -945,7 +965,8 @@ const POSSystemPage = () => {
       new Set(
         tableData
           .map((r) => r.batchId)
-          .filter((id) => id !== undefined && id !== null)
+          .filter((id) => Number.isFinite(Number(id)))
+          .map((id) => Number(id))
       )
     );
     setSelectedBatchIds(ids);

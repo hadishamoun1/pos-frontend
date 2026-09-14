@@ -3,6 +3,11 @@ import React, { useState } from "react";
 import ItemSalesHistoryModal from "./ItemSalesHistoryModal";
 import { useTranslation } from "../../hooks/useTranslation"; // ✅ adjust path if needed
 
+// The standard, always-selectable exchange rate(s). An invoice loaded with
+// a rate outside this list gets it added as an extra, clearly-marked option
+// (see the exchange-rate <select> below) instead of being hidden.
+const EXCHANGE_RATE_OPTIONS = ["89500"];
+
 const CustomerDetails = ({
   currencyRate,
   setCurrencyRate,
@@ -32,12 +37,25 @@ const CustomerDetails = ({
       {/* Dropdowns & Checkbox Row */}
       <div className="pos-page-toolbar-row">
         <div className="pos-page-dropdown-container">
+          {/* Standard rate is always selectable; if the loaded invoice's
+              actual rate isn't one of the standard options (e.g. an old/
+              broken value like "1"), it's added here as a visible, clearly-
+              marked extra option instead of being silently hidden or
+              (the previous bug) shown as if it were 89,500 when it wasn't.
+              Picking a different option is how you correct it. */}
           <select
             className="pos-page-exchange-rate-dropdown"
             value={currencyRate}
             onChange={(e) => setCurrencyRate(e.target.value)}
           >
-            <option value="89500">89,500</option>
+            {!EXCHANGE_RATE_OPTIONS.includes(String(currencyRate)) && currencyRate !== "" && (
+              <option value={currencyRate}>{currencyRate} (current — not a standard rate)</option>
+            )}
+            {EXCHANGE_RATE_OPTIONS.map((rate) => (
+              <option key={rate} value={rate}>
+                {Number(rate).toLocaleString()}
+              </option>
+            ))}
           </select>
 
           <select
