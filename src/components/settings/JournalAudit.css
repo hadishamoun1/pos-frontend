@@ -1,0 +1,44 @@
+.ja-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #334155;
+  font-weight: 500;
+  padding: 7px 0;
+  white-space: nowrap;
+}
+
+.ja-empty {
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.ja-badge-bad {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.ja-row-bad td {
+  background: #fff5f5;
+}
+.ja-row-bad:hover td {
+  background: #fee2e2 !important;
+}
+
+.ja-diff {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.ja-link {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #4f46e5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ja-link:hover {
+  text-decoration: underline;
+}

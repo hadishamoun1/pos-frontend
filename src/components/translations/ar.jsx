@@ -229,6 +229,7 @@ export const ar = {
       invoiceTypeConverter: "محوّل نوع الفاتورة",
       receivableTypeConverter: "محوّل نوع المقبوضات",
       receivableSequenceAudit: "مراجعة تسلسل المقبوضات",
+      journalAudit: "مراجعة القيود",
     },
   },
 

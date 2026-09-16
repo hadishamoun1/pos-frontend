@@ -49,6 +49,7 @@ const sections = [
   { key: "invoiceTypeConverter",    path: "/invoice-type-converter",    image: "/assets/rvr.png", perm: "invoiceTypeConverter.view" },
   { key: "receivableTypeConverter",  path: "/receivable-type-converter",  image: "/assets/rvr.png", perm: "receivableTypeConverter.view" },
   { key: "receivableSequenceAudit",  path: "/receivable-sequence-audit",  image: "/assets/rvr.png", perm: "receivableSequenceAudit.view" },
+  { key: "journalAudit",             path: "/journal-audit",              image: "/assets/rvr.png", perm: "journalAudit.view" },
 ];
 
 const DashboardPage = () => {

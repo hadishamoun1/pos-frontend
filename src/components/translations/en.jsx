@@ -237,6 +237,7 @@ export const en = {
       invoiceTypeConverter: "Invoice Type Converter",
       receivableTypeConverter: "Receivable Type Converter",
       receivableSequenceAudit: "Receivable Sequence Audit",
+      journalAudit: "Journal Audit",
     },
   },
 

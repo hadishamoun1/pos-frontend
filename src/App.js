@@ -43,6 +43,7 @@ const RVRBulkRandomizer        = lazy(() => import("./components/settings/RVRBul
 const InvoiceTypeConverter     = lazy(() => import("./components/settings/InvoiceTypeConverter"));
 const ReceivableTypeConverter  = lazy(() => import("./components/settings/ReceivableTypeConverter"));
 const ReceivableSequenceAudit  = lazy(() => import("./components/settings/ReceivableSequenceAudit"));
+const JournalAudit             = lazy(() => import("./components/settings/JournalAudit"));
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
 const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
@@ -124,6 +125,14 @@ function App() {
                     element={
                       hasPerm("receivableSequenceAudit.view")
                         ? <ReceivableSequenceAudit />
+                        : <Navigate to="/dashboard" replace />
+                    }
+                  />
+                  <Route
+                    path="/journal-audit"
+                    element={
+                      hasPerm("journalAudit.view")
+                        ? <JournalAudit />
                         : <Navigate to="/dashboard" replace />
                     }
                   />
