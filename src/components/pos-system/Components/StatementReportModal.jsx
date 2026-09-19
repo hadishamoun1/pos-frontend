@@ -527,7 +527,10 @@ const StatementReportModal = ({
                                           const dimStr = L && W
                                             ? `${L}×${W}${spb ? `-${spb}` : ""}`
                                             : L || W || "—";
-                                          const name = it.invoiceDisplayName || it.itemName || `Item ${idx + 1}`;
+                                          const fallbackName = it.thickness != null
+                                            ? `${parseFloat(it.thickness)} ملم ${it.itemName || ""}`.trim()
+                                            : it.itemName || `Item ${idx + 1}`;
+                                          const name = it.invoiceDisplayName || fallbackName;
                                           const rowBg = idx % 2 === 0 ? "#fff" : "#f5f9ff";
                                           return (
                                             <tr key={it.invoiceItemId ?? idx} style={{ background: rowBg }}>

@@ -247,7 +247,10 @@ function InvoiceItemsRow({ docNbr, colSpan, onLoaded, isRevo }) {
                       const dimStr = L && W
                         ? `${L}×${W}${spb ? `-${spb}` : ""}`
                         : L || W || "—";
-                      const displayName = it.invoiceDisplayName || it.itemName || `Item ${idx + 1}`;
+                      const fallbackName = it.thickness != null
+                        ? `${parseFloat(it.thickness)} ملم ${it.itemName || ""}`.trim()
+                        : it.itemName || `Item ${idx + 1}`;
+                      const displayName = it.invoiceDisplayName || fallbackName;
                       return (
                         <tr key={it.invoiceItemId ?? idx} className="stmt-inv-item-row">
                           <td className="stmt-inv-td-idx">{idx + 1}</td>
