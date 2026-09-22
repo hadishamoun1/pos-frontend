@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { axiosClient } from "../api/axiosClient";
 import "./inventory-report-modal.css";
 
 /* ----------------- Utilities ----------------- */
@@ -913,6 +914,7 @@ export default function ReportModal({
   const [showGroupHeaders,    setShowGroupHeaders]    = useState(true);
   const [showTripoliCol,      setShowTripoliCol]      = useState(showTripoliColInitial);
   const [showAmountTripoli,   setShowAmountTripoli]   = useState(false);
+  const [isDownloadingPdf,    setIsDownloadingPdf]    = useState(false);
   useEffect(() => {
     setTransferToSqm(false);
     if (mode !== "real") { setShowAvgCost(false); setShowLastCost(false); }
@@ -1032,6 +1034,47 @@ export default function ReportModal({
       finally { setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000); }
     };
     if (doc.readyState === "complete") doPrint(); else iframe.onload = doPrint;
+  };
+
+  const handleDownloadPdf = async () => {
+    // Same generated HTML as Print (so the PDF always reflects exactly
+    // whichever checkboxes are currently checked) — but rendered server-side
+    // by a real headless browser (Puppeteer) instead of screenshotting it
+    // page-by-page client-side. A long report turns into hundreds of raster
+    // images with the screenshot approach, which blows past the browser's
+    // max string length when jsPDF assembles them; a headless browser's
+    // native print-to-PDF has no such limit and renders Arabic/RTL text
+    // correctly since it's genuine browser rendering.
+    const html = buildPrintHTML({
+      groups: displayGroups, title, transferMode,
+      showAvgCost, showLastCost,
+      showAvgCostCVM, showAvgCostC, showLastCostC, showLastCostCVM,
+      showSqmAmount, showSqmAmountTotals,
+      showGroupHeaders, showTripoliCol, showAmountTripoli,
+      remoteWarehouse,
+      mode, grandTotals,
+    });
+
+    setIsDownloadingPdf(true);
+    try {
+      const res = await axiosClient.post(
+        "/pdf-render",
+        { html, landscape: false, filename: `inventory-report-${Date.now()}.pdf` },
+        { responseType: "blob" }
+      );
+      const objectUrl = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `inventory-report-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+    } catch (err) {
+      window.alert(err?.response?.data?.message || err?.message || "Failed to generate the PDF.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const costColCount = !transferMode
@@ -1398,7 +1441,9 @@ export default function ReportModal({
           <div className="invb-report-actions">
             <button className="invb-btn" onClick={handlePrint}>🖨️ Print</button>
             <button className="invb-btn" disabled>Export CSV</button>
-            <button className="invb-btn" disabled>Generate PDF</button>
+            <button className="invb-btn" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+              {isDownloadingPdf ? "Generating…" : "⬇️ Download PDF"}
+            </button>
             <button className="invb-btn invb-btn--ghost" onClick={onClose}>Close</button>
           </div>
         </div>
