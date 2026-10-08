@@ -114,6 +114,7 @@ export default function BulkRvrSettings() {
   const [sInvCustomer, setSInvCustomer] = useState(null);
   const [sInvItem, setSInvItem] = useState(null);
   const [sInvPrice, setSInvPrice] = useState("");
+  const [sInvExRate, setSInvExRate] = useState("89500");
   const [sRecvCustomer, setSRecvCustomer] = useState(null);
   const [sRecvCash, setSRecvCash] = useState("");
   const [sRecvCurrency, setSRecvCurrency] = useState("USD");
@@ -133,6 +134,7 @@ export default function BulkRvrSettings() {
         const utcToLocal = (h) => ((h - Math.round(new Date().getTimezoneOffset() / 60)) % 24 + 24) % 24;
         setSRunHour(utcToLocal(d.runHour ?? 0));
         setSInvPrice(d.invoiceUnitPrice ? String(d.invoiceUnitPrice) : "");
+        setSInvExRate(d.invoiceExchangeRate ? String(d.invoiceExchangeRate) : "89500");
         setSRecvCash(d.receivableCashAmount ? String(d.receivableCashAmount) : "");
         setSRecvCurrency(d.receivableCurrency || "USD");
         setSRecvExRate(d.receivableExchangeRate ? String(d.receivableExchangeRate) : "89500");
@@ -166,6 +168,7 @@ export default function BulkRvrSettings() {
         invoiceItemStockMode: sInvItem?.stockMode || null,
         invoiceItemName: sInvItem?.itemName || null,
         invoiceUnitPrice: parseFloat(sInvPrice) || 0,
+        invoiceExchangeRate: parseFloat(String(sInvExRate).replace(/,/g, "")) || 89500,
         receivableCustomerId: sRecvCustomer?.id || null,
         receivableCustomerName: sRecvCustomer?.customerName || null,
         receivableCashAmount: parseFloat(sRecvCash) || 0,
@@ -219,7 +222,7 @@ export default function BulkRvrSettings() {
     for (let i = 0; i < qty; i++) {
       setProgress({ type: "invoice", current: i + 1, total: qty });
       try {
-        await axiosClient.post("/invoices", { customerId: invCustomer.id, date: todayISO(), invoiceType: "RVR", documentNumber: "DOC-0001", currencyCode: "USD", totalWithoutVAT: unitPrice, totalVAT: vatAmount, grandTotal, currencyRate: 1, vatPercentage: 11, items: [{ itemVariantId: invItem.variantId, itemBatchId: invItem.batchId, itemType: invItem.type || "unit", stockMode: invItem.stockMode || null, quantity: 1, sqm: 0, unitPrice, totalAmount: unitPrice, vat: vatAmount, length: null, width: null, sheetsPerBox: null }] });
+        await axiosClient.post("/invoices", { customerId: invCustomer.id, date: todayISO(), invoiceType: "RVR", documentNumber: "DOC-0001", currencyCode: "USD", totalWithoutVAT: unitPrice, totalVAT: vatAmount, grandTotal, currencyRate: rate, vatPercentage: 11, items: [{ itemVariantId: invItem.variantId, itemBatchId: invItem.batchId, itemType: invItem.type || "unit", stockMode: invItem.stockMode || null, quantity: 1, sqm: 0, unitPrice, totalAmount: unitPrice, vat: vatAmount, length: null, width: null, sheetsPerBox: null }] });
         invoicesCreated++;
       } catch (e) { errors.push(`Invoice ${i + 1}: ${e?.response?.data?.message || e.message}`); }
     }
@@ -470,6 +473,10 @@ export default function BulkRvrSettings() {
                     {sInvPrice && !isNaN(parseFloat(sInvPrice)) && parseFloat(sInvPrice) > 0 && (
                       <div className="brs-vat-preview">VAT (11%): <strong>${(parseFloat(sInvPrice) * 0.11).toFixed(2)}</strong> · Grand total: <strong>${(parseFloat(sInvPrice) * 1.11).toFixed(2)}</strong></div>
                     )}
+                  </div>
+                  <div className="brs-field">
+                    <label className="brs-label">Exchange Rate <span className="brs-currency-tag">USD → LL, for the journal entry</span></label>
+                    <input type="text" className="brs-input" value={sInvExRate} onChange={(e) => setSInvExRate(e.target.value)} />
                   </div>
                 </div>
 
