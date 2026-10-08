@@ -230,6 +230,8 @@ export const ar = {
       receivableTypeConverter: "محوّل نوع المقبوضات",
       receivableSequenceAudit: "مراجعة تسلسل المقبوضات",
       journalAudit: "مراجعة القيود",
+      orderCapture: "التقاط الطلبات",
+      exchangeRateAudit: "مراجعة سعر الصرف",
     },
   },
 

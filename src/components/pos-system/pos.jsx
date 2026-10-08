@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FaFileInvoiceDollar, FaClipboardList } from "react-icons/fa";
 import "./pos.css";
 import SearchModal from "./searchModal";
@@ -21,6 +22,7 @@ import RevoInvoiceModal from "./revoInvoicePreviewModal";
 import { axiosClient } from "../api/axiosClient";
 
 const POSSystemPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tableData, setTableData] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
@@ -1512,6 +1514,27 @@ const POSSystemPage = () => {
       date: toYMD(rawDate),
     });
   };
+
+  // Lets another page (e.g. the Exchange Rate Audit's "Open" link) deep-link
+  // straight into a specific invoice via /pos-system?openInvoiceId=123 —
+  // reuses the exact same loader a normal search-result click uses, so it
+  // stays correct if that loading logic ever changes.
+  useEffect(() => {
+    const openId = searchParams.get("openInvoiceId");
+    if (!openId) return;
+    const idNum = Number(openId);
+    if (!Number.isFinite(idNum)) return;
+
+    handleSelectInvoice({ id: idNum, invoiceType: searchParams.get("openInvoiceType") || "S" });
+
+    // Drop the params once consumed so refreshing/navigating back doesn't
+    // re-trigger it, and so it doesn't fight with manual selection afterward.
+    const next = new URLSearchParams(searchParams);
+    next.delete("openInvoiceId");
+    next.delete("openInvoiceType");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     console.log("Updated selected invoice id:", selectedInvoiceId);

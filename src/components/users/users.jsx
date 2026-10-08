@@ -42,6 +42,8 @@ const PERMISSION_GROUPS = [
       "receivableTypeConverter.view",
       "receivableSequenceAudit.view",
       "journalAudit.view",
+      "orderCapture.view",
+      "exchangeRateAudit.view",
     ],
   },
   {
@@ -175,6 +177,8 @@ const PERMISSION_GROUPS = [
       "receivableTypeConverter.view",
       "receivableSequenceAudit.view",
       "journalAudit.view",
+      "orderCapture.view",
+      "exchangeRateAudit.view",
     ],
   },
   {

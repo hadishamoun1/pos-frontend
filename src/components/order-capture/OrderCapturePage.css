@@ -1,0 +1,153 @@
+.ocp-page {
+  padding: 24px 28px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ocp-header {
+  margin-bottom: 20px;
+}
+
+.ocp-title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ocp-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  max-width: 700px;
+}
+
+.ocp-body {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.ocp-upload-col {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ocp-result-col {
+  flex: 1;
+  min-width: 320px;
+}
+
+.ocp-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #94a3b8;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ocp-dropzone:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.ocp-dropzone-icon {
+  font-size: 32px;
+}
+
+.ocp-preview-wrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+}
+
+.ocp-preview {
+  max-width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.ocp-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ocp-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.ocp-btn--ghost {
+  background: #f1f5f9;
+  color: #334155;
+}
+.ocp-btn--ghost:hover:not(:disabled) { background: #e2e8f0; }
+
+.ocp-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+.ocp-btn--primary:hover:not(:disabled) { background: #1d4ed8; }
+.ocp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ocp-result-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.ocp-result-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 16px;
+  min-height: 280px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 13px;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ocp-loading {
+  color: #64748b;
+  font-size: 13px;
+  padding: 16px;
+}
+
+.ocp-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .ocp-body { flex-direction: column; }
+}

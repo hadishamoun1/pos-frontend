@@ -238,6 +238,8 @@ export const en = {
       receivableTypeConverter: "Receivable Type Converter",
       receivableSequenceAudit: "Receivable Sequence Audit",
       journalAudit: "Journal Audit",
+      orderCapture: "Order Capture",
+      exchangeRateAudit: "Exchange Rate Audit",
     },
   },
 
