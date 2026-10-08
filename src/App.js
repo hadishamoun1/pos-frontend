@@ -44,7 +44,6 @@ const InvoiceTypeConverter     = lazy(() => import("./components/settings/Invoic
 const ReceivableTypeConverter  = lazy(() => import("./components/settings/ReceivableTypeConverter"));
 const ReceivableSequenceAudit  = lazy(() => import("./components/settings/ReceivableSequenceAudit"));
 const JournalAudit             = lazy(() => import("./components/settings/JournalAudit"));
-const OrderCapturePage         = lazy(() => import("./components/order-capture/OrderCapturePage"));
 const ExchangeRateAudit        = lazy(() => import("./components/settings/ExchangeRateAudit"));
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
@@ -135,14 +134,6 @@ function App() {
                     element={
                       hasPerm("journalAudit.view")
                         ? <JournalAudit />
-                        : <Navigate to="/dashboard" replace />
-                    }
-                  />
-                  <Route
-                    path="/order-capture"
-                    element={
-                      hasPerm("orderCapture.view")
-                        ? <OrderCapturePage />
                         : <Navigate to="/dashboard" replace />
                     }
                   />

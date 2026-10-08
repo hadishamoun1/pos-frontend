@@ -50,7 +50,6 @@ const sections = [
   { key: "receivableTypeConverter",  path: "/receivable-type-converter",  image: "/assets/rvr.png", perm: "receivableTypeConverter.view" },
   { key: "receivableSequenceAudit",  path: "/receivable-sequence-audit",  image: "/assets/rvr.png", perm: "receivableSequenceAudit.view" },
   { key: "journalAudit",             path: "/journal-audit",              image: "/assets/rvr.png", perm: "journalAudit.view" },
-  { key: "orderCapture",             path: "/order-capture",              image: "/assets/rvr.png", perm: "orderCapture.view" },
   { key: "exchangeRateAudit",        path: "/exchange-rate-audit",        image: "/assets/rvr.png", perm: "exchangeRateAudit.view" },
 ];
 
