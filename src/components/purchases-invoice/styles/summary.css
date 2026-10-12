@@ -7,51 +7,40 @@
 
 /* ✅ Tabs above the summary (Summary View 1 / 2) */
 .summary-toggle-navbar {
-  position: sticky;
-  top: 10px;
-  z-index: 50;
-
   display: inline-flex;
-  gap: 10px;
+  gap: 6px;
 
-  padding: 8px;
-  margin: 12px 0 10px;
+  padding: 4px;
+  margin: 14px 0 10px;
 
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(6px);
-
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  background: #f1f5f9;
+  border-radius: 10px;
 }
 
 .summary-toggle-navbar button {
-  padding: 10px 14px;
+  padding: 8px 14px;
 
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border: none;
+  border-radius: 8px;
 
-  background: #ffffff;
-  color: #0f172a;
+  background: transparent;
+  color: #475569;
 
-  font-weight: 900;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13.5px;
   cursor: pointer;
 
-  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .summary-toggle-navbar button:hover {
-  transform: translateY(-1px);
-  background: #f8fafc;
-  border-color: #94a3b8;
+  color: #0f172a;
 }
 
 .summary-toggle-navbar button.active {
-  background: linear-gradient(to right, #2563eb, #1d4ed8);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.22);
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
 
 /* =========================
@@ -60,14 +49,16 @@
 
 .summary-section {
   /* you can control max height when open */
-  --summary-max-h: 360px;
+  --summary-max-h: 420px;
+
+  width: 100%;
+  box-sizing: border-box;
 
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
 
-  padding: 12px;
+  padding: 14px;
   margin-top: 10px;
 
   display: flex;
@@ -82,36 +73,35 @@
   align-items: center;
   gap: 10px;
 
-  padding: 10px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .summary-title {
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 14.5px;
+  font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 
 /* toggle button (Show/Hide Summary) */
 .summary-toggle-btn {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e5e7eb;
   background: #f8fafc;
-  color: #0f172a;
-  font-weight: 900;
-  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+  font-size: 12.5px;
 
-  padding: 8px 12px;
-  border-radius: 12px;
+  padding: 7px 12px;
+  border-radius: 8px;
   cursor: pointer;
 
-  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .summary-toggle-btn:hover {
-  background: #eef2ff;
-  border-color: #a5b4fc;
-  transform: translateY(-1px);
+  background: #eff6ff;
+  border-color: #93c5fd;
 }
 
 /* ========= Collapsible body ========= */
@@ -132,16 +122,15 @@
   display: grid;
 
   /* ✅ give the middle (cost table) much more space */
-  grid-template-columns: 0.7fr 2.6fr 0.7fr; /* inputs | cost table | totals */
+  grid-template-columns: 200px 2.6fr 220px; /* inputs | cost table | totals */
 
-  gap: 14px;
+  gap: 16px;
   align-items: start;
 }
 
 /* Left inputs */
 .fields {
   display: grid;
-width: 100px;
   gap: 12px;
 }
 
@@ -150,19 +139,20 @@ width: 100px;
   flex-direction: column;
   gap: 6px;
 
-  font-size: 14px;
-  font-weight: 900;
-  color: #0f172a;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .fields input {
-  height: 20px;
+  height: 38px;
+  box-sizing: border-box;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 8px 10px;
 
-  font-size: 15px;
-  color: #111827;
+  font-size: 13.5px;
+  color: #0f172a;
   background: #ffffff;
   outline: none;
 
@@ -171,58 +161,62 @@ width: 100px;
 
 .fields input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
-/* Final cost highlight */
+/* Final cost — display only now; opening the charges breakdown happens
+   via the مصاريف toggle instead of clicking here */
 .important-field input {
-  border: 2px solid rgba(239, 68, 68, 0.55);
-  background: rgba(239, 68, 68, 0.08);
-  color: #7f1d1d;
-  cursor: pointer;
+  border: 1.5px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+  font-weight: 700;
+  cursor: default;
 }
 
 .important-field input:focus {
-  border-color: rgba(239, 68, 68, 0.8);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
 }
 
 /* Center: cost table container */
 .cost-table-container {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
 
-  /* ✅ FIX: remove invalid width */
-  width: 100%;
-
-  /* ✅ make it much bigger */
- max-height: 300px;
-
-  /* ✅ keep scroll inside the box */
+  width: 90%;
+  max-height: 320px;
   overflow: auto;
- 
 }
+
 /* Cost table */
 .cost-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-
-  /* ✅ keep headers readable + allow full text */
   min-width: 680px;
 }
 
 .cost-table th,
 .cost-table td {
-  padding: 10px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 9px 10px;
+  border-bottom: 1px solid #e5e7eb;
 
-  font-size: 20px;
+  font-size: 15px;
+  text-align: center;
+  vertical-align: middle;
 
-  /* ✅ show full text (no ellipsis) */
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
+}
+
+/* "Cost per Item" (item name) column — narrower, wraps instead of
+   stretching the whole table */
+.cost-table th:first-child,
+.cost-table td:first-child {
+  width: 160px;
+  max-width: 160px;
 }
 
 .cost-table th {
@@ -230,10 +224,10 @@ width: 100px;
   top: 0;
   z-index: 2;
 
-  background: linear-gradient(to right, #2563eb, #1d4ed8);
+  background: #2563eb;
   color: #ffffff;
-  font-weight: 900;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 13.5px;
 }
 
 .cost-table tbody tr:nth-child(even) td {
@@ -241,30 +235,28 @@ width: 100px;
 }
 
 .cost-table tbody tr:hover td {
-  background: rgba(37, 99, 235, 0.06);
+  background: #eff6ff;
 }
 
 /* Right totals */
 .totals {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: stretch;
 }
 
 .totals p {
   margin: 0;
-  padding: 12px 12px;
+  padding: 10px 12px;
 
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
 
-  background: #ffffff;
+  background: #f8fafc;
   color: #0f172a;
-  font-weight: 900;
-  font-size: 15px;
-
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  font-weight: 600;
+  font-size: 13px;
 }
 
 /* Responsive */
@@ -276,7 +268,7 @@ width: 100px;
     min-width: 0;
   }
   .cost-table-container {
-    max-height: 220px;
+    max-height: 260px;
   }
 }
 
@@ -286,7 +278,6 @@ width: 100px;
   }
   .summary-toggle-navbar {
     width: 100%;
-    justify-content: space-between;
   }
   .summary-toggle-navbar button {
     flex: 1;

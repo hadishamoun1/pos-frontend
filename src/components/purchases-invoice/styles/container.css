@@ -1,71 +1,234 @@
 /* =========================
-   Layout: Left + Right Panels
+   Layout: 3 columns — Order (left) | Items table (center) | Invoices (right)
+   Mirrors the POS page's Requests/Table/Invoices arrangement.
 ========================= */
 
-.main-container {
+.pi-page-shell {
   display: flex;
-  gap: 14px;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
   padding: 10px;
   box-sizing: border-box;
+}
 
-  /* ✅ if screen is small -> allow wrap */
+.pi-page-columns {
+  display: flex;
+  gap: 14px;
+  align-items: stretch; /* Order/Invoices match the table column's full height */
+  width: 100%;
+  box-sizing: border-box;
   flex-wrap: wrap;
 }
 
-/* =========================
-   Left Panel (Purchase Invoice)
-========================= */
+/* Row of toggle switches sitting directly above the columns — its slots
+   mirror the left/center/right flex sizing below so each toggle lines up
+   with the column it belongs to. */
+.pi-page-toggles {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
 
-.purchase-invoice-container {
-  flex: 1 1 980px;         /* ✅ grows, but can shrink */
-  min-width: 720px;        /* ✅ safe minimum (change if you want) */
-  height: calc(100vh - 40px);
+.pi-toggle-slot {
+  flex: 0 1 350px;
+  max-width: 350px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
 
-  background: #f9fafb;
-  border: 1px solid rgba(255, 196, 0, 0.75);
-  border-radius: 14px;
+.pi-toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
 
-  padding: 18px;
+.pi-toggle-slot--center {
+  flex: 3 1 480px;
+  max-width: none;
+}
+
+/* The Invoices toggle sits at the right edge of its slot, matching the
+   right-hand column below it */
+.pi-toggle-slot--right {
+  justify-content: flex-end;
+}
+
+/* Toggle switch (behavior TBD) */
+.pi-column-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  flex: none;
+  cursor: pointer;
+}
+
+.pi-column-toggle input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 1;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.pi-column-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  pointer-events: none;
+  transition: background-color 0.15s ease;
+}
+
+.pi-column-toggle-slider::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.pi-column-toggle input:checked + .pi-column-toggle-slider {
+  background: #2563eb;
+}
+
+.pi-column-toggle input:checked + .pi-column-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Left: Order (supplier/invoice/classification/pricing + summary) */
+.pi-page-left {
+  flex: 0 1 350px;
+
+  max-width: 350px;
+
+  /* fixed height regardless of how many orders are in it — scrolls
+     internally instead of growing/shrinking the row */
+  height: 880px;
+
+  background: #fff6b4;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  padding: 16px;
   margin: 0;
 
   display: flex;
   flex-direction: column;
+  gap: 4px;
   box-sizing: border-box;
 
-  box-shadow: 0 10px 26px rgba(255, 196, 0, 0.20);
-  overflow: hidden; /* ✅ prevents inner sections from overflowing */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-/* If you need scrolling inside the left page, scroll the content wrapper */
-.purchase-invoice-container > * {
+.pi-page-left > * {
   min-width: 0;
 }
 
-/* =========================
-   Right Panel (Additional Section)
-========================= */
+.pi-page-left-placeholder {
+  color: #94a3b8;
+  font-size: 13.5px;
+  text-align: center;
+  padding: 24px 0;
+}
 
-.additional-container {
-  flex: 0 0 380px;        /* ✅ fixed comfortable width */
-  max-width: 420px;
-  min-width: 320px;
+/* Center: the items table — the dominant, widest column */
+.pi-page-center {
+  flex: 3 1 480px;
+  min-width: 0;
+  box-sizing: border-box;
+  position: relative;
+}
 
-  height: calc(100vh - 40px);
+/* Collapsed via the minus button (مصاريف mode) — shrink to just enough to
+   show the reopen button, letting the expenses panel take the rest */
+.pi-page-center.collapsed {
+  flex: 0 0 auto;
+  width: 44px;
+  min-width: 44px;
+}
 
+.pi-table-collapse-btn {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   background: #ffffff;
-  border: 1px solid rgba(0, 140, 255, 0.65);
-  border-radius: 14px;
+  color: #334155;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
 
-  padding: 14px;
+.pi-table-collapse-btn:hover {
+  background: #f8fafc;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+/* مصاريف (Expenses) mode — Order/Invoices columns are gone, so the table
+   shifts left and splits the freed width evenly with the expenses panel. */
+.pi-columns--expenses .pi-page-center {
+  flex: 1 1 480px;
+}
+
+/* Higher specificity than the rule above, so collapsing still wins even
+   in مصاريف mode instead of being overridden back to 480px */
+.pi-columns--expenses .pi-page-center.collapsed {
+  flex: 0 0 auto;
+  width: 44px;
+  min-width: 44px;
+}
+
+.pi-page-expenses {
+  flex: 1 1 480px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Right: Invoices list */
+.pi-page-right {
+  flex: 0 1 350px;
+  min-width: 350px;
+
+  /* fixed height (matches .pi-page-left) — scrolls internally instead of
+     growing with the invoice list; stays in view as you scroll the page */
+  position: sticky;
+  top: 10px;
+  height: 880px;
+
+  background: #ffe7e7;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  padding: 16px;
   margin: 0;
 
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-
-  box-shadow: 0 10px 26px rgba(0, 140, 255, 0.14);
 
   overflow-y: auto; /* ✅ scroll for many cards */
   overflow-x: hidden;
@@ -78,8 +241,15 @@
 .purchase-invoice-cards-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
+}
+
+.purchase-invoice-cards-wrapper > p {
+  color: #94a3b8;
+  font-size: 13.5px;
+  text-align: center;
+  padding: 24px 0;
 }
 
 /* =========================
@@ -89,33 +259,77 @@
 .purchase-invoice-card {
   position: relative;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
 
-  padding: 14px 14px 14px 18px; /* left padding for accent line */
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  padding: 12px 14px 12px 16px; /* left padding for accent line */
 
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .purchase-invoice-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 140, 255, 0.35);
-  box-shadow: 0 14px 30px rgba(0, 140, 255, 0.16);
+  transform: translateY(-1px);
+  border-color: #93c5fd;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+/* Shipped (in transit, not yet Recieved) */
+.purchase-invoice-card.shipped {
+  background: #fefce8;
+  border-color: #fde047;
+}
+
+.purchase-invoice-card.shipped::before {
+  background: #eab308;
+}
+
+.purchase-invoice-card.shipped:hover {
+  border-color: #eab308;
+  box-shadow: 0 6px 16px rgba(202, 138, 4, 0.15);
+}
+
+.purchase-invoice-card.ordered {
+  background: #ffbebe;
+  border-color: #fca5a5;
+}
+
+.purchase-invoice-card.ordered::before {
+  background: #ef4444;
+}
+
+.purchase-invoice-card.ordered:hover {
+  border-color: #ef4444;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.15);
+}
+
+/* The invoice currently open in the Order/Table form */
+.purchase-invoice-card.selected {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 6px 18px rgba(37, 99, 235, 0.18);
+}
+
+.purchase-invoice-card.selected:hover {
+  transform: none;
+}
+
+.purchase-invoice-card.selected::before {
+  width: 5px;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.8);
 }
 
 /* Colored Side Line */
 .purchase-invoice-card::before {
   content: "";
   position: absolute;
-  top: 10px;
-  bottom: 10px;
+  top: 8px;
+  bottom: 8px;
   left: 0;
 
-  width: 6px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #007bff, #0056b3);
+  width: 4px;
+  border-radius: 10px;
+  background: #2563eb;
 }
 
 /* Header (Invoice Number + Date) */
@@ -124,13 +338,13 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 /* Supplier Name */
 .supplier-name {
-  font-weight: 900;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 14.5px;
   color: #0f172a;
 
   max-width: 70%;
@@ -141,19 +355,25 @@
 
 /* Invoice Number */
 .invoice-number {
-  font-size: 14px;
+  font-size: 12.5px;
   color: #2563eb;
-  font-weight: 900;
+  font-weight: 700;
+  font-family: "SF Mono", Consolas, monospace;
 
   white-space: nowrap;
+}
+
+/* Not yet Recieved — showing the order number, not a real invoice number */
+.invoice-number.order-pending {
+  color: #d97706;
 }
 
 /* Body */
 .purchase-invoice-card-body {
   margin-top: 6px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
 
   display: flex;
   flex-direction: column;
@@ -162,8 +382,8 @@
 
 .purchase-invoice-card-date {
   margin-top: 10px;
-  font-size: 12.5px;
-  color: rgba(15, 23, 42, 0.55);
+  font-size: 12px;
+  color: #94a3b8;
   text-align: right;
   white-space: nowrap;
 }
@@ -174,53 +394,186 @@
   justify-content: space-between;
   align-items: center;
 
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed #e2e8f0;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
 }
 
 .grand-total {
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 13.5px;
+  font-weight: 700;
   color: #0f172a;
   white-space: nowrap;
 }
 
 /* Title label */
 .tittle-label {
-  font-weight: 900;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 15px;
   color: #0f172a;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
   margin-bottom: 10px;
 }
 
+/* Search box under the "Purchase Invoices" title */
+.invoice-list-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.invoice-list-search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 32px 0 12px;
+  font-size: 13.5px;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.invoice-list-search input::placeholder {
+  color: #94a3b8;
+}
+
+.invoice-list-search input:focus {
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.invoice-list-search-clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.invoice-list-search-clear:hover {
+  background: #cbd5e1;
+}
+
+/* All / Completed / Uncompleted filter chips, under the Proforma column's
+   search box */
+.proforma-filter-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.proforma-filter-chip {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.proforma-filter-chip:hover {
+  background: #e2e8f0;
+}
+
+.proforma-filter-chip--all.active {
+  color: #fff;
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.proforma-filter-chip--completed.active {
+  color: #fff;
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.proforma-filter-chip--uncompleted.active {
+  color: #fff;
+  background: #d97706;
+  border-color: #d97706;
+}
+
+/* Small badge on a Proforma card manually marked completed */
+.proforma-completed-badge {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+
 /* =========================
-   Responsive
+   Responsive — stack into one column, table first (same order as the
+   POS page: table/center, then order/left, then invoices/right)
 ========================= */
 
-@media (max-width: 1200px) {
-  .purchase-invoice-container {
-    min-width: 0;
-    flex: 1 1 100%;
+@media (max-width: 1100px) {
+  .pi-page-columns {
+    flex-direction: column;
   }
 
-  .additional-container {
-    flex: 1 1 100%;
+  .pi-page-left,
+  .pi-page-center,
+  .pi-page-right,
+  .pi-page-expenses {
+    flex: 1 1 auto;
+    width: 100%;
     max-width: none;
-    height: auto;
-    max-height: 55vh;
   }
+
+  /* Columns stack full-width below, so the toggle row no longer needs to
+     mirror their widths — just spread the two toggles evenly */
+  .pi-toggle-slot,
+  .pi-toggle-slot--center {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .pi-toggle-slot--center {
+    display: none;
+  }
+
+  .pi-page-left,
+  .pi-page-right {
+    height: 55vh;
+  }
+
+  .pi-page-right {
+    position: static;
+  }
+
+  .pi-page-center { order: 1; }
+  .pi-page-left   { order: 2; }
+  .pi-page-right  { order: 3; }
 }
 
 @media (max-width: 640px) {
-  .main-container {
+  .pi-page-shell {
     padding: 8px;
   }
 
-  .purchase-invoice-container,
-  .additional-container {
+  .pi-page-left,
+  .pi-page-right {
     border-radius: 12px;
     padding: 12px;
   }

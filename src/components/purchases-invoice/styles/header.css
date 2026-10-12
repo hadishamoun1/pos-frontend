@@ -10,21 +10,38 @@
   align-items: center;
   gap: 14px;
 
-
-  padding: 12px 14px;
+  padding: 14px 16px;
 
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+/* System-assigned PV/Order number, shown next to the title */
+.pi-doc-number-badge {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.pi-doc-number-badge--pending {
+  color: #d97706;
+  background: #fffbeb;
+  border-color: #fde68a;
 }
 
 /* Title */
 .header h2 {
   margin: 0;
 
-  font-size: 20px;
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 700;
   color: #0f172a;
 
   /* keeps title from pushing buttons off-screen */
@@ -37,107 +54,83 @@
 /* Buttons Wrapper */
 .button-container {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap; /* ✅ allows wrap on smaller screens */
 }
 
-/* Shared button base (add .edit-button here) */
+/* Shared button base */
 .save-button,
 .new-button,
 .cancel-button,
-.edit-purch-button {
+.edit-purch-button,
+.view-jv-button,
+.mark-completed-button {
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
 
-  font-weight: 900;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13.5px;
 
   padding: 10px 16px;
-  min-height: 42px;
+  min-height: 40px;
 
   color: #ffffff;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
 
-  transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
-.save-button:hover,
-.new-button:hover,
-.cancel-button:hover,
-.edit-purch-button:hover {
-  transform: translateY(-1px);
-  filter: brightness(0.96);
-}
-
-/* ✅ Edit button style */
-.edit-purch-button {
-  background: linear-gradient(to right, #f59e0b, #d97706);
-}
-
-/* Disabled (add .edit-button here) */
-.save-button:disabled,
-.new-button:disabled,
-.cancel-button:disabled,
-.edit-purch-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  filter: none;
-  box-shadow: none;
-}
-
-
-
-/* Specific colors */
-.save-button {
-  background: linear-gradient(to right, #2563eb, #1d4ed8);
-}
-
-.new-button {
-  background: linear-gradient(to right, #16a34a, #15803d);
-}
-
-.cancel-button {
-  background: linear-gradient(to right, #ef4444, #b91c1c);
+.save-button:hover:not(:disabled),
+.new-button:hover:not(:disabled),
+.cancel-button:hover:not(:disabled),
+.edit-purch-button:hover:not(:disabled),
+.view-jv-button:hover:not(:disabled),
+.mark-completed-button:hover:not(:disabled) {
+  filter: brightness(0.94);
 }
 
 /* Disabled */
 .save-button:disabled,
 .new-button:disabled,
-.cancel-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-  filter: none;
-  box-shadow: none;
-}
-
-/* Add to your purchase invoice CSS file */
-.view-jv-button {
-  margin-left: 8px;
-  background: linear-gradient(135deg, #10b981, #04724f);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.view-jv-button:hover {
-  background: linear-gradient(135deg, #05865d, #024633);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
-
-.view-jv-button:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
+.cancel-button:disabled,
+.edit-purch-button:disabled,
+.view-jv-button:disabled,
+.mark-completed-button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* Specific colors — one clear meaning per action */
+.save-button {
+  background: #2563eb; /* primary action */
+}
+
+.new-button {
+  background: #16a34a; /* start something new */
+}
+
+.cancel-button {
+  background: #64748b; /* neutral escape, not "danger" red for a plain cancel */
+}
+
+.edit-purch-button {
+  background: #d97706; /* switching into edit mode */
+}
+
+.view-jv-button {
+  background: #0891b2; /* secondary/informational action */
+  margin-left: 0;
+}
+
+.mark-completed-button {
+  background: #00cb2c; /* distinct from every other button in the row */
+}
+
+.mark-completed-button.is-completed {
+  background: #cc0000; /* matches the green "Completed" badge/chip elsewhere */
 }
 
 /* Responsive */
@@ -146,15 +139,6 @@
     flex-direction: column;
     align-items: stretch;
   }
-/* Responsive (add .edit-button here too) */
-@media (max-width: 720px) {
-  .save-button,
-  .new-button,
-  .cancel-button,
-  .edit-button {
-    width: 100%;
-  }
-}
 
   .button-container {
     justify-content: flex-start;
@@ -162,8 +146,11 @@
 
   .save-button,
   .new-button,
-  .cancel-button {
-    width: 100%; /* ✅ full width buttons on mobile */
+  .cancel-button,
+  .edit-purch-button,
+  .view-jv-button,
+  .mark-completed-button {
+    width: 100%;
   }
 
   .header h2 {

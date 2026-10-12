@@ -9,7 +9,7 @@ const SupplierInput = ({
   setSelectedSupplierId,
 }) => {
   return (
-    <label style={{ position: "relative", width: "100%" }}>
+    <label className="field-supplier" style={{ position: "relative" }}>
       Supplier Name
       <input
         type="text"

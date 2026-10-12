@@ -1,0 +1,134 @@
+.proforma-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.proforma-picker {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 22px;
+  width: 1300px;
+  max-width: 98vw;
+  height: 92vh;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.proforma-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.proforma-picker-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.proforma-picker-close {
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.proforma-picker-close:hover { color: #0f172a; }
+
+.proforma-picker-hint {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 8px 0 14px;
+}
+
+.proforma-picker-status {
+  font-size: 13.5px;
+  color: #6b7280;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.proforma-picker-error {
+  color: #b91c1c;
+}
+
+/* .items-table (table.css) supplies the base look — header/row/input
+   styling matches the main invoice items table exactly. This just adds
+   the scroll box and a couple of picker-specific accents. */
+.proforma-picker-table-wrap {
+  overflow: auto;
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+/* table.css's sticky header sticks relative to --toolbar-h, a variable set
+   by the main page (for sitting under its toolbar) — meaningless in here,
+   where the modal itself is the scroll container, so it must stick to 0
+   instead or a row peeks through above the header. (.items-table and
+   .proforma-picker-table-wrap are the same element — see the JSX — so this
+   needs the combined-class form, not a descendant selector.) */
+.items-table.proforma-picker-table-wrap th {
+  top: 0;
+}
+
+/* Left border marks where the picker-only columns start, after the
+   familiar item columns. */
+.proforma-picker-col-divider {
+  border-left: 2px solid #cbd5e1;
+}
+
+.proforma-picker-row-done {
+  opacity: 0.55;
+}
+
+.proforma-picker-remaining {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.proforma-picker-remaining-zero {
+  color: #94a3b8;
+}
+
+.proforma-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.proforma-picker-cancel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.proforma-picker-cancel:hover { background: #f1f5f9; }
+
+.proforma-picker-confirm {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.proforma-picker-confirm:hover:not(:disabled) { background: #1d4ed8; }
+.proforma-picker-confirm:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }

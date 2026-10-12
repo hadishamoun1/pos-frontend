@@ -167,6 +167,7 @@ const PERMISSION_GROUPS = [
       "payments.update",
       "payments.delete",
       "purchases.createReturn",
+      "purchases.shipmentTracking",
       "rvrRandomizer.view",
       "rvrRecievables.view",
       "warehouseStock.view",

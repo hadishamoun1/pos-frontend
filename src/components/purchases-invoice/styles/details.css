@@ -1,56 +1,64 @@
 /* =========================================================
    Invoice Details (Top Form)
-   ✅ consistent widths
-   ✅ grid layout (no old flex leftovers)
-   ✅ supplier suggestions dropdown fixed
-   ✅ compact fields (dates/currency/type/vat) still work
-   ✅ FIX: 2 rows by allowing 6 columns + smaller min widths
+   - lives above the items table, squeezed into the center column
+     (between the Order and Invoices columns) — one flowing row of
+     fields, no section dividers.
 ========================================================= */
 
 .invoice-details {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
 
-  padding: 16px;
-  margin: 10px 0;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  padding: 10px 14px;
+  margin: 0 0 10px;
 }
 
-/* ✅ FIX: 6 columns so many fields fit in 2 rows (e.g. up to 12 fields) */
+/* Fields keep their own proportions (a date field starts wider than a
+   Type field) but share out any leftover width in a row instead of
+   leaving it empty at the end. */
 .invoice-row {
-  display: grid !important;
-  grid-template-columns: repeat(6, minmax(160px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   align-items: start;
 }
 
-/* ✅ kill old rules that were messing widths */
-.invoice-row.row-1 label,
-.invoice-row.row-1 > div {
-  flex: unset !important;
-  max-width: unset !important;
-  min-width: 0 !important;
-}
-
-/* Label blocks */
+/* Label blocks — each grows from its own content-appropriate base size */
 .invoice-row label,
 .invoice-row > div {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
+  flex: 1 1 150px; /* default: Invoice Number, Warehouse */
 
-  font-size: 14px;
-  font-weight: 900;
-  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
 
-  min-width: 0;
   position: relative; /* for suggestions dropdown */
 }
+
+/* Bigger fields — these class names are on the <label> itself. Note:
+   field-compact/field-date/field-type/field-currency/field-vat below are
+   deliberately NOT reused here for sizing the label — they're already
+   applied to the <input>/<select> *inside* each label (for input
+   height/padding), and since each label is a column flex container,
+   any flex-basis/flex-grow put on those would size the input's HEIGHT,
+   not the label's width. Hence the separate field-col-* names. */
+.invoice-row .field-supplier { flex-basis: 220px; }
+.invoice-row .field-status { flex-basis: 200px; }
+.invoice-row .field-col-date { flex-basis: 170px; }
+
+/* Narrower fields */
+.invoice-row .field-col-type { flex-basis: 76px; flex-grow: 0.4; }
+.invoice-row .field-col-currency { flex-basis: 90px; flex-grow: 0.5; }
+.invoice-row .field-col-vat { flex-basis: 100px; flex-grow: 0.5; }
+.invoice-row .field-col-exch { flex-basis: 110px; flex-grow: 0.6; }
+
+/* JV Date's label text is long enough to wrap onto two lines — give the
+   label itself more room even though its input stays the standard date width */
+.invoice-row .field-jvdate { flex-basis: 190px; }
 
 /* Inputs/selects */
 .invoice-row input,
@@ -58,16 +66,16 @@
   width: 100%;
   box-sizing: border-box;
 
-  height: 46px;
-  padding: 10px 12px;
+  height: 34px;
+  padding: 6px 10px;
 
   font-size: 14px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 500;
+  color: #0f172a;
 
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 7px;
 
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -76,12 +84,12 @@
 .invoice-row input:focus,
 .invoice-row select:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 /* Date inputs: space for native calendar icon */
 .invoice-row input[type="date"] {
-  padding-right: 42px;
+  padding-right: 36px;
 }
 
 /* Selects */
@@ -93,16 +101,22 @@
 .invoice-row input:disabled,
 .invoice-row select:disabled,
 .invoice-row textarea:disabled {
-  background: #f1f5f9;
-  color: #334155;
+  background: #f8fafc;
+  color: #64748b;
   cursor: not-allowed;
   opacity: 1;
 }
 
-/* Status dropdown color modes */
+.status-auto-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+/* Status dropdown color modes (kept for anything still targeting these) */
 .status-dropdown {
   color: #ffffff;
-  font-weight: 900;
+  font-weight: 700;
   border: 1px solid #cbd5e1;
 }
 
@@ -126,38 +140,36 @@
   left: 0;
   right: 0;
 
-  z-index: 9999;
+  z-index: 40;
   max-height: 260px;
   overflow: auto;
 
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
 
   padding: 6px;
 }
 
 .suggestion-item {
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
   cursor: pointer;
 
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13.5px;
+  font-weight: 500;
   color: #0f172a;
 
   transition: background-color 0.12s ease;
 }
 
 .suggestion-item:hover {
-  background: rgba(37, 99, 235, 0.08);
+  background: #eff6ff;
 }
 
 /* =========================================================
    Compact fields (dates / currency / type / VAT)
-   ✅ NOTE: max-width does NOT change grid layout, but it can help visuals.
-   ✅ We also allow these to shrink properly inside the grid cell.
 ========================================================= */
 
 .invoice-row .field-compact,
@@ -165,77 +177,16 @@
 .invoice-row .field-currency,
 .invoice-row .field-type,
 .invoice-row .field-vat {
-  min-width: 0;         /* ✅ allow shrink */
-  justify-self: stretch; /* ✅ fill cell normally */
-}
-
-/* compact inputs/selects */
-.invoice-row .field-compact input,
-.invoice-row .field-compact select {
-  height: 42px;
-  font-size: 13.5px;
-  padding: 9px 10px;
-}
-
-/* date fields slightly tighter */
-.invoice-row .field-date input[type="date"] {
-  padding-right: 36px;
-}
-
-/* Optional: if you want some fields to be visually narrower */
-.invoice-row .field-date {
-  max-width: 230px;
-}
-.invoice-row .field-currency,
-.invoice-row .field-type {
-  max-width: 140px;
-}
-.invoice-row .field-vat {
-  max-width: 120px;
-}
-
-/* ✅ Optional helper: make big fields span 2 columns (add class in JSX) */
-.invoice-row .field-wide {
-  grid-column: span 2;
+  min-width: 0;
 }
 
 /* =========================================================
    Responsive
 ========================================================= */
 
-@media (max-width: 1400px) {
-  .invoice-row {
-    grid-template-columns: repeat(5, minmax(160px, 1fr));
-  }
-}
-
-@media (max-width: 1100px) {
-  .invoice-row {
-    grid-template-columns: repeat(4, minmax(160px, 1fr));
-  }
-}
-
-@media (max-width: 780px) {
-  .invoice-row {
-    grid-template-columns: repeat(2, minmax(160px, 1fr));
-  }
-
-  /* On smaller screens: don’t force tiny widths */
-  .invoice-row .field-compact,
-  .invoice-row .field-date,
-  .invoice-row .field-currency,
-  .invoice-row .field-type,
-  .invoice-row .field-vat {
-    max-width: 100%;
-  }
-
-  .invoice-row .field-wide {
-    grid-column: span 1;
-  }
-}
-
 @media (max-width: 520px) {
-  .invoice-row {
-    grid-template-columns: 1fr;
+  .invoice-row label,
+  .invoice-row > div {
+    flex-basis: 45%;
   }
 }

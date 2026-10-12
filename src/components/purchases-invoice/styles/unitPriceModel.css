@@ -31,6 +31,18 @@
   position: relative;
 }
 
+/* Embedded (مصاريف panel) — a normal in-flow panel, not a centered popup.
+   Needs a real (not auto) height so the table container's flex:1/overflow
+   below actually has space to scroll within — otherwise rows silently get
+   clipped by this panel's own overflow:hidden instead of scrolling. */
+.unit-price-modal-content.embedded {
+  width: 100%;
+  height: min(80vh, 860px);
+  border-radius: 12px;
+  box-shadow: none;
+  border: 1px solid #e5e7eb;
+}
+
 /* ===== Header (sticky) ===== */
 .modal-header {
   position: sticky;
@@ -47,8 +59,8 @@
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 17px;
+  font-weight: 700;
   color: #0f172a;
   letter-spacing: 0.2px;
   min-width: 0;
@@ -106,11 +118,11 @@
   position: sticky;
   top: 0; /* sticks inside scroll container */
   z-index: 10;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #2563eb;
   color: #ffffff;
-  font-weight: 900;
-  font-size: 13px;
-  padding: 12px 10px;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 11px 10px;
   text-align: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   white-space: normal;
@@ -138,13 +150,13 @@
 .unit-price-table td input,
 .unit-price-table td select {
   width: 100%;
-  height: 44px;
+  height: 40px;
   padding: 8px 10px;
   border: 1px solid #d6dde7;
-  border-radius: 10px;
+  border-radius: 8px;
   box-sizing: border-box;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 500;
   color: #0f172a;
   background: #ffffff;
   outline: none;
@@ -274,36 +286,34 @@
 .unit-price-load-settings-button,
 .unit-price-save-button {
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 900;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13.5px;
   padding: 10px 14px;
-  min-height: 42px;
-  transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  min-height: 40px;
+  transition: filter 0.15s ease, opacity 0.15s ease;
 }
 
 .unit-price-add-row-button {
-  background: linear-gradient(135deg, #16a34a, #15803d);
+  background: #16a34a;
   color: #fff;
 }
 
 .unit-price-load-settings-button {
-  background: linear-gradient(135deg, #d97706, #b45309);
+  background: #d97706;
   color: #fff;
 }
 
 .unit-price-save-button {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #2563eb;
   color: #fff;
 }
 
-.unit-price-add-row-button:hover,
-.unit-price-load-settings-button:hover,
-.unit-price-save-button:hover {
-  transform: translateY(-1px);
-  filter: brightness(0.97);
+.unit-price-add-row-button:hover:not(:disabled),
+.unit-price-load-settings-button:hover:not(:disabled),
+.unit-price-save-button:hover:not(:disabled) {
+  filter: brightness(0.94);
 }
 
 .unit-price-add-row-button:disabled,

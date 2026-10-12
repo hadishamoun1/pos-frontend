@@ -1,0 +1,255 @@
+.scm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.scm-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 900px;
+  max-width: 94vw;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.scm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.scm-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.scm-close {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.scm-close:hover:not(:disabled) { color: #0f172a; }
+
+.scm-hint {
+  margin: 0;
+  padding: 12px 20px 0;
+  font-size: 12.5px;
+  color: #6b7280;
+}
+
+.scm-body {
+  display: flex;
+  gap: 18px;
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.scm-left {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scm-right {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scm-search {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+}
+.scm-search:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.scm-invoice-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.scm-invoice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  font-size: 13px;
+}
+.scm-invoice-row:last-child { border-bottom: none; }
+.scm-invoice-row:hover { background: #f8fafc; }
+
+.scm-invoice-number {
+  font-weight: 700;
+  color: #2563eb;
+  font-family: "SF Mono", Consolas, monospace;
+  min-width: 90px;
+}
+
+.scm-invoice-supplier {
+  flex: 1;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scm-invoice-amount {
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.scm-empty {
+  padding: 16px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.scm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #334155;
+  flex: 1;
+}
+
+.scm-field input,
+.scm-field select {
+  padding: 9px 12px;
+  font-size: 13.5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  font-weight: 400;
+  color: #0f172a;
+}
+.scm-field input:focus,
+.scm-field select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.scm-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.scm-chk {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.scm-preview {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+}
+
+.scm-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.scm-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.scm-preview-table th,
+.scm-preview-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+}
+
+.scm-preview-table th {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+
+.scm-preview-table .num { text-align: right; }
+
+.scm-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+}
+
+.scm-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.scm-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.scm-btn--ghost {
+  background: #f1f5f9;
+  color: #334155;
+}
+.scm-btn--ghost:hover:not(:disabled) { background: #e2e8f0; }
+
+.scm-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+.scm-btn--primary:hover:not(:disabled) { background: #1d4ed8; }
+.scm-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 800px) {
+  .scm-body { flex-direction: column; }
+}

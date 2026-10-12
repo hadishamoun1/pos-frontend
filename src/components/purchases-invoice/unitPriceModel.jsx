@@ -17,6 +17,10 @@ export default function UnitPriceModal({
   invoiceId,
   rows,
   onRowsChange,
+  // When true, renders as a normal in-flow panel (no dark backdrop, no
+  // fixed overlay, no close button) instead of a popup — used for the
+  // مصاريف (Expenses) side panel.
+  embedded = false,
 }) {
   const [suppliers, setSuppliers] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -522,18 +526,19 @@ export default function UnitPriceModal({
 
   if (!isVisible) return null;
 
-  return (
-    <div className="unit-price-modal-overlay" onClick={closeDeleteMenu}>
-      <div
-        className="unit-price-modal-content"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <h3>Unit Price Details</h3>
+  const modalBody = (
+    <div
+      className={`unit-price-modal-content${embedded ? " embedded" : ""}`}
+      onClick={embedded ? undefined : (e) => e.stopPropagation()}
+    >
+      <div className="modal-header">
+        <h3>Unit Price Details</h3>
+        {!embedded && (
           <button className="close-button" onClick={onClose}>
             ×
           </button>
-        </div>
+        )}
+      </div>
 
         <div className="unit-price-table-container">
           <table className="unit-price-table" ref={tableRef}>
@@ -815,7 +820,14 @@ export default function UnitPriceModal({
             Save
           </button>
         </div>
-      </div>
+    </div>
+  );
+
+  if (embedded) return modalBody;
+
+  return (
+    <div className="unit-price-modal-overlay" onClick={closeDeleteMenu}>
+      {modalBody}
     </div>
   );
 }

@@ -3,18 +3,45 @@
 
 
 .summary-section h4 {
-  font-size: 20px;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: #0f172a;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+
+/* Tracking-method picker — decides which of the fields/buttons below
+   actually show, so only what's relevant to the chosen method appears. */
+.tracking-mode-tabs {
+  display: flex;
+  gap: 6px;
   margin-bottom: 16px;
-  color: #333;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 8px;
+}
+
+.tracking-mode-tab {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.tracking-mode-tab:hover { background: #e2e8f0; }
+.tracking-mode-tab.active {
+  color: #fff;
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 /* Grid layout: 3 fields max per row, left-aligned */
 .alternative-fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 16px;
   justify-content: start;
   align-items: flex-start;
 }
@@ -22,24 +49,25 @@
 .alternative-fields label {
   display: flex;
   flex-direction: column;
+  gap: 6px;
   font-weight: 600;
-  color: #444;
-  font-size: 15px;
+  color: #334155;
+  font-size: 13px;
 }
 
 .alternative-fields input {
-  margin-top: 6px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   font-size: 14px;
   border-radius: 8px;
-  border: 1.8px solid #ccc;
+  border: 1px solid #cbd5e1;
   background-color: #fff;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  color: #0f172a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .alternative-fields input:focus {
-  border-color: #007bff;
-  box-shadow: 0 0 6px rgba(0, 123, 255, 0.35);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
   outline: none;
 }
 
@@ -53,4 +81,293 @@
   .alternative-fields {
     grid-template-columns: 1fr;
   }
+}
+
+/* BL document attach / view / download row */
+.bl-document-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.bl-attach-btn {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.bl-attach-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #94a3b8; }
+.bl-attach-btn:disabled { color: #94a3b8; background: #f8fafc; border-color: #e2e8f0; cursor: not-allowed; }
+
+.bl-document-hint {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.bl-document-attached {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.bl-document-icon { font-size: 16px; }
+
+.bl-document-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-document-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bl-document-btn {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.bl-document-btn:hover:not(:disabled) { background: #dbeafe; }
+
+.bl-document-btn--replace {
+  color: #334155;
+  background: #fff;
+  border-color: #cbd5e1;
+}
+.bl-document-btn--replace:hover:not(:disabled) { background: #f1f5f9; }
+.bl-document-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* BL / ShipsGo tracking row */
+.bl-tracking-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.bl-track-btn {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.bl-track-btn:hover:not(:disabled) { background: #1d4ed8; }
+.bl-track-btn:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }
+
+.bl-tracking-hint {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.bl-tracking-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bl-tracking-pill {
+  font: 700 11px/1 -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 6px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.bl-tracking-pill.good { color: #16a34a; background: #dcfce7; }
+.bl-tracking-pill.mute { color: #6b7280; background: #f1f5f9; }
+
+.bl-tracking-meta {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #6b7280;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+.bl-tracking-pill.warn { color: #b45309; background: #fef3c7; }
+.bl-tracking-pill.bad { color: #b91c1c; background: #fee2e2; cursor: help; }
+
+.field-optional-hint {
+  font-weight: 400;
+  font-size: 11.5px;
+  color: #94a3b8;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Other Documents — plain attachments, no extraction */
+.other-documents-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.other-documents-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.other-documents-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.other-document-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.other-document-size {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-family: "SF Mono", Consolas, monospace;
+}
+
+/* Vessel (AIS) tracking row — same layout as the ShipsGo row above it */
+.vessel-tracking-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Vessel picker (name search results) */
+.vessel-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.vessel-picker {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  width: 380px;
+  max-width: 90vw;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.vessel-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vessel-picker-header h5 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vessel-picker-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.vessel-picker-close:hover { color: #0f172a; }
+
+.vessel-picker-hint {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin: 6px 0 12px;
+}
+
+.vessel-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.vessel-picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.vessel-picker-item:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; }
+.vessel-picker-item:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.vessel-picker-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.vessel-picker-meta {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: "SF Mono", Consolas, monospace;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 // --- DND KIT IMPORTS ---
 import {
   DndContext,
@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 // --- SORTABLE ROW WRAPPER ---
-function SortableRow({ id, children, onContextMenu, isEditable }) {
+function SortableRow({ id, children, onContextMenu, isEditable, hidden }) {
   const {
     attributes,
     listeners,
@@ -33,12 +33,15 @@ function SortableRow({ id, children, onContextMenu, isEditable }) {
     transition,
   };
 
+  // `hidden` only hides the row visually (filters) — it stays a real
+  // sortable child so drag-and-drop indices and item order never drift
+  // from what's actually in the `items` array.
   return (
-    <tr 
-      ref={setNodeRef} 
-      style={style} 
+    <tr
+      ref={setNodeRef}
+      style={style}
       onContextMenu={onContextMenu}
-      className={isDragging ? "is-dragging" : ""}
+      className={`${isDragging ? "is-dragging" : ""} ${hidden ? "row-filtered-out" : ""}`.trim()}
     >
       <td className="drag-handle-cell">
         {isEditable && (
@@ -210,15 +213,6 @@ export default function ItemsTable({
     }
   }, [items, setItems]);
 
-  const [deleteMenu, setDeleteMenu] = useState({ visible: false, x: 0, y: 0, rowIndex: null });
-  const closeDeleteMenu = () => setDeleteMenu({ visible: false, x: 0, y: 0, rowIndex: null });
-
-  const handleRowContext = (e, index) => {
-    e.preventDefault();
-    if (!isEditable) return;
-    setDeleteMenu({ visible: true, x: e.clientX, y: e.clientY, rowIndex: index });
-  };
-
   const displayItemName = (item) => {
     const name = item?.itemName || "";
     const th = [item?.thickness, item?.payloadVariant?.thickness, item?.variant?.thickness, item?.dimension?.thickness]
@@ -232,14 +226,381 @@ export default function ItemsTable({
   const sqmEditable = isEditable && invoiceType === "SR";
   const sqmOfrEditable = isEditable && invoiceType === "SR";
 
+  // --- Filters (visual only — never touches `items`, so indices/order
+  // used by editing, drag-and-drop, and delete all stay correct) ---
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [originFilter, setOriginFilter] = useState("all");
+  const [onlyMissingPrice, setOnlyMissingPrice] = useState(false);
+
+  const typeOptions = useMemo(
+    () => Array.from(new Set(items.map((it) => it.type).filter(Boolean))).sort(),
+    [items]
+  );
+  const originOptions = useMemo(
+    () => Array.from(new Set(items.map((it) => it.origin).filter(Boolean))).sort(),
+    [items]
+  );
+
+  // --- Per-column right-click filters (greater than / less than / contains / …) ---
+  const COLUMN_DEFS = {
+    itemName: { label: "Item Name", type: "text", getValue: (it) => displayItemName(it) },
+    type: { label: "Type", type: "text", getValue: (it) => it.type || "" },
+    origin: { label: "Origin", type: "text", getValue: (it) => it.origin || "" },
+    length: { label: "Length", type: "number", getValue: (it) => num(it.length, 0) },
+    width: { label: "Width", type: "number", getValue: (it) => num(it.width, 0) },
+    quantity: { label: "Quantity", type: "number", getValue: (it) => num(it.quantity, 0) },
+    sheetsPerBox: { label: "Sheets/Box", type: "number", getValue: (it) => num(it.sheetsPerBox, 0) },
+    sqm: { label: "SQM", type: "number", getValue: (it) => num(it.sqm, 0) },
+    sqmOfr: { label: "SQM OFR", type: "number", getValue: (it) => num(it.sqmOfr, 0) },
+    euroPrice: { label: "Euro Price", type: "number", getValue: (it) => num(it.euroPrice, 0) },
+    unitPrice: { label: "Unit Price", type: "number", getValue: (it) => num(it.unitPrice, 0) },
+    euroOfferPrice: { label: "Euro Offer Price", type: "number", getValue: (it) => num(it.euroOfferPrice, 0) },
+    priceOFR: { label: "Price OFR", type: "number", getValue: (it) => num(it.priceOFR, 0) },
+    total: { label: "Total", type: "number", getValue: (it) => num(it.total, 0) },
+    totalOFR: { label: "Total OFR", type: "number", getValue: (it) => num(it.totalOFR, 0) },
+    numberOfContainers: { label: "Nb of Containers", type: "number", getValue: (it) => num(it.numberOfContainers, 0) },
+  };
+
+  const NUMBER_OPERATORS = [
+    { value: "gt", label: "Greater than" },
+    { value: "gte", label: "Greater than or equal" },
+    { value: "lt", label: "Less than" },
+    { value: "lte", label: "Less than or equal" },
+    { value: "eq", label: "Equal to" },
+    { value: "neq", label: "Not equal to" },
+    { value: "between", label: "Between" },
+  ];
+  const TEXT_OPERATORS = [
+    { value: "contains", label: "Contains" },
+    { value: "notContains", label: "Does not contain" },
+    { value: "equals", label: "Equals" },
+    { value: "startsWith", label: "Starts with" },
+  ];
+
+  // The exact left-to-right column order actually rendered below (drag
+  // handle first, `null` since it has no filterable column) — used to
+  // resolve which column a right-clicked <td> belongs to via its native
+  // `cellIndex`, so every data cell (not just headers) can open the
+  // filter for its column.
+  const visibleColumnKeys = [
+    null,
+    "itemName", "type", "origin", "length", "width", "quantity", "sheetsPerBox",
+    ...(showSqm ? ["sqm"] : []),
+    ...(showSqmOfr ? ["sqmOfr"] : []),
+    ...(currency === "EURO" ? ["euroPrice"] : []),
+    ...(invoiceType !== "G" ? ["unitPrice"] : []),
+    ...(currency === "EURO" ? ["euroOfferPrice"] : []),
+    ...(invoiceType !== "S" && invoiceType !== "RVR" ? ["priceOFR"] : []),
+    "total", "totalOFR", "numberOfContainers",
+  ];
+
+  const [columnFilters, setColumnFilters] = useState({}); // { [columnKey]: { operator, val, val2 } }
+  const [colFilterMenu, setColFilterMenu] = useState({
+    visible: false, x: 0, y: 0, columnKey: null, rowIndex: null,
+  });
+  const [draftOperator, setDraftOperator] = useState("gt");
+  const [draftValue, setDraftValue] = useState("");
+  const [draftValue2, setDraftValue2] = useState("");
+
+  // Unified right-click menu: filter options for the clicked column (if
+  // any) plus a Delete Row action (if a row was clicked). Works from a
+  // header (columnKey only), from any cell (both), or the drag handle
+  // (rowIndex only).
+  const openCellContextMenu = (e, columnKey, rowIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (columnKey) {
+      const def = COLUMN_DEFS[columnKey];
+      const existing = columnFilters[columnKey];
+      setDraftOperator(existing?.operator || (def.type === "number" ? "gt" : "contains"));
+      setDraftValue(existing?.val ?? "");
+      setDraftValue2(existing?.val2 ?? "");
+    }
+    setColFilterMenu({ visible: true, x: e.clientX, y: e.clientY, columnKey: columnKey || null, rowIndex: rowIndex ?? null });
+  };
+
+  const handleCellContextMenu = (e, rowIndex) => {
+    // Filtering works regardless of edit mode; only the Delete Row action
+    // (rendered conditionally below) is gated on isEditable.
+    const td = e.target.closest("td");
+    const cellIndex = td ? td.cellIndex : -1;
+    const columnKey = cellIndex >= 0 ? visibleColumnKeys[cellIndex] : null;
+    openCellContextMenu(e, columnKey, rowIndex);
+  };
+
+  const closeColumnFilterMenu = () =>
+    setColFilterMenu({ visible: false, x: 0, y: 0, columnKey: null, rowIndex: null });
+
+  const applyColumnFilter = () => {
+    const key = colFilterMenu.columnKey;
+    if (!key) return;
+    if (draftValue === "" || draftValue == null) {
+      setColumnFilters((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } else {
+      setColumnFilters((prev) => ({
+        ...prev,
+        [key]: { operator: draftOperator, val: draftValue, val2: draftValue2 },
+      }));
+    }
+    closeColumnFilterMenu();
+  };
+
+  const clearColumnFilter = (key) => {
+    setColumnFilters((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    closeColumnFilterMenu();
+  };
+
+  const matchesColumnValue = (value, filter, type) => {
+    const { operator, val, val2 } = filter;
+    if (type === "number") {
+      const n = Number(value);
+      const a = Number(val);
+      if (!Number.isFinite(a)) return true; // nothing usable typed yet
+      switch (operator) {
+        case "gt": return n > a;
+        case "gte": return n >= a;
+        case "lt": return n < a;
+        case "lte": return n <= a;
+        case "eq": return n === a;
+        case "neq": return n !== a;
+        case "between": {
+          const b = val2 === "" || val2 == null ? NaN : Number(val2);
+          if (!Number.isFinite(b)) return n >= a;
+          const lo = Math.min(a, b), hi = Math.max(a, b);
+          return n >= lo && n <= hi;
+        }
+        default: return true;
+      }
+    }
+    const s = String(value ?? "").toLowerCase();
+    const a = String(val ?? "").toLowerCase();
+    switch (operator) {
+      case "contains": return s.includes(a);
+      case "notContains": return !s.includes(a);
+      case "equals": return s === a;
+      case "startsWith": return s.startsWith(a);
+      default: return true;
+    }
+  };
+
+  const searchLower = searchText.trim().toLowerCase();
+  const matchesFilters = (item) => {
+    if (typeFilter !== "all" && item.type !== typeFilter) return false;
+    if (originFilter !== "all" && item.origin !== originFilter) return false;
+    if (onlyMissingPrice && num(item.unitPrice, 0) > 0) return false;
+    if (searchLower) {
+      const haystack = [displayItemName(item), item.type, item.origin]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(searchLower)) return false;
+    }
+    for (const [key, filter] of Object.entries(columnFilters)) {
+      const def = COLUMN_DEFS[key];
+      if (!def) continue;
+      if (!matchesColumnValue(def.getValue(item), filter, def.type)) return false;
+    }
+    return true;
+  };
+
+  const visibleCount = items.reduce((n, it) => (matchesFilters(it) ? n + 1 : n), 0);
+  const columnFilterEntries = Object.entries(columnFilters);
+  const filtersActive =
+    Boolean(searchLower) ||
+    typeFilter !== "all" ||
+    originFilter !== "all" ||
+    onlyMissingPrice ||
+    columnFilterEntries.length > 0;
+
+  const clearFilters = () => {
+    setSearchText("");
+    setTypeFilter("all");
+    setOriginFilter("all");
+    setOnlyMissingPrice(false);
+    setColumnFilters({});
+  };
+
+  const thFilterProps = (key) => ({
+    onContextMenu: (e) => openCellContextMenu(e, key, null),
+    className: columnFilters[key] ? "th-filtered" : "",
+    title: "Right-click to filter this column",
+  });
+
   return (
-    <div className="items-table" onClick={closeDeleteMenu}>
+    <div className="items-table" onClick={closeColumnFilterMenu}>
       <div className="separator">
         <h3>Items</h3>
-        <button className="select-item-button" onClick={openItemModal} disabled={!isEditable}>
-          Select Item
-        </button>
+        <div className="items-table-toolbar-actions">
+          <button
+            type="button"
+            className={`items-filter-toggle${filtersActive ? " active" : ""}`}
+            onClick={() => setFilterOpen((v) => !v)}
+            aria-expanded={filterOpen}
+          >
+            Filter{filtersActive ? ` (${visibleCount}/${items.length})` : ""}
+          </button>
+          <button className="select-item-button" onClick={openItemModal} disabled={!isEditable}>
+            Select Item
+          </button>
+        </div>
       </div>
+
+      {filterOpen && (
+        <div className="items-table-filters">
+          <input
+            type="text"
+            className="items-filter-search"
+            placeholder="Search item name…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+
+          <label className="items-filter-field">
+            Type
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              {typeOptions.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="items-filter-field">
+            Origin
+            <select value={originFilter} onChange={(e) => setOriginFilter(e.target.value)}>
+              <option value="all">All origins</option>
+              {originOptions.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="items-filter-checkbox">
+            <input
+              type="checkbox"
+              checked={onlyMissingPrice}
+              onChange={(e) => setOnlyMissingPrice(e.target.checked)}
+            />
+            Missing unit price
+          </label>
+
+          {filtersActive && (
+            <button type="button" className="items-filter-clear" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
+
+          {columnFilterEntries.length > 0 && (
+            <div className="items-filter-chips">
+              {columnFilterEntries.map(([key, filter]) => {
+                const def = COLUMN_DEFS[key];
+                if (!def) return null;
+                const opLabel =
+                  (def.type === "number" ? NUMBER_OPERATORS : TEXT_OPERATORS).find(
+                    (o) => o.value === filter.operator
+                  )?.label || filter.operator;
+                const valueLabel =
+                  filter.operator === "between" ? `${filter.val} – ${filter.val2}` : filter.val;
+                return (
+                  <span className="items-filter-chip" key={key}>
+                    {def.label} {opLabel.toLowerCase()} <strong>{valueLabel}</strong>
+                    <button
+                      type="button"
+                      onClick={() => clearColumnFilter(key)}
+                      aria-label={`Remove ${def.label} filter`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          <span className="items-filter-hint">Tip: right-click any cell (or a column header) to filter that column.</span>
+        </div>
+      )}
+
+      {colFilterMenu.visible && (() => {
+        const def = colFilterMenu.columnKey ? COLUMN_DEFS[colFilterMenu.columnKey] : null;
+        const canDelete = colFilterMenu.rowIndex != null && isEditable;
+        if (!def && !canDelete) return null;
+        const operators = def ? (def.type === "number" ? NUMBER_OPERATORS : TEXT_OPERATORS) : [];
+        return (
+          <div
+            className="column-filter-menu"
+            style={{ top: colFilterMenu.y, left: colFilterMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {def && (
+              <>
+                <div className="column-filter-menu-title">Filter: {def.label}</div>
+                <select value={draftOperator} onChange={(e) => setDraftOperator(e.target.value)} autoFocus>
+                  {operators.map((op) => (
+                    <option key={op.value} value={op.value}>{op.label}</option>
+                  ))}
+                </select>
+                <input
+                  type={def.type === "number" ? "number" : "text"}
+                  value={draftValue}
+                  placeholder="Value…"
+                  onChange={(e) => setDraftValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") applyColumnFilter(); }}
+                />
+                {draftOperator === "between" && (
+                  <input
+                    type="number"
+                    value={draftValue2}
+                    placeholder="and…"
+                    onChange={(e) => setDraftValue2(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") applyColumnFilter(); }}
+                  />
+                )}
+                <div className="column-filter-menu-actions">
+                  {columnFilters[colFilterMenu.columnKey] && (
+                    <button
+                      type="button"
+                      className="column-filter-clear-btn"
+                      onClick={() => clearColumnFilter(colFilterMenu.columnKey)}
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button type="button" className="column-filter-apply-btn" onClick={applyColumnFilter}>
+                    Apply
+                  </button>
+                </div>
+              </>
+            )}
+
+            {canDelete && (
+              <>
+                {def && <div className="column-filter-menu-divider" />}
+                <button
+                  type="button"
+                  className="column-filter-delete-btn"
+                  onClick={() => {
+                    setItems(items.filter((_, i) => i !== colFilterMenu.rowIndex));
+                    closeColumnFilterMenu();
+                  }}
+                >
+                  Delete Row
+                </button>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <table ref={tableRef}>
@@ -265,33 +626,34 @@ export default function ItemsTable({
           <thead>
             <tr>
               <th></th>
-              <th>Item Name</th>
-              <th>Type</th>
-              <th>Origin</th>
-              <th>Length</th>
-              <th>Width</th>
-              <th>Quantity</th>
-              <th>Sheets/Box</th>
-              {showSqm && <th>SQM</th>}
-              {showSqmOfr && <th>SQM OFR</th>}
-              {currency === "EURO" && <th>Euro Price</th>}
-              {invoiceType !== "G" && <th>Unit Price</th>}
-              {currency === "EURO" && <th>Euro Offer Price</th>}
-              {invoiceType !== "S" && invoiceType !== "RVR" && <th>Price OFR</th>}
-              <th>Total</th>
-              <th>Total OFR</th>
-              <th>Nb of Cont</th>
+              <th {...thFilterProps("itemName")}>Item Name</th>
+              <th {...thFilterProps("type")}>Type</th>
+              <th {...thFilterProps("origin")}>Origin</th>
+              <th {...thFilterProps("length")}>Length</th>
+              <th {...thFilterProps("width")}>Width</th>
+              <th {...thFilterProps("quantity")}>Quantity</th>
+              <th {...thFilterProps("sheetsPerBox")}>Sheets/Box</th>
+              {showSqm && <th {...thFilterProps("sqm")}>SQM</th>}
+              {showSqmOfr && <th {...thFilterProps("sqmOfr")}>SQM OFR</th>}
+              {currency === "EURO" && <th {...thFilterProps("euroPrice")}>Euro Price</th>}
+              {invoiceType !== "G" && <th {...thFilterProps("unitPrice")}>Unit Price</th>}
+              {currency === "EURO" && <th {...thFilterProps("euroOfferPrice")}>Euro Offer Price</th>}
+              {invoiceType !== "S" && invoiceType !== "RVR" && <th {...thFilterProps("priceOFR")}>Price OFR</th>}
+              <th {...thFilterProps("total")}>Total</th>
+              <th {...thFilterProps("totalOFR")}>Total OFR</th>
+              <th {...thFilterProps("numberOfContainers")}>Nb of Cont</th>
             </tr>
           </thead>
 
           <SortableContext items={items.map((it) => it.id || it._tempId)} strategy={verticalListSortingStrategy}>
             <tbody>
               {items.map((item, index) => (
-                <SortableRow 
-                  key={item.id || item._tempId} 
-                  id={item.id || item._tempId} 
+                <SortableRow
+                  key={item.id || item._tempId}
+                  id={item.id || item._tempId}
                   isEditable={isEditable}
-                  onContextMenu={(e) => handleRowContext(e, index)}
+                  hidden={!matchesFilters(item)}
+                  onContextMenu={(e) => handleCellContextMenu(e, index)}
                 >
                   <td style={{ direction: "rtl", textAlign: "right" }}>{displayItemName(item)}</td>
                   <td>{item.type}</td>
@@ -429,20 +791,20 @@ export default function ItemsTable({
                   </td>
                 </SortableRow>
               ))}
+              {items.length > 0 && visibleCount === 0 && (
+                <tr className="items-table-empty-row">
+                  <td colSpan={20}>
+                    No items match your filters.{" "}
+                    <button type="button" className="items-filter-clear-inline" onClick={clearFilters}>
+                      Clear filters
+                    </button>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </SortableContext>
         </table>
       </DndContext>
-
-      {deleteMenu.visible && (
-        <div
-          className="context-menu-purchases"
-          style={{ top: deleteMenu.y, left: deleteMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button onClick={() => { setItems(items.filter((_, i) => i !== deleteMenu.rowIndex)); closeDeleteMenu(); }}>Delete Row</button>
-        </div>
-      )}
     </div>
   );
 }

@@ -114,9 +114,7 @@ const SummarySection = ({
                 type="number"
                 value={finalCost}
                 readOnly
-                onClick={openItemModal}
-                className="final-cost-clickable"
-                placeholder="Click to calculate"
+                className="final-cost-display"
               />
             </label>
 
