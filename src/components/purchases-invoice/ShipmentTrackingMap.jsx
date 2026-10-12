@@ -208,20 +208,28 @@ function FlyToOnSelect({ target }) {
 }
 
 // Leaflet caches its container's pixel size at mount. If the layout above/
-// around the map shifts afterward (header/footer content changing, async
-// data pushing things around, fonts swapping in) Leaflet doesn't notice and
-// keeps rendering at the stale size — the map looks shrunk/cut off until a
-// manual window resize. Re-measure once after mount (and after a short
-// delay for late layout settling) and on every window resize.
+// around the map shifts afterward Leaflet doesn't notice and keeps
+// rendering at the stale size — the map looks shrunk/cut off until a manual
+// window resize. This bites hardest when the map is mounted by toggling
+// into view inside another page (e.g. Purchase Invoice's "Shipment
+// Tracking" switch): the container can still be settling its final size
+// for a tick after mount. A ResizeObserver on the map's own container
+// re-measures on every actual size change, however long that takes,
+// instead of guessing a fixed delay — plus a window-resize listener for
+// viewport changes that don't touch this element directly.
 function InvalidateMapSizeOnLayoutChange() {
   const map = useMap();
   React.useEffect(() => {
     const invalidate = () => map.invalidateSize();
     invalidate();
-    const t = setTimeout(invalidate, 300);
+
+    const container = map.getContainer();
+    const ro = new ResizeObserver(invalidate);
+    ro.observe(container);
+
     window.addEventListener("resize", invalidate);
     return () => {
-      clearTimeout(t);
+      ro.disconnect();
       window.removeEventListener("resize", invalidate);
     };
   }, [map]);
