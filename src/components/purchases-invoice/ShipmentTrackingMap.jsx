@@ -362,23 +362,12 @@ export default function ShipmentTrackingMap() {
       <div className="ship-track-header">
         <div>
           <h1>Shipment Tracking</h1>
-          <p className="ship-track-subtitle">
-            Live vessel positions from ShipsGo (container bookings) and AIS (chartered/bulk vessels).
-          </p>
+        
         </div>
-        <span className="ship-track-live-badge">
-          <span className="ship-track-live-dot" />
-          Live via ShipsGo &amp; AIS
-        </span>
+ 
       </div>
 
-      {shipments.length > 0 && shipments.every((s) => !s.linkedInvoice) && (
-        <div className="ship-track-notice">
-          None of these shipments are linked to a purchase invoice yet — use the "Track Shipment" or "Track Vessel"
-          button on an invoice's Summary View 2 to link one, and its card here will show the PO/invoice number
-          instead of just the raw reference.
-        </div>
-      )}
+  
 
       <div className="ship-track-stats">
         {STATUS_ORDER.map((key) => (
@@ -625,13 +614,8 @@ export default function ShipmentTrackingMap() {
       </div>
 
       <footer className="ship-track-footer">
-        <strong>Data source:</strong>
-        <span>
-          {" "}
-          ShipsGo (booking/container tracking) for liner shipments, and VesselAPI (raw AIS position) for
-          chartered/bulk vessels with no shipping line. Vessel-tracked cards only auto-update status up to
-          "Shipped" — arrival still needs manual confirmation on the invoice.
-        </span>
+       
+
       </footer>
     </div>
   );
