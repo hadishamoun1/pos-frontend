@@ -207,6 +207,27 @@ function FlyToOnSelect({ target }) {
   return null;
 }
 
+// Leaflet caches its container's pixel size at mount. If the layout above/
+// around the map shifts afterward (header/footer content changing, async
+// data pushing things around, fonts swapping in) Leaflet doesn't notice and
+// keeps rendering at the stale size — the map looks shrunk/cut off until a
+// manual window resize. Re-measure once after mount (and after a short
+// delay for late layout settling) and on every window resize.
+function InvalidateMapSizeOnLayoutChange() {
+  const map = useMap();
+  React.useEffect(() => {
+    const invalidate = () => map.invalidateSize();
+    invalidate();
+    const t = setTimeout(invalidate, 300);
+    window.addEventListener("resize", invalidate);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", invalidate);
+    };
+  }, [map]);
+  return null;
+}
+
 function SearchIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -362,12 +383,8 @@ export default function ShipmentTrackingMap() {
       <div className="ship-track-header">
         <div>
           <h1>Shipment Tracking</h1>
-        
         </div>
- 
       </div>
-
-  
 
       <div className="ship-track-stats">
         {STATUS_ORDER.map((key) => (
@@ -426,6 +443,7 @@ export default function ShipmentTrackingMap() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
+            <InvalidateMapSizeOnLayoutChange />
             {flyTarget && <FlyToOnSelect target={flyTarget} />}
 
             {filteredShipments.map((s) => {
@@ -612,11 +630,6 @@ export default function ShipmentTrackingMap() {
           </div>
         </aside>
       </div>
-
-      <footer className="ship-track-footer">
-       
-
-      </footer>
     </div>
   );
 }
