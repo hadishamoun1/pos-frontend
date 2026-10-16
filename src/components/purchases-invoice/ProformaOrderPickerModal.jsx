@@ -13,6 +13,16 @@ import "./styles/proformaOrderPickerModal.css";
 // actually still available.
 const displayItemName = (row) => (row.thickness != null ? `${row.thickness} ملم ${row.itemName}` : row.itemName);
 
+// SQM per one unit of quantity — taken from the proforma line itself so it
+// respects whatever SQM the proforma was saved with; falls back to the same
+// dims formula as ItemsTable when the line has no quantity to divide by.
+const sqmPerUnit = (row) => {
+  const qty = Number(row.quantity) || 0;
+  if (qty > 0) return (Number(row.sqm) || 0) / qty;
+  const sheets = Number(row.sheetsPerBox) || 1;
+  return ((Number(row.length) || 0) * (Number(row.width) || 0) * sheets) / 10000;
+};
+
 const ProformaOrderPickerModal = ({ proformaId, onClose, onCreated }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -156,7 +166,11 @@ const ProformaOrderPickerModal = ({ proformaId, onClose, onCreated }) => {
                               step="any"
                               disabled={!sel.checked}
                               value={sel.quantity ?? 0}
-                              onChange={(e) => updateSelection(r.proformaItemId, { quantity: e.target.value })}
+                              onChange={(e) => {
+                                const quantity = e.target.value;
+                                const sqm = Number(((Number(quantity) || 0) * sqmPerUnit(r)).toFixed(2));
+                                updateSelection(r.proformaItemId, { quantity, sqm });
+                              }}
                             />
                           </td>
                           <td>

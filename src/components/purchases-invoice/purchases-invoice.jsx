@@ -45,6 +45,14 @@ const fetchSuppliersByQuery = async (query) => {
   return data;
 };
 
+// Card date = the PO date. Parsed as a local date (not UTC) so a
+// "YYYY-MM-DD" value never shifts a day in the display.
+const formatPoDate = (poDate) => {
+  if (!poDate) return "—";
+  const [y, m, d] = String(poDate).slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString();
+};
+
 const PurchasesInvoicePage = () => {
   const [supplierName, setSupplierName] = useState("");
   const [showSupplierSuggestions, setShowSupplierSuggestions] = useState(false);
@@ -935,10 +943,10 @@ const handleToggleProformaCompleted = async () => {
     try {
       const supplierId = selectedSupplierId;
       const totalAmount = items.reduce((sum, item) => sum + (item.total || 0), 0);
-      const totalOfferAmount = items.reduce((sum, item) => sum + (item.totalOFR || 0), 0);
-      const vatBase = totalAmount + totalOfferAmount;
-      const calculatedVatAmount = vatBase * (vatRate / 100);
-      const grandTotal = vatBase + calculatedVatAmount;
+      // Grand amount mirrors the Summary's "Total Amount" — offer (OFR) pricing
+      // is a parallel figure, not an addition, so it must not be summed in.
+      const calculatedVatAmount = type !== "G" ? totalAmount * (vatRate / 100) : 0;
+      const grandTotal = totalAmount + calculatedVatAmount;
 
       const enrichedItems = items.map((item) => ({
         itemVariantId: item.dimensionId,
@@ -1141,7 +1149,13 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
     if (familyProformaId) {
       return base.filter((inv) => inv.id === familyProformaId);
     }
-    return base;
+    // Newest PO date first; proformas without one go last, ties by newest id.
+    return [...base].sort((a, b) => {
+      const da = a.poDate ? String(a.poDate).slice(0, 10) : "";
+      const db = b.poDate ? String(b.poDate).slice(0, 10) : "";
+      if (da !== db) return db.localeCompare(da);
+      return (b.id || 0) - (a.id || 0);
+    });
   }, [minimalInvoicesArr, familyProformaId]);
 
   const [proformaListSearch, setProformaListSearch] = useState("");
@@ -1245,10 +1259,10 @@ unitPriceRows: (unitPriceRows || []).map((row) => ({
           : 0;
       setVatRate(Number.isFinite(inferred) ? +inferred.toFixed(2) : 0);
     }
-    setShippingLine(fullInvoice.shippingLine);
-    setEtd(fullInvoice.etd);
-    setAltContainers(fullInvoice.numberOfContainers);
-    setBlNumber(fullInvoice.blNumber);
+    setShippingLine(fullInvoice.shippingLine ?? "");
+    setEtd(fullInvoice.etd ?? "");
+    setAltContainers(fullInvoice.numberOfContainers ?? 0);
+    setBlNumber(fullInvoice.blNumber ?? "");
     setContainerNumber(fullInvoice.containerNumber ?? "");
     setBlDocumentPath(fullInvoice.blDocumentPath ?? null);
     setShipsgoShipmentId(fullInvoice.shipsgoShipmentId ?? null);
@@ -1385,10 +1399,10 @@ setUnitPriceRows(
         ? +inferredRate.toFixed(2)
         : 0
     );
-    setShippingLine(inv.shippingLine);
-    setEtd(inv.etd);
-    setAltContainers(inv.numberOfContainers);
-    setBlNumber(inv.blNumber);
+    setShippingLine(inv.shippingLine ?? "");
+    setEtd(inv.etd ?? "");
+    setAltContainers(inv.numberOfContainers ?? 0);
+    setBlNumber(inv.blNumber ?? "");
     setContainerNumber(inv.containerNumber ?? "");
     setBlDocumentPath(inv.blDocumentPath ?? null);
     setShipsgoShipmentId(inv.shipsgoShipmentId ?? null);
@@ -1936,7 +1950,7 @@ return (
                       ${Number(invoice.grandAmount || 0).toFixed(2)}
                     </span>
                     <span className="purchase-invoice-card-date">
-                      {new Date(invoice.date).toLocaleDateString()}
+                      {formatPoDate(invoice.poDate)}
                     </span>
                   </div>
                   {invoice.isCompleted && (
@@ -2343,7 +2357,7 @@ return (
                     ${Number(invoice.grandAmount || 0).toFixed(2)}
                   </span>
                   <span className="purchase-invoice-card-date">
-                    {new Date(invoice.date).toLocaleDateString()}
+                    {formatPoDate(invoice.poDate)}
                   </span>
                 </div>
               </div>
