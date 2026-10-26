@@ -17,6 +17,7 @@ import ShipmentTrackingMap from "./ShipmentTrackingMap";
 import ProformaOrderPickerModal from "./ProformaOrderPickerModal";
 import SupplierStatementModal from "./SupplierStatementModal";
 import SharedChargeModal from "./SharedChargeModal";
+import InvoiceModal from "../pos-system/invoicePreviewModal";
 import NotificationModal from "../recievables/NotificationModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -173,6 +174,7 @@ const PurchasesInvoicePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showProformaOrderPicker, setShowProformaOrderPicker] = useState(false);
   const [showSupplierStatement, setShowSupplierStatement] = useState(false);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [showSharedChargeModal, setShowSharedChargeModal] = useState(false);
   const queryClient = useQueryClient();
 
@@ -1690,6 +1692,58 @@ setUnitPriceRows(
     }
   }
 
+  // Shape the current invoice into the sale InvoiceModal's data format so
+  // the purchase view prints with the exact same layout. A G invoice shows
+  // the OFR figures (SQM OFR / Price OFR / Total OFR) and totals like the
+  // Summary's "Offer Amount"; every other type shows the normal figures and
+  // totals like "Total Amount". VAT is applied in both cases, same as there.
+  const buildPurchasePreviewData = () => {
+    const supplier = fullInvoice?.supplier || {};
+    const useOfr = invoiceType === "G";
+    const totalWithoutVAT = Number((useOfr ? totalOfferAmount : itemsTotalAmount).toFixed(2));
+    const totalVAT = Number((totalWithoutVAT * (Number(vatRate) || 0) / 100).toFixed(2));
+    return {
+      invoiceNumber: systemInvoiceNumber || systemOrderNumber || systemProformaNumber || invoiceNumber || "",
+      date: inputedDate,
+      customerName: supplier.supplierName || supplierName || "",
+      customerAddress: supplier.address || "",
+      customerPhone: supplier.phoneNumber || "",
+      customerAccountNumber: supplier.supplierAccountNumber || "",
+      customerTaxNumber: supplier.financialNumber || "",
+      // VAT LBP line needs an LBP rate — exchangeRate holds one for USD
+      // invoices; a EURO invoice's rate is EUR→USD, so fall back there.
+      currencyRate: currency === "USD" ? Number(exchangeRate) || 89500 : 89500,
+      currencyCode: "USD",
+      vatPercentage: Number(vatRate) || 0,
+      totalWithoutVAT,
+      totalVAT,
+      grandTotal: Number((totalWithoutVAT + totalVAT).toFixed(2)),
+      invoiceType,
+      items: items.map((it, idx) => ({
+        itemNumber: idx + 1,
+        itemName: it.itemName,
+        thickness: it.thickness,
+        itemType: String(it.type || "").toLowerCase(),
+        quantity: it.quantity,
+        sheetsPerBox: it.sheetsPerBox,
+        length: it.length,
+        width: it.width,
+        sqm: useOfr ? it.sqmOfr : it.sqm,
+        unitPrice: useOfr ? it.priceOFR : it.unitPrice,
+        totalAmount: Number((useOfr ? it.totalOFR : it.total) || 0),
+      })),
+    };
+  };
+
+  const purchaseDocNumberLabel =
+    invoiceType === "PR"
+      ? "مرتجع شراء رقم"
+      : systemInvoiceNumber
+      ? "رقم الفاتورة"
+      : systemOrderNumber
+      ? "رقم الطلبية"
+      : "Proforma #";
+
 return (
   <div className="pi-page-shell">
       <div className="pi-page-toggles">
@@ -1799,6 +1853,15 @@ return (
                       : "Mark Completed"}
                   </button>
                 )}
+
+                <button
+                  className="view-jv-button"
+                  style={{ backgroundColor: "#dc2626", color: "#fff" }}
+                  onClick={() => setShowInvoicePreview(true)}
+                  title="Printable invoice — same layout as the sales invoice view"
+                >
+                  View Invoice
+                </button>
 
                 <button
                   className="view-jv-button"
@@ -2091,26 +2154,18 @@ return (
                   <option value="Shipped" disabled={!isPurchaseReturn && invoiceType !== "PR"}>
                     Shipped{!isPurchaseReturn && invoiceType !== "PR" ? " (auto)" : ""}
                   </option>
-                  {/* Recieved stays auto-only, except: an admin can manually finish
-                      a vessel(AIS)-tracked invoice already at Shipped — AIS data for
-                      a given vessel can just stall on the provider's end, so there
-                      needs to be a way to close this out if automation never fires.
-                      Backend enforces the admin check either way; this just avoids
-                      showing a non-admin an option that would 403. */}
+                  {/* Recieved is set automatically by shipment tracking; an admin
+                      can also set it by hand as a manual override (tracking
+                      stalled, or the shipment was never tracked). Backend
+                      enforces the admin check; this just avoids showing a
+                      non-admin an option that would 403. Purchase Returns are
+                      exempt — they never ship. */}
                   <option
                     value="Recieved"
-                    disabled={
-                      !isPurchaseReturn &&
-                      invoiceType !== "PR" &&
-                      !((vesselImo || vesselMmsi) && status === "Shipped" && isAdmin)
-                    }
+                    disabled={!isPurchaseReturn && invoiceType !== "PR" && !isAdmin}
                   >
                     Recieved
-                    {!isPurchaseReturn &&
-                    invoiceType !== "PR" &&
-                    !((vesselImo || vesselMmsi) && status === "Shipped" && isAdmin)
-                      ? " (auto)"
-                      : ""}
+                    {!isPurchaseReturn && invoiceType !== "PR" && !isAdmin ? " (auto)" : ""}
                   </option>
                 </select>
               </label>
@@ -2487,6 +2542,18 @@ return (
           proformaId={selectedInvoiceId}
           onClose={() => setShowProformaOrderPicker(false)}
           onCreated={handleProformaOrderCreated}
+        />
+      )}
+
+      {showInvoicePreview && (
+        <InvoiceModal
+          isOpen={showInvoicePreview}
+          onClose={() => setShowInvoicePreview(false)}
+          invoiceData={buildPurchasePreviewData()}
+          partyLabel="المورد"
+          hideVatToggle
+          docNumberLabel={purchaseDocNumberLabel}
+          title={invoiceType === "PR" ? "Purchase Return Preview" : "Purchase Invoice Preview"}
         />
       )}
 

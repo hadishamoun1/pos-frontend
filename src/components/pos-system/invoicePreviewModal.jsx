@@ -425,7 +425,7 @@ export const INLINE_INVOICE_CSS = `
    ========================= */
 export function buildInvoiceHtml(
   invoiceData = {},
-  { inlineCss, baseHref = "/", editMode = false, isRevo = false, logoBase64 = "", forceHeaderOnG = false, shamounSigBase64 = "", forceShowVat = false } = {}
+  { inlineCss, baseHref = "/", editMode = false, isRevo = false, logoBase64 = "", forceHeaderOnG = false, shamounSigBase64 = "", forceShowVat = false, partyLabel = "اسم الزبون", docNumberLabel = "" } = {}
 ) {
   const {
     invoiceNumber = "",
@@ -691,14 +691,14 @@ ${styleTag}
 
     <div class="invoice-meta" id="source-meta">
       <div class="meta-right">
-        <div class="meta-line"><span class="meta-label">اسم الزبون</span><span class="meta-colon">:</span><span class="meta-name-cus">${customerName || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">${partyLabel}</span><span class="meta-colon">:</span><span class="meta-name-cus">${customerName || "-"}</span></div>
         <div class="meta-line"><span class="meta-label">العنوان</span><span class="meta-colon">:</span><span class="meta-value">${customerAddress || "-"}</span></div>
         <div class="meta-line"><span class="meta-label">تلفون</span><span class="meta-colon">:</span><span class="meta-value">${customerPhone || "-"}</span></div>
         ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">رقم الحساب</span><span class="meta-colon">:</span><span class="meta-value">${customerAccountNumber || "-"}</span></div>`}
         ${hideTaxAccount ? "" : `<div class="meta-line"><span class="meta-label">الرقم الضريبي</span><span class="meta-colon">:</span><span class="meta-value">${customerTaxNumber || "-"}</span></div>`}
       </div>
       <div class="meta-left">
-        <div class="meta-line"><span class="meta-label">${invoiceType === "G" ? "Proforma #" : (invoiceType === "RTN" || invoiceType === "RRVR") ? "مرتجع رقم الفاتورة" : "رقم الفاتورة"}</span><span class="meta-colon">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
+        <div class="meta-line"><span class="meta-label">${docNumberLabel || (invoiceType === "G" ? "Proforma #" : (invoiceType === "RTN" || invoiceType === "RRVR") ? "مرتجع رقم الفاتورة" : "رقم الفاتورة")}</span><span class="meta-colon">:</span><span class="meta-value">${invoiceNumber || "-"}</span></div>
         <div class="meta-line"><span class="meta-label">التاريخ</span><span class="meta-colon">:</span><span class="meta-value date-ltr">${fmtDate(date)}</span></div>
         <div class="meta-line"><span class="meta-label">العملة</span><span class="meta-colon">:</span><span class="meta-value">${currencyCode}</span></div>
       </div>
@@ -1021,7 +1021,18 @@ function injectAnnotsIntoClone(iframeWin, origPage, clonedPage) {
    - keeps "لوح" and "صندوق" independent
    - does not reload iframe on each blur (prevents jump)
    ========================= */
-const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
+// partyLabel / docNumberLabel / title let other documents (e.g. the
+// purchase invoice view) reuse this exact layout with their own wording.
+const InvoiceModal = ({
+  isOpen,
+  onClose,
+  invoiceData,
+  onSaveEdited,
+  partyLabel,
+  docNumberLabel,
+  title = "Invoice Preview",
+  hideVatToggle = false,
+}) => {
   const iframeRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [editMode, setEditMode] = useState(false);
@@ -1090,9 +1101,11 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
       isRevo,
       logoBase64,
       forceShowVat: showVatAtZero,
+      partyLabel,
+      docNumberLabel,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceData, editMode, savedEditedData, renderVersion, isRevo, logoBase64, showVatAtZero]);
+  }, [invoiceData, editMode, savedEditedData, renderVersion, isRevo, logoBase64, showVatAtZero, partyLabel, docNumberLabel]);
 
   useEffect(() => {
     const handleMessage = (event) => {
@@ -1445,6 +1458,9 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
       editMode: false,
       isRevo,
       logoBase64,
+      forceShowVat: showVatAtZero,
+      partyLabel,
+      docNumberLabel,
     });
 
     printFrame.srcdoc = printHtml;
@@ -1606,12 +1622,12 @@ const InvoiceModal = ({ isOpen, onClose, invoiceData, onSaveEdited }) => {
         <div className="invoice-modal-shell" onMouseDown={(e) => e.stopPropagation()}>
           <div className="invoice-modal-header">
             <div className="invoice-modal-title-row">
-              <div className="invoice-modal-title">Invoice Preview</div>
+              <div className="invoice-modal-title">{title}</div>
               {editMode && <div className="edit-mode-badge">✏️ Edit Mode</div>}
             </div>
 
             <div className="invoice-modal-controls">
-              {Number(invoiceData?.vatPercentage ?? 11) === 0 && hasPerm("invoice.showVatZero") && (
+              {!hideVatToggle && Number(invoiceData?.vatPercentage ?? 11) === 0 && hasPerm("invoice.showVatZero") && (
                 <label className="invoice-modal-vat-toggle" title="Show VAT row even at 0%">
                   <input
                     type="checkbox"
