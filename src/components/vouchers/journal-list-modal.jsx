@@ -33,6 +33,8 @@ const JournalListsModal = ({
   onLoadMore,
   hasMore,
   loadingMore,
+  loading,
+  total,
 
   // search props (seq)
   searchSeq,
@@ -196,7 +198,7 @@ const JournalListsModal = ({
                 ) : (
                   <tr>
                     <td colSpan="6" className="empty-row">
-                      No Journal Vouchers Found
+                      {loading ? "Loading…" : "No Journal Vouchers Found"}
                     </td>
                   </tr>
                 )}
@@ -205,6 +207,14 @@ const JournalListsModal = ({
           </div>
 
           <div className="journal-list-footer">
+            <span className="journal-list-count">
+              {loading
+                ? "Loading…"
+                : `Showing ${journalData?.length || 0} of ${total || 0}` +
+                  (total > 100
+                    ? ` · Page ${Math.ceil((journalData?.length || 0) / 100)} of ${Math.ceil(total / 100)}`
+                    : "")}
+            </span>
             <button
               className="view-btn"
               onClick={onLoadMore}

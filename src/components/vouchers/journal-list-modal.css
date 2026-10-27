@@ -458,3 +458,16 @@
     width: 100%;
   }
 }
+
+.journal-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.journal-list-count {
+  font-size: 13px;
+  color: #475569;
+}

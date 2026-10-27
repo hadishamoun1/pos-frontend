@@ -30,6 +30,7 @@ const JournalVoucherPage = () => {
 
   const [summaryPage, setSummaryPage] = useState(1);
   const [hasMoreSummary, setHasMoreSummary] = useState(true);
+  const [summaryTotal, setSummaryTotal] = useState(0);
   const [loadingMoreSummary, setLoadingMoreSummary] = useState(false);
 
   const { id } = useParams();
@@ -358,9 +359,11 @@ const JournalVoucherPage = () => {
       const res = await fetchJournalData(1, digits, k, q);
       setJournalData(res.data || []);
       setHasMoreSummary(Boolean(res.hasMore));
+      setSummaryTotal(Number(res.total) || 0);
     } catch (e) {
       setJournalData([]);
       setHasMoreSummary(false);
+      setSummaryTotal(0);
     } finally {
       setLoading(false);
     }
@@ -1416,20 +1419,12 @@ const handleRightClick = (event, rowIndex, rowRid) => {
   };
 
   const handleSearchTextChange = (val) => {
+    // The debounced effect below re-runs the search when this changes.
     setSearchText(val);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(async () => {
-      runJournalListSearch({ searchText: val });
-    }, 300);
   };
 
   const handleSearchSeqChange = (val) => {
-    const digits = (val || "").replace(/\D+/g, "");
     setSummarySeq(val);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(async () => {
-      runJournalListSearch({ summarySeq: digits });
-    }, 300);
   };
 
   const runSearchNow = async () => {
@@ -1440,9 +1435,11 @@ const handleRightClick = (event, rowIndex, rowRid) => {
       const res = await fetchJournalData(1, digits, kindFilter, searchText);
       setJournalData(res.data || []);
       setHasMoreSummary(Boolean(res.hasMore));
+      setSummaryTotal(Number(res.total) || 0);
     } catch (e) {
       setJournalData([]);
       setHasMoreSummary(false);
+      setSummaryTotal(0);
     } finally {
       setLoading(false);
     }
@@ -1460,12 +1457,6 @@ const handleRightClick = (event, rowIndex, rowRid) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isJournalListOpen, summarySeq, kindFilter, searchText]);
 
-  useEffect(() => {
-    if (isJournalListOpen) {
-      runJournalListSearch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isJournalListOpen]);
 
   const handleLoadMore = async () => {
     if (!hasMoreSummary || loadingMoreSummary) return;
@@ -1913,7 +1904,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
     <div>
       <div className="general-vouchers-container" onClick={handleCloseContextMenu}>
         <AccountSelectionModal isOpen={isModalOpen} onClose={handleModalClose} onSelect={handleAccountSelection} />
-        <JournalListsModal isOpen={isJournalListOpen} onClose={() => setIsJournalListOpen(false)} journalData={journalData} onView={handleView} onDelete={handleDeleteJV} onLoadMore={handleLoadMore} hasMore={hasMoreSummary} loadingMore={loadingMoreSummary} searchSeq={summarySeq} onSearchSeqChange={handleSearchSeqChange} searchText={searchText} onSearchTextChange={handleSearchTextChange} kindFilter={kindFilter} onKindFilterChange={(val) => { setKindFilter(val); runJournalListSearch({ kindFilter: val }); }} onSearchNow={() => runJournalListSearch()} />
+        <JournalListsModal isOpen={isJournalListOpen} onClose={() => setIsJournalListOpen(false)} journalData={journalData} onView={handleView} onDelete={handleDeleteJV} onLoadMore={handleLoadMore} hasMore={hasMoreSummary} loadingMore={loadingMoreSummary} loading={loading} total={summaryTotal} searchSeq={summarySeq} onSearchSeqChange={handleSearchSeqChange} searchText={searchText} onSearchTextChange={handleSearchTextChange} kindFilter={kindFilter} onKindFilterChange={(val) => setKindFilter(val)} onSearchNow={() => runJournalListSearch()} />
 
         <div className="general-vouchers-header">
           <div className="header-left">
