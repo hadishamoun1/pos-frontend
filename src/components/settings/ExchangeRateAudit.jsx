@@ -31,6 +31,11 @@ export default function ExchangeRateAudit() {
   const [data, setData] = useState(saved?.data ?? null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  // Bulk fix: which mismatches are ticked, and the rate to apply to them.
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [newRate, setNewRate] = useState(saved?.expectedRate ?? DEFAULT_EXPECTED_RATE);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState(null);
 
   useEffect(() => {
     try {
@@ -41,6 +46,7 @@ export default function ExchangeRateAudit() {
   const handleScan = useCallback(async () => {
     setErr("");
     setData(null);
+    setSelectedIds(new Set());
     setLoading(true);
     try {
       const params = { expectedRate };
@@ -57,6 +63,56 @@ export default function ExchangeRateAudit() {
 
   const mismatchCount = data?.mismatchCount ?? 0;
   const isClean = data && mismatchCount === 0;
+  const mismatches = data?.mismatches ?? [];
+  const allSelected = mismatches.length > 0 && mismatches.every((m) => selectedIds.has(m.invoiceId));
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedIds(allSelected ? new Set() : new Set(mismatches.map((m) => m.invoiceId)));
+  };
+
+  const handleApply = useCallback(async () => {
+    const rate = Number(newRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      setErr("Enter a valid new rate.");
+      return;
+    }
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    if (
+      !window.confirm(
+        `Change the exchange rate of ${ids.length} invoice${ids.length === 1 ? "" : "s"} to ${fmt(rate)}?
+
+` +
+          "Each invoice's journal voucher will be rebuilt with the new rate, the same as saving it from the POS page."
+      )
+    ) {
+      return;
+    }
+    setErr("");
+    setApplyResult(null);
+    setApplying(true);
+    try {
+      const res = await axiosClient.patch("/invoices/v1/exchange-rate-audit/apply", {
+        invoiceIds: ids,
+        newRate: rate,
+      });
+      setApplyResult(res.data);
+      await handleScan();
+    } catch (e) {
+      setErr(e?.response?.data?.message || e.message || "Failed to update the exchange rate.");
+    } finally {
+      setApplying(false);
+    }
+  }, [newRate, selectedIds, handleScan]);
 
   return (
     <div className="itc-page ja-page">
@@ -132,13 +188,61 @@ export default function ExchangeRateAudit() {
                 {mismatchCount}
               </span>
             </div>
+            {applyResult && (
+              <div className={`itc-result ${applyResult.failed?.length ? "itc-result-warn" : "itc-result-ok"}`}>
+                Updated <strong>{applyResult.updatedCount}</strong> invoice
+                {applyResult.updatedCount === 1 ? "" : "s"} to rate {fmt(applyResult.newRate)} (journal vouchers
+                rebuilt).
+                {applyResult.failed?.length > 0 && (
+                  <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                    {applyResult.failed.map((f) => (
+                      <li key={f.invoiceId}>
+                        {f.invoiceNumber || `#${f.invoiceId}`}: {f.error}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             {mismatchCount === 0 ? (
               <p className="ja-empty">Every invoice uses the expected rate.</p>
             ) : (
+              <>
+              <div className="itc-filters" style={{ marginBottom: 12 }}>
+                <div className="itc-field">
+                  <label>New Rate</label>
+                  <input
+                    type="number"
+                    className="itc-input"
+                    value={newRate}
+                    onChange={(e) => setNewRate(e.target.value)}
+                  />
+                </div>
+                <div className="itc-field itc-field-btn">
+                  <button
+                    type="button"
+                    className="itc-btn itc-btn-primary"
+                    onClick={handleApply}
+                    disabled={applying || loading || selectedIds.size === 0}
+                  >
+                    {applying
+                      ? "Updating…"
+                      : `Apply to ${selectedIds.size} selected`}
+                  </button>
+                </div>
+              </div>
               <div className="itc-table-wrap">
                 <table className="itc-table">
                   <thead>
                     <tr>
+                      <th>
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          onChange={toggleAll}
+                          title="Select all"
+                        />
+                      </th>
                       <th>Invoice Number</th>
                       <th>Date</th>
                       <th>Type</th>
@@ -150,8 +254,15 @@ export default function ExchangeRateAudit() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.mismatches.map((m) => (
+                    {mismatches.map((m) => (
                       <tr key={m.invoiceId} className="ja-row-bad">
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(m.invoiceId)}
+                            onChange={() => toggleOne(m.invoiceId)}
+                          />
+                        </td>
                         <td className="itc-inv-num">{m.invoiceNumber}</td>
                         <td>{fmtDate(m.date)}</td>
                         <td>{m.invoiceType}</td>
@@ -174,6 +285,7 @@ export default function ExchangeRateAudit() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </section>
         </>
