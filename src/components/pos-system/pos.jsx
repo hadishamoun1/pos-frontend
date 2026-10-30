@@ -24,6 +24,7 @@ import { axiosClient } from "../api/axiosClient";
 const POSSystemPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tableData, setTableData] = useState([]);
+  const [exceededBatches, setExceededBatches] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
@@ -1253,7 +1254,28 @@ const POSSystemPage = () => {
     }
   };
 
+  // Rows over the limit the server reported on the last save. Worked out from
+  // the live table, so a row clears as soon as its quantity is corrected.
+  const exceededRowKeys = useMemo(() => {
+    const keys = new Set();
+    exceededBatches.forEach(({ batchId, limit, bySqm }) => {
+      const rows = tableData.filter((r) => Number(r.batchId) === Number(batchId));
+      const asked = rows.reduce((sum, r) => {
+        if (bySqm) return sum + (Number(r.sqm) || 0);
+        const type = String(r.itemType ?? r.type ?? "").toLowerCase();
+        return sum + (Number(type === "box" ? r.box : r.sheet) || 0);
+      }, 0);
+      if (asked > Number(limit) + 0.005) rows.forEach((r) => keys.add(r.__rowKey));
+    });
+    return keys;
+  }, [exceededBatches, tableData]);
+
+  useEffect(() => {
+    setExceededBatches([]);
+  }, [selectedInvoiceId, selectedRequestId]);
+
   const handleCreateInvoice = async (invoiceType = "S") => {
+    setExceededBatches([]);
     if (posControls.blockCreation) {
       showNotification("error", "Failed to create invoice.");
       return;
@@ -1349,6 +1371,7 @@ const POSSystemPage = () => {
       setTableData([]);
     } catch (err) {
       console.error("❌ Error creating invoice:", err);
+      setExceededBatches(err.response?.data?.exceeded ?? []);
       showNotification(
         "error",
         `Failed to create invoice. ${err.response?.data?.message || err.message}`
@@ -1622,6 +1645,7 @@ const POSSystemPage = () => {
     }
 
     setLoading(true);
+    setExceededBatches([]);
 
     const vatPct = Number(vat) || 0;
     const vatRate = vatPct / 100;
@@ -1724,6 +1748,7 @@ const POSSystemPage = () => {
       showNotification("success", "Invoice updated successfully!");
     } catch (err) {
       console.error("❌ Error saving invoice:", err);
+      setExceededBatches(err.response?.data?.exceeded ?? []);
       showNotification(
         "error",
         `Failed to save invoice: ${err.response?.data?.message || err.message}`
@@ -1991,6 +2016,7 @@ const POSSystemPage = () => {
             returnSelection={returnSelection}
             onToggleReturnRow={toggleReturnRow}
             onReturnQtyChange={changeReturnQty}
+            exceededRowKeys={exceededRowKeys}
           />
         </div>
       </div>

@@ -20,6 +20,9 @@ const InventoryTable = ({
   returnSelection = {},
   onToggleReturnRow = () => {},
   onReturnQtyChange = () => {},
+
+  // Rows over the available balance on the last save (marked red)
+  exceededRowKeys,
 }) => {
   const { t } = useTranslation(); // ✅ ADD THIS
   
@@ -355,6 +358,7 @@ const InventoryTable = ({
                   isDragOver ? "row-dragover" : "",
                   !canReorder ? "drag-disabled" : "",
                   hasOrigDims ? "row-has-cut" : "",
+                  exceededRowKeys?.has(row.__rowKey) ? "pos-exceeded-row" : "",
                 ]
                   .join(" ")
                   .trim()}

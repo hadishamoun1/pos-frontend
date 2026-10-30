@@ -1225,3 +1225,9 @@ input:disabled {
 
 }
 
+
+/* Row whose quantity went over the available balance on save */
+.pos-exceeded-row td,
+.pos-exceeded-row td input {
+  background-color: #fecaca !important;
+}
