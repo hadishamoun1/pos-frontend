@@ -17,6 +17,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import CountModal from "./countModal";
 import TransferModal from "./transferModal";
+import InventoryPrintModal from "./inventoryPrintModal";
 import "./inventory-activity.css";
 import { io } from "socket.io-client";
 
@@ -55,6 +56,71 @@ const normalizeStatus = (s) => {
   if (t.startsWith("sale")) return "sale";
   if (t.startsWith("count")) return "inventoryCount";
   return t;
+};
+
+/** ---------- Row shape shared by the table and the print preview ---------- */
+const mapActivityRow = (r) => {
+const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—"; 
+      const category = r.category ?? r.description?.categoryName ?? "—";
+      const subCategory = r.subCategory ?? r.description?.subCategory ?? "—";
+      const color = r.color ?? r.description?.colorName ?? "—";
+      const design = r.design ?? r.description?.designName ?? "—";
+
+      return {
+        id: r.id,
+        itemNumber,
+        category,
+        subCategory,
+        color,
+        design,
+
+        name: `${r.thickness} ملم ${r.itemName}`,
+        condition: r.itemBatch?.condition || "—",
+        warehouse: r.itemBatch?.warehouse || "—",
+        batchDate: r.itemBatch?.dateReceived || "—",
+        dimension:
+          r.itemType === "box" && r.sheetsPerBox
+            ? `${r.length}×${r.width}-${String(r.sheetsPerBox).padStart(3, "0")}`
+            : `${r.length}×${r.width}`,
+        origin: r.origin || "—",
+        quantity: r.quantity,
+        quantityofr: r.quantityofr,
+        sqm: typeof r.sqm === "number" ? r.sqm.toFixed(2) : r.sqm,
+        sqmofr: typeof r.sqmofr === "number" ? r.sqmofr.toFixed(2) : r.sqmofr,
+        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
+        finalcostofr: r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
+        unit:
+          r.itemType === "box"
+            ? "Box"
+            : r.itemType === "sheet"
+            ? "Sheet"
+            : "SQM",
+        status:
+          r.transactionType === "purchase"
+            ? "Purchase"
+            : r.transactionType === "sale"
+            ? "Sales"
+            : r.transactionType || "-",
+        date: r.invoiceDate || "—",
+        invoiceNo: r.invoiceNumber || "—",
+
+        previousQuantity: r.previousQuantity != null ? Number(r.previousQuantity).toFixed(2) : "—",
+        previousQuantityC: r.previousQuantityC != null ? Number(r.previousQuantityC).toFixed(2) : "—",
+        previousQuantityVM: r.previousQuantityVM != null ? Number(r.previousQuantityVM).toFixed(2) : "—",
+
+        previousAverageCost: r.previousAverageCost != null ? Number(r.previousAverageCost).toFixed(2) : "—",
+        previousAverageCostC: r.previousAverageCostC != null ? Number(r.previousAverageCostC).toFixed(2) : "—",
+        previousAverageCostVM: r.previousAverageCostVM != null ? Number(r.previousAverageCostVM).toFixed(2) : "—",
+        previousAverageCostCVM: r.previousAverageCostCVM != null ? Number(r.previousAverageCostCVM).toFixed(2) : "—",
+
+        averageCost: r.averageCost != null ? Number(r.averageCost).toFixed(2) : "—",
+        averageCostC: r.averageCostC != null ? Number(r.averageCostC).toFixed(2) : "—",
+        averageCostCVM: r.averageCostCVM != null ? Number(r.averageCostCVM).toFixed(2) : "—",
+        averageCostVM: r.averageCostVM != null ? Number(r.averageCostVM).toFixed(2) : "—",
+
+        itemVariantId: r.itemVariantId,
+        itemBatch: r.itemBatch,
+      };
 };
 
 /** ---------- Draggable header cell ---------- */
@@ -99,6 +165,7 @@ export default function InventoryActivityPage() {
 
   const [showCountModal, setShowCountModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const [columnOrder, setColumnOrder] = useState([]);
   const [hiddenColumns, setHiddenColumns] = useState(() => new Set());
@@ -299,69 +366,7 @@ export default function InventoryActivityPage() {
 
   /** ---------- react-table setup ---------- */
   const data = useMemo(() => {
-    return (rows || []).map((r) => {
-const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—"; 
-      const category = r.category ?? r.description?.categoryName ?? "—";
-      const subCategory = r.subCategory ?? r.description?.subCategory ?? "—";
-      const color = r.color ?? r.description?.colorName ?? "—";
-      const design = r.design ?? r.description?.designName ?? "—";
-
-      return {
-        id: r.id,
-        itemNumber,
-        category,
-        subCategory,
-        color,
-        design,
-
-        name: `${r.thickness} ملم ${r.itemName}`,
-        condition: r.itemBatch?.condition || "—",
-        warehouse: r.itemBatch?.warehouse || "—",
-        batchDate: r.itemBatch?.dateReceived || "—",
-        dimension:
-          r.itemType === "box" && r.sheetsPerBox
-            ? `${r.length}×${r.width}-${String(r.sheetsPerBox).padStart(3, "0")}`
-            : `${r.length}×${r.width}`,
-        origin: r.origin || "—",
-        quantity: r.quantity,
-        quantityofr: r.quantityofr,
-        sqm: typeof r.sqm === "number" ? r.sqm.toFixed(2) : r.sqm,
-        sqmofr: typeof r.sqmofr === "number" ? r.sqmofr.toFixed(2) : r.sqmofr,
-        finalcost: r.finalcost != null ? Number(r.finalcost).toFixed(2) : "—",
-        finalcostofr: r.finalcostofr != null ? Number(r.finalcostofr).toFixed(2) : "—",
-        unit:
-          r.itemType === "box"
-            ? "Box"
-            : r.itemType === "sheet"
-            ? "Sheet"
-            : "SQM",
-        status:
-          r.transactionType === "purchase"
-            ? "Purchase"
-            : r.transactionType === "sale"
-            ? "Sales"
-            : r.transactionType || "-",
-        date: r.invoiceDate || "—",
-        invoiceNo: r.invoiceNumber || "—",
-
-        previousQuantity: r.previousQuantity != null ? Number(r.previousQuantity).toFixed(2) : "—",
-        previousQuantityC: r.previousQuantityC != null ? Number(r.previousQuantityC).toFixed(2) : "—",
-        previousQuantityVM: r.previousQuantityVM != null ? Number(r.previousQuantityVM).toFixed(2) : "—",
-
-        previousAverageCost: r.previousAverageCost != null ? Number(r.previousAverageCost).toFixed(2) : "—",
-        previousAverageCostC: r.previousAverageCostC != null ? Number(r.previousAverageCostC).toFixed(2) : "—",
-        previousAverageCostVM: r.previousAverageCostVM != null ? Number(r.previousAverageCostVM).toFixed(2) : "—",
-        previousAverageCostCVM: r.previousAverageCostCVM != null ? Number(r.previousAverageCostCVM).toFixed(2) : "—",
-
-        averageCost: r.averageCost != null ? Number(r.averageCost).toFixed(2) : "—",
-        averageCostC: r.averageCostC != null ? Number(r.averageCostC).toFixed(2) : "—",
-        averageCostCVM: r.averageCostCVM != null ? Number(r.averageCostCVM).toFixed(2) : "—",
-        averageCostVM: r.averageCostVM != null ? Number(r.averageCostVM).toFixed(2) : "—",
-
-        itemVariantId: r.itemVariantId,
-        itemBatch: r.itemBatch,
-      };
-    });
+    return (rows || []).map(mapActivityRow);
   }, [rows]);
 
   const {
@@ -518,12 +523,11 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
   );
 
   /** ---------- Fetching ---------- */
-  // ✅ NOW uses axiosClient instead of fetch/apiUrl
-  const fetchData = useCallback(
-    async (append = false) => {
+  const buildActivityUrl = useCallback(
+    (pageNo, size) => {
       const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("pageSize", String(pageSize));
+      params.set("page", String(pageNo));
+      params.set("pageSize", String(size));
 
       activeFilters.forEach((f) => params.append(f.key, f.value));
 
@@ -537,7 +541,15 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
           ? "/inventory-transactions/activity/v1/filtered"
           : "/inventory-transactions/activity";
 
-      const res = await axiosClient.get(`${basePath}?${params.toString()}`);
+      return `${basePath}?${params.toString()}`;
+    },
+    [activeFilters, sortConfig]
+  );
+
+  // ✅ NOW uses axiosClient instead of fetch/apiUrl
+  const fetchData = useCallback(
+    async (append = false) => {
+      const res = await axiosClient.get(buildActivityUrl(page, pageSize));
       const js = res?.data;
 
       if (Array.isArray(js?.data)) {
@@ -561,7 +573,42 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
         setHasMore(false);
       }
     },
-    [activeFilters, page, pageSize, rows.length, sortConfig]
+    [buildActivityUrl, page, pageSize, rows.length]
+  );
+
+  // The printout covers every record matching the filters, not just the rows
+  // loaded on screen so far.
+  const fetchAllForPrint = useCallback(
+    async (onProgress, isCancelled) => {
+      const chunkSize = 500;
+      const all = [];
+      let pageNo = 1;
+      let totalCount = 0;
+      let printTotals = null;
+
+      while (!isCancelled()) {
+        const res = await axiosClient.get(buildActivityUrl(pageNo, chunkSize));
+        const js = res?.data;
+        const chunk = Array.isArray(js?.data) ? js.data : [];
+        all.push(...chunk);
+        totalCount = js?.totalRecords ?? all.length;
+        printTotals = js?.totals ?? printTotals;
+        onProgress(all.length, totalCount);
+        if (chunk.length === 0 || all.length >= totalCount) break;
+        pageNo += 1;
+      }
+
+      return { rows: all.map(mapActivityRow), totals: printTotals, totalRecords: totalCount };
+    },
+    [buildActivityUrl]
+  );
+
+  const printColumns = useMemo(
+    () =>
+      (headerGroups?.[0]?.headers || [])
+        .filter((col) => col.id !== "select")
+        .map((col) => ({ id: col.id, label: col.Header })),
+    [headerGroups]
   );
 
   useEffect(() => {
@@ -695,6 +742,9 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
           </button>
           <button className="inventory-activity-btn-transfers" onClick={clearAll}>
             Clear All
+          </button>
+          <button className="inventory-activity-btn-transfers" onClick={() => setShowPrintModal(true)}>
+            Print
           </button>
           <button
             className="inventory-activity-btn-transfers"
@@ -1159,6 +1209,13 @@ const itemNumber = r.ItemNumber ?? r.description?.itemNumber ?? "—";
 
       <CountModal isOpen={showCountModal} onClose={() => setShowCountModal(false)} />
       <TransferModal isOpen={showTransferModal} onClose={() => setShowTransferModal(false)} />
+      <InventoryPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        columns={printColumns}
+        filters={activeFilters}
+        fetchAllRows={fetchAllForPrint}
+      />
     </div>
   );
 }

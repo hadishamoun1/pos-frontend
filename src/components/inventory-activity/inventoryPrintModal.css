@@ -1,0 +1,122 @@
+.inv-print-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  display: flex;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 16px;
+}
+
+.inv-print-modal {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.inv-print-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.inv-print-title {
+  font-size: 1rem;
+}
+
+.inv-print-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+
+.inv-print-size {
+  min-width: 42px;
+  text-align: center;
+}
+
+.inv-print-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.inv-print-bar button {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.inv-print-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inv-print-bar button.active,
+.inv-print-bar button.inv-print-primary {
+  background: #007bff;
+  border-color: #007bff;
+  color: #fff;
+}
+
+.inv-print-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  max-height: 84px;
+  overflow-y: auto;
+  padding: 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.8rem;
+}
+
+.inv-print-columns label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.inv-print-status {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+}
+
+.inv-print-status.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.inv-print-status.bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.inv-print-preview {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #6b7280;
+}
+
+.inv-print-preview iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.inv-print-message {
+  padding: 24px;
+  color: #fff;
+  text-align: center;
+}
