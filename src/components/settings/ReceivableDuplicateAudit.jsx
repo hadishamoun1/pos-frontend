@@ -151,7 +151,7 @@ const ReceiptTable = ({ receipts, busyIds, onMark, onUnmark }) => {
                 ) : backed ? (
                   r.cashCollections.map((c) => (
                     <div key={c.id} className="rda-cash">
-                      ✓ {fmt(c.amount)} {c.currency} · {c.method}
+                      ✓ {fmtDate(c.date)} · {fmt(c.amount)} {c.currency} · {c.method}
                       {c.employeeName ? ` · ${c.employeeName}` : ""}
                       {c.driverName ? ` · ${c.driverName}` : ""}
                       {c.how === "link" ? " · linked" : ""}
