@@ -45,6 +45,7 @@ const ReceivableTypeConverter  = lazy(() => import("./components/settings/Receiv
 const ReceivableSequenceAudit  = lazy(() => import("./components/settings/ReceivableSequenceAudit"));
 const JournalAudit             = lazy(() => import("./components/settings/JournalAudit"));
 const ExchangeRateAudit        = lazy(() => import("./components/settings/ExchangeRateAudit"));
+const ReceivableDuplicateAudit = lazy(() => import("./components/settings/ReceivableDuplicateAudit"));
 const CashCollectionsPage      = lazy(() => import("./components/cash-collection/CashCollectionsPage"));
 const EmployeeDocManager       = lazy(() => import("./components/Employees/EmployeeDocManager"));
 const ActivityMonitor          = lazy(() => import("./components/activity-monitor/ActivityMonitor"));
@@ -134,6 +135,14 @@ function App() {
                     element={
                       hasPerm("journalAudit.view")
                         ? <JournalAudit />
+                        : <Navigate to="/dashboard" replace />
+                    }
+                  />
+                  <Route
+                    path="/receivable-duplicate-audit"
+                    element={
+                      hasPerm("receivableDuplicateAudit.view")
+                        ? <ReceivableDuplicateAudit />
                         : <Navigate to="/dashboard" replace />
                     }
                   />

@@ -239,6 +239,7 @@ export const en = {
       receivableSequenceAudit: "Receivable Sequence Audit",
       journalAudit: "Journal Audit",
       exchangeRateAudit: "Exchange Rate Audit",
+      receivableDuplicateAudit: "Receivable Duplicate Audit",
     },
   },
 

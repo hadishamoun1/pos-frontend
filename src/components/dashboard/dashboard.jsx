@@ -51,6 +51,7 @@ const sections = [
   { key: "receivableSequenceAudit",  path: "/receivable-sequence-audit",  image: "/assets/rvr.png", perm: "receivableSequenceAudit.view" },
   { key: "journalAudit",             path: "/journal-audit",              image: "/assets/rvr.png", perm: "journalAudit.view" },
   { key: "exchangeRateAudit",        path: "/exchange-rate-audit",        image: "/assets/rvr.png", perm: "exchangeRateAudit.view" },
+  { key: "receivableDuplicateAudit", path: "/receivable-duplicate-audit", image: "/assets/rvr.png", perm: "receivableDuplicateAudit.view" },
 ];
 
 const DashboardPage = () => {

@@ -231,6 +231,7 @@ export const ar = {
       receivableSequenceAudit: "مراجعة تسلسل المقبوضات",
       journalAudit: "مراجعة القيود",
       exchangeRateAudit: "مراجعة سعر الصرف",
+      receivableDuplicateAudit: "مراجعة المقبوضات المكررة",
     },
   },
 

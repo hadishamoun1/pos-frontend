@@ -43,6 +43,7 @@ const PERMISSION_GROUPS = [
       "receivableSequenceAudit.view",
       "journalAudit.view",
       "exchangeRateAudit.view",
+      "receivableDuplicateAudit.view",
     ],
   },
   {
@@ -178,6 +179,7 @@ const PERMISSION_GROUPS = [
       "receivableSequenceAudit.view",
       "journalAudit.view",
       "exchangeRateAudit.view",
+      "receivableDuplicateAudit.view",
     ],
   },
   {
