@@ -19,10 +19,34 @@ const saved = (() => {
 
 const startOfYear = () => `${new Date().getFullYear()}-01-01`;
 
+// What the cash collection page recorded for this receipt.
+const CashCell = ({ cash }) => {
+  if (cash === undefined) return <td className="itc-dim">not scanned</td>;
+  if (!cash || cash.length === 0) {
+    return (
+      <td>
+        <span className="ja-badge-bad itc-badge">No cash collection</span>
+      </td>
+    );
+  }
+  return (
+    <td>
+      {cash.map((c) => (
+        <div key={c.id}>
+          ✓ {fmt(c.amount)} {c.currency} · {c.method}
+          {c.employeeName ? ` · ${c.employeeName}` : ""}
+          {c.driverName ? ` · ${c.driverName}` : ""}
+          {c.how === "link" ? " (linked)" : ""}
+        </div>
+      ))}
+    </td>
+  );
+};
+
 // One receipt per row; used by both sections.
 const ReceiptRows = ({ receipts }) =>
   receipts.map((r) => (
-    <tr key={r.id} className="ja-row-bad">
+    <tr key={r.id} className={r.cashCollections && r.cashCollections.length ? "" : "ja-row-bad"}>
       <td className="itc-inv-num">{r.jvNumber || `#${r.id}`}</td>
       <td>{fmtDate(r.date)}</td>
       <td className="itc-dim">{fmtStamp(r.createdAt)}</td>
@@ -34,6 +58,7 @@ const ReceiptRows = ({ receipts }) =>
       <td className="num">{fmt(r.usdAmount)}</td>
       <td>{r.invoiceNumber || "—"}</td>
       <td className="itc-dim">{r.comments || ""}</td>
+      <CashCell cash={r.cashCollections} />
     </tr>
   ));
 
@@ -48,6 +73,7 @@ const ReceiptHead = () => (
     <th className="num">USD</th>
     <th>Invoice</th>
     <th>Comments</th>
+    <th>Cash Collection</th>
   </tr>
 );
 
@@ -56,15 +82,18 @@ export default function ReceivableDuplicateAudit() {
   const [to, setTo] = useState(saved?.to ?? "");
   const [windowDays, setWindowDays] = useState(saved?.windowDays ?? "7");
   const [tolerance, setTolerance] = useState(saved?.tolerance ?? "1");
+  // A group where every receivable has its own cash collection is real
+  // repeated payments, not a duplicate — hidden unless asked for.
+  const [showBacked, setShowBacked] = useState(saved?.showBacked ?? false);
   const [data, setData] = useState(saved?.data ?? null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ from, to, windowDays, tolerance, data }));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ from, to, windowDays, tolerance, showBacked, data }));
     } catch {}
-  }, [from, to, windowDays, tolerance, data]);
+  }, [from, to, windowDays, tolerance, showBacked, data]);
 
   const handleScan = useCallback(async () => {
     setErr("");
@@ -84,8 +113,12 @@ export default function ReceivableDuplicateAudit() {
   }, [from, to, windowDays, tolerance]);
 
   const overpaid = data?.overpaid ?? [];
-  const duplicates = data?.duplicates ?? [];
-  const isClean = data && overpaid.length === 0 && duplicates.length === 0;
+  const allDuplicates = data?.duplicates ?? [];
+  const suspicious = allDuplicates.filter((g) => g.withoutCashCount > 0);
+  const duplicates = (showBacked ? allDuplicates : suspicious)
+    .slice()
+    .sort((a, b) => b.withoutCashCount - a.withoutCashCount);
+  const isClean = data && overpaid.length === 0 && suspicious.length === 0;
 
   return (
     <div className="itc-page ja-page">
@@ -94,7 +127,8 @@ export default function ReceivableDuplicateAudit() {
         <p className="itc-subtitle">
           Finds receipts that look entered twice: receipts for the same customer with about the same
           amount a few days apart, and invoices whose receipts add up to more than the invoice total.
-          Small differences up to the tolerance are treated as rounding.
+          Each receipt is checked against the Cash Collection page (same customer, same date, same
+          amount) — a receipt with no cash collection behind it is the likely duplicate.
         </p>
       </div>
 
@@ -143,13 +177,17 @@ export default function ReceivableDuplicateAudit() {
         <>
           <section className="itc-section">
             <div className={`itc-result ${isClean ? "itc-result-ok" : "itc-result-warn"}`}>
-              Scanned {data.scannedReceipts} receipt{data.scannedReceipts === 1 ? "" : "s"} —{" "}
+              Scanned {data.scannedReceipts} receipt{data.scannedReceipts === 1 ? "" : "s"} and{" "}
+              {data.scannedCollections} cash collection{data.scannedCollections === 1 ? "" : "s"} —{" "}
               {isClean ? (
                 "nothing suspicious found."
               ) : (
                 <>
-                  <strong>{duplicates.length}</strong> possible duplicate group
-                  {duplicates.length === 1 ? "" : "s"}, <strong>{overpaid.length}</strong> overpaid invoice
+                  <strong>{suspicious.length}</strong> possible duplicate group
+                  {suspicious.length === 1 ? "" : "s"} with a receipt missing its cash collection
+                  {allDuplicates.length > suspicious.length &&
+                    ` (${allDuplicates.length - suspicious.length} more fully backed by cash collections)`}
+                  , <strong>{overpaid.length}</strong> overpaid invoice
                   {overpaid.length === 1 ? "" : "s"}.
                 </>
               )}
@@ -164,8 +202,12 @@ export default function ReceivableDuplicateAudit() {
                 {duplicates.length}
               </span>
             </div>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+              <input type="checkbox" checked={showBacked} onChange={(e) => setShowBacked(e.target.checked)} />
+              Also show groups where every receipt has a cash collection
+            </label>
             {duplicates.length === 0 ? (
-              <p className="ja-empty">No repeated receipts found.</p>
+              <p className="ja-empty">No suspicious repeated receipts found.</p>
             ) : (
               duplicates.map((g) => (
                 <div key={g.receipts.map((r) => r.id).join("-")} style={{ marginBottom: 18 }}>
@@ -182,6 +224,14 @@ export default function ReceivableDuplicateAudit() {
                         same invoice
                       </span>
                     )}
+                    <span
+                      className={`itc-badge ${g.withoutCashCount ? "ja-badge-bad" : "itc-badge-green"}`}
+                      style={{ marginLeft: 8 }}
+                    >
+                      {g.withoutCashCount
+                        ? `${g.withoutCashCount} without cash collection`
+                        : "all backed by cash collections"}
+                    </span>
                   </div>
                   <div className="itc-table-wrap">
                     <table className="itc-table">
