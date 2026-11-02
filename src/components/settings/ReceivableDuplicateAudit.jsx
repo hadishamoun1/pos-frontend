@@ -18,9 +18,23 @@ const saved = (() => {
 })();
 
 const startOfYear = () => `${new Date().getFullYear()}-01-01`;
+
+// Customers on hold, hidden from this audit. Kept in this browser only.
+const HIDDEN_KEY = "receivableDuplicateAudit_hiddenCustomers";
+const loadHidden = () => {
+  try {
+    const list = JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+};
+const customerIdOf = (item) => item?.receipts?.[0]?.customerId ?? null;
 const PAGE_SIZE = 25;
 
 const hasCash = (r) => Array.isArray(r.cashCollections) && r.cashCollections.length > 0;
+// Suspect = scanned, no cash collection, and nobody has marked it correct.
+const isSuspect = (r) => r.cashCollections !== undefined && !hasCash(r) && !r.reviewed;
 
 const matchesSearch = (q, ...values) =>
   !q || values.some((v) => String(v ?? "").toLowerCase().includes(q));
@@ -37,8 +51,22 @@ const dateSpan = (receipts) => {
 
 // Receipts of one group/invoice. Receipts without a cash collection are the
 // suspects and get the strong red treatment; backed ones are muted.
-const ReceiptTable = ({ receipts }) => (
+const ReceiptTable = ({ receipts, busyIds, onMark, onUnmark }) => {
+  const suspects = receipts.filter(isSuspect);
+  return (
   <div className="rda-table-wrap">
+    {suspects.length > 1 && (
+      <div className="rda-group-actions">
+        <button
+          type="button"
+          className="rda-btn-correct"
+          disabled={suspects.some((r) => busyIds.has(r.id))}
+          onClick={() => onMark(suspects.map((r) => r.id), true)}
+        >
+          ✓ Mark all {suspects.length} suspects in this group correct
+        </button>
+      </div>
+    )}
     <table className="rda-table">
       <thead>
         <tr>
@@ -58,15 +86,53 @@ const ReceiptTable = ({ receipts }) => (
         {receipts.map((r) => {
           const scanned = r.cashCollections !== undefined;
           const backed = hasCash(r);
-          const suspect = scanned && !backed;
+          const suspect = isSuspect(r);
+          const busy = busyIds.has(r.id);
           return (
-            <tr key={r.id} className={suspect ? "rda-row-suspect" : "rda-row-ok"}>
+            <tr
+              key={r.id}
+              className={suspect ? "rda-row-suspect" : r.reviewed ? "rda-row-reviewed" : "rda-row-ok"}
+            >
               <td>
-                {suspect ? (
-                  <span className="rda-tag rda-tag-bad">Suspect</span>
-                ) : scanned ? (
-                  <span className="rda-tag rda-tag-ok">OK</span>
-                ) : null}
+                <div className="rda-status">
+                  {suspect ? (
+                    <>
+                      <span className="rda-tag rda-tag-bad">Suspect</span>
+                      <button
+                        type="button"
+                        className="rda-btn-correct"
+                        disabled={busy}
+                        onClick={() => onMark([r.id])}
+                      >
+                        {busy ? "Saving…" : "✓ Mark correct"}
+                      </button>
+                    </>
+                  ) : r.reviewed ? (
+                    <>
+                      <span
+                        className="rda-tag rda-tag-reviewed"
+                        title={`Marked by ${r.reviewed.by || "—"} on ${fmtStamp(r.reviewed.at)}`}
+                      >
+                        Marked correct
+                      </span>
+                      <button
+                        type="button"
+                        className="rda-btn-undo"
+                        disabled={busy}
+                        onClick={() => onUnmark(r.id)}
+                      >
+                        Undo
+                      </button>
+                    </>
+                  ) : scanned ? (
+                    <span className="rda-tag rda-tag-ok">OK</span>
+                  ) : null}
+                </div>
+                {r.reviewed && (
+                  <div className="rda-dim rda-reviewed-by">
+                    {r.reviewed.by || "—"} · {fmtStamp(r.reviewed.at)}
+                  </div>
+                )}
               </td>
               <td className="rda-strong">{r.jvNumber || `#${r.id}`}</td>
               <td>{fmtDate(r.date)}</td>
@@ -104,7 +170,8 @@ const ReceiptTable = ({ receipts }) => (
       </tbody>
     </table>
   </div>
-);
+  );
+};
 
 const StatCard = ({ label, value, sub, tone, active, onClick }) => (
   <button type="button" className={`rda-stat rda-stat-${tone} ${active ? "active" : ""}`} onClick={onClick}>
@@ -130,6 +197,83 @@ export default function ReceivableDuplicateAudit() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(() => new Set());
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [busyIds, setBusyIds] = useState(() => new Set());
+  const [hiddenCustomers, setHiddenCustomers] = useState(loadHidden); // [{ id, name }]
+  const [showHiddenList, setShowHiddenList] = useState(false);
+  const hiddenIds = useMemo(() => new Set(hiddenCustomers.map((h) => h.id)), [hiddenCustomers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenCustomers));
+    } catch {}
+  }, [hiddenCustomers]);
+
+  const hideCustomer = (id, name) => {
+    if (id == null) return;
+    if (!window.confirm(`Hide all receipts of "${name || "this customer"}" from this audit?`)) return;
+    setHiddenCustomers((prev) => (prev.some((h) => h.id === id) ? prev : [...prev, { id, name: name || "" }]));
+  };
+  const unhideCustomer = (id) => setHiddenCustomers((prev) => prev.filter((h) => h.id !== id));
+
+  // Applies review changes to the loaded scan so the page updates without
+  // scanning again. `changes` maps receiptId -> reviewed object or null.
+  const applyReviews = useCallback((changes) => {
+    const fixReceipt = (r) => (changes.has(r.id) ? { ...r, reviewed: changes.get(r.id) } : r);
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        duplicates: (prev.duplicates || []).map((g) => {
+          const receipts = g.receipts.map(fixReceipt);
+          return {
+            ...g,
+            receipts,
+            withoutCashCount: receipts.filter(isSuspect).length,
+            reviewedCount: receipts.filter((r) => r.reviewed).length,
+          };
+        }),
+        overpaid: (prev.overpaid || []).map((inv) => ({ ...inv, receipts: inv.receipts.map(fixReceipt) })),
+      };
+    });
+  }, []);
+
+  const setBusy = (ids, on) =>
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (on ? next.add(id) : next.delete(id)));
+      return next;
+    });
+
+  const markCorrect = useCallback(
+    async (receiptIds, askFirst = false) => {
+      if (askFirst && !window.confirm(`Mark ${receiptIds.length} receipts as correct?`)) return;
+      setBusy(receiptIds, true);
+      try {
+        const res = await axiosClient.post("/recievables/duplicate-audit/review", { receiptIds });
+        applyReviews(new Map((res.data || []).map((r) => [r.receiptEntryId, { by: r.by, at: r.at, note: r.note }])));
+      } catch (e) {
+        alert(e?.response?.data?.message || e.message || "Failed to mark as correct.");
+      } finally {
+        setBusy(receiptIds, false);
+      }
+    },
+    [applyReviews]
+  );
+
+  const unmarkCorrect = useCallback(
+    async (receiptId) => {
+      setBusy([receiptId], true);
+      try {
+        await axiosClient.delete(`/recievables/duplicate-audit/review/${receiptId}`);
+        applyReviews(new Map([[receiptId, null]]));
+      } catch (e) {
+        alert(e?.response?.data?.message || e.message || "Failed to undo.");
+      } finally {
+        setBusy([receiptId], false);
+      }
+    },
+    [applyReviews]
+  );
 
   useEffect(() => {
     try {
@@ -164,25 +308,36 @@ export default function ReceivableDuplicateAudit() {
 
   const allGroups = useMemo(
     () =>
-      (data?.duplicates ?? []).map((g) => ({
+      (data?.duplicates ?? [])
+        .filter((g) => !hiddenIds.has(customerIdOf(g)))
+        .map((g) => ({
         ...g,
         key: `d-${g.receipts.map((r) => r.id).join("-")}`,
-        suspectUsd: g.receipts.filter((r) => !hasCash(r)).reduce((s, r) => s + r.usdAmount, 0),
+        suspectUsd: g.receipts.filter(isSuspect).reduce((s, r) => s + r.usdAmount, 0),
         lastDate: g.receipts.reduce((m, r) => (fmtDate(r.date) > m ? fmtDate(r.date) : m), ""),
       })),
-    [data]
+    [data, hiddenIds]
   );
   const suspectGroups = useMemo(() => allGroups.filter((g) => g.withoutCashCount > 0), [allGroups]);
   const overpaidAll = useMemo(
-    () => (data?.overpaid ?? []).map((inv) => ({ ...inv, key: `o-${inv.invoiceId}` })),
-    [data]
+    () =>
+      (data?.overpaid ?? [])
+        .filter((inv) => !hiddenIds.has(customerIdOf(inv)))
+        .map((inv) => ({ ...inv, key: `o-${inv.invoiceId}` })),
+    [data, hiddenIds]
   );
 
   const q = search.trim().toLowerCase();
 
   const groups = useMemo(() => {
     let list =
-      show === "all" ? allGroups : show === "sameInvoice" ? allGroups.filter((g) => g.sameInvoice) : suspectGroups;
+      show === "all"
+        ? allGroups
+        : show === "sameInvoice"
+        ? allGroups.filter((g) => g.sameInvoice)
+        : show === "reviewed"
+        ? allGroups.filter((g) => g.reviewedCount > 0)
+        : suspectGroups;
     list = list.filter(
       (g) =>
         matchesSearch(q, g.customerName) || g.receipts.some((r) => matchesSearch(q, ...receiptSearchValues(r)))
@@ -292,7 +447,7 @@ export default function ReceivableDuplicateAudit() {
             <StatCard
               label="Groups to review"
               value={suspectGroups.length}
-              sub={`${allGroups.length - suspectGroups.length} more fully backed`}
+              sub={`${allGroups.filter((g) => g.reviewedCount > 0).length} with receipts marked correct`}
               tone={suspectGroups.length ? "warn" : "ok"}
               active={tab === "duplicates" && show === "all"}
               onClick={() => {
@@ -348,6 +503,7 @@ export default function ReceivableDuplicateAudit() {
                 <select className="itc-input" value={show} onChange={(e) => setShow(e.target.value)}>
                   <option value="suspect">Missing a cash collection</option>
                   <option value="sameInvoice">Same invoice</option>
+                  <option value="reviewed">Marked correct</option>
                   <option value="all">All groups</option>
                 </select>
                 <select className="itc-input" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
@@ -359,6 +515,16 @@ export default function ReceivableDuplicateAudit() {
               </>
             )}
 
+            {hiddenCustomers.length > 0 && (
+              <button
+                type="button"
+                className="rda-hidden-toggle"
+                onClick={() => setShowHiddenList((v) => !v)}
+              >
+                Hidden customers ({hiddenCustomers.length}) {showHiddenList ? "▴" : "▾"}
+              </button>
+            )}
+
             <div className="rda-expand">
               <button type="button" onClick={expandAll}>
                 Expand all
@@ -368,6 +534,20 @@ export default function ReceivableDuplicateAudit() {
               </button>
             </div>
           </div>
+
+          {showHiddenList && hiddenCustomers.length > 0 && (
+            <div className="rda-hidden-list">
+              <span className="rda-dim">Hidden from this audit (on hold):</span>
+              {hiddenCustomers.map((h) => (
+                <span key={h.id} className="rda-hidden-chip">
+                  {h.name || `Customer #${h.id}`}
+                  <button type="button" onClick={() => unhideCustomer(h.id)} title="Show again">
+                    Unhide
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="rda-list">
             {visible.length === 0 && (
@@ -381,7 +561,13 @@ export default function ReceivableDuplicateAudit() {
                 const open = expanded.has(g.key);
                 return (
                   <div key={g.key} className={`rda-item ${g.withoutCashCount ? "rda-item-bad" : "rda-item-ok"}`}>
-                    <button type="button" className="rda-item-head" onClick={() => toggle(g.key)}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="rda-item-head"
+                      onClick={() => toggle(g.key)}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle(g.key)}
+                    >
                       <span className="rda-chevron">{open ? "▾" : "▸"}</span>
                       <span className="rda-customer">{g.customerName || "—"}</span>
                       <span className="rda-amount">{amountLabel(g)} USD</span>
@@ -390,6 +576,9 @@ export default function ReceivableDuplicateAudit() {
                       </span>
                       <span className="rda-badges">
                         {g.sameInvoice && <span className="rda-tag rda-tag-warn">Same invoice</span>}
+                        {g.reviewedCount > 0 && (
+                          <span className="rda-tag rda-tag-reviewed">{g.reviewedCount} marked correct</span>
+                        )}
                         {g.withoutCashCount ? (
                           <span className="rda-tag rda-tag-bad">
                             {g.withoutCashCount} without cash · {fmt(g.suspectUsd)} USD
@@ -397,9 +586,26 @@ export default function ReceivableDuplicateAudit() {
                         ) : (
                           <span className="rda-tag rda-tag-ok">All backed</span>
                         )}
+                        <button
+                          type="button"
+                          className="rda-btn-hide"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hideCustomer(customerIdOf(g), g.customerName);
+                          }}
+                        >
+                          Hide customer
+                        </button>
                       </span>
-                    </button>
-                    {open && <ReceiptTable receipts={g.receipts} />}
+                    </div>
+                    {open && (
+                      <ReceiptTable
+                        receipts={g.receipts}
+                        busyIds={busyIds}
+                        onMark={markCorrect}
+                        onUnmark={unmarkCorrect}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -409,7 +615,13 @@ export default function ReceivableDuplicateAudit() {
                 const open = expanded.has(inv.key);
                 return (
                   <div key={inv.key} className="rda-item rda-item-bad">
-                    <button type="button" className="rda-item-head" onClick={() => toggle(inv.key)}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="rda-item-head"
+                      onClick={() => toggle(inv.key)}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggle(inv.key)}
+                    >
                       <span className="rda-chevron">{open ? "▾" : "▸"}</span>
                       <span className="rda-customer">
                         {inv.invoiceNumber} · {inv.customerName || "—"}
@@ -422,9 +634,26 @@ export default function ReceivableDuplicateAudit() {
                       </span>
                       <span className="rda-badges">
                         <span className="rda-tag rda-tag-bad">Over by {fmt(inv.overByUsd)}</span>
+                        <button
+                          type="button"
+                          className="rda-btn-hide"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            hideCustomer(customerIdOf(inv), inv.customerName);
+                          }}
+                        >
+                          Hide customer
+                        </button>
                       </span>
-                    </button>
-                    {open && <ReceiptTable receipts={inv.receipts} />}
+                    </div>
+                    {open && (
+                      <ReceiptTable
+                        receipts={inv.receipts}
+                        busyIds={busyIds}
+                        onMark={markCorrect}
+                        onUnmark={unmarkCorrect}
+                      />
+                    )}
                   </div>
                 );
               })}
