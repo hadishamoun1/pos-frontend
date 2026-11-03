@@ -9,6 +9,7 @@ import RctPaper from "./rctPreview";
 import { createSocket } from "../api/socketClient";
 import StatementModal from "../pos-system/Components/StatementModal";
 import { hasPerm } from "../auth/authz";
+import { isPastEditWindow, useEditLockEnabled } from "../hooks/useEditLock";
 import { useNavigate, useLocation } from "react-router-dom";
 import DailyReceivablesModal from "./DailyReceivablesModal";
 import { useTranslation } from "../hooks/useTranslation";
@@ -61,6 +62,12 @@ const AccountingPage = () => {
   const canCreate = hasPerm("recievables.create");
   const canUpdate = hasPerm("recievables.update");
   const canDelete = hasPerm("recievables.delete");
+  // Settings → POS Controls: receivables dated 2+ days ago can't be edited.
+  const editLockEnabled = useEditLockEnabled();
+  const selectedEditLocked =
+    editLockEnabled &&
+    selectedRowIndex !== null &&
+    isPastEditWindow(filteredData[selectedRowIndex]?.date);
 
   const openNewModal = () => setIsNewModalOpen(true);
   const closeNewModal = () => {
@@ -78,6 +85,7 @@ const AccountingPage = () => {
       return;
     }
     const sel = filteredData[selectedRowIndex];
+    if (selectedEditLocked) return;
     setSelectedRow({
       id: sel.id,
       customer: {
@@ -533,7 +541,7 @@ const AccountingPage = () => {
                 </button>
               )}
 
-              {canUpdate && (
+              {canUpdate && !selectedEditLocked && (
                 <button className="action-button" onClick={openEditModal}>
                   {t("common.edit")}
                 </button>

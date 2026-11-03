@@ -102,6 +102,24 @@ const PosControlsSettings = () => {
         </button>
       </div>
 
+      {/* Toggle 3 — Lock editing of old documents */}
+      <div className="sls-toggle-row">
+        <div className="sls-toggle-text">
+          <span className="sls-toggle-label">Lock Editing of Old Documents</span>
+          <span className="sls-toggle-hint">
+            When ON, the Edit button is hidden for invoices (POS), receivables and journal
+            vouchers dated 2 or more days ago.
+          </span>
+        </div>
+        <button
+          className={`sls-toggle ${controls.lockOldEdits ? "sls-toggle-on" : "sls-toggle-off"}`}
+          onClick={() => toggle("lockOldEdits")}
+          disabled={saving}
+        >
+          <span className="sls-toggle-knob" />
+        </button>
+      </div>
+
       <div className="sls-info-box">
         <span className="sls-info-icon">ℹ</span>
         <p className="sls-info-text">

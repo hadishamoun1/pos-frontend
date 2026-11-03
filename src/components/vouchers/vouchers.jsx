@@ -7,6 +7,7 @@ import NotificationModal from "../recievables/NotificationModal";
 import JournalListsModal from "./journal-list-modal";
 import { useParams, useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import { isPastEditWindow, useEditLockEnabled } from "../hooks/useEditLock";
 
 const JournalVoucherPage = () => {
   const [isJournalListOpen, setIsJournalListOpen] = useState(false);
@@ -14,6 +15,9 @@ const JournalVoucherPage = () => {
   const [loading, setLoading] = useState(false);
 
   const [date, setDate] = useState("");
+  // Date of the opened voucher as saved (not the editable date field).
+  const [savedJvDate, setSavedJvDate] = useState(null);
+  const editLockEnabled = useEditLockEnabled();
   const [type, setType] = useState("");
   const isOFRType = (t) => ["G", "RG", "PRG"].includes(String(t || "").toUpperCase());
   const isBaseType = (t) => ["S", "R", "RVR", "PR"].includes(String(t || "").toUpperCase());
@@ -1478,6 +1482,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
     try {
       const { data: jv } = await axiosClient.get(`/journal-vouchers/${id}`);
       setDate(jv.date);
+      setSavedJvDate(jv.date);
       setType(apiTypeToUiType(jv));
       setEditingId(jv.id);
       setIsSaved(true);
@@ -1576,6 +1581,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
     setOriginalDetailIds([]);
     setIsEditing(false);
     setEditingId(null);
+    setSavedJvDate(null);
     setCurrentRowRid(null);
     setIsSaved(false);
     setActiveRowIndex(null);
@@ -1622,6 +1628,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
       setNotification({ visible: true, type: "warning", message: "Open or save a journal voucher first, then click Edit.", onConfirm: null });
       return;
     }
+    if (jvEditLocked) return;
     setIsEditing(true);
   };
 
@@ -1636,6 +1643,8 @@ const handleRightClick = (event, rowIndex, rowRid) => {
   };
 
   const editDisabled = !isSaved || isEditing;
+  // Settings → POS Controls: vouchers dated 2+ days ago can't be edited.
+  const jvEditLocked = editLockEnabled && !!editingId && isPastEditWindow(savedJvDate);
 
   // ✅ RENDER HELPERS - Type S/R/RVR with EDITABLE LL fields
   const renderTypeSOrRVR = () => (
@@ -1936,7 +1945,7 @@ const handleRightClick = (event, rowIndex, rowRid) => {
   <button className="new-btn" onClick={handleClearEntries}>Clear</button>
 )}
               <button className="export-journal-voucher-btn" onClick={handleExportToExcel} disabled={!isSaved} title={!isSaved ? "Open or save a voucher first" : "Export to Excel"}>📊 Export</button>
-              <button className="edit-journal-voucher" onClick={handleStartEdit} disabled={editDisabled} title={!isSaved ? "Open or save a voucher first" : ""}>Edit</button>
+              {!jvEditLocked && (<button className="edit-journal-voucher" onClick={handleStartEdit} disabled={editDisabled} title={!isSaved ? "Open or save a voucher first" : ""}>Edit</button>)}
               {isEditing && (<button className="edit-journal-voucher" onClick={handleCancelEdit}>Cancel Edit</button>)}
               <button className="open-journal-list-btn" onClick={() => setIsJournalListOpen(true)}>Open List</button>
               {!isSaved && !isEditing && (<button className="general-vouchers-submit-btn" onClick={handleSubmit} disabled={submitBlocked}>Submit</button>)}

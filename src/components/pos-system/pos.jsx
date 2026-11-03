@@ -20,6 +20,7 @@ import RevoInvoiceModal from "./revoInvoicePreviewModal";
 
 // ✅ API client (baseURL should be "/api")
 import { axiosClient } from "../api/axiosClient";
+import { isPastEditWindow, usePosControls } from "../hooks/useEditLock";
 
 const POSSystemPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,7 +45,8 @@ const POSSystemPage = () => {
   const [isEditable, setIsEditable] = useState(true);
   const [invoiceData, setInvoiceData] = useState(null);
   const [showOnlyCenter, setShowOnlyCenter] = useState(false);
-  const [posControls, setPosControls] = useState({ blockCreation: false, blockViewing: false });
+  // Live: updated by the server the moment a switch changes in Settings.
+  const posControls = usePosControls();
   const [showPreview, setShowPreview] = useState(false);
   const [showStatement, setShowStatement] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
@@ -75,6 +77,8 @@ const POSSystemPage = () => {
   const [statementBaseDate, setStatementBaseDate] = useState(null);
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
+  // Date of the loaded invoice as saved (not the editable date field).
+  const [selectedInvoiceDate, setSelectedInvoiceDate] = useState(null);
 
   const toYMDLocal = (d) => {
     const y = d.getFullYear();
@@ -82,6 +86,10 @@ const POSSystemPage = () => {
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
+
+  // Settings → POS Controls: invoices 2+ days old (by invoice date) can't be edited.
+  const invoiceEditLocked =
+    !!posControls?.lockOldEdits && !!selectedInvoiceId && isPastEditWindow(selectedInvoiceDate);
 
   const openStatement = () => {
     setStatementBaseDate(toYMDLocal(new Date()));
@@ -189,20 +197,6 @@ const POSSystemPage = () => {
         setActiveCompany(companies.find((c) => c.isActive) || null);
       })
       .catch(() => setActiveCompany(null));
-  }, []);
-
-  // Fetch POS access controls (block creation / block viewing)
-  useEffect(() => {
-    axiosClient.get("/pos-controls")
-      .then((res) => { if (res.data) setPosControls(res.data); })
-      .catch(() => {});
-    // Re-check every 10 seconds so changes by admins apply live
-    const interval = setInterval(() => {
-      axiosClient.get("/pos-controls")
-        .then((res) => { if (res.data) setPosControls(res.data); })
-        .catch(() => {});
-    }, 10000);
-    return () => clearInterval(interval);
   }, []);
 
   const isShamounActive = useMemo(() => {
@@ -1052,6 +1046,7 @@ const POSSystemPage = () => {
     setEditingInvoiceType(null);
     setCutMode(false);
     setDate(today);
+    setSelectedInvoiceDate(null);
     setSelectedRequestNumber("");
     setReturnMode(false);
     setReturnSelection({});
@@ -1430,6 +1425,7 @@ const POSSystemPage = () => {
     const rawDate = pickInvoiceDate(invoice);
     console.log("🧾 invoice raw date =", rawDate, "keys:", Object.keys(invoice || {}));
     setDate(toYMD(rawDate));
+    setSelectedInvoiceDate(toYMD(rawDate));
 
     const vatPercentage = invoice?.vatPercentage
       ? parseFloat(invoice.vatPercentage).toString()
@@ -1635,6 +1631,7 @@ const POSSystemPage = () => {
   };
 
   const handleEditInvoice = async () => {
+    if (invoiceEditLocked) return;
     setIsEditable(true);
   };
 
@@ -1848,6 +1845,7 @@ const POSSystemPage = () => {
             onConfirmReturnSelected={handleCreateReturnInvoiceSelected}
             handleNewTransaction={handleNewTransaction}
             handleEditInvoice={handleEditInvoice}
+            invoiceEditLocked={invoiceEditLocked}
             handleSaveRequest={handleSaveRequest}
             handleSaveInvoice={handleSaveInvoice}
             handleEditRequest={handleEditRequestConfirmed}

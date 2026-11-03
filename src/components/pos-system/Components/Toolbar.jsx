@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation"; // ✅ add
 const Toolbar = ({
   handleNewTransaction,
   handleEditInvoice,
+  invoiceEditLocked = false,
   handleEditRequest,
   handleCreateRequest,
   handleCreateInvoice,
@@ -53,13 +54,15 @@ const Toolbar = ({
 
       {selectedInvoiceId !== null ? (
         <>
-          <button
-            className="pos-page-toolbar-button pos-page-green-button"
-            onClick={handleEditInvoice}
-            disabled={loading}
-          >
-            {loading ? t("common.processing") : t("posToolbar.editInvoice")}
-          </button>
+          {!invoiceEditLocked && (
+            <button
+              className="pos-page-toolbar-button pos-page-green-button"
+              onClick={handleEditInvoice}
+              disabled={loading}
+            >
+              {loading ? t("common.processing") : t("posToolbar.editInvoice")}
+            </button>
+          )}
 
           {/* ✅ Return button (permission controlled) */}
           {canReturn && (
