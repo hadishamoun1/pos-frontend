@@ -627,7 +627,9 @@ function InvoiceSplitterModal({ open, onClose, onConfirm, originalAmount, curren
 }
 
 // ✅ Main NewRecordModal Component (UPDATED)
-const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
+// onFailed (optional): called with (message, created) instead of showing the
+// error here — used when the form was opened from Cash Collections.
+const NewRecordModal = ({ onClose, onSave, onFailed, prefillDraft }) => {
   const { t } = useTranslation(); // ✅
   const location = useLocation();
 
@@ -960,6 +962,7 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    const created = [];
 
     try {
       if (!rows.length) throw new Error(t("receivables.errors.addAtLeastOneRow"));
@@ -978,8 +981,6 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
         if (!r.amountExchanged) throw new Error(t("receivables.errors.rowAmountExchangedRequired", { row: rowNum }));
         if (!r.date) throw new Error(t("receivables.errors.rowDateRequired", { row: rowNum }));
       }
-
-      const created = [];
 
       for (const r of rows) {
         const cashNumber = Number(String(r.cashNumber || "").replace(/,/g, ""));
@@ -1031,9 +1032,14 @@ const NewRecordModal = ({ onClose, onSave, prefillDraft }) => {
       setCloseAfterNotification(true);
       onSave(created);
     } catch (e) {
+      const message = e?.response?.data?.message || e?.message;
+      if (onFailed) {
+        onFailed(message, created);
+        return;
+      }
       setNotification({
         type: "error",
-        message: e?.response?.data?.message || e?.message,
+        message,
       });
       setSaving(false);
     }

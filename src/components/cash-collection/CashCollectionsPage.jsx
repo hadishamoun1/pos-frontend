@@ -1,7 +1,9 @@
 // src/components/cash-collection/CashCollectionsPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { axiosClient } from "../api/axiosClient";
 import ViewCashflowModal from "./CashCollectionsPreviewModal";
+import EditCollectionModal from "./EditCollectionModal";
 import NotificationModal from "../recievables/NotificationModal"; 
 import "./cash-collections.css";
 
@@ -304,7 +306,13 @@ function mapMethodToPmtType(method) {
   return "Cash";
 }
 
+// Filters are remembered so that coming back after creating a receivable
+// lands on the same list instead of resetting to today.
+const FILTERS_KEY = "cashCollections_filters";
+
 export default function CashCollectionsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [date, setDate] = useState(todayYmd());
 
   const [customerId, setCustomerId] = useState(null);
@@ -325,24 +333,69 @@ export default function CashCollectionsPage() {
 
   const [saving, setSaving] = useState(false);
   const [employees, setEmployees] = useState([]);
+  const [editingRow, setEditingRow] = useState(null);
 
-  const [filters, setFilters] = useState({
-  from: todayYmd(),   
-  to: todayYmd(), 
-    q: "",
-    method: "",
-    employeeId: "",
-    page: 1,
-    limit: 200,
-    sortBy: "createdAt",
-    sortDir: "ASC",
+  const [filters, setFilters] = useState(() => {
+    const defaults = {
+      from: todayYmd(),
+      to: todayYmd(),
+      q: "",
+      method: "",
+      employeeId: "",
+      page: 1,
+      limit: 200,
+      sortBy: "createdAt",
+      sortDir: "ASC",
+    };
+    if (!location.state?.fromReceivables) return defaults;
+    try {
+      return { ...defaults, ...(JSON.parse(sessionStorage.getItem(FILTERS_KEY) || "null") || {}) };
+    } catch {
+      return defaults;
+    }
   });
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
+    } catch {}
+  }, [filters]);
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [notif, setNotif] = useState({ open: false, type: "info", message: "" });
+  // Result of the "create receivable" trip: saved, failed, or cancelled.
+  const [notif, setNotif] = useState(() => {
+    const back = location.state;
+    if (!back?.fromReceivables) return { open: false, type: "info", message: "" };
+    const count = Number(back.createdCount) || 0;
+    if (back.error) {
+      return {
+        open: true,
+        type: "error",
+        message:
+          `Receivable not saved: ${back.error}` +
+          (count > 0
+            ? ` (${count} receivable${count === 1 ? " was" : "s were"} created before the error — check before retrying.)`
+            : ""),
+      };
+    }
+    if (count > 0) {
+      return {
+        open: true,
+        type: "success",
+        message: count > 1 ? `${count} receivables created` : "Receivable created",
+      };
+    }
+    return { open: false, type: "info", message: "" }; // cancelled
+  });
+
+  // Clear the "came back from receivables" flag so a refresh doesn't repeat it.
+  useEffect(() => {
+    if (location.state?.fromReceivables) navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [duplicateConflict, setDuplicateConflict] = useState(null);
   const [requestingApproval, setRequestingApproval] = useState(false);
@@ -861,6 +914,19 @@ function buildDraftFromFilteredRows(allRows) {
         </div>
       </div>
 
+      {editingRow && (
+        <EditCollectionModal
+          row={editingRow}
+          currencies={currencies}
+          onClose={() => setEditingRow(null)}
+          onSaved={async () => {
+            setEditingRow(null);
+            await loadList(filters);
+            setNotif({ open: true, type: "success", message: "Collection updated" });
+          }}
+        />
+      )}
+
       {/* ================== DUPLICATE WARNING MODAL ================== */}
       {duplicateConflict && (
         <div className="cc-dup-overlay">
@@ -1232,7 +1298,7 @@ function buildDraftFromFilteredRows(allRows) {
                   <th style={{ width: 140 }}>Reference</th>
                   <th>Notes</th>
                   <th style={{ width: 120 }}>Receivable</th>
-                  <th style={{ width: 90 }}></th>
+                  <th style={{ width: 150 }}></th>
                 </tr>
               </thead>
 
@@ -1260,6 +1326,11 @@ function buildDraftFromFilteredRows(allRows) {
                       )}
                     </td>
                     <td className="actions">
+                      {!r?.receivableEntryId && (
+                        <button className="btn" onClick={() => setEditingRow(r)}>
+                          Edit
+                        </button>
+                      )}
                       <button className="btn danger" onClick={() => deleteRow(r.id)}>
                         Delete
                       </button>

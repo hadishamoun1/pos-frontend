@@ -668,8 +668,34 @@ const AccountingPage = () => {
 
         {isNewModalOpen && (
           <NewRecordModal
-            onClose={closeNewModal}
-            onSave={() => closeNewModal()}
+            onClose={() => {
+              closeNewModal();
+              // Opened from Cash Collections: Cancel goes straight back too.
+              if (incomingDraft) navigate("/cash-collections", { state: { fromReceivables: true } });
+            }}
+            onFailed={
+              incomingDraft
+                ? (message, created) => {
+                    closeNewModal();
+                    navigate("/cash-collections", {
+                      state: {
+                        fromReceivables: true,
+                        error: message || "Failed to save",
+                        createdCount: created?.length ?? 0,
+                      },
+                    });
+                  }
+                : undefined
+            }
+            onSave={(created) => {
+              closeNewModal();
+              // Opened from Cash Collections' "create receivable": go straight back.
+              if (incomingDraft) {
+                navigate("/cash-collections", {
+                  state: { fromReceivables: true, createdCount: created?.length ?? 0 },
+                });
+              }
+            }}
             prefillDraft={incomingDraft}
             draft={incomingDraft}
           />
