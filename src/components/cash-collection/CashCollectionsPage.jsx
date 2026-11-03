@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { axiosClient } from "../api/axiosClient";
+import { createSocket } from "../api/socketClient";
 import ViewCashflowModal from "./CashCollectionsPreviewModal";
 import EditCollectionModal from "./EditCollectionModal";
 import NotificationModal from "../recievables/NotificationModal"; 
@@ -487,8 +488,9 @@ export default function CashCollectionsPage() {
     return params;
   }
 
-  async function loadList(nextFilters = filters) {
-    setLoading(true);
+  // silent: refresh in place (live updates) without the "Loading..." swap.
+  async function loadList(nextFilters = filters, { silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const { data } = await axiosClient.get(`/cash-collections`, {
         params: buildListParams(nextFilters),
@@ -496,13 +498,14 @@ export default function CashCollectionsPage() {
       setRows(data?.rows || []);
       setTotal(data?.total || 0);
     } catch (e) {
+      if (silent) return;
       setNotif({
         open: true,
         type: "error",
         message: e?.response?.data?.message || "Failed to load cash collections",
       });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -873,6 +876,32 @@ function buildDraftFromFilteredRows(allRows) {
     loadList(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.limit, filters.sortBy, filters.sortDir]);
+
+  // Live updates: any user creating, editing, deleting, converting to a
+  // receivable or approving refreshes this list. The event carries no rows —
+  // the list is refetched so each user still only sees what they may see.
+  const liveRef = useRef({});
+  liveRef.current = { filters, approvalsShown: approvalRequests !== null };
+  useEffect(() => {
+    const socket = createSocket();
+    let timer = null;
+    socket.on("cashCollections:changed", (evt) => {
+      clearTimeout(timer);
+      // A burst of changes (e.g. several rows posted at once) reloads once.
+      timer = setTimeout(() => {
+        loadList(liveRef.current.filters, { silent: true });
+        if (liveRef.current.approvalsShown && String(evt?.action || "").startsWith("approval")) {
+          loadApprovalRequests();
+        }
+      }, 300);
+    });
+    return () => {
+      clearTimeout(timer);
+      socket.off("cashCollections:changed");
+      socket.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ✅ NotificationModal expects: success | error | warning
   const modalType =
