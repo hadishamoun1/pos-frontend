@@ -409,6 +409,7 @@ export default function CashCollectionsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewDraft, setPreviewDraft] = useState(null);
+  const previewFiltersRef = useRef(null);
 
   const pageSum = useMemo(
     () => rows.reduce((s, r) => s + Number(r.amount || 0), 0),
@@ -811,8 +812,13 @@ function buildDraftFromFilteredRows(allRows) {
   }
 
   async function viewFiltered() {
+    await buildPreview({ ...filters });
+  }
+
+  // Builds the preview for `applied` filters. Live updates call it again with
+  // the filters the preview was opened with, while it is open.
+  async function buildPreview(applied, { live = false } = {}) {
     try {
-      const applied = { ...filters };
       const allRows = await fetchAllForPaper(applied);
 
       const groupedRows = groupRowsForPaper(allRows);
@@ -839,10 +845,10 @@ function buildDraftFromFilteredRows(allRows) {
         }
       }
 
-      console.log("📦 previewDraft sending to modal:", draftFromForm || draftFromFilters);
-
-      setPreviewOpen(true);
+      previewFiltersRef.current = applied;
+      if (!live) setPreviewOpen(true);
     } catch (e) {
+      if (live) return;
       setNotif({
         open: true,
         type: "error",
@@ -881,7 +887,15 @@ function buildDraftFromFilteredRows(allRows) {
   // receivable or approving refreshes this list. The event carries no rows —
   // the list is refetched so each user still only sees what they may see.
   const liveRef = useRef({});
-  liveRef.current = { filters, approvalsShown: approvalRequests !== null };
+  liveRef.current = {
+    filters,
+    approvalsShown: approvalRequests !== null,
+    previewOpen,
+    // latest versions, so the handler never uses stale form/filter state
+    loadList,
+    loadApprovalRequests,
+    buildPreview,
+  };
   useEffect(() => {
     const socket = createSocket();
     let timer = null;
@@ -889,9 +903,13 @@ function buildDraftFromFilteredRows(allRows) {
       clearTimeout(timer);
       // A burst of changes (e.g. several rows posted at once) reloads once.
       timer = setTimeout(() => {
-        loadList(liveRef.current.filters, { silent: true });
-        if (liveRef.current.approvalsShown && String(evt?.action || "").startsWith("approval")) {
-          loadApprovalRequests();
+        const live = liveRef.current;
+        live.loadList(live.filters, { silent: true });
+        if (live.previewOpen && previewFiltersRef.current) {
+          live.buildPreview(previewFiltersRef.current, { live: true });
+        }
+        if (live.approvalsShown && String(evt?.action || "").startsWith("approval")) {
+          live.loadApprovalRequests();
         }
       }, 300);
     });

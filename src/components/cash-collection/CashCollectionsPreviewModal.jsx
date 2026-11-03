@@ -104,6 +104,13 @@ export default function ViewCashflowModal({
     if (!open) return;
     const iframe = iframeRef.current;
     if (!iframe) return;
+    // A live update replaces the content; keep the reader where they were.
+    const win = iframe.contentWindow;
+    const scrollY = win ? win.scrollY : 0;
+    const scrollX = win ? win.scrollX : 0;
+    iframe.onload = () => {
+      if (scrollY || scrollX) iframe.contentWindow?.scrollTo(scrollX, scrollY);
+    };
     iframe.srcdoc = viewHtml;
   }, [open, viewHtml]);
 
