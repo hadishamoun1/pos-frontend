@@ -157,6 +157,14 @@ const PurchasesInvoicePage = () => {
   const isInvoiceSelected = selectedInvoiceId !== null;
   const canEdit = !isInvoiceSelected || isEditMode;
   const isAdmin = getPayload()?.role === "ADMIN";
+  // Manual Shipped/Recieved (Settings → Purchase Status Access). Admins always.
+  const [statusAccess, setStatusAccess] = useState({ shipped: isAdmin, received: isAdmin });
+  useEffect(() => {
+    axiosClient
+      .get("/purchase-invoices/status-access/me")
+      .then((res) => setStatusAccess({ shipped: !!res.data?.shipped, received: !!res.data?.received }))
+      .catch(() => {});
+  }, []);
   // Gates the Track Shipment / Track Vessel / Attach Bill of Lading buttons
   // in Summary View 2 — separate from the broader purchases.update, since
   // those three specifically start/attach shipment tracking rather than
@@ -2147,25 +2155,25 @@ return (
                   <option value="">Select Status</option>
                   <option value="Proforma">Proforma</option>
                   <option value="Ordered">Ordered</option>
-                  {/* Shipped/Recieved are driven by shipment tracking (ShipsGo or
-                      vessel/AIS) once a BL is tracked, so they aren't manually
-                      selectable here — except for Purchase Returns, which never
-                      go through shipping. */}
-                  <option value="Shipped" disabled={!isPurchaseReturn && invoiceType !== "PR"}>
-                    Shipped{!isPurchaseReturn && invoiceType !== "PR" ? " (auto)" : ""}
+                  {/* Shipped/Recieved are set automatically by shipment tracking.
+                      Admins, and users granted it in Settings → Purchase Status
+                      Access, can also set them by hand (tracking stalled, or the
+                      shipment was never tracked). Backend enforces this; here we
+                      just avoid offering an option that would 403. Purchase
+                      Returns are exempt — they never ship. */}
+                  <option
+                    value="Shipped"
+                    disabled={!isPurchaseReturn && invoiceType !== "PR" && !statusAccess.shipped}
+                  >
+                    Shipped
+                    {!isPurchaseReturn && invoiceType !== "PR" && !statusAccess.shipped ? " (auto)" : ""}
                   </option>
-                  {/* Recieved is set automatically by shipment tracking; an admin
-                      can also set it by hand as a manual override (tracking
-                      stalled, or the shipment was never tracked). Backend
-                      enforces the admin check; this just avoids showing a
-                      non-admin an option that would 403. Purchase Returns are
-                      exempt — they never ship. */}
                   <option
                     value="Recieved"
-                    disabled={!isPurchaseReturn && invoiceType !== "PR" && !isAdmin}
+                    disabled={!isPurchaseReturn && invoiceType !== "PR" && !statusAccess.received}
                   >
                     Recieved
-                    {!isPurchaseReturn && invoiceType !== "PR" && !isAdmin ? " (auto)" : ""}
+                    {!isPurchaseReturn && invoiceType !== "PR" && !statusAccess.received ? " (auto)" : ""}
                   </option>
                 </select>
               </label>

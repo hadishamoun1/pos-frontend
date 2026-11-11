@@ -59,6 +59,16 @@ export default function CompanySettings() {
     }
   };
 
+  const handleSetCountry = async (id, country) => {
+    setError("");
+    try {
+      await axiosClient.patch(`/company/${id}/country`, { country });
+      await fetchCompanies();
+    } catch {
+      setError("Failed to update country.");
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this company?")) return;
     setError("");
@@ -118,6 +128,18 @@ export default function CompanySettings() {
             </div>
 
             <div className="company-settings__item-actions">
+              {/* Vessel tracking marks a shipment arrived only at this
+                  country's ports: Lebanon → Beirut/Saida/Tripoli, Syria → Latakia. */}
+              <select
+                className="company-settings__country"
+                value={c.country || "Lebanon"}
+                onChange={(e) => handleSetCountry(c.id, e.target.value)}
+                title="Country — decides which ports count as arrival for vessel tracking"
+              >
+                <option value="Lebanon">Lebanon</option>
+                <option value="Syria">Syria</option>
+              </select>
+
               <button
                 className={`company-settings__btn ${c.vatInclusive ? "company-settings__btn--vat-on" : "company-settings__btn--vat-off"}`}
                 onClick={() => handleToggleVat(c.id, c.vatInclusive)}
@@ -189,6 +211,15 @@ export default function CompanySettings() {
           font-weight: 600;
           cursor: pointer;
           transition: background 0.15s;
+        }
+        .company-settings__country {
+          padding: 7px 10px;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          background: #fff;
+          cursor: pointer;
         }
         .company-settings__btn:disabled {
           opacity: 0.5;
