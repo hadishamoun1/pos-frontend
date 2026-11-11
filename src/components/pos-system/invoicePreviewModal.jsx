@@ -1023,6 +1023,18 @@ function injectAnnotsIntoClone(iframeWin, origPage, clonedPage) {
    ========================= */
 // partyLabel / docNumberLabel / title let other documents (e.g. the
 // purchase invoice view) reuse this exact layout with their own wording.
+// Active company's header branding (Revo logo vs Shamoun), cached for the
+// page session so later previews open with the right header straight away.
+let brandCache = null;
+async function loadBrand() {
+  const { data } = await axiosClient.get("/company");
+  const active = Array.isArray(data) ? data.find((c) => c.isActive) : null;
+  const revo = !!active?.companyName?.toLowerCase().includes("revo");
+  const logo = revo ? await toBase64(revoLogoSrc) : "";
+  brandCache = { isRevo: revo, logoBase64: logo };
+  return brandCache;
+}
+
 const InvoiceModal = ({
   isOpen,
   onClose,
@@ -1042,18 +1054,30 @@ const InvoiceModal = ({
 
   const [renderVersion, setRenderVersion] = useState(0);
 
-  const [isRevo, setIsRevo] = useState(false);
-  const [logoBase64, setLogoBase64] = useState("");
+  const [isRevo, setIsRevo] = useState(brandCache?.isRevo ?? false);
+  const [logoBase64, setLogoBase64] = useState(brandCache?.logoBase64 ?? "");
+  // Don't draw the invoice until the company is known — otherwise it shows
+  // the Shamoun header for a moment before switching to Revo.
+  const [brandReady, setBrandReady] = useState(!!brandCache);
   const [showVatAtZero, setShowVatAtZero] = useState(false);
   const [annotMode, setAnnotMode] = useState(false);
 
   useEffect(() => {
-    axiosClient.get("/company").then(({ data }) => {
-      const active = Array.isArray(data) ? data.find((c) => c.isActive) : null;
-      const revo = !!active?.companyName?.toLowerCase().includes("revo");
-      setIsRevo(revo);
-      if (revo) toBase64(revoLogoSrc).then(setLogoBase64);
-    }).catch(() => {});
+    // Refreshed on every open (the active company can change in Settings).
+    let alive = true;
+    loadBrand()
+      .then((b) => {
+        if (!alive) return;
+        setIsRevo(b.isRevo);
+        setLogoBase64(b.logoBase64);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setBrandReady(true);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1708,7 +1732,7 @@ const InvoiceModal = ({
               <iframe
                 ref={iframeRef}
                 title="Invoice Preview"
-                srcDoc={html}
+                srcDoc={brandReady ? html : ""}
                 style={{ width: "100%", height: "85vh", border: 0, background: "#fff" }}
                 sandbox="allow-same-origin allow-scripts"
                 onLoad={() => {
