@@ -400,6 +400,27 @@
 .ship-track-eta.bad { color: #dc2626; }
 .ship-track-eta.mute { color: #64748b; font-weight: 500; }
 
+.ship-track-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ship-track-open-invoice {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.ship-track-open-invoice:hover { background: #dbeafe; }
+/* Completed shipments are dimmed, but their invoice can still be opened. */
+.ship-track-card.disabled .ship-track-open-invoice { opacity: 1; }
+
 .ship-track-footer {
   display: flex;
   gap: 8px;

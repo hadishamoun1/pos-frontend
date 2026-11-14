@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useNavigate } from "react-router-dom";
 import { axiosClient } from "../api/axiosClient";
 import "./ShipmentTrackingMap.css";
 
@@ -254,7 +255,16 @@ function RefreshIcon() {
   );
 }
 
-export default function ShipmentTrackingMap() {
+// onOpenInvoice(invoiceId): given when embedded in the Purchase Invoice page
+// (switches back to the invoice view). On the standalone /shipment-tracking
+// page it's absent, so "Open Invoice" navigates to the purchase page instead.
+export default function ShipmentTrackingMap({ onOpenInvoice } = {}) {
+  const navigate = useNavigate();
+  const openInvoice = (invoiceId) => {
+    if (!invoiceId) return;
+    if (onOpenInvoice) onOpenInvoice(invoiceId);
+    else navigate("/purchases-invoice", { state: { openPurchaseInvoiceId: invoiceId } });
+  };
   const [selectedId, setSelectedId] = useState(null);
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -631,7 +641,22 @@ export default function ShipmentTrackingMap() {
                         {originName || "?"} <span className="ship-track-route-arrow">→</span> {destName || "?"}
                       </div>
                     )}
-                    <div className={`ship-track-eta ${status}`}>{etaLabel(s)}</div>
+                    <div className="ship-track-card-bottom">
+                      <div className={`ship-track-eta ${status}`}>{etaLabel(s)}</div>
+                      {s.linkedInvoice?.invoiceId && (
+                        <button
+                          type="button"
+                          className="ship-track-open-invoice"
+                          onClick={(e) => {
+                            e.stopPropagation(); // don't also select the card on the map
+                            openInvoice(s.linkedInvoice.invoiceId);
+                          }}
+                          title="Open this purchase invoice"
+                        >
+                          Open Invoice
+                        </button>
+                      )}
+                    </div>
                   </article>
                 );
               })}

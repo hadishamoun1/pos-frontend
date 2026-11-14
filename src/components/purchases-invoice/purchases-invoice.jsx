@@ -18,9 +18,10 @@ import ProformaOrderPickerModal from "./ProformaOrderPickerModal";
 import SupplierStatementModal from "./SupplierStatementModal";
 import SharedChargeModal from "./SharedChargeModal";
 import InvoiceModal from "../pos-system/invoicePreviewModal";
+import ItemPurchaseHistoryModal from "./ItemPurchaseHistoryModal";
 import NotificationModal from "../recievables/NotificationModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 // ✅ use axiosClient (auto token)
 import { axiosClient } from "../api/axiosClient";
 import { getPayload, hasPerm } from "../auth/authz";
@@ -183,6 +184,7 @@ const PurchasesInvoicePage = () => {
   const [showProformaOrderPicker, setShowProformaOrderPicker] = useState(false);
   const [showSupplierStatement, setShowSupplierStatement] = useState(false);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [showItemPurchaseHistory, setShowItemPurchaseHistory] = useState(false);
   const [showSharedChargeModal, setShowSharedChargeModal] = useState(false);
   const queryClient = useQueryClient();
 
@@ -328,6 +330,18 @@ const PurchasesInvoicePage = () => {
 
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Opened from the standalone Shipment Tracking page's "Open Invoice":
+  // select that invoice, then clear the state so a refresh doesn't reopen it.
+  useEffect(() => {
+    const id = location.state?.openPurchaseInvoiceId;
+    if (!id) return;
+    setOrderColumnToggle(false);
+    setSelectedInvoiceId(id);
+    navigate(location.pathname, { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
 // Add this handler function
 const handleViewJournalVoucher = async () => {
@@ -1781,7 +1795,12 @@ return (
       </div>
 
       {orderColumnToggle ? (
-        <ShipmentTrackingMap />
+        <ShipmentTrackingMap
+          onOpenInvoice={(id) => {
+            setOrderColumnToggle(false); // back to the invoice view
+            setSelectedInvoiceId(id);
+          }}
+        />
       ) : (
         <>
       <div className="header">
@@ -1897,6 +1916,15 @@ return (
             title={!selectedSupplierId ? "Select a supplier first" : "View this supplier's account statement"}
           >
             View Statement
+          </button>
+
+          <button
+            type="button"
+            className="view-jv-button item-history-button"
+            onClick={() => setShowItemPurchaseHistory(true)}
+            title="Every purchase of an item — supplier, price, cost and date"
+          >
+            Item Purchase History
           </button>
 
           <button
@@ -2553,6 +2581,11 @@ return (
         />
       )}
 
+      <ItemPurchaseHistoryModal
+        isOpen={showItemPurchaseHistory}
+        onClose={() => setShowItemPurchaseHistory(false)}
+      />
+
       {showInvoicePreview && (
         <InvoiceModal
           isOpen={showInvoicePreview}
@@ -2570,7 +2603,7 @@ return (
         onClose={() => setShowSupplierStatement(false)}
         supplierId={selectedSupplierId}
         supplierName={supplierName}
-        defaultDate={inputedDate}
+        // No defaultDate: the statement opens up to today, not the invoice's date.
       />
 
       <SharedChargeModal

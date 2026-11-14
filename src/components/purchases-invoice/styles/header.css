@@ -125,6 +125,10 @@
   margin-left: 0;
 }
 
+.view-jv-button.item-history-button {
+  background: #7c3aed; /* Item Purchase History — stands apart from the cyan info buttons */
+}
+
 .mark-completed-button {
   background: #00cb2c; /* distinct from every other button in the row */
 }

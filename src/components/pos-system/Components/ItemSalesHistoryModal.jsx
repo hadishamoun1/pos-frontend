@@ -3,95 +3,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { axiosClient } from "../../api/axiosClient";
 import { useTranslation } from "../../hooks/useTranslation";
 import "./ItemSalesHistoryModal.css";
+import {
+  buildDimensionDisplay,
+  buildItemNameDisplay,
+  buildItemFilters,
+  formatDate,
+  parseSearchEntry,
+} from "./itemHistorySearch";
 
 const LIMIT = 100;
-
-const buildDimensionDisplay = (row) => {
-  const typeLower = String(row.type || "").toLowerCase();
-  if (typeLower === "box") {
-    return `${row.length ?? ""}×${row.width ?? ""}-${String(row.sheetsPerBox || 0).padStart(3, "0")}`;
-  }
-  if (typeLower === "sheet") {
-    return `${row.length ?? ""}×${row.width ?? ""}`;
-  }
-  if (typeLower !== "unit" && typeLower !== "sqm" && row.length && row.width) {
-    return `${row.length}×${row.width}`;
-  }
-  return "—";
-};
-
-const buildItemNameDisplay = (row) => {
-  const typeLower = String(row.type || "").toLowerCase();
-  const hasThickness = typeLower !== "unit" && row.thickness != null && Number(row.thickness) > 0;
-  const thicknessLabel = hasThickness ? `${Number(row.thickness)} ملم ` : "";
-  return `${thicknessLabel}${row.itemName ?? ""}`.trim();
-};
-
-const formatDate = (d) => {
-  if (!d) return "—";
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return String(d);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getFullYear()}`;
-};
-
-// ── Search parsing — mirrors the POS Stock tab search exactly (StockTab.jsx) ──
-const normalizeDigits = (s = "") =>
-  String(s)
-    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-    .replace(/،/g, ",");
-
-const normalizeArabic = (s = "") =>
-  String(s || "")
-    .replace(/[ً-ٟ]/g, "")
-    .replace(/ـ/g, "")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ى/g, "ي")
-    .replace(/ة/g, "ه")
-    .replace(/ئ/g, "ي")
-    .replace(/ؤ/g, "و")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const looksLikeDims = (s) => {
-  if (!s) return false;
-  const t = normalizeDigits(s).trim();
-  if (!t.includes("*")) return false;
-  const [L, rest] = t.split("*");
-  if (!L || !rest) return false;
-  if (!/^\s*\d+(\.\d+)?\s*$/.test(L)) return false;
-  const parts = rest.split("-");
-  if (!/^\s*\d+(\.\d+)?\s*$/.test(parts[0] || "")) return false;
-  if (parts[1] && !/^\s*\d+\s*$/.test(parts[1])) return false;
-  return true;
-};
-
-const isPlainNumber = (s) => {
-  if (!s) return false;
-  const t = normalizeDigits(String(s)).trim();
-  return /^\d{1,5}(\.\d+)?$/.test(t);
-};
-
-// Given the pinned name/dims chips, resolve them into the same {q, length}
-// request shape StockTab's fetchSearch sends to /items/v1/real-variant-ledger.
-const buildItemFilters = (nameChip, dimsChip) => {
-  let q;
-  let length;
-
-  if (nameChip) q = normalizeArabic(nameChip);
-
-  const raw = dimsChip ? normalizeDigits(dimsChip.trim()) : "";
-  if (raw) {
-    if (looksLikeDims(raw)) {
-      q = [q, raw].filter(Boolean).join(" ");
-    } else if (isPlainNumber(raw)) {
-      length = Number(raw);
-    }
-  }
-
-  return { q, length };
-};
 
 const ItemSalesHistoryModal = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
@@ -176,60 +96,14 @@ const ItemSalesHistoryModal = ({ isOpen, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, nameChip, dimsChip, debouncedCustomerName, debouncedInvoiceNumber]);
 
-  // Same Enter-to-pin parsing as StockTab.jsx's handleEnter: a "*"-shaped
-  // token (or dims-with-sheets like 225*321-012) becomes the dims chip; two
-  // bare numbers become dims; one bare number is a lone dims chip; anything
-  // left over becomes the name chip.
+  // Enter-to-pin, same parsing as the POS Stock tab (see itemHistorySearch.js).
   const handleSearchKeyDown = (e) => {
     if (e.key !== "Enter") return;
-    const raw0 = inputValue.trim();
-    if (!raw0) return;
+    if (!inputValue.trim()) return;
     e.preventDefault();
-
-    const raw = normalizeDigits(raw0).trim();
-    const parts = raw.split(/\s+/).filter(Boolean);
-
-    const dimsToken = parts.find((p) => p.includes("*") && looksLikeDims(p));
-    if (dimsToken) {
-      setDimsChip(dimsToken);
-      const rest = parts.filter((p) => p !== dimsToken).join(" ").trim();
-      // Only touch nameChip if this entry actually included name text —
-      // otherwise leave whatever was already pinned alone (e.g. pinning a
-      // dimension on its own shouldn't wipe out a previously pinned name).
-      if (rest) setNameChip(normalizeArabic(rest));
-      setInputValue("");
-      return;
-    }
-
-    const numIdx = [];
-    for (let i = 0; i < parts.length; i++) {
-      if (isPlainNumber(parts[i])) numIdx.push(i);
-    }
-
-    if (numIdx.length >= 2) {
-      const a = parts[numIdx[0]];
-      const b = parts[numIdx[1]];
-      setDimsChip(`${a}*${b}`);
-      const restParts = parts.slice();
-      restParts.splice(numIdx[1], 1);
-      restParts.splice(numIdx[0], 1);
-      const rest = restParts.join(" ").trim();
-      if (rest) setNameChip(normalizeArabic(rest));
-      setInputValue("");
-      return;
-    }
-
-    if (numIdx.length === 1) {
-      setDimsChip(parts[numIdx[0]]);
-      const restParts = parts.slice();
-      restParts.splice(numIdx[0], 1);
-      const rest = restParts.join(" ").trim();
-      if (rest) setNameChip(normalizeArabic(rest));
-      setInputValue("");
-      return;
-    }
-
-    setNameChip(normalizeArabic(raw));
+    const { dims, name } = parseSearchEntry(inputValue);
+    if (dims) setDimsChip(dims);
+    if (name) setNameChip(name);
     setInputValue("");
   };
 
