@@ -382,6 +382,11 @@ export default function InventoryBrowser() {
       if (type) baseParams.type = type;
       if (origin) baseParams.origin = origin;
 
+      // Real-description report: cost boxes, SQM and unit items from their last
+      // purchase or count in Inventory Activity (up to the As-of date); sheets
+      // take their box's cost.
+      if (descMode === "real") baseParams.costFromEvents = "true";
+
       const BIG_LIMIT = 500;
       let aggAll = [];
       let pg = 1;
