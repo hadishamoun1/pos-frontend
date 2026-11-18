@@ -10,6 +10,8 @@ export default function SqmPiecesMaintenance() {
   const [error, setError] = useState("");
   const [fixResult, setFixResult] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [repairing, setRepairing] = useState(false);
+  const [repairResult, setRepairResult] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -43,6 +45,39 @@ export default function SqmPiecesMaintenance() {
       setError(e?.response?.data?.message || "Fix failed.");
     } finally {
       setFixing(false);
+    }
+  };
+
+  // Re-create SQM trash movements that earlier transfer rebuilds (Recompute /
+  // editing a BOSTS transfer) deleted from Inventory Activity. Previews first.
+  const handleRepairTrash = async () => {
+    setRepairing(true);
+    setError("");
+    setRepairResult(null);
+    try {
+      const { data: preview } = await axiosClient.post("/sqm-pieces/repair-trash-movements", { dryRun: true });
+      if (!preview.created) {
+        setRepairResult({ ...preview, done: true });
+        return;
+      }
+      const ok = window.confirm(
+        `${preview.created} BOSTS line(s) have trash on the SQM page that is missing from Inventory Activity ` +
+        `(${Number(preview.sqmCreated).toFixed(2)} sqm in total).
+
+` +
+        "Re-create those trash movements now? They will be dated on each BOSTS transfer's date, " +
+        "because the original trash date is no longer known."
+      );
+      if (!ok) {
+        setRepairResult({ ...preview, done: false });
+        return;
+      }
+      const { data } = await axiosClient.post("/sqm-pieces/repair-trash-movements", { dryRun: false });
+      setRepairResult({ ...data, done: true });
+    } catch (e) {
+      setError(e?.response?.data?.message || "Repair failed.");
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -86,12 +121,41 @@ export default function SqmPiecesMaintenance() {
         </div>
       )}
 
+      {repairResult && (
+        <div style={{ background: repairResult.done ? "#dcfce7" : "#fef3c7", color: repairResult.done ? "#166534" : "#92400e", padding: "8px 12px", borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
+          {!repairResult.created
+            ? `Checked ${repairResult.checked} BOSTS line(s) with trash — nothing missing.`
+            : repairResult.done
+            ? `Re-created ${repairResult.created} trash movement(s), ${Number(repairResult.sqmCreated).toFixed(2)} sqm.`
+            : `Not applied: ${repairResult.created} line(s) (${Number(repairResult.sqmCreated).toFixed(2)} sqm) are missing their trash movement.`}
+          {repairResult.created > 0 && (
+            <div style={{ marginTop: 4, fontSize: 12 }}>
+              {repairResult.lines.slice(0, 15).map((l) => (
+                <div key={l.transferItemId}>
+                  {l.transferNumber || `line #${l.transferItemId}`} — missing {Number(l.missing).toFixed(2)} sqm
+                  {l.skipped ? ` (skipped: ${l.skipped})` : ""}
+                </div>
+              ))}
+              {repairResult.lines.length > 15 && <div>… and {repairResult.lines.length - 15} more</div>}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
         <button onClick={load} disabled={loading} style={btnStyle("#2563eb")}>
           {loading ? "Loading…" : "Refresh"}
         </button>
         <button onClick={handleFix} disabled={fixing || loading} style={btnStyle("#dc2626")}>
           {fixing ? "Fixing…" : `Fix Wrong Rows${wrongCount ? ` (${wrongCount})` : ""}`}
+        </button>
+        <button
+          onClick={handleRepairTrash}
+          disabled={repairing || loading}
+          style={btnStyle("#7c3aed")}
+          title="Re-create SQM trash that shows on the SQM page but is missing from Inventory Activity"
+        >
+          {repairing ? "Checking…" : "Repair Trash Movements"}
         </button>
 
         <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
