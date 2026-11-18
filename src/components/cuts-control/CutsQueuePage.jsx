@@ -42,11 +42,18 @@ export default function CutsQueuePage() {
   const [trashing, setTrashing] = useState(() => new Set());
 
   const debounceRef = useRef(null);
+  // Only the newest request may update the table (fast paging can return
+  // responses out of order).
+  const requestIdRef = useRef(0);
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const isFirstFilterRun = useRef(true);
 
   const fetchList = useCallback(
     async (opts = {}) => {
       const effectivePage  = Number(opts.page  ?? page);
       const effectiveLimit = Number(opts.limit ?? limit);
+      const requestId = ++requestIdRef.current;
 
       setLoading(true);
       setErr("");
@@ -57,6 +64,7 @@ export default function CutsQueuePage() {
         if (q.trim()) params.q = q.trim();
 
         const res  = await axiosClient.get("/transfers/v1/invoice-cuts", { params });
+        if (requestId !== requestIdRef.current) return;
         const json = res?.data || {};
         const data = Array.isArray(json?.data) ? json.data : [];
 
@@ -69,6 +77,7 @@ export default function CutsQueuePage() {
         setPage(Number(json?.page  ?? effectivePage));
         setLimit(Number(json?.limit ?? effectiveLimit));
       } catch (e) {
+        if (requestId !== requestIdRef.current) return;
         setRows([]);
         setMeta({ total: 0, totalPages: 1, hasMore: false });
         const msg  = e?.response?.data?.message;
@@ -79,25 +88,34 @@ export default function CutsQueuePage() {
           String(e);
         setErr(String(nice));
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     },
     [page, limit, status, q],
   );
 
+  // Page changes (Next / Previous, and the reset to page 1 below) load here.
   useEffect(() => {
     fetchList({ page });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  // Search / filter changes: back to page 1 (debounced). Deliberately not
+  // keyed on fetchList — that changes with every page, which used to fire
+  // this after each Next and jump back to page 1.
   useEffect(() => {
+    if (isFirstFilterRun.current) {
+      isFirstFilterRun.current = false; // the page effect already loads on open
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      setPage(1);
-      fetchList({ page: 1 });
+      if (pageRef.current !== 1) setPage(1); // the page effect fetches
+      else fetchList({ page: 1 });
     }, 250);
     return () => clearTimeout(debounceRef.current);
-  }, [q, status, limit, fetchList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, status, limit]);
 
   const toggleExpand = (id) => {
     setExpanded((prev) => {
